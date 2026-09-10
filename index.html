@@ -1167,9 +1167,32 @@ let esTemaFijo = false;   // true = practicando un tema concreto, no la mezcla
 let capFijo = null;       // 1/2/3 = mezclando solo los temas de ese capítulo
 let sesionHechos = 0;     // cuántos ejercicios van en esta ronda
 const SESION_TOTAL = 10;  // tamaño de la ronda; al llegar acá se reinicia sola
+let ultimoFeedback = null;// resultado de verificar() del último responder(), para poder retomarlo
+
+/* ---------- retomar donde quedó (mate_sesion_v1) ---------- */
+function guardarSesion(){
+  guardar('mate_sesion_v1', { modId: modActual.id, esTemaFijo, capFijo, sesionHechos,
+    ejActual, respondido, vioExpl, ordenSel, ultimoFeedback });
+}
+const borrarSesion = () => { try{ localStorage.removeItem('mate_sesion_v1'); }catch(e){} };
+function restaurarSesion(){
+  const s = leer('mate_sesion_v1', null);
+  if(!s || !MOD_POR_ID[s.modId] || !s.ejActual) return false;
+  modActual = MOD_POR_ID[s.modId];
+  esTemaFijo = s.esTemaFijo; capFijo = s.capFijo; sesionHechos = s.sesionHechos || 1;
+  ejActual = s.ejActual; respondido = s.respondido; vioExpl = s.vioExpl;
+  ordenSel = s.ordenSel || []; ultimoFeedback = s.ultimoFeedback || null;
+  pintarEjercicio();
+  if(respondido){
+    if(vioExpl) _pintarVistaExplicacion();
+    else if(ultimoFeedback) mostrarFb(ultimoFeedback, false);
+  }
+  return true;
+}
 
 function ir(pantalla, arg, continuar){
   window.scrollTo(0,0);
+  if(pantalla !== 'practica') borrarSesion();   // salir de la práctica = ronda terminada
   if(pantalla === 'inicio')   return pantallaInicio();
   if(pantalla === 'practica') return nuevoEjercicio(arg, continuar);
   if(pantalla === 'stats')    return pantallaStats();
@@ -1230,8 +1253,9 @@ function nuevoEjercicio(arg, continuar){
   }
   ejActual = modActual.gen(nivel);
   ejActual.__mod = modActual.id;
-  respondido = false; vioExpl = false; ordenSel = [];
+  respondido = false; vioExpl = false; ordenSel = []; ultimoFeedback = null;
   pintarEjercicio();
+  guardarSesion();
 }
 
 function entradaHTML(ej){
@@ -1348,8 +1372,10 @@ function responder(valor){
   if(res.vacio) return mostrarFb({ ok:false, msg:'Te falta escribir la respuesta.' }, true);
 
   respondido = true;
+  ultimoFeedback = res;
   if(!vioExpl) anotar(ejActual.__mod, res.ok);
   mostrarFb(res, false);
+  guardarSesion();
 }
 
 function mostrarFb(res, soloAviso){
@@ -1378,6 +1404,10 @@ const explHTML = () => `
 function verExplicacion(){
   if(respondido) return;
   vioExpl = true; respondido = true;
+  _pintarVistaExplicacion();
+  guardarSesion();
+}
+function _pintarVistaExplicacion(){
   $('zonaEntrada').style.opacity = '.5';
   $('zonaEntrada').style.pointerEvents = 'none';
   $('btnExpl').style.display = 'none';
@@ -1626,7 +1656,7 @@ function autotest(){
    9. ARRANQUE
    ══════════════════════════════════════════════════════════ */
 if(location.search.indexOf('test') >= 0) autotest();
-else pantallaInicio();
+else if(!restaurarSesion()) pantallaInicio();
 
 // ── SERVICE WORKER (PWA offline) ──
 if('serviceWorker' in navigator){
