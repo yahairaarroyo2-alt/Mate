@@ -1,0 +1,1643 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#1e2a52">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png">
+<title>Práctica de Matemáticas</title>
+<style>
+  :root{
+    --azul:#1e2a52; --azul2:#2b3c72; --azul3:#3b52a0;
+    --acento:#ffc93c; --acento2:#ffe08a;
+    --verde:#2ecc71; --verde-bg:#e8f9f0;
+    --rojo:#e74c3c; --rojo-bg:#fdeceb;
+    --ambar:#f39c12; --ambar-bg:#fef6e7;
+    --blanco:#fff; --gris:#eef1f7; --gris2:#d7dee9;
+    --texto:#1a2438; --muted:#5f6b85;
+    --sombra:0 6px 20px rgba(0,0,0,.16);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:'Segoe UI',system-ui,-apple-system,Arial,sans-serif;
+    background:linear-gradient(160deg,var(--azul),var(--azul2));
+    color:var(--texto);min-height:100vh;padding:14px;line-height:1.55;
+  }
+  .app{max-width:720px;margin:0 auto;padding-bottom:30px}
+  header.top{text-align:center;color:var(--blanco);padding:10px 6px 18px}
+  header.top h1{font-size:1.35rem;letter-spacing:.2px}
+  header.top p{opacity:.8;font-size:.87rem;margin-top:3px}
+  .card{background:var(--blanco);border-radius:18px;box-shadow:var(--sombra);padding:20px;margin-bottom:14px}
+  h2{color:var(--azul);font-size:1.18rem;margin-bottom:12px}
+  h3{color:var(--azul2);font-size:1rem;margin:14px 0 7px}
+  .btn{display:block;width:100%;border:none;border-radius:14px;cursor:pointer;padding:15px;
+    font-size:1.02rem;font-weight:600;margin-bottom:10px;font-family:inherit;
+    transition:transform .08s,box-shadow .15s;background:var(--azul3);color:var(--blanco)}
+  .btn:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(30,42,82,.28)}
+  .btn:active{transform:translateY(0)}
+  .btn.amar{background:var(--acento);color:var(--azul)}
+  .btn.sec{background:var(--gris);color:var(--azul);border:2px solid var(--gris2)}
+  .btn.chico{padding:11px;font-size:.92rem}
+  .btn small{display:block;font-weight:400;font-size:.79rem;opacity:.85;margin-top:2px}
+  .row{display:flex;gap:9px;flex-wrap:wrap}
+  .row .btn{flex:1;min-width:120px}
+  .back{background:none;border:none;color:var(--blanco);cursor:pointer;font-size:.94rem;
+    padding:5px 2px;margin-bottom:6px;opacity:.9;font-family:inherit}
+  .back:hover{opacity:1;text-decoration:underline}
+  .pill{display:inline-block;background:var(--acento);color:var(--azul);font-weight:700;
+    font-size:.75rem;padding:4px 12px;border-radius:20px;margin-bottom:9px}
+  .nota{background:var(--gris);border-left:4px solid var(--acento);padding:10px 13px;
+    border-radius:8px;margin:10px 0;font-size:.9rem;color:var(--muted)}
+  /* chips de nivel / tema */
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px}
+  .chip{border:2px solid var(--gris2);background:var(--blanco);color:var(--azul2);
+    border-radius:20px;padding:7px 15px;font-size:.88rem;font-weight:600;cursor:pointer;font-family:inherit}
+  .chip.on{background:var(--azul3);border-color:var(--azul3);color:var(--blanco)}
+  /* enunciado */
+  .enunciado{background:var(--azul);color:var(--blanco);border-radius:14px;padding:20px 18px;
+    font-size:1.22rem;text-align:center;margin-bottom:16px;line-height:1.6}
+  .enunciado .fr{color:var(--acento2)}
+  /* fracción apilada */
+  .fr{display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;
+    margin:0 4px;line-height:1.15;font-weight:700}
+  .fr b{display:block;padding:0 5px}
+  .fr i{display:block;padding:0 5px;border-top:2px solid currentColor;font-style:normal}
+  /* entradas */
+  .campo{width:100%;border:2px solid var(--gris2);border-radius:12px;padding:13px;
+    font-size:1.15rem;text-align:center;font-family:inherit;color:var(--texto)}
+  .campo:focus{outline:none;border-color:var(--azul3)}
+  .fracIn{display:flex;flex-direction:column;align-items:center;gap:6px;max-width:150px;margin:0 auto}
+  .fracIn .campo{width:110px}
+  .fracIn .barra{width:110px;height:3px;background:var(--azul);border-radius:2px}
+  .mixIn{display:flex;align-items:center;justify-content:center;gap:12px}
+  .mixIn .campo{width:80px}
+  .opt{display:flex;gap:10px}
+  .opt .btn{flex:1;font-size:1.25rem;padding:18px}
+  .ordenCaja{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:12px}
+  .ordenChip{position:relative;border:2px solid var(--gris2);background:var(--blanco);
+    border-radius:14px;padding:14px 20px;font-size:1.25rem;cursor:pointer;font-family:inherit;color:var(--texto)}
+  .ordenChip.on{border-color:var(--azul3);background:var(--gris)}
+  .ordenChip .num{position:absolute;top:-9px;right:-9px;background:var(--azul3);color:var(--blanco);
+    width:24px;height:24px;border-radius:50%;font-size:.8rem;font-weight:700;
+    display:flex;align-items:center;justify-content:center}
+  /* feedback */
+  .fb{border-radius:12px;padding:13px 15px;margin-bottom:12px;font-weight:600}
+  .fb.ok{background:var(--verde-bg);color:#1e7a48;border-left:5px solid var(--verde)}
+  .fb.mal{background:var(--rojo-bg);color:#b03a2e;border-left:5px solid var(--rojo)}
+  .fb.medio{background:var(--ambar-bg);color:#9c6410;border-left:5px solid var(--ambar)}
+  .fb small{display:block;font-weight:400;margin-top:4px}
+  .expl{background:var(--gris);border-radius:12px;padding:14px 16px;margin-bottom:12px}
+  .expl h3{margin-top:0}
+  .expl ol{margin:0;padding-left:20px}
+  .expl li{margin-bottom:6px;font-size:.95rem}
+  .expl li:last-child{margin-bottom:0;font-weight:600;color:var(--azul)}
+  /* stats */
+  .barra-ext{height:10px;background:var(--gris);border-radius:6px;overflow:hidden;margin-top:5px}
+  .barra-int{height:100%;border-radius:6px;background:var(--verde);transition:width .4s}
+  .stat{margin-bottom:13px}
+  .stat .lbl{display:flex;justify-content:space-between;font-size:.9rem}
+  .stat .lbl b{color:var(--azul)}
+  .racha{display:flex;gap:10px;text-align:center;margin-bottom:6px}
+  .racha div{flex:1;background:var(--gris);border-radius:12px;padding:12px 6px}
+  .racha b{display:block;font-size:1.6rem;color:var(--azul3);line-height:1.2}
+  .racha span{font-size:.78rem;color:var(--muted)}
+  /* clase */
+  .banner{background:var(--acento2);border-radius:12px;padding:11px 14px;margin-bottom:12px;
+    display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:.9rem;font-weight:600;color:var(--azul)}
+  .banner button{background:var(--azul);color:var(--blanco);border:none;border-radius:8px;
+    padding:6px 11px;font-size:.8rem;cursor:pointer;font-family:inherit}
+  textarea.campo{text-align:left;font-size:.92rem;min-height:130px;resize:vertical}
+  .modCheck{display:flex;align-items:center;gap:10px;padding:9px 11px;border:2px solid var(--gris2);
+    border-radius:11px;margin-bottom:7px;cursor:pointer}
+  .modCheck.on{border-color:var(--azul3);background:var(--gris)}
+  .modCheck input{width:19px;height:19px;accent-color:var(--azul3)}
+  .modCheck .sc{margin-left:auto;font-size:.76rem;color:var(--muted)}
+  .drop{border:2px dashed var(--gris2);border-radius:12px;padding:18px;text-align:center;
+    color:var(--muted);font-size:.9rem;cursor:pointer;margin-bottom:10px}
+  .drop.hover{border-color:var(--azul3);background:var(--gris)}
+  .cargando{text-align:center;color:var(--muted);font-size:.9rem;padding:10px}
+  /* test */
+  pre.test{background:var(--azul);color:#d6f5c8;padding:14px;border-radius:12px;
+    font-size:.82rem;overflow-x:auto;white-space:pre-wrap}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <h1>Práctica de Matemáticas</h1>
+    <p>Números · Álgebra · Geometría · Fracciones</p>
+  </header>
+  <main id="main"></main>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════
+   1. HELPERS MATEMÁTICOS  (funciones puras, sin dependencias)
+   ══════════════════════════════════════════════════════════ */
+const R = (a,b) => a + Math.floor(Math.random()*(b-a+1));
+const pick = a => a[Math.floor(Math.random()*a.length)];
+const shuffle = a => a.map(v=>[Math.random(),v]).sort((x,y)=>x[0]-y[0]).map(x=>x[1]);
+
+function mcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b){ const t=b; b=a%b; a=t; } return a; }
+function mcm(a,b){ return Math.abs(a*b)/mcd(a,b); }
+function esPrimo(n){
+  if(n<2) return false;
+  if(n%2===0) return n===2;
+  for(let d=3; d*d<=n; d+=2) if(n%d===0) return false;
+  return true;
+}
+function factorizar(n){
+  const f={}; let d=2;
+  while(d*d<=n){ while(n%d===0){ f[d]=(f[d]||0)+1; n/=d; } d++; }
+  if(n>1) f[n]=(f[n]||0)+1;
+  return f;
+}
+function simplificar(n,d){ const g=mcd(n,d)||1; return [n/g, d/g]; }
+const SUP={'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'};
+const sup = n => String(n).split('').map(c=>SUP[c]).join('');
+function fmtFactores(f){
+  const ps = Object.keys(f).map(Number).sort((a,b)=>a-b);
+  if(!ps.length) return '1';
+  return ps.map(p => f[p]>1 ? p+sup(f[p]) : ''+p).join(' × ');
+}
+function fmtFactoresPlano(f){
+  const ps = Object.keys(f).map(Number).sort((a,b)=>a-b);
+  if(!ps.length) return '1';
+  return ps.map(p => f[p]>1 ? p+'^'+f[p] : ''+p).join(' * ');
+}
+const sumaDig = n => String(n).split('').reduce((s,c)=>s + (+c), 0);
+const porNivel = (nv,f,m,d) => nv==='facil' ? f : nv==='medio' ? m : d;
+// fracción apilada para el enunciado
+const fr = (n,d) => `<span class="fr"><b>${n}</b><i>${d}</i></span>`;
+const cmpSigno = (a,b) => a<b ? '<' : a>b ? '>' : '=';
+
+/* ══════════════════════════════════════════════════════════
+   2. EXPLICACIONES  (salen de las mismas variables que la respuesta)
+   ══════════════════════════════════════════════════════════ */
+function explDivisibilidad(n,d){
+  const s = String(n), ult = +s[s.length-1], sd = sumaDig(n), dos = n%100;
+  const ok = n%d===0, si = ok?'sí':'no';
+  const final = `→ ${n} ${si} es divisible por ${d}.`;
+  const sumaTxt = `${s.split('').join(' + ')} = ${sd}`;
+  switch(d){
+    case 2: return ['Regla del 2: el último dígito tiene que ser par (0, 2, 4, 6 u 8).',
+      `El último dígito de ${n} es ${ult}.`, `${ult} ${ult%2===0?'es par':'no es par'}. ${final}`];
+    case 5: return ['Regla del 5: el último dígito tiene que ser 0 o 5.',
+      `El último dígito de ${n} es ${ult}.`, `${ult} ${(ult===0||ult===5)?'sí es':'no es'} 0 ni 5. ${final}`];
+    case 10:return ['Regla del 10: el último dígito tiene que ser 0.',
+      `El último dígito de ${n} es ${ult}.`, `${ult} ${ult===0?'sí es':'no es'} 0. ${final}`];
+    case 3: return ['Regla del 3: la suma de los dígitos tiene que ser múltiplo de 3.',
+      sumaTxt, `${sd} ${sd%3===0?'sí es':'no es'} múltiplo de 3. ${final}`];
+    case 9: return ['Regla del 9: la suma de los dígitos tiene que ser múltiplo de 9.',
+      sumaTxt, `${sd} ${sd%9===0?'sí es':'no es'} múltiplo de 9. ${final}`];
+    case 4: return ['Regla del 4: el número formado por los dos últimos dígitos tiene que ser divisible por 4.',
+      `Los dos últimos dígitos de ${n} forman el ${dos}.`,
+      `${dos} ÷ 4 ${dos%4===0?`= ${dos/4}, exacto`:'no da exacto'}. ${final}`];
+    case 6: return ['Regla del 6: tiene que ser divisible por 2 Y por 3 a la vez.',
+      `¿Por 2? El último dígito es ${ult} → ${ult%2===0?'sí':'no'}.`,
+      `¿Por 3? ${sumaTxt} → ${sd%3===0?'sí':'no'}.`,
+      `${ok?'Cumple las dos condiciones':'Falla al menos una condición'}. ${final}`];
+    case 12:return ['Regla del 12: tiene que ser divisible por 3 Y por 4 a la vez.',
+      `¿Por 3? ${sumaTxt} → ${sd%3===0?'sí':'no'}.`,
+      `¿Por 4? Los dos últimos dígitos forman el ${dos} → ${dos%4===0?'sí':'no'}.`,
+      `${ok?'Cumple las dos condiciones':'Falla al menos una condición'}. ${final}`];
+  }
+  return [`${n} ${si} es divisible por ${d}.`];
+}
+
+const TRAMPAS = [51,57,87,91,111,119,133,143,161,187,203,209,217,221,247,253,289,299];
+
+function explPrimo(n){
+  if(esPrimo(n)){
+    const lim = Math.floor(Math.sqrt(n));
+    const ps = [2,3,5,7,11,13,17].filter(x=>x<=lim);
+    const li = [`Solo hace falta probar los primos hasta √${n} ≈ ${lim}.`];
+    li.push(ps.length ? `Probamos ${ps.join(', ')}: ninguno divide a ${n} de forma exacta.`
+                      : `√${n} es menor que 2, no hay ningún primo que probar.`);
+    li.push(`${n} es PRIMO: solo se puede dividir entre 1 y entre ${n}.`);
+    return li;
+  }
+  let d = 2; while(n%d !== 0) d++;
+  const li = ['Buscamos el divisor más pequeño distinto de 1.'];
+  if(d>2) li.push(`${n} no es par, así que el 2 no sirve.`);
+  li.push(`${n} ÷ ${d} = ${n/d}, exacto.`);
+  li.push(`Como ${n} = ${d} × ${n/d}, tiene más divisores que 1 y él mismo → es COMPUESTO.`);
+  if(TRAMPAS.indexOf(n) >= 0) li.push(`Ojo con este: ${n} parece primo a simple vista, pero no lo es.`);
+  return li;
+}
+
+function explFactorizar(n){
+  const li = ['Dividimos entre primos, empezando siempre por el más pequeño que quepa:'];
+  let m = n, d = 2;
+  while(m > 1){
+    if(m % d === 0){ li.push(`${m} ÷ ${d} = ${m/d}`); m = m/d; }
+    else d++;
+  }
+  li.push(`Ya llegamos a 1 → ${n} = ${fmtFactores(factorizar(n))}`);
+  return li;
+}
+
+function explMcmListado(a,b){
+  const m = mcm(a,b), la = [], lb = [];
+  for(let k=1; a*k<=m; k++) la.push(a*k);
+  for(let k=1; b*k<=m; k++) lb.push(b*k);
+  return [`Múltiplos de ${a}: ${la.join(', ')}`,
+          `Múltiplos de ${b}: ${lb.join(', ')}`,
+          `El primero que aparece en las dos listas es ${m} → MCM(${a}, ${b}) = ${m}`];
+}
+
+function explMcmFactores(ns){
+  const fs = ns.map(factorizar);
+  const li = ns.map((n,i)=>`${n} = ${fmtFactores(fs[i])}`);
+  const primos = [...new Set(fs.reduce((ac,f)=>ac.concat(Object.keys(f).map(Number)),[]))].sort((a,b)=>a-b);
+  li.push('Para el MCM se toma cada primo con el MAYOR exponente que aparezca:');
+  primos.forEach(p=>{
+    const es = fs.map(f => f[p]||0);
+    li.push(`${p} → exponentes ${es.join(', ')} · el mayor es ${Math.max.apply(null,es)}`);
+  });
+  const partes = primos.map(p=>{ const e = Math.max.apply(null, fs.map(f=>f[p]||0)); return e>1 ? p+sup(e) : ''+p; });
+  li.push(`MCM = ${partes.join(' × ')} = ${ns.reduce(mcm)}`);
+  return li;
+}
+
+function explMcd(ns){
+  const fs = ns.map(factorizar);
+  const li = ns.map((n,i)=>`${n} = ${fmtFactores(fs[i])}`);
+  const comunes = Object.keys(fs[0]).map(Number).filter(p => fs.every(f=>f[p])).sort((a,b)=>a-b);
+  if(!comunes.length){
+    li.push('No hay ningún primo que esté en todas las factorizaciones.');
+    li.push(`Sin factores comunes → MCD = 1 (son primos entre sí).`);
+    return li;
+  }
+  li.push('Para el MCD se toman SOLO los primos que están en todos, con el MENOR exponente:');
+  comunes.forEach(p=>{
+    const es = fs.map(f=>f[p]);
+    li.push(`${p} → exponentes ${es.join(', ')} · el menor es ${Math.min.apply(null,es)}`);
+  });
+  const partes = comunes.map(p=>{ const e = Math.min.apply(null, fs.map(f=>f[p])); return e>1 ? p+sup(e) : ''+p; });
+  li.push(`MCD = ${partes.join(' × ')} = ${ns.reduce(mcd)}`);
+  return li;
+}
+
+function explComparar(a,b){
+  const m = mcm(a.d,b.d), ka = m/a.d, kb = m/b.d;
+  const na = a.n*ka, nb = b.n*kb, s = cmpSigno(na,nb);
+  return [`Denominador común: MCM(${a.d}, ${b.d}) = ${m}`,
+    `${a.n}/${a.d} → multiplicamos arriba y abajo por ${ka} → ${na}/${m}`,
+    `${b.n}/${b.d} → multiplicamos arriba y abajo por ${kb} → ${nb}/${m}`,
+    `Con el mismo denominador solo se comparan los numeradores: ${na} ${s} ${nb}`,
+    `→ ${a.n}/${a.d} ${s} ${b.n}/${b.d}`];
+}
+
+/* ══════════════════════════════════════════════════════════
+   3. MÓDULOS  — cada uno devuelve enunciado + respuesta + explicación
+   Capítulos 1-2 primero (signos, álgebra, geometría), capítulo 3 después
+   (divisibilidad y fracciones — el original).
+   ══════════════════════════════════════════════════════════ */
+const MODULOS = [
+{
+  id:'conjuntos-numericos', nombre:'Conjuntos numéricos', secciones:['1.1'],
+  gen(nv){
+    const irracionales = ['√2','√3','√5','√7','√10','√11','π'];
+    const alto = porNivel(nv, 20, 60, 200);
+    const tipo = pick(['nat','ent','rac','irr']);
+    let num, correcta;
+    if(tipo==='nat'){ num = R(1,alto); correcta = 'Natural'; }
+    else if(tipo==='ent'){ num = -R(1,alto); correcta = 'Entero'; }
+    else if(tipo==='rac'){
+      const d = R(2, porNivel(nv,6,10,14)); let n = R(1,d-1);
+      const g = mcd(n,d); n/=g;
+      num = fr(n, d/g); correcta = 'Racional';
+    } else { num = pick(irracionales); correcta = 'Irracional'; }
+    return {
+      enunciado:`¿Cuál es el conjunto <b>más específico</b> al que pertenece <b>${num}</b>?`,
+      tipo:'opciones', opciones: shuffle(['Natural','Entero','Racional','Irracional']), respuesta: correcta,
+      explicacion: tipo==='nat' ? [`${num} es un número entero positivo, sin parte decimal ni fraccionaria.`,
+          `Se puede usar para contar → es Natural (y también Entero y Racional, pero el más específico es Natural).`]
+        : tipo==='ent' ? [`${num} es negativo, así que no puede ser Natural.`,
+          `No tiene parte fraccionaria → es Entero (y también Racional, pero el más específico es Entero).`]
+        : tipo==='rac' ? [`${num} se puede escribir como una fracción a/b con b ≠ 0.`,
+          `No se simplifica a un número entero → es Racional.`]
+        : [`${num} no se puede escribir como una fracción exacta; su decimal no termina ni se repite.`,
+          `→ es Irracional.`]
+    };
+  }
+},
+{
+  id:'valor-absoluto', nombre:'Valor absoluto', secciones:['1.2'],
+  gen(nv){
+    const alto = porNivel(nv, 15, 40, 99);
+    const n = R(1, alto);
+    const variante = pick(['simple','neg-fuera','doble-neg','doble-neg-resta']);
+    if(variante==='simple'){
+      const m = pick([1,-1])*n;
+      return { enunciado:`Calcula: | ${m} |`, tipo:'num', respuesta:n,
+        explicacion:[`El valor absoluto es la distancia al 0, siempre positiva o cero.`,
+          `${m} está a ${n} unidades del 0.`, `→ |${m}| = ${n}`] };
+    }
+    if(variante==='neg-fuera'){
+      return { enunciado:`Calcula: −| ${n} |`, tipo:'num', respuesta:-n,
+        explicacion:[`Primero el valor absoluto: |${n}| = ${n}.`,
+          `El signo − de afuera se aplica después.`, `→ −|${n}| = −${n}`] };
+    }
+    if(variante==='doble-neg'){
+      return { enunciado:`Calcula: | −(−${n}) |`, tipo:'num', respuesta:n,
+        explicacion:[`Dentro de las barras: −(−${n}) = ${n} (el opuesto del opuesto).`,
+          `El valor absoluto de ${n} es ${n}.`, `→ |−(−${n})| = ${n}`] };
+    }
+    const m = R(1, Math.max(1, Math.floor(n/2)));
+    return { enunciado:`Calcula: | −(${n}) | − ${m}`, tipo:'num', respuesta:n-m,
+      explicacion:[`Dentro de las barras: −(${n}) = −${n}.`,
+        `|−${n}| = ${n}.`, `${n} − ${m} = ${n-m}`] };
+  }
+},
+{
+  id:'reglas-signos', nombre:'Reglas de signos', secciones:['1.3'],
+  gen(nv){
+    const alto = porNivel(nv, 12, 30, 80);
+    const a = R(1,alto), b = R(1,alto);
+    const variante = pick(['suma-igual','suma-dif','resta','mult','div']);
+    if(variante==='suma-igual'){
+      const signo = pick([1,-1]); const A=signo*a, B=signo*b, r=A+B;
+      return { enunciado:`(${A}) + (${B}) =`, tipo:'num', respuesta:r,
+        explicacion:[`Mismo signo: se suman los valores y se conserva el signo.`,
+          `${a} + ${b} = ${a+b}`, `→ (${A}) + (${B}) = ${r}`] };
+    }
+    if(variante==='suma-dif'){
+      const A=a, B=-b, r=A+B, mayor = a>=b?A:B;
+      return { enunciado:`(${A}) + (${B}) =`, tipo:'num', respuesta:r,
+        explicacion:[`Signos diferentes: se restan los valores y se usa el signo del mayor valor absoluto.`,
+          `|${A}| = ${a}, |${B}| = ${b}`,
+          `${Math.max(a,b)} − ${Math.min(a,b)} = ${Math.abs(r)}, con el signo de ${mayor}`,
+          `→ (${A}) + (${B}) = ${r}`] };
+    }
+    if(variante==='resta'){
+      const A=a, B=-b, r=A+b;
+      return { enunciado:`${A} − (${B}) =`, tipo:'num', respuesta:r,
+        explicacion:[`Restar es lo mismo que sumar el opuesto.`,
+          `${A} − (${B}) = ${A} + ${b}`, `→ = ${r}`] };
+    }
+    const op = pick(['mult','div']);
+    const signoA = pick([1,-1]), signoB = pick([1,-1]), igual = signoA===signoB;
+    if(op==='mult'){
+      const A=signoA*a, B=signoB*b, r=A*B;
+      return { enunciado:`(${A}) × (${B}) =`, tipo:'num', respuesta:r,
+        explicacion:[igual?'Signos iguales → el resultado es positivo.':'Signos diferentes → el resultado es negativo.',
+          `${a} × ${b} = ${a*b}`, `→ (${A}) × (${B}) = ${r}`] };
+    }
+    const A=signoA*(a*b), B=signoB*b, r=A/B;
+    return { enunciado:`(${A}) ÷ (${B}) =`, tipo:'num', respuesta:r,
+      explicacion:[igual?'Signos iguales → el resultado es positivo.':'Signos diferentes → el resultado es negativo.',
+        `${Math.abs(A)} ÷ ${b} = ${a}`, `→ (${A}) ÷ (${B}) = ${r}`] };
+  }
+},
+{
+  id:'orden-operaciones-1', nombre:'Orden de operaciones', secciones:['1.4'],
+  gen(nv){
+    const chico = porNivel(nv, 6, 10, 15);
+    const plantilla = pick(['completo','trampa-div','agrupa-mult','sustituir']);
+    if(plantilla==='completo' || plantilla==='sustituir'){
+      const b = R(2,chico), c = R(3,chico), d = R(1,c-1);
+      const agr = c-d, pot = agr*agr, prod = b*pot;
+      if(plantilla==='sustituir'){
+        const x = R(1,chico), resp = x + prod;
+        return { enunciado:`Si x = ${x}, calcula: x + ${b}(${c} − ${d})²`, tipo:'num', respuesta:resp,
+          explicacion:[`Sustituye x por ${x}: ${x} + ${b}(${c} − ${d})²`,
+            `Agrupación: ${c} − ${d} = ${agr}`, `Exponente: ${agr}² = ${pot}`,
+            `Multiplicación: ${b} × ${pot} = ${prod}`, `Suma: ${x} + ${prod} = ${resp}`] };
+      }
+      const a = R(1,chico), resp = a + prod;
+      return { enunciado:`${a} + ${b}(${c} − ${d})²`, tipo:'num', respuesta:resp,
+        explicacion:[`Agrupación: ${c} − ${d} = ${agr}`, `Exponente: ${agr}² = ${pot}`,
+          `Multiplicación: ${b} × ${pot} = ${prod}`, `Suma: ${a} + ${prod} = ${resp}`] };
+    }
+    if(plantilla==='trampa-div'){
+      const c = R(2,chico), a = R(2,chico*3), d = R(1,chico), q = R(1,chico), bb = c*q;
+      const resp = a - q + d;
+      return { enunciado:`${a} − ${bb} ÷ ${c} + ${d}`, tipo:'num', respuesta:resp,
+        explicacion:[`División primero: ${bb} ÷ ${c} = ${q}`,
+          `Queda: ${a} − ${q} + ${d}`, `Izquierda a derecha: ${a} − ${q} = ${a-q}`,
+          `${a-q} + ${d} = ${resp}`] };
+    }
+    const b2 = R(1,chico), a2 = b2 + R(1,chico), c2 = R(2,chico), agr2 = a2-b2, resp2 = agr2*c2;
+    return { enunciado:`(${a2} − ${b2}) × ${c2}`, tipo:'num', respuesta:resp2,
+      explicacion:[`Agrupación primero: ${a2} − ${b2} = ${agr2}`,
+        `Multiplicación: ${agr2} × ${c2} = ${resp2}`] };
+  }
+},
+{
+  id:'lenguaje-algebraico', nombre:'Lenguaje algebraico', secciones:['2.1'],
+  gen(nv){
+    const alto = porNivel(nv, 12, 20, 30);
+    const letra = pick(['x','y','a','m','n']);
+    const coefUno = Math.random() < 0.2;
+    const coef = coefUno ? 1 : R(2,alto);
+    const signoConst = pick(['+','−']), cons = R(1,alto);
+    const expr = `${coefUno?'':coef}${letra} ${signoConst} ${cons}`;
+    if(Math.random() < 0.5) return {
+      enunciado:`En la expresión <b>${expr}</b>, ¿cuál es el coeficiente?`, tipo:'num', respuesta:coef,
+      explicacion:[`El coeficiente es el número que multiplica a la variable ${letra}.`,
+        coefUno ? `Cuando la variable aparece sola, su coeficiente es 1.` : `En ${coef}${letra}, el coeficiente es ${coef}.`,
+        `→ El coeficiente es ${coef}.`] };
+    const respConst = signoConst==='+' ? cons : -cons;
+    return {
+      enunciado:`En la expresión <b>${expr}</b>, ¿cuál es la constante?`, tipo:'num', respuesta:respConst,
+      explicacion:[`La constante es el número que no tiene variable.`, `→ La constante es ${respConst}.`] };
+  }
+},
+{
+  id:'traducir-algebra', nombre:'Traducir a álgebra', secciones:['2.1'],
+  gen(nv){
+    const n = R(2, porNivel(nv,10,20,30));
+    const plantillas = [
+      { frase:`${n} más que un número x`, correcta:`x + ${n}`, mal:[`${n} − x`,`x − ${n}`,`${n}x`] },
+      { frase:`${n} menos que un número x`, correcta:`x − ${n}`, mal:[`${n} − x`,`x + ${n}`,`x ÷ ${n}`] },
+      { frase:`el doble de un número x`, correcta:`2x`, mal:[`x + 2`,`x ÷ 2`,`x²`] },
+      { frase:`el triple de un número x`, correcta:`3x`, mal:[`x + 3`,`x ÷ 3`,`3 + x`] },
+      { frase:`un número x dividido entre ${n}`, correcta:`x ÷ ${n}`, mal:[`${n} ÷ x`,`${n}x`,`x − ${n}`] },
+      { frase:`el triple de un número x, aumentado en ${n}`, correcta:`3x + ${n}`, mal:[`3(x + ${n})`,`3x − ${n}`,`x + 3 + ${n}`] }
+    ];
+    const t = pick(plantillas);
+    return { enunciado:`Traduce a lenguaje algebraico: "<b>${t.frase}</b>"`,
+      tipo:'opciones', opciones: shuffle([t.correcta, ...t.mal]), respuesta: t.correcta,
+      explicacion:[`"${t.frase}" se traduce como ${t.correcta}.`,
+        `Fíjate en el orden: "menos que" y "más que" a veces invierten el orden respecto a como se leen.`] };
+  }
+},
+{
+  id:'propiedades', nombre:'Propiedades de los números', secciones:['2.2'],
+  gen(nv){
+    const alto = porNivel(nv, 12, 25, 60);
+    const a = R(1,alto), b = R(1,alto), c = R(1,alto);
+    const p = pick(['conmutativa-suma','conmutativa-mult','asociativa-suma','asociativa-mult','identidad-suma','identidad-mult','distributiva']);
+    const casos = {
+      'conmutativa-suma': { enun:`${a} + ${b} = ${b} + ${a}`, cat:'Conmutativa',
+        expl:[`Cambiar el orden de los sumandos no cambia el resultado.`,`Esa es la propiedad conmutativa.`] },
+      'conmutativa-mult': { enun:`${a} × ${b} = ${b} × ${a}`, cat:'Conmutativa',
+        expl:[`Cambiar el orden de los factores no cambia el resultado.`,`Esa es la propiedad conmutativa.`] },
+      'asociativa-suma': { enun:`(${a} + ${b}) + ${c} = ${a} + (${b} + ${c})`, cat:'Asociativa',
+        expl:[`Cambiar cómo se agrupan los sumandos no cambia el resultado.`,`Esa es la propiedad asociativa.`] },
+      'asociativa-mult': { enun:`(${a} × ${b}) × ${c} = ${a} × (${b} × ${c})`, cat:'Asociativa',
+        expl:[`Cambiar cómo se agrupan los factores no cambia el resultado.`,`Esa es la propiedad asociativa.`] },
+      'identidad-suma': { enun:`${a} + 0 = ${a}`, cat:'Identidad',
+        expl:[`Sumar 0 deja el número sin cambiar.`,`El 0 es la identidad aditiva.`] },
+      'identidad-mult': { enun:`${a} × 1 = ${a}`, cat:'Identidad',
+        expl:[`Multiplicar por 1 deja el número sin cambiar.`,`El 1 es la identidad multiplicativa.`] },
+      'distributiva': { enun:`${a}(${b} + ${c}) = ${a}×${b} + ${a}×${c}`, cat:'Distributiva',
+        expl:[`El número de afuera se multiplica por cada término de adentro.`,`Esa es la propiedad distributiva.`] }
+    };
+    const cs = casos[p];
+    return { enunciado:`¿Qué propiedad se usa en esta igualdad?<br><b>${cs.enun}</b>`,
+      tipo:'opciones', opciones: shuffle(['Conmutativa','Asociativa','Identidad','Distributiva']),
+      respuesta: cs.cat, explicacion: cs.expl };
+  }
+},
+{
+  id:'terminos-semejantes', nombre:'Términos semejantes', secciones:['2.3'],
+  gen(nv){
+    const alto = porNivel(nv, 12, 20, 30);
+    const letra = pick(['x','y','a','m','n']);
+    const variante = pick(['sumar','restar','multiplicar','no-combinan']);
+    if(variante==='sumar'){
+      const c1=R(2,alto), c2=R(2,alto);
+      return { enunciado:`${c1}${letra} + ${c2}${letra} = ___${letra}`, tipo:'num', respuesta:c1+c2,
+        explicacion:[`Son términos semejantes (misma variable ${letra}).`,
+          `Se suman los coeficientes: ${c1} + ${c2} = ${c1+c2}`, `→ ${c1+c2}${letra}`] };
+    }
+    if(variante==='restar'){
+      const c2=R(2,alto), c1=c2+R(1,alto);
+      return { enunciado:`${c1}${letra} − ${c2}${letra} = ___${letra}`, tipo:'num', respuesta:c1-c2,
+        explicacion:[`Son términos semejantes (misma variable ${letra}).`,
+          `Se restan los coeficientes: ${c1} − ${c2} = ${c1-c2}`, `→ ${c1-c2}${letra}`] };
+    }
+    if(variante==='multiplicar'){
+      const c1=R(2,porNivel(nv,8,12,18)), c2=R(2,porNivel(nv,8,12,18));
+      return { enunciado:`(${c1}${letra})(${c2}${letra}) = ___${letra}²`, tipo:'num', respuesta:c1*c2,
+        explicacion:[`Al multiplicar, se multiplican los coeficientes y se suman los exponentes de la variable.`,
+          `${c1} × ${c2} = ${c1*c2}`, `${letra} × ${letra} = ${letra}²`, `→ ${c1*c2}${letra}²`] };
+    }
+    const c1=R(2,alto), c2=R(2,alto), letra2 = pick(['y','a','b','n'].filter(l=>l!==letra));
+    return { enunciado:`¿Se pueden combinar estos términos?<br><b>${c1}${letra} + ${c2}${letra2}</b>`,
+      tipo:'sino', respuesta:false,
+      explicacion:[`Para combinarse, dos términos deben tener exactamente la misma variable (y exponente).`,
+        `${letra} y ${letra2} son variables distintas.`,
+        `→ No se pueden combinar; queda como ${c1}${letra} + ${c2}${letra2}.`] };
+  }
+},
+{
+  id:'ecuaciones-lineales', nombre:'Ecuaciones lineales', secciones:['2.4'],
+  gen(nv){
+    const alto = porNivel(nv, 12, 25, 60);
+    const x = R(-alto, alto) || 1;
+    const letra = pick(['x','y','n']);
+    const pasos = porNivel(nv, 1, Math.random()<0.5?2:1, 2);
+    if(pasos===1){
+      const tipoOp = pick(['suma','resta','mult','div']);
+      if(tipoOp==='suma'){ const c=R(1,alto), r=x+c;
+        return { enunciado:`${letra} + ${c} = ${r}`, tipo:'num', respuesta:x,
+          explicacion:[`Para despejar ${letra}, resta ${c} en ambos lados.`,`${letra} = ${r} − ${c} = ${x}`] }; }
+      if(tipoOp==='resta'){ const c=R(1,alto), r=x-c;
+        return { enunciado:`${letra} − ${c} = ${r}`, tipo:'num', respuesta:x,
+          explicacion:[`Para despejar ${letra}, suma ${c} en ambos lados.`,`${letra} = ${r} + ${c} = ${x}`] }; }
+      if(tipoOp==='mult'){ const c=R(2,10), r=x*c;
+        return { enunciado:`${c}${letra} = ${r}`, tipo:'num', respuesta:x,
+          explicacion:[`Para despejar ${letra}, divide entre ${c} en ambos lados.`,`${letra} = ${r} ÷ ${c} = ${x}`] }; }
+      const c=R(2,10), k=R(1,alto), sol=k*c;
+      return { enunciado:`${letra} ÷ ${c} = ${k}`, tipo:'num', respuesta:sol,
+        explicacion:[`Para despejar ${letra}, multiplica por ${c} en ambos lados.`,`${letra} = ${k} × ${c} = ${sol}`] };
+    }
+    const c1 = R(2,10), c2 = R(1,alto), sig = pick(['+','−']);
+    const r = sig==='+' ? c1*x + c2 : c1*x - c2;
+    return { enunciado:`${c1}${letra} ${sig} ${c2} = ${r}`, tipo:'num', respuesta:x,
+      explicacion:[`Paso 1: deshaz la suma/resta. ${sig==='+'?`${r} − ${c2}`:`${r} + ${c2}`} = ${c1*x}`,
+        `Paso 2: deshaz la multiplicación. ${c1*x} ÷ ${c1} = ${x}`, `→ ${letra} = ${x}`] };
+  }
+},
+{
+  id:'problemas-verbales-alg', nombre:'Problemas verbales (álgebra)', secciones:['2.4'],
+  gen(nv){
+    const alto = porNivel(nv, 20, 50, 120);
+    const sol = R(5,alto);
+    const plantillas = [
+      () => { const c=R(1,alto); const total=sol+c;
+        return { enunciado:`María tenía cierta cantidad de dólares. Su mamá le dio $${c} más y ahora tiene $${total}. ¿Cuánto dinero tenía María al principio?`,
+          expl:[`Palabra clave "más" → suma. Ecuación: x + ${c} = ${total}`, `x = ${total} − ${c} = ${sol}`] }; },
+      () => { const c=R(1,sol-1); const total=sol-c;
+        return { enunciado:`Había cierta cantidad de libros en una mesa. Se retiraron ${c} y quedaron ${total}. ¿Cuántos libros había originalmente?`,
+          expl:[`Palabra clave "se retiraron" → resta. Ecuación: x − ${c} = ${total}`, `x = ${total} + ${c} = ${sol}`] }; },
+      () => { const q=R(2,8); const total=sol*q;
+        return { enunciado:`${q} boletos cuestan en total $${total} y todos tienen el mismo precio. ¿Cuánto cuesta cada boleto?`,
+          expl:[`${q} boletos por el precio de cada uno dan el total. Ecuación: ${q}x = ${total}`, `x = ${total} ÷ ${q} = ${sol}`] }; },
+      () => { const q=R(2,8); const total=sol*q;
+        return { enunciado:`Se repartieron ${total} lápices en partes iguales entre ${q} estudiantes. ¿Cuántos lápices recibió cada estudiante?`,
+          expl:[`Palabra clave "repartieron en partes iguales" → división.`, `${total} ÷ ${q} = ${sol}`] }; }
+    ];
+    const t = pick(plantillas)();
+    return { enunciado: t.enunciado, tipo:'num', respuesta: sol, explicacion: t.expl };
+  }
+},
+{
+  id:'promedio', nombre:'Media aritmética (promedio)', secciones:['2.5'],
+  gen(nv){
+    const cuantos = R(3, porNivel(nv,4,5,6));
+    const alto = porNivel(nv, 20, 100, 200);
+    const vals = []; for(let i=0;i<cuantos;i++) vals.push(R(1,alto));
+    const suma = vals.reduce((a,b)=>a+b,0);
+    const media = Math.round((suma/cuantos)*100)/100;
+    return { enunciado:`Halla el promedio de: <b>${vals.join(', ')}</b>`, tipo:'num', respuesta:media,
+      explicacion:[`Media = suma de los valores ÷ cantidad de valores`,
+        `Suma: ${vals.join(' + ')} = ${suma}`, `Cantidad de valores: ${cuantos}`,
+        `${suma} ÷ ${cuantos} = ${media}`] };
+  }
+},
+{
+  id:'angulos', nombre:'Ángulos', secciones:['2.6'],
+  gen(nv){
+    const variante = pick(['clasificar','complemento','suplemento','opuestos']);
+    if(variante==='clasificar'){
+      const tipo = pick(['agudo','recto','obtuso','llano']);
+      const deg = tipo==='agudo' ? R(10,89) : tipo==='recto' ? 90 : tipo==='obtuso' ? R(91,179) : 180;
+      const nombre = {agudo:'Agudo',recto:'Recto',obtuso:'Obtuso',llano:'Llano'}[tipo];
+      return { enunciado:`Un ángulo mide <b>${deg}°</b>. ¿Cómo se clasifica?`,
+        tipo:'opciones', opciones: shuffle(['Agudo','Recto','Obtuso','Llano']), respuesta: nombre,
+        explicacion:[`Agudo: menor que 90°. Recto: igual a 90°. Obtuso: entre 90° y 180°. Llano: igual a 180°.`,
+          `${deg}° → ${nombre}`] };
+    }
+    if(variante==='complemento'){
+      const a = R(10,80);
+      return { enunciado:`¿Cuál es el complemento de un ángulo de <b>${a}°</b>?`, tipo:'num', respuesta:90-a,
+        explicacion:[`Dos ángulos complementarios suman 90°.`, `x + ${a}° = 90°`, `x = 90 − ${a} = ${90-a}`] };
+    }
+    if(variante==='suplemento'){
+      const a = R(10,170);
+      return { enunciado:`¿Cuál es el suplemento de un ángulo de <b>${a}°</b>?`, tipo:'num', respuesta:180-a,
+        explicacion:[`Dos ángulos suplementarios suman 180°.`, `x + ${a}° = 180°`, `x = 180 − ${a} = ${180-a}`] };
+    }
+    const a = R(10,170);
+    return { enunciado:`Dos rectas se cruzan. Uno de los ángulos mide <b>${a}°</b>. ¿Cuánto mide el ángulo opuesto por el vértice?`,
+      tipo:'num', respuesta:a,
+      explicacion:[`Los ángulos opuestos por el vértice son congruentes (miden lo mismo).`,
+        `→ el ángulo opuesto también mide ${a}°`] };
+  }
+},
+{
+  id:'triangulos', nombre:'Triángulos según sus lados', secciones:['2.6'],
+  gen(nv){
+    const alto = porNivel(nv, 15, 25, 40);
+    const tipo = pick(['equilatero','isosceles','escaleno']);
+    let a,b,c;
+    if(tipo==='equilatero'){ a=b=c=R(3,alto); }
+    else if(tipo==='isosceles'){ a=b=R(3,alto); do{ c=R(3,alto); }while(c===a); }
+    else { a=R(3,alto); do{ b=R(3,alto); }while(b===a); do{ c=R(3,alto); }while(c===a||c===b); }
+    const nombre = {equilatero:'Equilátero',isosceles:'Isósceles',escaleno:'Escaleno'}[tipo];
+    return { enunciado:`Un triángulo tiene lados de <b>${a}, ${b} y ${c}</b>. ¿Cómo se clasifica según sus lados?`,
+      tipo:'opciones', opciones: shuffle(['Equilátero','Isósceles','Escaleno']), respuesta: nombre,
+      explicacion:[`Equilátero: los 3 lados iguales. Isósceles: 2 lados iguales. Escaleno: los 3 diferentes.`,
+        `${a}, ${b}, ${c} → ${nombre}`] };
+  }
+},
+{
+  id:'perimetro-area', nombre:'Perímetro y área', secciones:['2.7'],
+  gen(nv){
+    const alto = porNivel(nv, 12, 20, 35);
+    const R2 = () => R(3,alto);
+    const forma = pick(['cuadrado','rectangulo','triangulo','circulo','trapecio','rombo','romboide']);
+    const medida = pick(['perimetro','area']);
+    if(forma==='cuadrado'){
+      const l = R2();
+      return medida==='perimetro'
+        ? { enunciado:`Halla el <b>perímetro</b> de un cuadrado de lado ${l}.`, tipo:'num', respuesta:4*l,
+            explicacion:[`P = 4 × lado`, `P = 4 × ${l} = ${4*l}`] }
+        : { enunciado:`Halla el <b>área</b> de un cuadrado de lado ${l}.`, tipo:'num', respuesta:l*l,
+            explicacion:[`A = lado²`, `A = ${l}² = ${l*l}`] };
+    }
+    if(forma==='rectangulo'){
+      const l=R2(), w=R2();
+      return medida==='perimetro'
+        ? { enunciado:`Halla el <b>perímetro</b> de un rectángulo de ${l} por ${w}.`, tipo:'num', respuesta:2*l+2*w,
+            explicacion:[`P = 2×largo + 2×ancho`, `P = 2×${l} + 2×${w} = ${2*l+2*w}`] }
+        : { enunciado:`Halla el <b>área</b> de un rectángulo de ${l} por ${w}.`, tipo:'num', respuesta:l*w,
+            explicacion:[`A = largo × ancho`, `A = ${l} × ${w} = ${l*w}`] };
+    }
+    if(forma==='triangulo'){
+      if(medida==='area'){
+        const b=R2(), h=R2(), bb=(b*h)%2===0?b:b+1, a=(bb*h)/2;
+        return { enunciado:`Halla el <b>área</b> de un triángulo con base ${bb} y altura ${h}.`, tipo:'num', respuesta:a,
+          explicacion:[`A = (base × altura) ÷ 2`, `A = (${bb} × ${h}) ÷ 2 = ${a}`] };
+      }
+      const l1=R2(),l2=R2(),l3=R2();
+      return { enunciado:`Halla el <b>perímetro</b> de un triángulo con lados ${l1}, ${l2} y ${l3}.`, tipo:'num', respuesta:l1+l2+l3,
+        explicacion:[`P = suma de los 3 lados`, `P = ${l1} + ${l2} + ${l3} = ${l1+l2+l3}`] };
+    }
+    if(forma==='circulo'){
+      const r = R(2,15);
+      if(medida==='perimetro'){ const c = Math.round(2*3.14*r*100)/100;
+        return { enunciado:`Halla la <b>circunferencia</b> de un círculo con radio ${r} (usa π ≈ 3.14).`, tipo:'num', respuesta:c,
+          explicacion:[`C = 2πr`, `C = 2 × 3.14 × ${r} = ${c}`] }; }
+      const a = Math.round(3.14*r*r*100)/100;
+      return { enunciado:`Halla el <b>área</b> de un círculo con radio ${r} (usa π ≈ 3.14).`, tipo:'num', respuesta:a,
+        explicacion:[`A = πr²`, `A = 3.14 × ${r}² = 3.14 × ${r*r} = ${a}`] };
+    }
+    if(forma==='trapecio'){
+      const B=R2(), b2=R(2,B-1), l1=R2(), l2=R2();
+      if(medida==='area'){ const h=R2(), b3=((B+b2)*h)%2===0?b2:b2+1, a=((B+b3)*h)/2;
+        return { enunciado:`Halla el <b>área</b> de un trapecio con bases ${B} y ${b3}, y altura ${h}.`, tipo:'num', respuesta:a,
+          explicacion:[`A = ((base mayor + base menor) × altura) ÷ 2`, `A = ((${B} + ${b3}) × ${h}) ÷ 2 = ${a}`] }; }
+      return { enunciado:`Halla el <b>perímetro</b> de un trapecio con lados ${B}, ${b2}, ${l1} y ${l2}.`, tipo:'num', respuesta:B+b2+l1+l2,
+        explicacion:[`P = suma de los 4 lados`, `P = ${B} + ${b2} + ${l1} + ${l2} = ${B+b2+l1+l2}`] };
+    }
+    if(forma==='rombo'){
+      const l = R2();
+      if(medida==='perimetro') return { enunciado:`Halla el <b>perímetro</b> de un rombo de lado ${l}.`, tipo:'num', respuesta:4*l,
+        explicacion:[`P = 4 × lado`, `P = 4 × ${l} = ${4*l}`] };
+      const D=R(4,alto), d0=R(2,D-1), d=(D*d0)%2===0?d0:d0+1, a=(D*d)/2;
+      return { enunciado:`Halla el <b>área</b> de un rombo con diagonales ${D} y ${d}.`, tipo:'num', respuesta:a,
+        explicacion:[`A = (diagonal mayor × diagonal menor) ÷ 2`, `A = (${D} × ${d}) ÷ 2 = ${a}`] };
+    }
+    const b=R2(), h=R2(), l=R2();
+    return medida==='area'
+      ? { enunciado:`Halla el <b>área</b> de un romboide con base ${b} y altura ${h}.`, tipo:'num', respuesta:b*h,
+          explicacion:[`A = base × altura`, `A = ${b} × ${h} = ${b*h}`] }
+      : { enunciado:`Halla el <b>perímetro</b> de un romboide con lados ${b} y ${l}.`, tipo:'num', respuesta:2*b+2*l,
+          explicacion:[`P = 2×lado a + 2×lado b`, `P = 2×${b} + 2×${l} = ${2*b+2*l}`] };
+  }
+},
+{
+  id:'divisibilidad', nombre:'Divisibilidad', secciones:['3.1'],
+  gen(nv){
+    const d = pick(porNivel(nv, [2,5,10,3], [2,3,4,5,6,9,10], [3,4,6,9,12]));
+    const alto = porNivel(nv, 200, 999, 9999);
+    // la mitad de las veces forzamos que sí sea divisible
+    const n = Math.random()<0.5 ? d*R(4, Math.floor(alto/d)) : R(20, alto);
+    return { enunciado:`¿Es <b>${n}</b> divisible por <b>${d}</b>?`, tipo:'sino',
+             respuesta: n%d===0, explicacion: explDivisibilidad(n,d) };
+  }
+},
+{
+  id:'primos', nombre:'Primo o compuesto', secciones:['3.2'],
+  gen(nv){
+    const alto = porNivel(nv, 60, 150, 300);
+    const n = Math.random()<0.35 ? pick(TRAMPAS.filter(x=>x<=alto)) || R(2,alto) : R(2,alto);
+    return { enunciado:`¿Es <b>${n}</b> un número primo?`, tipo:'sino',
+             respuesta: esPrimo(n), explicacion: explPrimo(n) };
+  }
+},
+{
+  id:'factorizacion', nombre:'Factorización prima', secciones:['3.2','3.3'],
+  gen(nv){
+    const alto = porNivel(nv, 60, 200, 600);
+    let n; do { n = R(12, alto); } while(esPrimo(n));
+    return { enunciado:`Escribe la <b>factorización prima</b> de <b>${n}</b>.`,
+             tipo:'texto', respuesta: factorizar(n), explicacion: explFactorizar(n),
+             ayuda:'Puedes escribirlo como <b>2^3 * 5</b> o como <b>2*2*2*5</b>.' };
+  }
+},
+{
+  id:'mcm-listado', nombre:'MCM por listado', secciones:['3.3'],
+  gen(nv){
+    const alto = porNivel(nv, 12, 20, 30);
+    const a = R(2,alto), b = R(2,alto);
+    return { enunciado:`Halla el <b>MCM</b> de <b>${a}</b> y <b>${b}</b> listando sus múltiplos.`,
+             tipo:'num', respuesta: mcm(a,b), explicacion: explMcmListado(a,b) };
+  }
+},
+{
+  id:'mcm-factores', nombre:'MCM por factorización', secciones:['3.3'],
+  gen(nv){
+    const cuantos = porNivel(nv, 2, Math.random()<0.4?3:2, 3);
+    const alto = porNivel(nv, 40, 90, 180);
+    const ns = []; for(let i=0;i<cuantos;i++) ns.push(R(6,alto));
+    let enunciado = `Halla el <b>MCM</b> de <b>${ns.join(', ')}</b> usando factorización prima.`;
+    if(cuantos===2 && Math.random()<0.4)
+      enunciado = `Una campana suena cada <b>${ns[0]}</b> minutos y otra cada <b>${ns[1]}</b> minutos. `+
+                  `Si acaban de sonar juntas, ¿dentro de cuántos minutos volverán a sonar juntas?`;
+    else if(cuantos===3 && Math.random()<0.4)
+      enunciado = `Los vasos vienen en paquetes de <b>${ns[0]}</b>, los platos de <b>${ns[1]}</b> y las servilletas de <b>${ns[2]}</b>. `+
+                  `¿Cuál es la cantidad mínima que hay que comprar para tener la misma cantidad de cada cosa?`;
+    return { enunciado, tipo:'num', respuesta: ns.reduce(mcm), explicacion: explMcmFactores(ns) };
+  }
+},
+{
+  id:'mcd', nombre:'MCD (máximo común divisor)', secciones:['3.3'],
+  gen(nv){
+    const cuantos = porNivel(nv, 2, Math.random()<0.35?3:2, 3);
+    const alto = porNivel(nv, 40, 120, 300);
+    const ns = []; for(let i=0;i<cuantos;i++) ns.push(R(8,alto));
+    let enunciado = `Halla el <b>MCD</b> de <b>${ns.join(', ')}</b>.`;
+    if(cuantos===2 && Math.random()<0.4)
+      enunciado = `Una hoja mide <b>${ns[0]}</b> cm por <b>${ns[1]}</b> cm. ¿Cuál es el lado del cuadrado `+
+                  `más grande con el que se puede cortar toda la hoja sin que sobre nada?`;
+    return { enunciado, tipo:'num', respuesta: ns.reduce(mcd), explicacion: explMcd(ns) };
+  }
+},
+{
+  id:'frac-equivalentes', nombre:'Fracciones equivalentes', secciones:['3.4'],
+  gen(nv){
+    const alto = porNivel(nv, 9, 15, 25);
+    const d = R(2,alto), n = R(1,d-1), k = R(2, porNivel(nv,5,9,14));
+    const faltaNum = Math.random()<0.5;
+    if(faltaNum) return {
+      enunciado:`Completa: ${fr(n,d)} = ${fr('?', d*k)}`, tipo:'num', respuesta: n*k,
+      explicacion:[`Miramos los denominadores: ${d*k} ÷ ${d} = ${k}.`,
+        `El factor de conversión es ${k}: hay que multiplicar arriba y abajo por lo mismo.`,
+        `${n} × ${k} = ${n*k}`, `→ ${n}/${d} = ${n*k}/${d*k}`] };
+    return {
+      enunciado:`Completa: ${fr(n,d)} = ${fr(n*k, '?')}`, tipo:'num', respuesta: d*k,
+      explicacion:[`Miramos los numeradores: ${n*k} ÷ ${n} = ${k}.`,
+        `El factor de conversión es ${k}: hay que multiplicar arriba y abajo por lo mismo.`,
+        `${d} × ${k} = ${d*k}`, `→ ${n}/${d} = ${n*k}/${d*k}`] };
+  }
+},
+{
+  id:'simplificar', nombre:'Simplificar fracciones', secciones:['3.4','3.5'],
+  gen(nv){
+    const alto = porNivel(nv, 8, 12, 20);
+    let bd = R(2,alto), bn = R(1, bd-1);
+    const g = mcd(bn,bd); bn/=g; bd/=g;                 // base ya simplificada
+    const k = R(2, porNivel(nv, 6, 10, 16));
+    const n = bn*k, d = bd*k;
+    let enunciado = `Simplifica ${fr(n,d)} a su mínima expresión.`;
+    if(Math.random()<0.35)
+      enunciado = `Un libro tiene <b>${d}</b> páginas y ya ha leído <b>${n}</b>. `+
+                  `¿Qué fracción del libro ha leído? (simplificada)`;
+    return { enunciado, tipo:'frac', respuesta:{n:bn, d:bd}, pedirSimple:true,
+      explicacion:[`Buscamos el MCD de ${n} y ${d}.`,
+        `${n} = ${fmtFactores(factorizar(n))} · ${d} = ${fmtFactores(factorizar(d))}`,
+        `MCD(${n}, ${d}) = ${mcd(n,d)}`,
+        `${n} ÷ ${mcd(n,d)} = ${bn} y ${d} ÷ ${mcd(n,d)} = ${bd}`,
+        `→ ${n}/${d} = ${bn}/${bd}`] };
+  }
+},
+{
+  id:'comparar', nombre:'Comparar y ordenar', secciones:['3.5','3.6'],
+  gen(nv){
+    const alto = porNivel(nv, 9, 14, 22);
+    const nueva = () => { const d = R(2,alto); return { n:R(1,d-1), d }; };
+    if(Math.random() < 0.65){                            // comparar dos
+      const a = nueva();
+      const b = Math.random()<0.2 ? {n:a.n*2, d:a.d*2} : nueva();   // a veces iguales
+      const m = mcm(a.d,b.d);
+      return { enunciado:`¿Qué signo va en el medio?<br>${fr(a.n,a.d)} &nbsp;___&nbsp; ${fr(b.n,b.d)}`,
+        tipo:'cmp', respuesta: cmpSigno(a.n*(m/a.d), b.n*(m/b.d)), explicacion: explComparar(a,b) };
+    }
+    // ordenar tres
+    const fs = []; while(fs.length<3){ const f = nueva();
+      if(!fs.some(x => x.n*f.d === f.n*x.d)) fs.push(f); }
+    const asc = Math.random()<0.5;
+    const m = fs.reduce((ac,f)=>mcm(ac,f.d), 1);
+    const conv = fs.map((f,i)=>({i, v:f.n*(m/f.d), f}));
+    const orden = conv.slice().sort((a,b)=> asc ? a.v-b.v : b.v-a.v);
+    return {
+      enunciado:`Ordena estas fracciones de <b>${asc?'menor a mayor':'mayor a menor'}</b>.<br>`+
+                `<small style="opacity:.75">Tócalas en orden.</small>`,
+      tipo:'orden', opciones: fs, respuesta: orden.map(o=>o.i),
+      explicacion:[`Denominador común: MCM(${fs.map(f=>f.d).join(', ')}) = ${m}`,
+        ...conv.map(c=>`${c.f.n}/${c.f.d} → ${c.v}/${m}`),
+        `Ordenando los numeradores de ${asc?'menor a mayor':'mayor a menor'}: ${orden.map(o=>o.v).join(' , ')}`,
+        `→ ${orden.map(o=>`${o.f.n}/${o.f.d}`).join(' , ')}`] };
+  }
+},
+{
+  id:'mixtos', nombre:'Mixtos e impropias', secciones:['3.7'],
+  gen(nv){
+    const alto = porNivel(nv, 6, 10, 16);
+    const d = R(2,alto), e = R(1, porNivel(nv,5,9,15));
+    let n; do { n = R(1, d-1); } while(mcd(n,d) !== 1);   // la parte fraccionaria ya nace irreducible
+    const imp = e*d + n;
+    if(Math.random()<0.5) return {
+      enunciado:`Convierte el número mixto <b>${e}</b> ${fr(n,d)} en fracción impropia.`,
+      tipo:'frac', respuesta:{n:imp, d}, pedirSimple:false,
+      explicacion:[`Se multiplica el entero por el denominador: ${e} × ${d} = ${e*d}`,
+        `Se le suma el numerador: ${e*d} + ${n} = ${imp}`,
+        `El denominador no cambia.`, `→ ${e} ${n}/${d} = ${imp}/${d}`] };
+    return {
+      enunciado:`Convierte ${fr(imp,d)} en número mixto.`,
+      tipo:'mixto', respuesta:{e, n, d},
+      explicacion:[`Se divide el numerador entre el denominador: ${imp} ÷ ${d}`,
+        `${d} × ${e} = ${e*d}, y sobran ${imp} − ${e*d} = ${n}`,
+        `El cociente ${e} es el entero, el resto ${n} es el nuevo numerador.`,
+        `→ ${imp}/${d} = ${e} ${n}/${d}`] };
+  }
+},
+{
+  id:'razones', nombre:'Razones', secciones:['3.8'],
+  gen(nv){
+    const alto = porNivel(nv, 12, 30, 60);
+    const k = R(2, porNivel(nv,4,7,11));
+    let a = R(1,alto), b = R(1,alto);
+    if(a===b) b = a+k;
+    a *= k; b *= k;
+    const [sn,sd] = simplificar(a,b);
+    const casos = [
+      `Una varilla mide <b>${a}</b> cm y otra mide <b>${b}</b> cm. Expresa la razón de <b>la primera a la segunda</b>, simplificada.`,
+      `En un salón hay <b>${a}</b> niñas y <b>${b}</b> niños. Escribe la razón de <b>niñas a niños</b>, simplificada.`,
+      `Escribe la razón de <b>${a} a ${b}</b> en su forma más simple.`
+    ];
+    return { enunciado: pick(casos), tipo:'frac', respuesta:{n:sn, d:sd}, pedirSimple:true,
+      ayuda:'El orden importa: el primer número va arriba.',
+      explicacion:[`"La razón de ${a} a ${b}" se escribe ${a}/${b} — el primer número va arriba.`,
+        `MCD(${a}, ${b}) = ${mcd(a,b)}`,
+        `${a} ÷ ${mcd(a,b)} = ${sn} y ${b} ÷ ${mcd(a,b)} = ${sd}`,
+        `→ la razón es ${sn} : ${sd}`] };
+  }
+}
+];
+const MOD_POR_ID = {}; MODULOS.forEach(m => MOD_POR_ID[m.id] = m);
+
+/* ══════════════════════════════════════════════════════════
+   4. VERIFICACIÓN  — una función para los 6 tipos de entrada
+   ══════════════════════════════════════════════════════════ */
+function parseFactores(s){
+  s = String(s).toLowerCase().replace(/[×·]/g,'*').replace(/\s+/g,'').replace(/x/g,'*');
+  if(!s) return null;
+  const out = {};
+  for(const t of s.split('*')){
+    if(!t) return null;
+    const m = t.match(/^(\d+)(?:\^(\d+))?$/);
+    if(!m) return null;
+    const p = +m[1], e = m[2] ? +m[2] : 1;
+    if(p < 2) return null;
+    out[p] = (out[p]||0) + e;
+  }
+  return out;
+}
+const numLimpio = s => Number(String(s).trim().replace(/\s+/g,'').replace(',','.'));
+
+function verificar(ej, ent){
+  switch(ej.tipo){
+    case 'sino': return { ok: ent === ej.respuesta };
+    case 'cmp':  return { ok: ent === ej.respuesta };
+    case 'num': {
+      const v = numLimpio(ent);
+      if(!isFinite(v) || ent === '') return { ok:false, vacio:true };
+      return { ok: Math.abs(v - ej.respuesta) < 0.01 };   // tolerancia: promedio/círculo redondean a 2 decimales
+    }
+    case 'opciones': return { ok: ent === ej.respuesta };
+    case 'orden': return { ok: ent.length===ej.respuesta.length && ent.every((v,i)=>v===ej.respuesta[i]) };
+    case 'frac': {
+      let n = numLimpio(ent.n), d = numLimpio(ent.d);
+      if(!isFinite(n) || !isFinite(d) || ent.n==='' || ent.d==='') return { ok:false, vacio:true };
+      if(d === 0) return { ok:false, msg:'El denominador no puede ser 0.' };
+      if(d < 0){ n = -n; d = -d; }                       // signo delante = signo arriba
+      const Rp = ej.respuesta;
+      if(n*Rp.d !== Rp.n*d) return { ok:false };
+      if(ej.pedirSimple && mcd(Math.abs(n), d) !== 1)
+        return { ok:false, incompleto:true,
+                 msg:`${n}/${d} vale lo mismo, pero el ejercicio pedía la mínima expresión.` };
+      return { ok:true };
+    }
+    case 'mixto': {
+      const e = numLimpio(ent.e), n = numLimpio(ent.n), d = numLimpio(ent.d);
+      if(![e,n,d].every(isFinite) || ent.e==='' || ent.n==='' || ent.d==='') return { ok:false, vacio:true };
+      if(d <= 0) return { ok:false, msg:'El denominador tiene que ser mayor que 0.' };
+      const Rp = ej.respuesta;
+      if((e*d + n)*Rp.d !== (Rp.e*Rp.d + Rp.n)*d) return { ok:false };
+      if(n >= d) return { ok:false, incompleto:true,
+        msg:'El valor es correcto, pero en un número mixto el numerador tiene que ser menor que el denominador.' };
+      if(mcd(n,d) !== 1) return { ok:false, incompleto:true, msg:'Falta simplificar la parte fraccionaria.' };
+      return { ok:true };
+    }
+    case 'texto': {
+      const f = parseFactores(ent);
+      if(!f) return { ok:false, msg:'No entendí lo que escribiste. Ejemplo: <b>2^3 * 5</b>' };
+      const bases = Object.keys(f).map(Number);
+      if(bases.some(p => !esPrimo(p)))
+        return { ok:false, msg:`Todos los factores tienen que ser primos (${bases.filter(p=>!esPrimo(p)).join(', ')} no lo ${bases.filter(p=>!esPrimo(p)).length>1?'son':'es'}).` };
+      const Rp = ej.respuesta, ks = Object.keys(Rp);
+      const ok = bases.length===ks.length && ks.every(p => f[p] === Rp[p]);
+      return { ok };
+    }
+  }
+  return { ok:false };
+}
+
+// respuesta correcta con la forma que tendría escrita el usuario (lo usa autotest)
+function respuestaComoEntrada(ej){
+  switch(ej.tipo){
+    case 'sino': case 'cmp': case 'orden': case 'opciones': return ej.respuesta;
+    case 'num':   return String(ej.respuesta);
+    case 'frac':  return { n:String(ej.respuesta.n), d:String(ej.respuesta.d) };
+    case 'mixto': return { e:String(ej.respuesta.e), n:String(ej.respuesta.n), d:String(ej.respuesta.d) };
+    case 'texto': return fmtFactoresPlano(ej.respuesta);
+  }
+}
+function fmtRespuesta(ej){
+  switch(ej.tipo){
+    case 'sino':  return ej.respuesta ? 'Sí' : 'No';
+    case 'cmp':   return ej.respuesta;
+    case 'num':   return String(ej.respuesta);
+    case 'frac':  return `${ej.respuesta.n}/${ej.respuesta.d}`;
+    case 'mixto': return `${ej.respuesta.e} ${ej.respuesta.n}/${ej.respuesta.d}`;
+    case 'texto': return fmtFactores(ej.respuesta);
+    case 'orden': return ej.respuesta.map(i=>`${ej.opciones[i].n}/${ej.opciones[i].d}`).join(' , ');
+    case 'opciones': return ej.respuesta;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   5. MODO CLASE  — leer el material y deducir qué toca estudiar
+   ══════════════════════════════════════════════════════════ */
+const SECMAP = {
+  '1.1': ['conjuntos-numericos'],
+  '1.2': ['valor-absoluto'],
+  '1.3': ['reglas-signos'],
+  '1.4': ['orden-operaciones-1'],
+  '2.1': ['lenguaje-algebraico','traducir-algebra'],
+  '2.2': ['propiedades'],
+  '2.3': ['terminos-semejantes'],
+  '2.4': ['ecuaciones-lineales','problemas-verbales-alg'],
+  '2.5': ['promedio'],
+  '2.6': ['angulos','triangulos'],
+  '2.7': ['perimetro-area'],
+  '3.1': ['divisibilidad'],
+  '3.2': ['primos','factorizacion'],
+  '3.3': ['factorizacion','mcm-listado','mcm-factores','mcd'],
+  '3.4': ['frac-equivalentes','simplificar'],
+  '3.5': ['simplificar','comparar'],
+  '3.6': ['comparar'],
+  '3.7': ['mixtos'],
+  '3.8': ['razones']
+};
+// EducoSoft está en inglés — las claves van en los dos idiomas
+const CLAVES = {
+  'conjuntos-numericos': ['conjunto numérico','conjuntos numéricos','number set','naturales','números naturales','números enteros','racionales','irracionales','números reales','natural numbers','integers','rational numbers','irrational numbers','real numbers'],
+  'valor-absoluto':    ['valor absoluto','absolute value'],
+  'reglas-signos':     ['regla de signos','reglas de signos','signed numbers','integer rules','suma de enteros','resta de enteros','multiplying integers','dividing integers'],
+  'orden-operaciones-1': ['orden de operaciones','order of operations','pemdas','agrupación','grouping symbols'],
+  'lenguaje-algebraico': ['lenguaje algebraico','algebraic expression','algebraic expressions','coeficiente','variable','constante','coefficient','constant'],
+  'traducir-algebra':  ['traducir','translate to algebra','palabra clave','key words','verbal expression'],
+  'propiedades':       ['propiedad','propiedades','property','properties','conmutativa','asociativa','distributiva','identidad','commutative property','associative property','distributive property','identity property'],
+  'terminos-semejantes': ['términos semejantes','like terms','combining like terms'],
+  'ecuaciones-lineales': ['ecuación lineal','ecuaciones lineales','linear equation','linear equations','despejar','solve for x','one-step equation','two-step equation'],
+  'problemas-verbales-alg': ['problema verbal','word problem','word problems'],
+  'promedio':          ['promedio','media aritmética','average','arithmetic mean'],
+  'angulos':           ['ángulo','ángulos','angle','angles','agudo','obtuso','complementario','suplementario','acute angle','obtuse angle','complementary angles','supplementary angles','vertical angles'],
+  'triangulos':        ['triángulo','triángulos','triangle','triangles','equilátero','isósceles','escaleno','equilateral','isosceles','scalene'],
+  'perimetro-area':    ['perímetro','área','perimeter','area','círculo','circunferencia','trapecio','rombo','romboide','circle','circumference','trapezoid','rhombus','parallelogram'],
+  'divisibilidad':    ['divisibilidad','divisible','divisibility','divisibility rule','regla de divisibilidad','múltiplo','multiple of'],
+  'primos':           ['primo','primos','prime','composite','compuesto','prime number'],
+  'factorizacion':    ['factorización','factorizacion','factorization','prime factorization','factor tree','árbol de factores','exponente','exponent'],
+  'mcm-listado':      ['mcm','lcm','mínimo común múltiplo','least common multiple','common multiple','múltiplo común'],
+  'mcm-factores':     ['mcm','lcm','least common multiple','mínimo común múltiplo','lcd','least common denominator','mínimo común denominador'],
+  'mcd':              ['mcd','gcf','gcd','máximo común divisor','maximo comun divisor','greatest common factor','greatest common divisor','common factor','factor común'],
+  'frac-equivalentes':['fracción equivalente','fracciones equivalentes','equivalent fraction','equivalent fractions','building up','amplificar'],
+  'simplificar':      ['simplificar','simplify','simplest form','lowest terms','reduce','reducir','mínima expresión'],
+  'comparar':         ['comparar','compare','comparing fractions','order','ordenar','greater than','less than','mayor que','menor que'],
+  'mixtos':           ['mixto','mixtos','mixed number','mixed numbers','improper','impropia','impropias','número mixto'],
+  'razones':          ['razón','razones','ratio','ratios','rate','proporción','proportion']
+};
+
+function analizarTexto(txt){
+  const t = ' ' + String(txt).toLowerCase().replace(/\s+/g,' ') + ' ';
+  const puntos = {}, secs = new Set();
+  MODULOS.forEach(m => puntos[m.id] = 0);
+
+  // (a) rangos "3.1 - 3.8" y "3.1 a 3.8"
+  const rangos = t.match(/(\d+)\s*\.\s*(\d+)\s*(?:-|–|—|a|to)\s*(\d+)\s*\.\s*(\d+)/g) || [];
+  rangos.forEach(r=>{
+    const m = r.match(/(\d+)\s*\.\s*(\d+)\s*(?:-|–|—|a|to)\s*(\d+)\s*\.\s*(\d+)/);
+    if(+m[1] !== +m[3]) return;                          // solo dentro del mismo capítulo
+    for(let s = +m[2]; s <= +m[4]; s++) secs.add(`${+m[1]}.${s}`);
+  });
+  // (b) secciones sueltas — solo cuentan las que existen en el mapa
+  (t.match(/\b\d+\s*\.\s*\d+\b/g) || []).forEach(s => {
+    const k = s.replace(/\s+/g,'');
+    if(SECMAP[k]) secs.add(k);
+  });
+
+  const secsValidas = [...secs].filter(s => SECMAP[s]).sort();
+  secsValidas.forEach(s => SECMAP[s].forEach(id => puntos[id] += 5));
+
+  // (c) palabras clave
+  const encontradas = {};
+  MODULOS.forEach(m=>{
+    encontradas[m.id] = [];
+    CLAVES[m.id].forEach(k=>{
+      if(t.indexOf(' '+k) >= 0 || t.indexOf(k+' ') >= 0){
+        puntos[m.id] += 1; encontradas[m.id].push(k);
+      }
+    });
+  });
+
+  const detectados = MODULOS.filter(m => puntos[m.id] > 0)
+    .sort((a,b) => puntos[b.id] - puntos[a.id]);
+  return { puntos, secciones: secsValidas, detectados, claves: encontradas };
+}
+
+/* --- lectura de archivos (las librerías se cargan solo si hacen falta) --- */
+const URL_JSZIP = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+const URL_PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+const URL_PDFWK = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+function cargarScript(src){
+  return new Promise((ok, err)=>{
+    if(document.querySelector(`script[src="${src}"]`)) return ok();
+    const s = document.createElement('script');
+    s.src = src; s.onload = ()=>ok();
+    s.onerror = ()=>err(new Error('No se pudo cargar la librería. ¿Hay internet?'));
+    document.head.appendChild(s);
+  });
+}
+const desXml = s => s.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"')
+                     .replace(/&apos;/g,"'").replace(/&amp;/g,'&');
+
+async function textoDePptx(file){
+  await cargarScript(URL_JSZIP);
+  const zip = await JSZip.loadAsync(file);
+  const slides = Object.keys(zip.files)
+    .filter(n => /^ppt\/(slides|notesSlides)\/\w+\d+\.xml$/.test(n))
+    .sort((a,b) => (+a.replace(/\D/g,'')) - (+b.replace(/\D/g,'')));
+  if(!slides.length) throw new Error('Ese .pptx no tiene diapositivas legibles.');
+  const out = [];
+  for(const n of slides){
+    const xml = await zip.files[n].async('string');
+    out.push((xml.match(/<a:t[^>]*>[\s\S]*?<\/a:t>/g) || [])
+      .map(t => desXml(t.replace(/<[^>]+>/g,''))).join(' '));
+  }
+  return out.join('\n');
+}
+async function textoDePdf(file){
+  await cargarScript(URL_PDFJS);
+  pdfjsLib.GlobalWorkerOptions.workerSrc = URL_PDFWK;
+  const doc = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+  const out = [];
+  for(let i=1; i<=doc.numPages; i++){
+    const tc = await (await doc.getPage(i)).getTextContent();
+    out.push(tc.items.map(it => it.str).join(' '));
+  }
+  return out.join('\n');
+}
+async function textoDeArchivo(file){
+  const n = file.name.toLowerCase();
+  if(n.endsWith('.pptx')) return textoDePptx(file);
+  if(n.endsWith('.pdf'))  return textoDePdf(file);
+  return file.text();
+}
+
+/* ══════════════════════════════════════════════════════════
+   6. ALMACENAMIENTO
+   ══════════════════════════════════════════════════════════ */
+const guardar = (k,v) => { try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} };
+const leer = (k,d) => { try{ const v = localStorage.getItem(k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } };
+
+let nivel  = leer('mate_nivel_v1', 'medio');
+let clase  = leer('mate_clase_v1', null);      // { etiqueta, mods:[] }
+let stats  = leer('mate_stats_v1', {});        // { modId:{ok, fallo} }
+let racha  = leer('mate_racha_v1', { actual:0, mejor:0 });
+
+function anotar(modId, ok){
+  const s = stats[modId] || (stats[modId] = { ok:0, fallo:0 });
+  ok ? s.ok++ : s.fallo++;
+  guardar('mate_stats_v1', stats);
+  racha.actual = ok ? racha.actual + 1 : 0;
+  if(racha.actual > racha.mejor) racha.mejor = racha.actual;
+  guardar('mate_racha_v1', racha);
+}
+const pct = s => { const t = s.ok + s.fallo; return t ? Math.round(s.ok*100/t) : null; };
+
+/* módulos disponibles ahora mismo (según el modo clase) */
+function modulosActivos(){
+  if(clase && clase.mods && clase.mods.length){
+    const ms = clase.mods.map(id => MOD_POR_ID[id]).filter(Boolean);
+    if(ms.length) return ms;
+  }
+  return MODULOS;
+}
+/* elige módulo dando más peso a los que van peor; cap (1/2/3) limita la mezcla a ese capítulo */
+function elegirModulo(cap){
+  const ms = cap ? modulosActivos().filter(m=>m.secciones[0][0]===String(cap)) : modulosActivos();
+  const pesos = ms.map(m => {
+    const s = stats[m.id] || { ok:0, fallo:0 };
+    return 1 + s.fallo / (s.ok + s.fallo + 1);
+  });
+  let r = Math.random() * pesos.reduce((a,b)=>a+b, 0);
+  for(let i=0; i<ms.length; i++){ r -= pesos[i]; if(r <= 0) return ms[i]; }
+  return ms[ms.length-1];
+}
+
+/* ══════════════════════════════════════════════════════════
+   7. INTERFAZ
+   ══════════════════════════════════════════════════════════ */
+const $ = id => document.getElementById(id);
+const main = $('main');
+let ejActual = null, modActual = null, respondido = false, vioExpl = false, ordenSel = [];
+let esTemaFijo = false;   // true = practicando un tema concreto, no la mezcla
+let capFijo = null;       // 1/2/3 = mezclando solo los temas de ese capítulo
+
+function ir(pantalla, arg){
+  window.scrollTo(0,0);
+  if(pantalla === 'inicio')   return pantallaInicio();
+  if(pantalla === 'practica') return nuevoEjercicio(arg);
+  if(pantalla === 'stats')    return pantallaStats();
+  if(pantalla === 'clase')    return pantallaClase();
+}
+
+/* ---------- inicio ---------- */
+function pantallaInicio(){
+  const bannerClase = clase && clase.mods.length ? `
+    <div class="banner">
+      <span>Practicando lo de clase: ${clase.etiqueta}</span>
+      <button onclick="quitarClase()">Quitar</button>
+    </div>` : '';
+  main.innerHTML = `
+    <div class="card">
+      ${bannerClase}
+      <button class="btn amar" onclick="ir('practica')">Empezar a practicar
+        <small>${clase && clase.mods.length ? clase.mods.length+' temas de tu clase' : 'todos los temas mezclados'}</small></button>
+      <h3>Nivel</h3>
+      <div class="chips" id="chipsNivel">
+        ${['facil','medio','dificil'].map(nv=>`<button class="chip ${nivel===nv?'on':''}"
+          onclick="setNivel('${nv}')">${nv==='facil'?'Fácil':nv==='medio'?'Medio':'Difícil'}</button>`).join('')}
+      </div>
+      <div class="nota">Los niveles cambian el tamaño de los números, no el tipo de ejercicio.</div>
+    </div>
+
+    <div class="card">
+      <h2>Practicar un tema suelto</h2>
+      ${[1,2,3].map(cap => `
+        <h3>Capítulo ${cap}</h3>
+        <button class="btn amar chico" onclick="ir('practica',${cap})">Mezcla del capítulo ${cap}</button>
+        ${MODULOS.filter(m=>m.secciones[0][0]===String(cap)).map(m=>{
+          const s = stats[m.id], p = s ? pct(s) : null;
+          return `<button class="btn sec chico" onclick="ir('practica','${m.id}')">${m.nombre}
+            ${p!==null ? `<small>${p}% de aciertos · ${s.ok+s.fallo} ejercicios</small>` : ''}</button>`;
+        }).join('')}`).join('')}
+    </div>
+
+    <div class="card">
+      <button class="btn" onclick="ir('clase')">Material de clase
+        <small>Pega o sube la presentación y te digo qué practicar</small></button>
+      <button class="btn sec" onclick="ir('stats')">Mi progreso</button>
+    </div>`;
+}
+function setNivel(nv){ nivel = nv; guardar('mate_nivel_v1', nv); pantallaInicio(); }
+function quitarClase(){ clase = null; guardar('mate_clase_v1', null); pantallaInicio(); }
+
+/* ---------- práctica ---------- */
+function nuevoEjercicio(arg){
+  if(typeof arg === 'number'){       // mezcla dentro de un capítulo
+    esTemaFijo = false; capFijo = arg;
+    modActual = elegirModulo(arg);
+  } else {
+    esTemaFijo = !!arg; capFijo = null;   // si vino con tema, "Siguiente" se queda en ese tema
+    modActual = arg ? MOD_POR_ID[arg] : elegirModulo();
+  }
+  ejActual = modActual.gen(nivel);
+  ejActual.__mod = modActual.id;
+  respondido = false; vioExpl = false; ordenSel = [];
+  pintarEjercicio();
+}
+
+function entradaHTML(ej){
+  switch(ej.tipo){
+    case 'sino': return `<div class="opt">
+        <button class="btn" onclick="responder(true)">Sí</button>
+        <button class="btn" onclick="responder(false)">No</button></div>`;
+    case 'cmp': return `<div class="opt">
+        <button class="btn" onclick="responder('<')">&lt;</button>
+        <button class="btn" onclick="responder('=')">=</button>
+        <button class="btn" onclick="responder('>')">&gt;</button></div>`;
+    case 'opciones': return ej.opciones.map((o,i)=>
+        `<button class="btn" onclick="responder(ejActual.opciones[${i}])">${o}</button>`).join('');
+    case 'num': return `
+        <input class="campo" id="inNum" inputmode="numeric" autocomplete="off" placeholder="Tu respuesta">
+        <button class="btn amar" style="margin-top:10px" onclick="responder()">Comprobar</button>`;
+    case 'texto': return `
+        <input class="campo" id="inTexto" autocomplete="off" placeholder="ej. 2^3 * 5">
+        ${ej.ayuda ? `<div class="nota">${ej.ayuda}</div>` : ''}
+        <button class="btn amar" style="margin-top:10px" onclick="responder()">Comprobar</button>`;
+    case 'frac': return `
+        <div class="fracIn">
+          <input class="campo" id="inN" inputmode="numeric" autocomplete="off" placeholder="arriba">
+          <div class="barra"></div>
+          <input class="campo" id="inD" inputmode="numeric" autocomplete="off" placeholder="abajo">
+        </div>
+        ${ej.ayuda ? `<div class="nota">${ej.ayuda}</div>` : ''}
+        <button class="btn amar" style="margin-top:12px" onclick="responder()">Comprobar</button>`;
+    case 'mixto': return `
+        <div class="mixIn">
+          <input class="campo" id="inE" inputmode="numeric" autocomplete="off" placeholder="entero">
+          <div class="fracIn" style="margin:0">
+            <input class="campo" id="inN" inputmode="numeric" autocomplete="off" placeholder="arriba">
+            <div class="barra"></div>
+            <input class="campo" id="inD" inputmode="numeric" autocomplete="off" placeholder="abajo">
+          </div>
+        </div>
+        <button class="btn amar" style="margin-top:12px" onclick="responder()">Comprobar</button>`;
+    case 'orden': return `
+        <div class="ordenCaja" id="cajaOrden">
+          ${ej.opciones.map((f,i)=>`<button class="ordenChip" id="oc${i}" onclick="tocarOrden(${i})">${fr(f.n,f.d)}</button>`).join('')}
+        </div>
+        <div class="row">
+          <button class="btn sec chico" onclick="ordenSel=[];pintarOrden()">Borrar</button>
+          <button class="btn amar chico" onclick="responder()">Comprobar</button>
+        </div>`;
+  }
+  return '';
+}
+
+function pintarEjercicio(){
+  main.innerHTML = `
+    <button class="back" onclick="ir('inicio')">← Inicio</button>
+    <div class="card">
+      <span class="pill">${modActual.nombre}</span>
+      <div class="enunciado">${ejActual.enunciado}</div>
+      <div id="zonaEntrada">${entradaHTML(ejActual)}</div>
+      <div id="zonaFb"></div>
+      <button class="btn sec chico" id="btnExpl" onclick="verExplicacion()">Ver explicación</button>
+    </div>
+    <div class="card" style="padding:14px 20px">
+      <div class="racha">
+        <div><b>${racha.actual}</b><span>racha actual</span></div>
+        <div><b>${racha.mejor}</b><span>mejor racha</span></div>
+        <div><b>${(stats[modActual.id]&&pct(stats[modActual.id])!==null)?pct(stats[modActual.id])+'%':'—'}</b><span>en este tema</span></div>
+      </div>
+    </div>`;
+  const primero = $('inNum') || $('inTexto') || $('inE') || $('inN');
+  if(primero){
+    primero.focus();
+    ['inNum','inTexto','inE','inN','inD'].forEach(id=>{
+      const el = $(id); if(el) el.addEventListener('keydown', e => { if(e.key==='Enter') responder(); });
+    });
+  }
+}
+
+function tocarOrden(i){
+  if(respondido) return;
+  const p = ordenSel.indexOf(i);
+  if(p >= 0) ordenSel.splice(p,1); else ordenSel.push(i);
+  pintarOrden();
+}
+function pintarOrden(){
+  ejActual.opciones.forEach((_,i)=>{
+    const el = $('oc'+i); if(!el) return;
+    const p = ordenSel.indexOf(i);
+    el.classList.toggle('on', p >= 0);
+    const badge = el.querySelector('.num');
+    if(p >= 0){
+      if(badge) badge.textContent = p+1;
+      else el.insertAdjacentHTML('beforeend', `<span class="num">${p+1}</span>`);
+    } else if(badge) badge.remove();
+  });
+}
+
+function leerEntrada(ej){
+  switch(ej.tipo){
+    case 'num':   return $('inNum').value;
+    case 'texto': return $('inTexto').value;
+    case 'frac':  return { n:$('inN').value, d:$('inD').value };
+    case 'mixto': return { e:$('inE').value, n:$('inN').value, d:$('inD').value };
+    case 'orden': return ordenSel.slice();
+  }
+}
+
+function responder(valor){
+  if(respondido) return;
+  const ent = (valor !== undefined) ? valor : leerEntrada(ejActual);
+  if(ejActual.tipo === 'orden' && ent.length < ejActual.opciones.length){
+    return mostrarFb({ ok:false, msg:'Toca las tres fracciones, en el orden que pide.' }, true);
+  }
+  const res = verificar(ejActual, ent);
+  if(res.vacio) return mostrarFb({ ok:false, msg:'Te falta escribir la respuesta.' }, true);
+
+  respondido = true;
+  if(!vioExpl) anotar(ejActual.__mod, res.ok);
+  mostrarFb(res, false);
+}
+
+function mostrarFb(res, soloAviso){
+  const zona = $('zonaFb');
+  if(soloAviso){ zona.innerHTML = `<div class="fb medio">${res.msg}</div>`; return; }
+
+  const clase_ = res.ok ? 'ok' : res.incompleto ? 'medio' : 'mal';
+  const titulo = res.ok ? '¡Correcto!' : res.incompleto ? 'Casi' : 'No es esa';
+  zona.innerHTML = `
+    <div class="fb ${clase_}">${titulo}
+      ${res.msg ? `<small>${res.msg}</small>` : ''}
+      ${!res.ok ? `<small>La respuesta es <b>${fmtRespuesta(ejActual)}</b>.</small>` : ''}
+      ${vioExpl ? `<small>Este no cuenta para las estadísticas (viste la explicación antes).</small>` : ''}
+    </div>
+    ${explHTML()}
+    <button class="btn amar" onclick="ir('practica'${esTemaFijo ? `,'${modActual.id}'` : capFijo ? `,${capFijo}` : ''})">Siguiente ejercicio</button>`;
+  $('zonaEntrada').style.opacity = '.5';
+  $('zonaEntrada').style.pointerEvents = 'none';
+  $('btnExpl').style.display = 'none';
+}
+
+const explHTML = () => `
+  <div class="expl"><h3>Por qué</h3>
+    <ol>${ejActual.explicacion.map(l=>`<li>${l}</li>`).join('')}</ol></div>`;
+
+function verExplicacion(){
+  if(respondido) return;
+  vioExpl = true; respondido = true;
+  $('zonaEntrada').style.opacity = '.5';
+  $('zonaEntrada').style.pointerEvents = 'none';
+  $('btnExpl').style.display = 'none';
+  $('zonaFb').innerHTML = `
+    <div class="fb medio">Respuesta: <b>${fmtRespuesta(ejActual)}</b>
+      <small>Este ejercicio no cuenta para las estadísticas.</small></div>
+    ${explHTML()}
+    <button class="btn amar" onclick="ir('practica'${esTemaFijo ? `,'${modActual.id}'` : capFijo ? `,${capFijo}` : ''})">Siguiente ejercicio</button>`;
+}
+
+/* ---------- progreso ---------- */
+function pantallaStats(){
+  const conDatos = MODULOS.filter(m => stats[m.id] && (stats[m.id].ok + stats[m.id].fallo) > 0);
+  const total = conDatos.reduce((a,m)=>a + stats[m.id].ok + stats[m.id].fallo, 0);
+  const aciertos = conDatos.reduce((a,m)=>a + stats[m.id].ok, 0);
+
+  let flojo = null;
+  const candidatos = conDatos.filter(m => (stats[m.id].ok + stats[m.id].fallo) >= 3);
+  if(candidatos.length) flojo = candidatos.reduce((a,b)=> pct(stats[a.id]) <= pct(stats[b.id]) ? a : b);
+
+  main.innerHTML = `
+    <button class="back" onclick="ir('inicio')">← Inicio</button>
+    <div class="card">
+      <h2>Mi progreso</h2>
+      <div class="racha">
+        <div><b>${total}</b><span>ejercicios</span></div>
+        <div><b>${total ? Math.round(aciertos*100/total) : 0}%</b><span>aciertos</span></div>
+        <div><b>${racha.mejor}</b><span>mejor racha</span></div>
+      </div>
+    </div>
+    ${flojo ? `<div class="card">
+      <h2>Tu tema más flojo</h2>
+      <p style="margin-bottom:12px">Vas al <b>${pct(stats[flojo.id])}%</b> en <b>${flojo.nombre}</b>. Es el que más te conviene repasar.</p>
+      <button class="btn amar" onclick="practicarTema('${flojo.id}')">Practicar ${flojo.nombre}</button>
+    </div>` : ''}
+    <div class="card">
+      <h2>Por tema</h2>
+      ${conDatos.length ? conDatos.map(m=>{
+        const s = stats[m.id], p = pct(s);
+        const color = p >= 80 ? 'var(--verde)' : p >= 55 ? 'var(--ambar)' : 'var(--rojo)';
+        return `<div class="stat">
+          <div class="lbl"><span>${m.nombre}</span><b>${p}% · ${s.ok}/${s.ok+s.fallo}</b></div>
+          <div class="barra-ext"><div class="barra-int" style="width:${p}%;background:${color}"></div></div>
+        </div>`;
+      }).join('') : '<div class="nota">Todavía no has hecho ningún ejercicio.</div>'}
+      ${total ? `<button class="btn sec chico" style="margin-top:10px" onclick="borrarProgreso()">Borrar mi progreso</button>` : ''}
+    </div>`;
+}
+function practicarTema(id){ ir('practica', id); }
+function borrarProgreso(){
+  if(!confirm('¿Borrar todas tus estadísticas y la racha?')) return;
+  stats = {}; racha = { actual:0, mejor:0 };
+  guardar('mate_stats_v1', stats); guardar('mate_racha_v1', racha);
+  pantallaStats();
+}
+
+/* ---------- material de clase ---------- */
+let analisis = null, seleccion = [];
+
+function pantallaClase(){
+  main.innerHTML = `
+    <button class="back" onclick="ir('inicio')">← Inicio</button>
+    <div class="card">
+      <h2>Material de clase</h2>
+      <p style="font-size:.93rem;color:var(--muted);margin-bottom:12px">
+        Pega el texto de la presentación (o el título de la tarea, tipo
+        <i>"Homework on 3.1 - 3.8"</i>) y te digo qué temas practicar.</p>
+      <textarea class="campo" id="txtClase" placeholder="Pega aquí el texto de la presentación o de la tarea…"></textarea>
+      <button class="btn amar" style="margin-top:10px" onclick="analizarPegado()">Analizar</button>
+
+      <h3>…o suelta un archivo</h3>
+      <div class="drop" id="drop">Arrastra aquí un <b>.pptx</b>, un <b>.pdf</b> o un <b>.txt</b><br>
+        <small>o toca para elegirlo</small></div>
+      <input type="file" id="fileClase" accept=".pptx,.pdf,.txt" style="display:none">
+      <div class="nota">En EducoSoft no se puede descargar la presentación, pero puedes abrirla y hacer
+        <b>Ctrl+P → Guardar como PDF</b>, o seleccionar el texto y pegarlo arriba.</div>
+      <div id="zonaClase"></div>
+    </div>`;
+
+  const drop = $('drop'), inp = $('fileClase');
+  drop.onclick = () => inp.click();
+  inp.onchange = () => { if(inp.files[0]) leerArchivoClase(inp.files[0]); };
+  ['dragenter','dragover'].forEach(ev => drop.addEventListener(ev, e => {
+    e.preventDefault(); drop.classList.add('hover'); }));
+  ['dragleave','drop'].forEach(ev => drop.addEventListener(ev, e => {
+    e.preventDefault(); drop.classList.remove('hover'); }));
+  drop.addEventListener('drop', e => {
+    const f = e.dataTransfer.files[0]; if(f) leerArchivoClase(f); });
+}
+
+async function leerArchivoClase(file){
+  $('zonaClase').innerHTML = `<div class="cargando">Leyendo ${file.name}…</div>`;
+  try {
+    const txt = await textoDeArchivo(file);
+    if(!txt || !txt.trim()) throw new Error('No se pudo sacar texto de ese archivo. Prueba a copiar y pegar.');
+    $('txtClase').value = txt.slice(0, 200000);
+    mostrarAnalisis(analizarTexto(txt), file.name);
+  } catch(e){
+    $('zonaClase').innerHTML = `<div class="fb mal">${e.message}</div>`;
+  }
+}
+function analizarPegado(){
+  const txt = $('txtClase').value;
+  if(!txt.trim()) return $('zonaClase').innerHTML = `<div class="fb medio">Pega algo primero.</div>`;
+  mostrarAnalisis(analizarTexto(txt), 'el texto pegado');
+}
+
+function mostrarAnalisis(a, fuente){
+  analisis = a;
+  seleccion = a.detectados.map(m => m.id);
+  if(!a.detectados.length){
+    $('zonaClase').innerHTML = `
+      <div class="fb medio">No reconocí ningún tema en ${fuente}.
+        <small>Puedes elegirlos a mano abajo.</small></div>
+      ${listaCheckHTML(MODULOS)}
+      <button class="btn amar" onclick="guardarClase()">Usar estos temas</button>`;
+    seleccion = [];
+    return;
+  }
+  const secs = a.secciones.length
+    ? `<div class="fb ok">Secciones detectadas: <b>${a.secciones.join(', ')}</b></div>` : '';
+  $('zonaClase').innerHTML = `
+    ${secs}
+    <h3>Esto es lo que detecté — corrígelo si hace falta</h3>
+    ${listaCheckHTML(a.detectados, a)}
+    <details style="margin:8px 0 12px">
+      <summary style="cursor:pointer;font-size:.88rem;color:var(--muted)">Ver los demás temas</summary>
+      <div style="margin-top:8px">${listaCheckHTML(MODULOS.filter(m => a.detectados.indexOf(m) < 0), a)}</div>
+    </details>
+    <button class="btn amar" onclick="guardarClase()">Practicar solo estos temas</button>`;
+}
+
+function listaCheckHTML(mods, a){
+  return mods.map(m=>{
+    const on = seleccion.indexOf(m.id) >= 0;
+    const razon = a ? (a.secciones.filter(s => SECMAP[s].indexOf(m.id) >= 0).join(', ')
+                       || (a.claves[m.id] || []).slice(0,2).join(', ')) : '';
+    return `<label class="modCheck ${on?'on':''}" id="mc_${m.id}">
+      <input type="checkbox" ${on?'checked':''} onchange="toggleMod('${m.id}', this.checked)">
+      <span>${m.nombre}</span>
+      ${razon ? `<span class="sc">${razon}</span>` : ''}
+    </label>`;
+  }).join('');
+}
+function toggleMod(id, on){
+  const i = seleccion.indexOf(id);
+  if(on && i < 0) seleccion.push(id);
+  if(!on && i >= 0) seleccion.splice(i,1);
+  const el = $('mc_'+id); if(el) el.classList.toggle('on', on);
+}
+function guardarClase(){
+  if(!seleccion.length) return $('zonaClase').insertAdjacentHTML('beforeend',
+    `<div class="fb medio">Marca al menos un tema.</div>`);
+  const secs = analisis && analisis.secciones.length ? analisis.secciones : null;
+  const etiqueta = secs
+    ? (secs.length > 1 ? `${secs[0]}–${secs[secs.length-1]}` : secs[0])
+    : seleccion.map(id => MOD_POR_ID[id].nombre).slice(0,2).join(', ') + (seleccion.length>2 ? '…' : '');
+  clase = { etiqueta, mods: seleccion.slice() };
+  guardar('mate_clase_v1', clase);
+  ir('inicio');
+}
+
+/* ══════════════════════════════════════════════════════════
+   8. AUTOTEST  — abrir index.html?test
+   ══════════════════════════════════════════════════════════ */
+function autotest(){
+  const fallos = [], lineas = [];
+  const eq = (a,b) => JSON.stringify(a) === JSON.stringify(b);
+  const chk = (nombre, cond) => { lineas.push(`${cond?'  ok  ':'FALLA'}  ${nombre}`); if(!cond) fallos.push(nombre); };
+
+  lineas.push('── helpers ──');
+  chk('mcd(48,18) = 6',            mcd(48,18) === 6);
+  chk('mcd(17,5) = 1',             mcd(17,5) === 1);
+  chk('mcd(0,7) = 7',              mcd(0,7) === 7);
+  chk('mcm(4,6) = 12',             mcm(4,6) === 12);
+  chk('mcm(21,6) = 42',            mcm(21,6) === 42);
+  chk('factorizar(360)',           eq(factorizar(360), {2:3, 3:2, 5:1}));
+  chk('factorizar(97) primo',      eq(factorizar(97), {97:1}));
+  chk('esPrimo(91) = false',       esPrimo(91) === false);
+  chk('esPrimo(2) = true',         esPrimo(2) === true);
+  chk('esPrimo(1) = false',        esPrimo(1) === false);
+  chk('esPrimo(289) = false',      esPrimo(289) === false);
+  chk('simplificar(18,24)=[3,4]',  eq(simplificar(18,24), [3,4]));
+  chk('fmtFactores(360)',          fmtFactores(factorizar(360)) === '2³ × 3² × 5');
+  chk('sumaDig(529) = 16',         sumaDig(529) === 16);
+  chk('parseFactores 2*2*2 → 2^3', eq(parseFactores('2*2*2'), {2:3}));
+  chk('parseFactores 2^3 × 5',     eq(parseFactores('2^3 × 5'), {2:3, 5:1}));
+  chk('parseFactores basura',      parseFactores('hola') === null);
+
+  lineas.push('', '── generadores (200 por módulo × 3 niveles) ──');
+  ['facil','medio','dificil'].forEach(nv=>{
+    MODULOS.forEach(m=>{
+      let malas = 0, sinExpl = 0, raras = 0;
+      for(let i=0; i<200; i++){
+        let ej;
+        try { ej = m.gen(nv); }
+        catch(e){ raras++; continue; }
+        if(!ej || !ej.enunciado || /NaN|undefined|Infinity/.test(ej.enunciado)) raras++;
+        if(!ej.explicacion || !ej.explicacion.length ||
+           ej.explicacion.some(l => /NaN|undefined|Infinity/.test(l))) sinExpl++;
+        // la respuesta correcta tiene que pasar la verificación
+        const r = verificar(ej, respuestaComoEntrada(ej));
+        if(!r.ok) malas++;
+      }
+      chk(`${nv}/${m.nombre}`, malas===0 && sinExpl===0 && raras===0);
+      if(malas)   lineas.push(`        ↳ ${malas} respuestas correctas rechazadas`);
+      if(sinExpl) lineas.push(`        ↳ ${sinExpl} explicaciones vacías o con NaN`);
+      if(raras)   lineas.push(`        ↳ ${raras} enunciados rotos`);
+    });
+  });
+
+  lineas.push('', '── verificación (casos borde) ──');
+  const ejS = { tipo:'frac', respuesta:{n:3,d:4}, pedirSimple:true };
+  chk('6/8 con pedirSimple → incompleto', verificar(ejS,{n:'6',d:'8'}).incompleto === true);
+  chk('3/4 con pedirSimple → ok',         verificar(ejS,{n:'3',d:'4'}).ok === true);
+  const ejN = { tipo:'frac', respuesta:{n:-3,d:4}, pedirSimple:true };
+  chk('-3/4 escrito como 3/-4',           verificar(ejN,{n:'3',d:'-4'}).ok === true);
+  chk('denominador 0 se rechaza',         verificar(ejS,{n:'3',d:'0'}).ok === false);
+  const ejT = { tipo:'texto', respuesta:{2:2, 3:2} };
+  chk('4*9 rechazado (no son primos)',    verificar(ejT,'4*9').ok === false);
+  chk('2^2*3^2 aceptado',                 verificar(ejT,'2^2*3^2').ok === true);
+  chk('2*2*3*3 aceptado',                 verificar(ejT,'2*2*3*3').ok === true);
+  const ejM = { tipo:'mixto', respuesta:{e:2, n:3, d:4} };
+  chk('mixto 1 7/4 → incompleto',         verificar(ejM,{e:'1',n:'7',d:'4'}).incompleto === true);
+  chk('mixto 2 3/4 → ok',                 verificar(ejM,{e:'2',n:'3',d:'4'}).ok === true);
+
+  lineas.push('', '── modo clase ──');
+  const a1 = analizarTexto('Homework on 3.1 - 3.3 due Friday');
+  chk('rango 3.1-3.3 → 3 secciones',      eq(a1.secciones, ['3.1','3.2','3.3']));
+  chk('rango 3.1-3.3 incluye primos',     a1.detectados.some(m => m.id === 'primos'));
+  const a2 = analizarTexto('Section 3.6: Comparing and Ordering Fractions');
+  chk('3.6 detecta comparar',             a2.detectados[0].id === 'comparar');
+  const a3 = analizarTexto('Least Common Multiple and Greatest Common Factor');
+  chk('claves en inglés (LCM/GCF)',       a3.detectados.some(m=>m.id==='mcd') && a3.detectados.some(m=>m.id.indexOf('mcm')===0));
+  chk('3.14 no se cuela como sección',    analizarTexto('pi vale 3.14').secciones.length === 0);
+  chk('texto vacío no detecta nada',      analizarTexto('').detectados.length === 0);
+
+  const total = lineas.filter(l => /^(  ok  |FALLA)/.test(l)).length;
+  main.innerHTML = `<div class="card">
+    <h2>${fallos.length ? `${fallos.length} de ${total} comprobaciones FALLAN` : `Las ${total} comprobaciones PASAN`}</h2>
+    <pre class="test">${lineas.join('\n')}</pre>
+    <button class="btn amar" onclick="location.search=''">Ir a la app</button></div>`;
+}
+
+/* ══════════════════════════════════════════════════════════
+   9. ARRANQUE
+   ══════════════════════════════════════════════════════════ */
+if(location.search.indexOf('test') >= 0) autotest();
+else pantallaInicio();
+
+// ── SERVICE WORKER (PWA offline) ──
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js', { updateViaCache:'none' }).then(reg => {
+    const checkForUpdate = () => reg.update().catch(()=>{});
+    document.addEventListener('visibilitychange', () => {
+      if(document.visibilityState === 'visible') checkForUpdate();
+    });
+    checkForUpdate();
+  }).catch(()=>{});
+  let _swWasControlled = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if(!_swWasControlled){ _swWasControlled = true; return; }  // primera instalación
+    window.location.reload();
+  });
+}
+</script>
+</body>
+</html>
