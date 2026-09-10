@@ -1165,11 +1165,13 @@ const main = $('main');
 let ejActual = null, modActual = null, respondido = false, vioExpl = false, ordenSel = [];
 let esTemaFijo = false;   // true = practicando un tema concreto, no la mezcla
 let capFijo = null;       // 1/2/3 = mezclando solo los temas de ese capítulo
+let sesionHechos = 0;     // cuántos ejercicios van en esta ronda
+const SESION_TOTAL = 10;  // tamaño de la ronda; al llegar acá se reinicia sola
 
-function ir(pantalla, arg){
+function ir(pantalla, arg, continuar){
   window.scrollTo(0,0);
   if(pantalla === 'inicio')   return pantallaInicio();
-  if(pantalla === 'practica') return nuevoEjercicio(arg);
+  if(pantalla === 'practica') return nuevoEjercicio(arg, continuar);
   if(pantalla === 'stats')    return pantallaStats();
   if(pantalla === 'clase')    return pantallaClase();
 }
@@ -1216,7 +1218,9 @@ function setNivel(nv){ nivel = nv; guardar('mate_nivel_v1', nv); pantallaInicio(
 function quitarClase(){ clase = null; guardar('mate_clase_v1', null); pantallaInicio(); }
 
 /* ---------- práctica ---------- */
-function nuevoEjercicio(arg){
+function nuevoEjercicio(arg, continuar){
+  if(!continuar || sesionHechos >= SESION_TOTAL) sesionHechos = 0;  // ronda nueva o recién completada
+  sesionHechos++;
   if(typeof arg === 'number'){       // mezcla dentro de un capítulo
     esTemaFijo = false; capFijo = arg;
     modActual = elegirModulo(arg);
@@ -1290,6 +1294,7 @@ function pintarEjercicio(){
     </div>
     <div class="card" style="padding:14px 20px">
       <div class="racha">
+        <div><b>${SESION_TOTAL - sesionHechos}/${SESION_TOTAL}</b><span>te faltan</span></div>
         <div><b>${racha.actual}</b><span>racha actual</span></div>
         <div><b>${racha.mejor}</b><span>mejor racha</span></div>
         <div><b>${(stats[modActual.id]&&pct(stats[modActual.id])!==null)?pct(stats[modActual.id])+'%':'—'}</b><span>en este tema</span></div>
@@ -1360,7 +1365,7 @@ function mostrarFb(res, soloAviso){
       ${vioExpl ? `<small>Este no cuenta para las estadísticas (viste la explicación antes).</small>` : ''}
     </div>
     ${explHTML()}
-    <button class="btn amar" onclick="ir('practica'${esTemaFijo ? `,'${modActual.id}'` : capFijo ? `,${capFijo}` : ''})">Siguiente ejercicio</button>`;
+    <button class="btn amar" onclick="ir('practica',${esTemaFijo ? `'${modActual.id}'` : capFijo ? capFijo : 'undefined'},true)">Siguiente ejercicio</button>`;
   $('zonaEntrada').style.opacity = '.5';
   $('zonaEntrada').style.pointerEvents = 'none';
   $('btnExpl').style.display = 'none';
@@ -1380,7 +1385,7 @@ function verExplicacion(){
     <div class="fb medio">Respuesta: <b>${fmtRespuesta(ejActual)}</b>
       <small>Este ejercicio no cuenta para las estadísticas.</small></div>
     ${explHTML()}
-    <button class="btn amar" onclick="ir('practica'${esTemaFijo ? `,'${modActual.id}'` : capFijo ? `,${capFijo}` : ''})">Siguiente ejercicio</button>`;
+    <button class="btn amar" onclick="ir('practica',${esTemaFijo ? `'${modActual.id}'` : capFijo ? capFijo : 'undefined'},true)">Siguiente ejercicio</button>`;
 }
 
 /* ---------- progreso ---------- */
