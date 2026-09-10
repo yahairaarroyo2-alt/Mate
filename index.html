@@ -172,6 +172,7 @@ const porNivel = (nv,f,m,d) => nv==='facil' ? f : nv==='medio' ? m : d;
 // fracción apilada para el enunciado
 const fr = (n,d) => `<span class="fr"><b>${n}</b><i>${d}</i></span>`;
 const cmpSigno = (a,b) => a<b ? '<' : a>b ? '>' : '=';
+const escHtml = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
 /* ══════════════════════════════════════════════════════════
    2. EXPLICACIONES  (salen de las mismas variables que la respuesta)
@@ -1168,11 +1169,12 @@ let capFijo = null;       // 1/2/3 = mezclando solo los temas de ese capítulo
 let sesionHechos = 0;     // cuántos ejercicios van en esta ronda
 const SESION_TOTAL = 10;  // tamaño de la ronda; al llegar acá se reinicia sola
 let ultimoFeedback = null;// resultado de verificar() del último responder(), para poder retomarlo
+let ultimoProceso = '';   // lo que el usuario escribió en "Tu proceso" antes de responder
 
 /* ---------- retomar donde quedó (mate_sesion_v1) ---------- */
 function guardarSesion(){
   guardar('mate_sesion_v1', { modId: modActual.id, esTemaFijo, capFijo, sesionHechos,
-    ejActual, respondido, vioExpl, ordenSel, ultimoFeedback });
+    ejActual, respondido, vioExpl, ordenSel, ultimoFeedback, ultimoProceso });
 }
 const borrarSesion = () => { try{ localStorage.removeItem('mate_sesion_v1'); }catch(e){} };
 function restaurarSesion(){
@@ -1182,6 +1184,7 @@ function restaurarSesion(){
   esTemaFijo = s.esTemaFijo; capFijo = s.capFijo; sesionHechos = s.sesionHechos || 1;
   ejActual = s.ejActual; respondido = s.respondido; vioExpl = s.vioExpl;
   ordenSel = s.ordenSel || []; ultimoFeedback = s.ultimoFeedback || null;
+  ultimoProceso = s.ultimoProceso || '';
   pintarEjercicio();
   if(respondido){
     if(vioExpl) _pintarVistaExplicacion();
@@ -1253,7 +1256,7 @@ function nuevoEjercicio(arg, continuar){
   }
   ejActual = modActual.gen(nivel);
   ejActual.__mod = modActual.id;
-  respondido = false; vioExpl = false; ordenSel = []; ultimoFeedback = null;
+  respondido = false; vioExpl = false; ordenSel = []; ultimoFeedback = null; ultimoProceso = '';
   pintarEjercicio();
   guardarSesion();
 }
@@ -1312,7 +1315,11 @@ function pintarEjercicio(){
     <div class="card">
       <span class="pill">${modActual.nombre}</span>
       <div class="enunciado">${ejActual.enunciado}</div>
-      <div id="zonaEntrada">${entradaHTML(ejActual)}</div>
+      <div id="zonaEntrada">
+        <textarea class="campo" id="inProceso" style="min-height:70px;margin-bottom:12px"
+          placeholder="Tu proceso (opcional) — escribe aquí los pasos antes de responder">${respondido ? escHtml(ultimoProceso) : ''}</textarea>
+        ${entradaHTML(ejActual)}
+      </div>
       <div id="zonaFb"></div>
       <button class="btn sec chico" id="btnExpl" onclick="verExplicacion()">Ver explicación</button>
     </div>
@@ -1373,6 +1380,7 @@ function responder(valor){
 
   respondido = true;
   ultimoFeedback = res;
+  ultimoProceso = ($('inProceso') || {}).value || '';
   if(!vioExpl) anotar(ejActual.__mod, res.ok);
   mostrarFb(res, false);
   guardarSesion();
@@ -1404,6 +1412,7 @@ const explHTML = () => `
 function verExplicacion(){
   if(respondido) return;
   vioExpl = true; respondido = true;
+  ultimoProceso = ($('inProceso') || {}).value || '';
   _pintarVistaExplicacion();
   guardarSesion();
 }
