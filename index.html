@@ -68,6 +68,9 @@
   .campo{width:100%;border:2px solid var(--gris2);border-radius:12px;padding:13px;
     font-size:1.15rem;text-align:center;font-family:inherit;color:var(--texto)}
   .campo:focus{outline:none;border-color:var(--azul3)}
+  .numRow{display:flex;gap:8px}
+  .numRow .campo{flex:1;min-width:0}
+  .signo{flex:none;width:52px;padding:0;font-size:1.3rem;font-weight:700;margin-bottom:0}
   .fracIn{display:flex;flex-direction:column;align-items:center;gap:6px;max-width:150px;margin:0 auto}
   .fracIn .campo{width:110px}
   .fracIn .barra{width:110px;height:3px;background:var(--azul);border-radius:2px}
@@ -173,6 +176,12 @@ const porNivel = (nv,f,m,d) => nv==='facil' ? f : nv==='medio' ? m : d;
 const fr = (n,d) => `<span class="fr"><b>${n}</b><i>${d}</i></span>`;
 const cmpSigno = (a,b) => a<b ? '<' : a>b ? '>' : '=';
 const escHtml = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+// teclado numérico del teléfono a veces no trae signo "-" (iOS, sobre todo) — botón ± como atajo
+function toggleSigno(id){
+  const el = $(id);
+  el.value = el.value.startsWith('-') ? el.value.slice(1) : '-' + el.value;
+  el.focus();
+}
 
 /* ══════════════════════════════════════════════════════════
    2. EXPLICACIONES  (salen de las mismas variables que la respuesta)
@@ -1200,13 +1209,14 @@ function ir(pantalla, arg, continuar){
   if(pantalla === 'practica') return nuevoEjercicio(arg, continuar);
   if(pantalla === 'stats')    return pantallaStats();
   if(pantalla === 'clase')    return pantallaClase();
+  if(pantalla === 'elegir')   return pantallaElegirTemas();
 }
 
 /* ---------- inicio ---------- */
 function pantallaInicio(){
   const bannerClase = clase && clase.mods.length ? `
     <div class="banner">
-      <span>Practicando lo de clase: ${clase.etiqueta}</span>
+      <span>Practicando: ${clase.etiqueta}</span>
       <button onclick="quitarClase()">Quitar</button>
     </div>` : '';
   main.innerHTML = `
@@ -1235,6 +1245,8 @@ function pantallaInicio(){
     </div>
 
     <div class="card">
+      <button class="btn" onclick="ir('elegir')">Elegir temas para mezclar
+        <small>combina los que quieras, por ejemplo capítulo 1 con capítulo 2</small></button>
       <button class="btn" onclick="ir('clase')">Material de clase
         <small>Pega o sube la presentación y te digo qué practicar</small></button>
       <button class="btn sec" onclick="ir('stats')">Mi progreso</button>
@@ -1273,7 +1285,10 @@ function entradaHTML(ej){
     case 'opciones': return ej.opciones.map((o,i)=>
         `<button class="btn" onclick="responder(ejActual.opciones[${i}])">${o}</button>`).join('');
     case 'num': return `
-        <input class="campo" id="inNum" inputmode="numeric" autocomplete="off" placeholder="Tu respuesta">
+        <div class="numRow">
+          <button type="button" class="btn sec signo" onclick="toggleSigno('inNum')">±</button>
+          <input class="campo" id="inNum" inputmode="numeric" autocomplete="off" placeholder="Tu respuesta">
+        </div>
         <button class="btn amar" style="margin-top:10px" onclick="responder()">Comprobar</button>`;
     case 'texto': return `
         <input class="campo" id="inTexto" autocomplete="off" placeholder="ej. 2^3 * 5">
@@ -1313,7 +1328,7 @@ function pintarEjercicio(){
   main.innerHTML = `
     <button class="back" onclick="ir('inicio')">← Inicio</button>
     <div class="card">
-      <span class="pill">${modActual.nombre}</span>
+      <span class="pill">${esTemaFijo ? '' : capFijo ? `Capítulo ${capFijo} · ` : (clase && clase.mods && clase.mods.length) ? `${clase.etiqueta} · ` : 'Mezcla · '}${modActual.nombre}</span>
       <div class="enunciado">${ejActual.enunciado}</div>
       <div id="zonaEntrada">
         <textarea class="campo" id="inProceso" style="min-height:70px;margin-bottom:12px"
@@ -1321,7 +1336,10 @@ function pintarEjercicio(){
         ${entradaHTML(ejActual)}
       </div>
       <div id="zonaFb"></div>
-      <button class="btn sec chico" id="btnExpl" onclick="verExplicacion()">Ver explicación</button>
+      <div class="row" id="accionesPre">
+        <button class="btn sec chico" onclick="saltarEjercicio()">Saltar</button>
+        <button class="btn sec chico" onclick="verExplicacion()">Ver explicación</button>
+      </div>
     </div>
     <div class="card" style="padding:14px 20px">
       <div class="racha">
@@ -1402,13 +1420,17 @@ function mostrarFb(res, soloAviso){
     <button class="btn amar" onclick="ir('practica',${esTemaFijo ? `'${modActual.id}'` : capFijo ? capFijo : 'undefined'},true)">Siguiente ejercicio</button>`;
   $('zonaEntrada').style.opacity = '.5';
   $('zonaEntrada').style.pointerEvents = 'none';
-  $('btnExpl').style.display = 'none';
+  $('accionesPre').style.display = 'none';
 }
 
 const explHTML = () => `
   <div class="expl"><h3>Por qué</h3>
     <ol>${ejActual.explicacion.map(l=>`<li>${l}</li>`).join('')}</ol></div>`;
 
+function saltarEjercicio(){
+  if(respondido) return;
+  nuevoEjercicio(esTemaFijo ? modActual.id : capFijo ? capFijo : undefined, true);
+}
 function verExplicacion(){
   if(respondido) return;
   vioExpl = true; respondido = true;
@@ -1419,7 +1441,7 @@ function verExplicacion(){
 function _pintarVistaExplicacion(){
   $('zonaEntrada').style.opacity = '.5';
   $('zonaEntrada').style.pointerEvents = 'none';
-  $('btnExpl').style.display = 'none';
+  $('accionesPre').style.display = 'none';
   $('zonaFb').innerHTML = `
     <div class="fb medio">Respuesta: <b>${fmtRespuesta(ejActual)}</b>
       <small>Este ejercicio no cuenta para las estadísticas.</small></div>
@@ -1473,8 +1495,41 @@ function borrarProgreso(){
   pantallaStats();
 }
 
-/* ---------- material de clase ---------- */
+/* ---------- elegir temas a mano (mezclar lo que quieras, ej. cap.1 con cap.2) ---------- */
 let analisis = null, seleccion = [];
+
+function pantallaElegirTemas(){
+  seleccion = (clase && clase.mods) ? clase.mods.slice() : [];
+  analisis = null;
+  _pintarElegirTemas();
+}
+function _pintarElegirTemas(){
+  main.innerHTML = `
+    <button class="back" onclick="ir('inicio')">← Inicio</button>
+    <div class="card">
+      <h2>Elige los temas a mezclar</h2>
+      <div class="nota">Marca cualquier combinación de temas, de cualquier capítulo — por
+        ejemplo, capítulo 1 con capítulo 2.</div>
+      ${[1,2,3].map(cap => `
+        <h3 style="display:flex;justify-content:space-between;align-items:center">
+          <span>Capítulo ${cap}</span>
+          <button class="btn sec chico" style="width:auto;margin:0;padding:5px 11px;font-size:.78rem"
+            onclick="_marcarCapitulo(${cap})">Marcar/quitar todo</button>
+        </h3>
+        ${listaCheckHTML(MODULOS.filter(m=>m.secciones[0][0]===String(cap)))}
+      `).join('')}
+      <div id="zonaClase"></div>
+      <button class="btn amar" style="margin-top:10px" onclick="guardarClase()">Practicar esta mezcla</button>
+    </div>`;
+}
+function _marcarCapitulo(cap){
+  const ms = MODULOS.filter(m=>m.secciones[0][0]===String(cap));
+  const todosMarcados = ms.every(m=>seleccion.indexOf(m.id)>=0);
+  ms.forEach(m=>toggleMod(m.id, !todosMarcados));
+  _pintarElegirTemas();
+}
+
+/* ---------- material de clase ---------- */
 
 function pantallaClase(){
   main.innerHTML = `
