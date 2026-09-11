@@ -18,6 +18,11 @@
     --blanco:#fff; --gris:#eef1f7; --gris2:#d7dee9;
     --texto:#1a2438; --muted:#5f6b85;
     --sombra:0 6px 20px rgba(0,0,0,.16);
+    /* --azul/--azul2 hacen doble papel: fondo de marca (header, enunciado, chip.on) Y texto de
+       título sobre tarjeta blanca (h2, h3, chip...). En modo oscuro esos dos papeles necesitan
+       colores distintos, así que el texto de título vive en variables propias. */
+    --titulo:var(--azul); --titulo2:var(--azul2);
+    --superficie:var(--blanco);   /* fondo de tarjeta/chip — separado de --blanco-como-texto-claro */
   }
   *{box-sizing:border-box;margin:0;padding:0}
   body{
@@ -29,16 +34,16 @@
   header.top{text-align:center;color:var(--blanco);padding:10px 6px 18px}
   header.top h1{font-size:1.35rem;letter-spacing:.2px}
   header.top p{opacity:.8;font-size:.87rem;margin-top:3px}
-  .card{background:var(--blanco);border-radius:18px;box-shadow:var(--sombra);padding:20px;margin-bottom:14px}
-  h2{color:var(--azul);font-size:1.18rem;margin-bottom:12px}
-  h3{color:var(--azul2);font-size:1rem;margin:14px 0 7px}
+  .card{background:var(--superficie);border-radius:18px;box-shadow:var(--sombra);padding:20px;margin-bottom:14px}
+  h2{color:var(--titulo);font-size:1.18rem;margin-bottom:12px}
+  h3{color:var(--titulo2);font-size:1rem;margin:14px 0 7px}
   .btn{display:block;width:100%;border:none;border-radius:14px;cursor:pointer;padding:15px;
     font-size:1.02rem;font-weight:600;margin-bottom:10px;font-family:inherit;
     transition:transform .08s,box-shadow .15s;background:var(--azul3);color:var(--blanco)}
   .btn:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(30,42,82,.28)}
   .btn:active{transform:translateY(0)}
   .btn.amar{background:var(--acento);color:var(--azul)}
-  .btn.sec{background:var(--gris);color:var(--azul);border:2px solid var(--gris2)}
+  .btn.sec{background:var(--gris);color:var(--titulo);border:2px solid var(--gris2)}
   .btn.chico{padding:11px;font-size:.92rem}
   .btn small{display:block;font-weight:400;font-size:.79rem;opacity:.85;margin-top:2px}
   .row{display:flex;gap:9px;flex-wrap:wrap}
@@ -52,12 +57,12 @@
     border-radius:8px;margin:10px 0;font-size:.9rem;color:var(--muted)}
   /* chips de nivel / tema */
   .chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px}
-  .chip{border:2px solid var(--gris2);background:var(--blanco);color:var(--azul2);
+  .chip{border:2px solid var(--gris2);background:var(--superficie);color:var(--titulo2);
     border-radius:20px;padding:7px 15px;font-size:.88rem;font-weight:600;cursor:pointer;font-family:inherit}
   .chip.on{background:var(--azul3);border-color:var(--azul3);color:var(--blanco)}
   /* flechita para plegar/desplegar listas de temas */
   details{margin:2px 0 10px}
-  summary{cursor:pointer;color:var(--azul2);font-weight:600;font-size:.85rem;
+  summary{cursor:pointer;color:var(--titulo2);font-weight:600;font-size:.85rem;
     padding:6px 0;list-style:none}
   summary::-webkit-details-marker{display:none}
   summary::before{content:'▶';display:inline-block;margin-right:6px;font-size:.65rem;transition:transform .15s}
@@ -73,20 +78,20 @@
   .fr i{display:block;padding:0 5px;border-top:2px solid currentColor;font-style:normal}
   /* entradas */
   .campo{width:100%;border:2px solid var(--gris2);border-radius:12px;padding:13px;
-    font-size:1.15rem;text-align:center;font-family:inherit;color:var(--texto)}
+    font-size:1.15rem;text-align:center;font-family:inherit;color:var(--texto);background:var(--superficie)}
   .campo:focus{outline:none;border-color:var(--azul3)}
   .numRow{display:flex;gap:8px}
   .numRow .campo{flex:1;min-width:0}
   .signo{flex:none;width:52px;padding:0;font-size:1.3rem;font-weight:700;margin-bottom:0}
   .fracIn{display:flex;flex-direction:column;align-items:center;gap:6px;max-width:150px;margin:0 auto}
   .fracIn .campo{width:110px}
-  .fracIn .barra{width:110px;height:3px;background:var(--azul);border-radius:2px}
+  .fracIn .barra{width:110px;height:3px;background:var(--titulo);border-radius:2px}
   .mixIn{display:flex;align-items:center;justify-content:center;gap:12px}
   .mixIn .campo{width:80px}
   .opt{display:flex;gap:10px}
   .opt .btn{flex:1;font-size:1.25rem;padding:18px}
   .ordenCaja{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:12px}
-  .ordenChip{position:relative;border:2px solid var(--gris2);background:var(--blanco);
+  .ordenChip{position:relative;border:2px solid var(--gris2);background:var(--superficie);
     border-radius:14px;padding:14px 20px;font-size:1.25rem;cursor:pointer;font-family:inherit;color:var(--texto)}
   .ordenChip.on{border-color:var(--azul3);background:var(--gris)}
   .ordenChip .num{position:absolute;top:-9px;right:-9px;background:var(--azul3);color:var(--blanco);
@@ -102,13 +107,13 @@
   .expl h3{margin-top:0}
   .expl ol{margin:0;padding-left:20px}
   .expl li{margin-bottom:6px;font-size:.95rem}
-  .expl li:last-child{margin-bottom:0;font-weight:600;color:var(--azul)}
+  .expl li:last-child{margin-bottom:0;font-weight:600;color:var(--titulo)}
   /* stats */
   .barra-ext{height:10px;background:var(--gris);border-radius:6px;overflow:hidden;margin-top:5px}
   .barra-int{height:100%;border-radius:6px;background:var(--verde);transition:width .4s}
   .stat{margin-bottom:13px}
   .stat .lbl{display:flex;justify-content:space-between;font-size:.9rem}
-  .stat .lbl b{color:var(--azul)}
+  .stat .lbl b{color:var(--titulo)}
   .racha{display:flex;gap:10px;text-align:center;margin-bottom:6px}
   .racha div{flex:1;background:var(--gris);border-radius:12px;padding:12px 6px}
   .racha b{display:block;font-size:1.6rem;color:var(--azul3);line-height:1.2}
@@ -131,6 +136,27 @@
   /* test */
   pre.test{background:var(--azul);color:#d6f5c8;padding:14px;border-radius:12px;
     font-size:.82rem;overflow-x:auto;white-space:pre-wrap}
+  /* modo oscuro automático — sigue el sistema, sin botón propio.
+     Ojo: --azul/--azul2/--blanco NO se redefinen aquí a propósito — siguen sirviendo de fondo
+     de marca (header, enunciado, chip.on) y de texto claro sobre esos fondos oscuros, y esos
+     dos papeles ya funcionan bien tal cual. Lo que sí cambia es la SUPERFICIE de las tarjetas
+     (antes literalmente blanca) y el TÍTULO que se lee encima de ella. */
+  @media (prefers-color-scheme: dark){
+    :root{
+      --acento:#ffc93c; --acento2:#ffe08a;
+      --verde:#2ecc71; --verde-bg:#123322;
+      --rojo:#e74c3c; --rojo-bg:#3a1c1c;
+      --ambar:#f39c12; --ambar-bg:#3a2c10;
+      --gris:#2a3358; --gris2:#3a4470;
+      --texto:#e8ecf7; --muted:#aab2d0;
+      --sombra:0 6px 20px rgba(0,0,0,.45);
+      --superficie:#1c2340;               /* antes --blanco: fondo de tarjeta/chip */
+      --titulo:#c9d3f5; --titulo2:#a9b7ec; /* antes --azul/--azul2 como texto de título */
+    }
+    body{background:linear-gradient(160deg,#070c1c,#0f1730)}
+    .fb.ok{color:#7be3a8} .fb.mal{color:#f19c92} .fb.medio{color:#f5c877}
+    pre.test{background:#070c1c}
+  }
 </style>
 </head>
 <body>
@@ -1249,6 +1275,9 @@ let nivel  = leer('mate_nivel_v1', 'medio');
 let clase  = leer('mate_clase_v1', null);      // { etiqueta, mods:[] }
 let stats  = leer('mate_stats_v1', {});        // { modId:{ok, fallo} }
 let racha  = leer('mate_racha_v1', { actual:0, mejor:0 });
+let errores = leer('mate_errores_v1', []);          // [{modId, ej}], más reciente primero, tope 30
+let historial = leer('mate_historial_v1', {});      // { "YYYY-MM-DD": cantidad de ejercicios }
+let rachaDias = leer('mate_racha_dias_v1', { actual:0, mejor:0, ultimoDia:null });
 
 function anotar(modId, ok){
   const s = stats[modId] || (stats[modId] = { ok:0, fallo:0 });
@@ -1258,6 +1287,24 @@ function anotar(modId, ok){
   if(racha.actual > racha.mejor) racha.mejor = racha.actual;
   guardar('mate_racha_v1', racha);
   _empujarSync(modId, ok);
+  _registrarHistorialYRachaDias();
+}
+function _registrarHistorialYRachaDias(){
+  const hoy = new Date().toISOString().slice(0,10);
+  historial[hoy] = (historial[hoy]||0) + 1;
+  guardar('mate_historial_v1', historial);
+  if(rachaDias.ultimoDia !== hoy){
+    const ayer = new Date(Date.now()-86400000).toISOString().slice(0,10);
+    rachaDias.actual = (rachaDias.ultimoDia === ayer) ? rachaDias.actual+1 : 1;
+    rachaDias.mejor = Math.max(rachaDias.mejor, rachaDias.actual);
+    rachaDias.ultimoDia = hoy;
+    guardar('mate_racha_dias_v1', rachaDias);
+  }
+}
+function _registrarError(ej){
+  errores.unshift({ modId: ej.__mod, ej });
+  errores = errores.slice(0, 30);
+  guardar('mate_errores_v1', errores);
 }
 
 /* ---------- sincronizar entre aparatos (Firebase, opcional) ---------- */
@@ -1339,26 +1386,62 @@ function _escucharSync(){
   _syncUnsub = syncDoc.onSnapshot(snap => {
     const d = snap.data();
     if(!d) return;
-    if(d.stats) stats = d.stats;
+    // Firestore solo guarda el campo que se incrementó (ok o fallo) — un tema sin fallos
+    // nunca queda con esa clave. Se normaliza al recibir para que pct() no dé NaN.
+    if(d.stats){
+      stats = {};
+      Object.keys(d.stats).forEach(id => { stats[id] = { ok: d.stats[id].ok||0, fallo: d.stats[id].fallo||0 }; });
+    }
     if(d.racha){ racha.actual = d.racha.actual||0; racha.mejor = Math.max(racha.mejor||0, d.racha.mejor||0); }
     if(d.nivel) nivel = d.nivel;
     if(d.clase !== undefined) clase = d.clase;
     guardar('mate_stats_v1', stats); guardar('mate_racha_v1', racha);
     guardar('mate_nivel_v1', nivel); guardar('mate_clase_v1', clase);
+    // si estás mirando Inicio o Progreso cuando llega el cambio del otro aparato, refresca sola
+    if(_pantallaActual === pantallaInicio || _pantallaActual === pantallaStats) _pantallaActual();
   }, err => console.warn('sync:', err.message));
 }
+// las escrituras se juntan unos segundos en vez de mandar una por cada respuesta — menos
+// veces que se despierta la radio del teléfono para lo mismo
+let _syncPendiente = null, _syncTimer = null;
 function _empujarSync(modId, ok){
   if(!syncDoc) return;
-  syncDoc.set({
-    stats: { [modId]: { [ok?'ok':'fallo']: firebase.firestore.FieldValue.increment(1) } },
-    racha: { actual: racha.actual, mejor: racha.mejor }
-  }, { merge: true }).catch(()=>{});   // sin conexión: la persistencia offline lo reintenta sola
+  if(!_syncPendiente) _syncPendiente = { stats:{} };
+  const p = _syncPendiente.stats[modId] || (_syncPendiente.stats[modId] = { ok:0, fallo:0 });
+  p[ok ? 'ok' : 'fallo']++;
+  _syncPendiente.racha = { actual: racha.actual, mejor: racha.mejor };
+  clearTimeout(_syncTimer);
+  _syncTimer = setTimeout(_flushSync, 4000);
+}
+function _flushSync(){
+  clearTimeout(_syncTimer); _syncTimer = null;
+  if(!syncDoc || !_syncPendiente) return;
+  const p = _syncPendiente; _syncPendiente = null;
+  const statsInc = {};
+  Object.keys(p.stats).forEach(id => {
+    statsInc[id] = {};
+    if(p.stats[id].ok)    statsInc[id].ok    = firebase.firestore.FieldValue.increment(p.stats[id].ok);
+    if(p.stats[id].fallo) statsInc[id].fallo = firebase.firestore.FieldValue.increment(p.stats[id].fallo);
+  });
+  syncDoc.set({ stats: statsInc, racha: p.racha }, { merge: true }).catch(()=>{});
 }
 function desconectarSync(){
+  _flushSync();
   if(_syncUnsub) _syncUnsub();
   _syncUnsub = null; syncDoc = null; syncListo = false; syncCode = null;
   localStorage.removeItem('mate_sync_code_v1');
 }
+// suelta la conexión en vivo con Firestore cuando la app pasa a segundo plano (batería), y la
+// vuelve a enganchar al regresar — antes se quedaba escuchando para siempre en background
+document.addEventListener('visibilitychange', () => {
+  if(!syncCode) return;
+  if(document.visibilityState === 'hidden'){
+    _flushSync();
+    if(_syncUnsub){ _syncUnsub(); _syncUnsub = null; syncListo = false; }
+  } else if(document.visibilityState === 'visible' && syncDoc && !syncListo){
+    _escucharSync();
+  }
+});
 const pct = s => { const t = s.ok + s.fallo; return t ? Math.round(s.ok*100/t) : null; };
 
 /* módulos disponibles ahora mismo (según el modo clase) */
@@ -1371,7 +1454,10 @@ function modulosActivos(){
 }
 /* elige módulo dando más peso a los que van peor; cap (1/2/3) limita la mezcla a ese capítulo */
 function elegirModulo(cap){
-  const ms = cap ? modulosActivos().filter(m=>m.secciones[0][0]===String(cap)) : modulosActivos();
+  // "Mezcla del capítulo N" siempre usa TODOS los temas del capítulo, sin importar si hay una
+  // mezcla personalizada activa — si no, pedir el capítulo 3 con una mezcla de solo cap.1 se
+  // quedaba sin candidatos y tronaba.
+  const ms = cap ? MODULOS.filter(m=>m.secciones[0][0]===String(cap)) : modulosActivos();
   const pesos = ms.map(m => {
     const s = stats[m.id] || { ok:0, fallo:0 };
     return 1 + s.fallo / (s.ok + s.fallo + 1);
@@ -1387,8 +1473,11 @@ function elegirModulo(cap){
 const $ = id => document.getElementById(id);
 const main = $('main');
 let ejActual = null, modActual = null, respondido = false, vioExpl = false, ordenSel = [];
+let _pantallaActual = null;   // qué pantalla-función se repinta sola si llega un cambio de sync
 let esTemaFijo = false;   // true = practicando un tema concreto, no la mezcla
 let capFijo = null;       // 1/2/3 = mezclando solo los temas de ese capítulo
+let modoErrores = false;  // true = repasando la lista de "errores" en vez de practicar normal
+let examen = null;        // { preguntas:[{ej,ok,completado}], idx, finLimite } o null si no hay examen activo
 let sesionHechos = 0;     // cuántos ejercicios van en esta ronda
 const SESION_TOTAL = 10;  // tamaño de la ronda; al llegar acá se reinicia sola
 let ultimoFeedback = null;// resultado de verificar() del último responder(), para poder retomarlo
@@ -1417,16 +1506,23 @@ function restaurarSesion(){
 function ir(pantalla, arg, continuar){
   window.scrollTo(0,0);
   if(pantalla !== 'practica') borrarSesion();   // salir de la práctica = ronda terminada
+  // salir de examen/errores sin terminar no debe dejar el modo "pegado" — si no, el modo
+  // práctica normal queda contaminado (responder() y el botón "Siguiente" siguen esas reglas)
+  if(pantalla !== 'examen'){ examen = null; clearInterval(_examenTimerIv); }
+  if(pantalla !== 'errores') modoErrores = false;
   if(pantalla === 'inicio')   return pantallaInicio();
   if(pantalla === 'practica') return nuevoEjercicio(arg, continuar);
   if(pantalla === 'stats')    return pantallaStats();
   if(pantalla === 'clase')    return pantallaClase();
   if(pantalla === 'elegir')   return pantallaElegirTemas();
   if(pantalla === 'sync')     return pantallaSync();
+  if(pantalla === 'examen')   return iniciarExamen();
+  if(pantalla === 'errores')  return pantallaErrores();
 }
 
 /* ---------- inicio ---------- */
 function pantallaInicio(){
+  _pantallaActual = pantallaInicio;
   const bannerClase = clase && clase.mods.length ? `
     <div class="banner">
       <span>Practicando: ${clase.etiqueta}</span>
@@ -1437,6 +1533,11 @@ function pantallaInicio(){
       ${bannerClase}
       <button class="btn amar" onclick="ir('practica')">Empezar a practicar
         <small>${clase && clase.mods.length ? clase.mods.length+' temas de tu clase' : 'todos los temas mezclados'}</small></button>
+      ${rachaDias.actual > 0 ? `<div class="nota">🔥 ${rachaDias.actual} ${rachaDias.actual===1?'día seguido':'días seguidos'} practicando (mejor: ${rachaDias.mejor})</div>` : ''}
+      <div class="row">
+        <button class="btn sec chico" onclick="ir('examen')">Modo examen</button>
+        <button class="btn sec chico" onclick="ir('errores')">Repasar mis errores${errores.length?` (${errores.length})`:''}</button>
+      </div>
       <h3>Nivel</h3>
       <div class="chips" id="chipsNivel">
         ${['facil','medio','dificil'].map(nv=>`<button class="chip ${nivel===nv?'on':''}"
@@ -1470,7 +1571,13 @@ function pantallaInicio(){
         <small>${syncCode ? 'Código: '+syncCode : 'Comparte tu progreso con tu otro aparato'}</small></button>
     </div>`;
 }
-function setNivel(nv){ nivel = nv; guardar('mate_nivel_v1', nv); if(syncDoc) syncDoc.set({nivel:nv},{merge:true}).catch(()=>{}); pantallaInicio(); }
+function setNivel(nv){
+  nivel = nv; guardar('mate_nivel_v1', nv);
+  if(syncDoc) syncDoc.set({nivel:nv},{merge:true}).catch(()=>{});
+  // solo repinta los chips, no toda la pantalla — si no, cualquier <details> abierto se cerraba
+  $('chipsNivel').innerHTML = ['facil','medio','dificil'].map(x=>`<button class="chip ${nivel===x?'on':''}"
+    onclick="setNivel('${x}')">${x==='facil'?'Fácil':x==='medio'?'Medio':'Difícil'}</button>`).join('');
+}
 function quitarClase(){ clase = null; guardar('mate_clase_v1', null); if(syncDoc) syncDoc.set({clase:null},{merge:true}).catch(()=>{}); pantallaInicio(); }
 
 /* ---------- práctica ---------- */
@@ -1493,15 +1600,15 @@ function nuevoEjercicio(arg, continuar){
 
 function entradaHTML(ej){
   switch(ej.tipo){
-    case 'sino': return `<div class="opt">
-        <button class="btn" onclick="responder(true)">Sí</button>
-        <button class="btn" onclick="responder(false)">No</button></div>`;
-    case 'cmp': return `<div class="opt">
-        <button class="btn" onclick="responder('<')">&lt;</button>
-        <button class="btn" onclick="responder('=')">=</button>
-        <button class="btn" onclick="responder('>')">&gt;</button></div>`;
-    case 'opciones': return ej.opciones.map((o,i)=>
-        `<button class="btn" onclick="responder(ejActual.opciones[${i}])">${o}</button>`).join('');
+    case 'sino': return `<div class="opt" role="radiogroup" aria-label="Sí o no">
+        <button class="btn" role="radio" aria-checked="false" onclick="responder(true)">Sí</button>
+        <button class="btn" role="radio" aria-checked="false" onclick="responder(false)">No</button></div>`;
+    case 'cmp': return `<div class="opt" role="radiogroup" aria-label="Comparación">
+        <button class="btn" role="radio" aria-checked="false" onclick="responder('<')">&lt;</button>
+        <button class="btn" role="radio" aria-checked="false" onclick="responder('=')">=</button>
+        <button class="btn" role="radio" aria-checked="false" onclick="responder('>')">&gt;</button></div>`;
+    case 'opciones': return `<div role="radiogroup" aria-label="Opciones de respuesta">${ej.opciones.map((o,i)=>
+        `<button class="btn" role="radio" aria-checked="false" onclick="responder(ejActual.opciones[${i}])">${o}</button>`).join('')}</div>`;
     case 'num': return `
         <div class="numRow">
           <button type="button" class="btn sec signo" onclick="toggleSigno('inNum')">±</button>
@@ -1546,11 +1653,11 @@ function pintarEjercicio(){
   main.innerHTML = `
     <button class="back" onclick="ir('inicio')">← Inicio</button>
     <div class="card">
-      <span class="pill">${esTemaFijo ? '' : capFijo ? `Capítulo ${capFijo} · ` : (clase && clase.mods && clase.mods.length) ? `${clase.etiqueta} · ` : 'Mezcla · '}${modActual.nombre}</span>
+      <span class="pill">${esTemaFijo ? '' : capFijo ? `Capítulo ${capFijo} · ` : (clase && clase.mods && clase.mods.length) ? `${clase.etiqueta.length>20?'Mi mezcla':clase.etiqueta} · ` : 'Mezcla · '}${modActual.nombre}</span>
       <div class="enunciado">${ejActual.enunciado}</div>
       <div id="zonaEntrada">
         <textarea class="campo" id="inProceso" style="min-height:70px;margin-bottom:12px"
-          placeholder="Tu proceso (opcional) — escribe aquí los pasos antes de responder">${respondido ? escHtml(ultimoProceso) : ''}</textarea>
+          placeholder="Tu proceso (opcional) — escribe aquí los pasos antes de responder">${(respondido || vioExpl) ? escHtml(ultimoProceso) : ''}</textarea>
         ${entradaHTML(ejActual)}
       </div>
       <div id="zonaFb"></div>
@@ -1569,7 +1676,7 @@ function pintarEjercicio(){
     </div>`;
   const primero = $('inNum') || $('inTexto') || $('inE') || $('inN');
   if(primero){
-    primero.focus();
+    if(window.innerWidth > 640) primero.focus();  // en móvil no abrimos el teclado solo: tapa el enunciado
     ['inNum','inTexto','inE','inN','inD'].forEach(id=>{
       const el = $(id); if(el) el.addEventListener('keydown', e => { if(e.key==='Enter') responder(); });
     });
@@ -1606,6 +1713,7 @@ function leerEntrada(ej){
 }
 
 function responder(valor){
+  if(examen) return responderExamen(valor);
   if(respondido) return;
   const ent = (valor !== undefined) ? valor : leerEntrada(ejActual);
   if(ejActual.tipo === 'orden' && ent.length < ejActual.opciones.length){
@@ -1617,17 +1725,27 @@ function responder(valor){
   respondido = true;
   ultimoFeedback = res;
   ultimoProceso = ($('inProceso') || {}).value || '';
-  if(!vioExpl) anotar(ejActual.__mod, res.ok);
+  if(modoErrores){
+    if(res.ok){ errores.shift(); guardar('mate_errores_v1', errores); }
+  } else {
+    if(!vioExpl) anotar(ejActual.__mod, res.ok);
+    if(!vioExpl && !res.ok) _registrarError(ejActual);
+    guardarSesion();
+  }
   mostrarFb(res, false);
-  guardarSesion();
 }
+
+const _feedbackHaptico = ok => { if(navigator.vibrate) navigator.vibrate(ok ? 30 : [30,50,30]); };
 
 function mostrarFb(res, soloAviso){
   const zona = $('zonaFb');
   if(soloAviso){ zona.innerHTML = `<div class="fb medio">${res.msg}</div>`; return; }
 
+  _feedbackHaptico(res.ok);
   const clase_ = res.ok ? 'ok' : res.incompleto ? 'medio' : 'mal';
   const titulo = res.ok ? '¡Correcto!' : res.incompleto ? 'Casi' : 'No es esa';
+  const sigOnclick = modoErrores ? '_pintarSiguienteError()'
+    : `ir('practica',${esTemaFijo ? `'${modActual.id}'` : capFijo ? capFijo : 'undefined'},true)`;
   zona.innerHTML = `
     <div class="fb ${clase_}">${titulo}
       ${res.msg ? `<small>${res.msg}</small>` : ''}
@@ -1635,10 +1753,11 @@ function mostrarFb(res, soloAviso){
       ${vioExpl ? `<small>Este no cuenta para las estadísticas (viste la explicación antes).</small>` : ''}
     </div>
     ${explHTML()}
-    <button class="btn amar" onclick="ir('practica',${esTemaFijo ? `'${modActual.id}'` : capFijo ? capFijo : 'undefined'},true)">Siguiente ejercicio</button>`;
+    <button class="btn amar" onclick="${sigOnclick}">Siguiente ejercicio</button>`;
   $('zonaEntrada').style.opacity = '.5';
   $('zonaEntrada').style.pointerEvents = 'none';
   $('accionesPre').style.display = 'none';
+  zona.scrollIntoView({behavior:'smooth', block:'start'});
 }
 
 const explHTML = () => `
@@ -1657,15 +1776,135 @@ function verExplicacion(){
   guardarSesion();
 }
 function _pintarVistaExplicacion(){
-  $('zonaFb').innerHTML = `
+  const zona = $('zonaFb');
+  zona.innerHTML = `
     <div class="fb medio">Respuesta: <b>${fmtRespuesta(ejActual)}</b>
       <small>Este ejercicio no cuenta para las estadísticas.</small></div>
     ${explHTML()}
     <button class="btn amar" onclick="ir('practica',${esTemaFijo ? `'${modActual.id}'` : capFijo ? capFijo : 'undefined'},true)">Siguiente ejercicio</button>`;
+  zona.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+/* ---------- repasar mis errores ---------- */
+function pantallaErrores(){
+  modoErrores = true;
+  if(!errores.length){
+    main.innerHTML = `<button class="back" onclick="ir('inicio')">← Inicio</button>
+      <div class="card"><h2>Repasar mis errores</h2>
+        <div class="nota">No tienes errores guardados — ¡vas muy bien, o ya los repasaste todos!</div></div>`;
+    return;
+  }
+  _pintarSiguienteError();
+}
+function _pintarSiguienteError(){
+  if(!errores.length){ modoErrores = false; return ir('inicio'); }
+  const item = errores[0];
+  modActual = MOD_POR_ID[item.modId] || { id:item.modId, nombre:'Repaso' };
+  ejActual = item.ej;
+  respondido = false; vioExpl = false; ordenSel = []; ultimoProceso = '';
+  main.innerHTML = `
+    <button class="back" onclick="ir('inicio')">← Inicio</button>
+    <div class="card">
+      <span class="pill">Repaso de errores · quedan ${errores.length}</span>
+      <div class="enunciado">${ejActual.enunciado}</div>
+      <div id="zonaEntrada">${entradaHTML(ejActual)}</div>
+      <div id="zonaFb"></div>
+      <div class="row" id="accionesPre">
+        <button class="btn sec chico" onclick="errores.shift(); guardar('mate_errores_v1',errores); _pintarSiguienteError();">Quitar de la lista</button>
+      </div>
+    </div>`;
+  const primero = $('inNum') || $('inTexto') || $('inE') || $('inN');
+  if(primero && window.innerWidth > 640) primero.focus();
+}
+
+/* ---------- modo examen ---------- */
+const EXAMEN_TOTAL = 10, EXAMEN_SEGUNDOS = 60 * EXAMEN_TOTAL;   // 1 minuto por pregunta
+let _examenTimerIv = null;
+function iniciarExamen(){
+  examen = { preguntas: [], idx: 0, finLimite: Date.now() + EXAMEN_SEGUNDOS*1000 };
+  for(let i=0; i<EXAMEN_TOTAL; i++){
+    const m = elegirModulo();
+    const ej = m.gen(nivel); ej.__mod = m.id; ej.__modNombre = m.nombre;
+    examen.preguntas.push({ ej, ok:null, completado:false });
+  }
+  pintarExamen();
+}
+function _abandonarExamen(){
+  if(!confirm('¿Abandonar el examen? No se guarda ningún resultado.')) return;
+  clearInterval(_examenTimerIv);
+  examen = null;
+  ir('inicio');
+}
+function pintarExamen(){
+  const p = examen.preguntas[examen.idx];
+  ordenSel = [];
+  main.innerHTML = `
+    <button class="back" onclick="_abandonarExamen()">← Abandonar examen</button>
+    <div class="card">
+      <div class="row" style="margin-bottom:10px">
+        <span class="pill">Pregunta ${examen.idx+1} de ${examen.preguntas.length}</span>
+        <span class="pill" id="examenReloj" style="background:var(--rojo-bg);color:#b03a2e">--:--</span>
+      </div>
+      <div class="enunciado">${p.ej.enunciado}</div>
+      <div id="zonaEntrada">${entradaHTML(p.ej)}</div>
+    </div>
+    <div class="nota">Modo examen: sin explicaciones ni saltar — el repaso queda para el final.</div>`;
+  const primero = $('inNum') || $('inTexto') || $('inE') || $('inN');
+  if(primero && window.innerWidth > 640) primero.focus();
+  _actualizarRelojExamen();
+}
+function _actualizarRelojExamen(){
+  clearInterval(_examenTimerIv);
+  const tick = () => {
+    if(!examen) return clearInterval(_examenTimerIv);
+    const restante = Math.max(0, Math.round((examen.finLimite - Date.now())/1000));
+    const el = $('examenReloj');
+    if(el) el.textContent = String(Math.floor(restante/60)).padStart(2,'0')+':'+String(restante%60).padStart(2,'0');
+    if(restante <= 0){ clearInterval(_examenTimerIv); finalizarExamen(); }
+  };
+  tick();
+  _examenTimerIv = setInterval(tick, 1000);
+}
+function responderExamen(valor){
+  const p = examen.preguntas[examen.idx];
+  const ent = (valor !== undefined) ? valor : leerEntrada(p.ej);
+  if(p.ej.tipo === 'orden' && ent.length < p.ej.opciones.length) return;   // en examen se exige completar, sin aviso
+  const res = verificar(p.ej, ent);
+  if(res.vacio) return;
+  p.ok = res.ok; p.completado = true;
+  examen.idx++;
+  if(examen.idx >= examen.preguntas.length) finalizarExamen();
+  else pintarExamen();
+}
+function finalizarExamen(){
+  clearInterval(_examenTimerIv);
+  const total = examen.preguntas.length;
+  const correctas = examen.preguntas.filter(p=>p.ok===true).length;
+  const nota = Math.round(correctas*100/total);
+  main.innerHTML = `
+    <div class="card">
+      <h2>Resultado del examen</h2>
+      <div class="racha">
+        <div><b>${correctas}/${total}</b><span>correctas</span></div>
+        <div><b>${nota}%</b><span>nota</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Repaso</h2>
+      ${examen.preguntas.map((p,i)=>`
+        <div class="fb ${!p.completado?'medio':p.ok?'ok':'mal'}" style="margin-bottom:6px">
+          ${i+1}. ${p.ej.enunciado}
+          <small>${!p.completado ? 'Sin responder (se acabó el tiempo)' : p.ok?'Correcto':'Incorrecto — la respuesta es '+fmtRespuesta(p.ej)}</small>
+        </div>
+        <div class="expl" style="margin-bottom:14px"><ol>${p.ej.explicacion.map(l=>`<li>${l}</li>`).join('')}</ol></div>`).join('')}
+      <button class="btn amar" onclick="examen=null; ir('inicio')">Volver a Inicio</button>
+    </div>`;
+  examen = null;
 }
 
 /* ---------- progreso ---------- */
 function pantallaStats(){
+  _pantallaActual = pantallaStats;
   const conDatos = MODULOS.filter(m => stats[m.id] && (stats[m.id].ok + stats[m.id].fallo) > 0);
   const total = conDatos.reduce((a,m)=>a + stats[m.id].ok + stats[m.id].fallo, 0);
   const aciertos = conDatos.reduce((a,m)=>a + stats[m.id].ok, 0);
@@ -1690,6 +1929,16 @@ function pantallaStats(){
       <button class="btn amar" onclick="practicarTema('${flojo.id}')">Practicar ${flojo.nombre}</button>
     </div>` : ''}
     <div class="card">
+      <h2>Últimos 14 días</h2>
+      <div style="display:flex;gap:4px;align-items:flex-end;height:50px">
+        ${_historialUltimosDias(14).map(d=>{
+          const alto = d.n ? Math.min(100, 25 + d.n*10) : 6;
+          return `<div style="flex:1;background:${d.n?'var(--verde)':'var(--gris)'};height:${alto}%;
+            border-radius:3px" title="${d.dia}: ${d.n} ejercicios"></div>`;
+        }).join('')}
+      </div>
+    </div>
+    <div class="card">
       <h2>Por tema</h2>
       ${conDatos.length ? conDatos.map(m=>{
         const s = stats[m.id], p = pct(s);
@@ -1699,14 +1948,56 @@ function pantallaStats(){
           <div class="barra-ext"><div class="barra-int" style="width:${p}%;background:${color}"></div></div>
         </div>`;
       }).join('') : '<div class="nota">Todavía no has hecho ningún ejercicio.</div>'}
+      <div class="row" style="margin-top:10px">
+        <button class="btn sec chico" onclick="exportarRespaldo()">Exportar respaldo</button>
+        <button class="btn sec chico" onclick="$('fileRespaldo').click()">Importar respaldo</button>
+      </div>
+      <input type="file" id="fileRespaldo" accept=".json" style="display:none"
+        onchange="if(this.files[0]) importarRespaldo(this.files[0])">
       ${total ? `<button class="btn sec chico" style="margin-top:10px" onclick="borrarProgreso()">Borrar mi progreso</button>` : ''}
     </div>`;
+}
+function _historialUltimosDias(n){
+  const out = [];
+  for(let i=n-1; i>=0; i--){
+    const d = new Date(Date.now()-i*86400000).toISOString().slice(0,10);
+    out.push({ dia:d, n: historial[d]||0 });
+  }
+  return out;
+}
+function exportarRespaldo(){
+  const datos = {};
+  Object.keys(localStorage).filter(k=>k.startsWith('mate_')).forEach(k=>{ datos[k] = localStorage.getItem(k); });
+  const blob = new Blob([JSON.stringify(datos)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'mate-respaldo-'+new Date().toISOString().slice(0,10)+'.json';
+  a.click();
+}
+function importarRespaldo(file){
+  const reader = new FileReader();
+  reader.onload = () => {
+    let datos;
+    try{ datos = JSON.parse(reader.result); }catch(e){ datos = null; }
+    // se valida ANTES de tocar nada — un JSON que solo "parsea" (null, un arreglo, un texto)
+    // no debe borrar el progreso que ya había
+    const claves = (datos && typeof datos === 'object' && !Array.isArray(datos))
+      ? Object.keys(datos).filter(k => k.startsWith('mate_')) : [];
+    if(!claves.length){ alert('Ese archivo no es un respaldo válido de esta app.'); return; }
+    claves.forEach(k => localStorage.setItem(k, datos[k]));
+    alert('Progreso restaurado. La app se va a recargar.');
+    location.reload();
+  };
+  reader.readAsText(file);
 }
 function practicarTema(id){ ir('practica', id); }
 function borrarProgreso(){
   if(!confirm('¿Borrar todas tus estadísticas y la racha?')) return;
   stats = {}; racha = { actual:0, mejor:0 };
   guardar('mate_stats_v1', stats); guardar('mate_racha_v1', racha);
+  // sin {merge:true}: un merge con {} no borra nada en Firestore, hay que reemplazar el documento
+  // entero (por eso van también nivel/clase, para no perderlos de paso)
+  if(syncDoc) syncDoc.set({ stats, racha, nivel, clase: clase||null }).catch(()=>{});
   pantallaStats();
 }
 
