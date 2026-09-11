@@ -1257,6 +1257,107 @@ function anotar(modId, ok){
   racha.actual = ok ? racha.actual + 1 : 0;
   if(racha.actual > racha.mejor) racha.mejor = racha.actual;
   guardar('mate_racha_v1', racha);
+  _empujarSync(modId, ok);
+}
+
+/* ---------- sincronizar entre aparatos (Firebase, opcional) ---------- */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyDrOButk_G90Qcrj3BB-tEHa9l2lJrVc-0",
+  authDomain: "mate-practica-matematicas.firebaseapp.com",
+  projectId: "mate-practica-matematicas",
+  storageBucket: "mate-practica-matematicas.firebasestorage.app",
+  messagingSenderId: "511953502483",
+  appId: "1:511953502483:web:8b0d98d48c1039d3f25ae6"
+};
+const URL_FB_APP = 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js';
+const URL_FB_FS  = 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js';
+const ALFABETO_CODIGO = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';  // sin 0/O/1/I/L, para no confundir al escribir
+
+let syncCode = leer('mate_sync_code_v1', null);
+let syncDoc = null;      // referencia Firestore, null hasta conectar
+let syncListo = false;   // true cuando ya hay listener activo
+let _syncUnsub = null;
+
+function generarCodigo(){
+  let s = '';
+  for(let g=0; g<3; g++){
+    for(let i=0; i<4; i++) s += ALFABETO_CODIGO[Math.floor(Math.random()*ALFABETO_CODIGO.length)];
+    if(g<2) s += '-';
+  }
+  return s;
+}
+async function _hashCodigo(codigo){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(codigo.trim().toUpperCase()));
+  return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+async function _initFirebase(){
+  await cargarScript(URL_FB_APP);
+  await cargarScript(URL_FB_FS);
+  if(!firebase.apps.length){
+    firebase.initializeApp(FIREBASE_CONFIG);
+    try{ await firebase.firestore().enablePersistence({synchronizeTabs:true}); }catch(e){}  // offline: cachea y reintenta sola
+  }
+  return firebase.firestore();
+}
+function _fusionarStats(a, b){
+  const ids = new Set([...Object.keys(a), ...Object.keys(b)]);
+  const out = {};
+  ids.forEach(id => {
+    const x = a[id] || {ok:0, fallo:0}, y = b[id] || {ok:0, fallo:0};
+    out[id] = { ok: (x.ok||0) + (y.ok||0), fallo: (x.fallo||0) + (y.fallo||0) };
+  });
+  return out;
+}
+async function conectarSync(codigo){           // se llama UNA vez, al vincular este aparato
+  const db = await _initFirebase();
+  const id = await _hashCodigo(codigo);
+  const ref = db.collection('syncs').doc(id);
+  const snap = await ref.get();
+  const remoto = snap.exists ? snap.data() : {};
+  await ref.set({
+    stats: _fusionarStats(remoto.stats || {}, stats),
+    racha: { actual: (remoto.racha && remoto.racha.actual) || racha.actual,
+             mejor: Math.max((remoto.racha && remoto.racha.mejor) || 0, racha.mejor) },
+    nivel: remoto.nivel || nivel,
+    clase: remoto.clase !== undefined ? remoto.clase : (clase || null)
+  }, { merge: true });
+  syncDoc = ref;
+  syncCode = codigo.trim().toUpperCase();
+  guardar('mate_sync_code_v1', syncCode);
+  _escucharSync();
+}
+async function _reengancharSync(){              // se llama en cada apertura, si ya había un código guardado
+  if(!syncCode) return;
+  const db = await _initFirebase();
+  const id = await _hashCodigo(syncCode);
+  syncDoc = db.collection('syncs').doc(id);
+  _escucharSync();
+}
+function _escucharSync(){
+  if(!syncDoc || syncListo) return;
+  syncListo = true;
+  _syncUnsub = syncDoc.onSnapshot(snap => {
+    const d = snap.data();
+    if(!d) return;
+    if(d.stats) stats = d.stats;
+    if(d.racha){ racha.actual = d.racha.actual||0; racha.mejor = Math.max(racha.mejor||0, d.racha.mejor||0); }
+    if(d.nivel) nivel = d.nivel;
+    if(d.clase !== undefined) clase = d.clase;
+    guardar('mate_stats_v1', stats); guardar('mate_racha_v1', racha);
+    guardar('mate_nivel_v1', nivel); guardar('mate_clase_v1', clase);
+  }, err => console.warn('sync:', err.message));
+}
+function _empujarSync(modId, ok){
+  if(!syncDoc) return;
+  syncDoc.set({
+    stats: { [modId]: { [ok?'ok':'fallo']: firebase.firestore.FieldValue.increment(1) } },
+    racha: { actual: racha.actual, mejor: racha.mejor }
+  }, { merge: true }).catch(()=>{});   // sin conexión: la persistencia offline lo reintenta sola
+}
+function desconectarSync(){
+  if(_syncUnsub) _syncUnsub();
+  _syncUnsub = null; syncDoc = null; syncListo = false; syncCode = null;
+  localStorage.removeItem('mate_sync_code_v1');
 }
 const pct = s => { const t = s.ok + s.fallo; return t ? Math.round(s.ok*100/t) : null; };
 
@@ -1323,6 +1424,7 @@ function ir(pantalla, arg, continuar){
   if(pantalla === 'stats')    return pantallaStats();
   if(pantalla === 'clase')    return pantallaClase();
   if(pantalla === 'elegir')   return pantallaElegirTemas();
+  if(pantalla === 'sync')     return pantallaSync();
 }
 
 /* ---------- inicio ---------- */
@@ -1366,10 +1468,12 @@ function pantallaInicio(){
       <button class="btn" onclick="ir('clase')">Material de clase
         <small>Pega o sube la presentación y te digo qué practicar</small></button>
       <button class="btn sec" onclick="ir('stats')">Mi progreso</button>
+      <button class="btn sec" onclick="ir('sync')">${syncCode ? 'Sincronización activa' : 'Sincronizar entre aparatos'}
+        <small>${syncCode ? 'Código: '+syncCode : 'Comparte tu progreso con tu otro aparato'}</small></button>
     </div>`;
 }
-function setNivel(nv){ nivel = nv; guardar('mate_nivel_v1', nv); pantallaInicio(); }
-function quitarClase(){ clase = null; guardar('mate_clase_v1', null); pantallaInicio(); }
+function setNivel(nv){ nivel = nv; guardar('mate_nivel_v1', nv); if(syncDoc) syncDoc.set({nivel:nv},{merge:true}).catch(()=>{}); pantallaInicio(); }
+function quitarClase(){ clase = null; guardar('mate_clase_v1', null); if(syncDoc) syncDoc.set({clase:null},{merge:true}).catch(()=>{}); pantallaInicio(); }
 
 /* ---------- práctica ---------- */
 function nuevoEjercicio(arg, continuar){
@@ -1649,6 +1753,51 @@ function _marcarCapitulo(cap){
   _pintarElegirTemas();
 }
 
+/* ---------- pantalla de sincronizar ---------- */
+function pantallaSync(){
+  main.innerHTML = `
+    <button class="back" onclick="ir('inicio')">← Inicio</button>
+    <div class="card">
+      <h2>Sincronizar entre aparatos</h2>
+      ${syncCode ? `
+        <div class="nota">Este aparato está conectado con el código:</div>
+        <div class="enunciado" style="font-size:1.4rem;letter-spacing:2px">${syncCode}</div>
+        <p style="font-size:.88rem;color:var(--muted);margin-bottom:14px">
+          Escribe este mismo código en tu otro aparato (acá mismo, en "¿Ya tienes un código?") para
+          que los dos compartan racha, aciertos y nivel.</p>
+        <button class="btn sec" onclick="_desconectarYRefrescar()">Desconectar este aparato</button>
+      ` : `
+        <p style="font-size:.9rem;color:var(--muted);margin-bottom:14px">
+          Conecta este aparato con tu otro aparato para que el progreso (racha, aciertos por tema,
+          nivel) se mantenga igual en los dos.</p>
+        <button class="btn amar" id="btnGenerarCodigo" onclick="_generarYMostrar()">Generar código nuevo</button>
+        <h3>¿Ya tienes un código de tu otro aparato?</h3>
+        <input class="campo" id="inCodigo" autocomplete="off" placeholder="XXXX-XXXX-XXXX" style="text-transform:uppercase">
+        <button class="btn" style="margin-top:10px" id="btnConectar" onclick="_conectarYRefrescar()">Conectar</button>
+      `}
+      <div id="zonaSync"></div>
+    </div>`;
+}
+async function _generarYMostrar(){
+  const btn = $('btnGenerarCodigo'); btn.textContent = 'Generando…'; btn.disabled = true;
+  try{ await conectarSync(generarCodigo()); pantallaSync(); }
+  catch(e){ $('zonaSync').innerHTML = `<div class="fb mal">No se pudo conectar. Revisa tu internet e intenta de nuevo.</div>`;
+    btn.textContent = 'Generar código nuevo'; btn.disabled = false; }
+}
+async function _conectarYRefrescar(){
+  const codigo = $('inCodigo').value.trim();
+  if(!codigo){ $('zonaSync').innerHTML = `<div class="fb medio">Escribe el código primero.</div>`; return; }
+  const btn = $('btnConectar'); btn.textContent = 'Conectando…'; btn.disabled = true;
+  try{ await conectarSync(codigo); pantallaSync(); }
+  catch(e){ $('zonaSync').innerHTML = `<div class="fb mal">No se pudo conectar. Revisa el código e intenta de nuevo.</div>`;
+    btn.textContent = 'Conectar'; btn.disabled = false; }
+}
+function _desconectarYRefrescar(){
+  if(!confirm('¿Desconectar este aparato? Tu progreso actual se queda aquí, pero deja de compartirse con el otro aparato.')) return;
+  desconectarSync();
+  pantallaSync();
+}
+
 /* ---------- material de clase ---------- */
 
 function pantallaClase(){
@@ -1751,6 +1900,7 @@ function guardarClase(){
     : seleccion.map(id => MOD_POR_ID[id].nombre).slice(0,2).join(', ') + (seleccion.length>2 ? '…' : '');
   clase = { etiqueta, mods: seleccion.slice() };
   guardar('mate_clase_v1', clase);
+  if(syncDoc) syncDoc.set({clase},{merge:true}).catch(()=>{});
   ir('inicio');
 }
 
@@ -1841,6 +1991,7 @@ function autotest(){
    ══════════════════════════════════════════════════════════ */
 if(location.search.indexOf('test') >= 0) autotest();
 else if(!restaurarSesion()) pantallaInicio();
+if(syncCode) _reengancharSync();
 
 // ── SERVICE WORKER (PWA offline) ──
 if('serviceWorker' in navigator){
