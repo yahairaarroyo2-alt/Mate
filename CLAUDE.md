@@ -55,9 +55,13 @@ solo el paso mecánico (fue el pedido explícito de la usuaria — "como si no s
 **Línea `TRUCO:` — obligatoria.** Toda explicación termina con una línea que empieza con
 `TRUCO: ` y da el atajo para resolver ese ejercicio más rápido la próxima vez (no un
 resumen de los pasos: el camino corto, la regla mnemotécnica o la comprobación que evita
-rehacer la cuenta). `explPasos()` la saca de la lista numerada y la pinta como recuadro
-aparte (`.truco`), poniéndole mayúscula inicial. El autotest lo verifica: si algún `return`
-de un `gen()` se queda sin línea `TRUCO:`, ese módulo FALLA (contador `sinTruco`).
+rehacer la cuenta). Y **siempre cierra con un ejemplo concreto** ("Ejemplo: ...", "Otro
+ejemplo: ..."), con números, no en abstracto — también fue pedido explícito.
+
+`explPasos()` saca esa línea de la lista numerada y la pinta como recuadro aparte
+(`.truco`): le pone mayúscula inicial y mete un `<br>` antes de cada "Ejemplo:". El
+autotest verifica que exista: si algún `return` de un `gen()` se queda sin línea `TRUCO:`,
+ese módulo FALLA (contador `sinTruco`).
 
 Los `tipo` de entrada (7): `sino`, `cmp`, `opciones`, `num`, `texto`, `frac`, `mixto`,
 `orden`. `entradaHTML()` decide qué pintar según el tipo; `verificar()` decide si la
