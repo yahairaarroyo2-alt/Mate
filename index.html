@@ -55,6 +55,13 @@
   .chip{border:2px solid var(--gris2);background:var(--blanco);color:var(--azul2);
     border-radius:20px;padding:7px 15px;font-size:.88rem;font-weight:600;cursor:pointer;font-family:inherit}
   .chip.on{background:var(--azul3);border-color:var(--azul3);color:var(--blanco)}
+  /* flechita para plegar/desplegar listas de temas */
+  details{margin:2px 0 10px}
+  summary{cursor:pointer;color:var(--azul2);font-weight:600;font-size:.85rem;
+    padding:6px 0;list-style:none}
+  summary::-webkit-details-marker{display:none}
+  summary::before{content:'▶';display:inline-block;margin-right:6px;font-size:.65rem;transition:transform .15s}
+  details[open] summary::before{transform:rotate(90deg)}
   /* enunciado */
   .enunciado{background:var(--azul);color:var(--blanco);border-radius:14px;padding:20px 18px;
     font-size:1.22rem;text-align:center;margin-bottom:16px;line-height:1.6}
@@ -1234,14 +1241,17 @@ function pantallaInicio(){
 
     <div class="card">
       <h2>Practicar un tema suelto</h2>
-      ${[1,2,3].map(cap => `
+      ${[1,2,3].map(cap => { const ms = MODULOS.filter(m=>m.secciones[0][0]===String(cap)); return `
         <h3>Capítulo ${cap}</h3>
         <button class="btn amar chico" onclick="ir('practica',${cap})">Mezcla del capítulo ${cap}</button>
-        ${MODULOS.filter(m=>m.secciones[0][0]===String(cap)).map(m=>{
-          const s = stats[m.id], p = s ? pct(s) : null;
-          return `<button class="btn sec chico" onclick="ir('practica','${m.id}')">${m.nombre}
-            ${p!==null ? `<small>${p}% de aciertos · ${s.ok+s.fallo} ejercicios</small>` : ''}</button>`;
-        }).join('')}`).join('')}
+        <details>
+          <summary>Ver los ${ms.length} temas del capítulo ${cap}</summary>
+          ${ms.map(m=>{
+            const s = stats[m.id], p = s ? pct(s) : null;
+            return `<button class="btn sec chico" onclick="ir('practica','${m.id}')">${m.nombre}
+              ${p!==null ? `<small>${p}% de aciertos · ${s.ok+s.fallo} ejercicios</small>` : ''}</button>`;
+          }).join('')}
+        </details>`; }).join('')}
     </div>
 
     <div class="card">
@@ -1510,14 +1520,18 @@ function _pintarElegirTemas(){
       <h2>Elige los temas a mezclar</h2>
       <div class="nota">Marca cualquier combinación de temas, de cualquier capítulo — por
         ejemplo, capítulo 1 con capítulo 2.</div>
-      ${[1,2,3].map(cap => `
+      ${[1,2,3].map(cap => { const ms = MODULOS.filter(m=>m.secciones[0][0]===String(cap));
+        const n = ms.filter(m=>seleccion.indexOf(m.id)>=0).length; return `
         <h3 style="display:flex;justify-content:space-between;align-items:center">
           <span>Capítulo ${cap}</span>
           <button class="btn sec chico" style="width:auto;margin:0;padding:5px 11px;font-size:.78rem"
             onclick="_marcarCapitulo(${cap})">Marcar/quitar todo</button>
         </h3>
-        ${listaCheckHTML(MODULOS.filter(m=>m.secciones[0][0]===String(cap)))}
-      `).join('')}
+        <details ${n>0?'open':''}>
+          <summary>${n} de ${ms.length} marcados</summary>
+          ${listaCheckHTML(ms)}
+        </details>
+      `; }).join('')}
       <div id="zonaClase"></div>
       <button class="btn amar" style="margin-top:10px" onclick="guardarClase()">Practicar esta mezcla</button>
     </div>`;
