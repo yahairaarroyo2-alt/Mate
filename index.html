@@ -223,18 +223,31 @@ function toggleSigno(id){
 /* ══════════════════════════════════════════════════════════
    2. EXPLICACIONES  (salen de las mismas variables que la respuesta)
    ══════════════════════════════════════════════════════════ */
-const TRUCO_DIV = {
-  2:'Ni mires el resto del número: tapa todo con la mano menos la última cifra. Si esa cifra es 0, 2, 4, 6 u 8, es divisible entre 2. Da igual si el número tiene cuatro cifras o veinte. Ejemplo: en 4.738 tapas todo menos el 8; el 8 es par, así que sí.',
-  5:'Igual que con el 2, solo cuenta la última cifra: 0 o 5 → sí, cualquier otra → no. Ni sumes ni dividas nada. Ejemplo: 1.245 termina en 5 → sí; 1.242 termina en 2 → no.',
-  10:'La más rápida de todas: ¿termina en 0? Sí. ¿No termina en 0? No. Ejemplo: 3.480 → sí; 3.485 → no, porque termina en 5 y no en 0.',
-  3:'Si al sumar los dígitos te queda un número grande (por ejemplo 27), vuelve a sumar SUS dígitos: 2+7 = 9. Repite hasta quedarte con una sola cifra; si esa cifra es 3, 6 o 9, el número es divisible entre 3. Ejemplo: 987 → 9+8+7 = 24 → 2+4 = 6 → 6 es múltiplo de 3, así que sí.',
-  9:'El mismo atajo del 3: suma los dígitos, y si te queda grande vuelve a sumarlos hasta tener una sola cifra. Solo si esa cifra final es 9, el número es divisible entre 9. Ejemplo: 837 → 8+3+7 = 18 → 1+8 = 9 → sí. En cambio 834 → 15 → 6, y 6 no es 9, así que no.',
-  4:'Toma las dos últimas cifras y pártelas a la mitad dos veces seguidas. Si las dos veces sale exacto, es divisible entre 4 Ejemplo que sí: 1.736 → las dos últimas son 36 → 18 → 9, exacto las dos veces. Ejemplo que no: 1.750 → 50 → 25 → 12,5, ahí se rompe.',
-  6:'Empieza siempre por lo más barato: ¿es par? Si NO es par, ya puedes contestar "no" sin sumar ni un dígito. Solo si es par vale la pena revisar la regla del 3. Ejemplo: 4.317 no es par → no, y ya terminaste. 4.314 sí es par, y 4+3+1+4 = 12 que es múltiplo de 3 → sí.',
-  12:'Empieza por la regla del 4 (solo dos cifras que mirar). Si falla, la respuesta ya es "no" y te ahorras sumar todos los dígitos para el 3. Ejemplo: 1.518 → las dos últimas son 18, y 18 entre 4 no da exacto → no, sin sumar ni un dígito.'
-};
+// El ejemplo del truco se arma con el MISMO número del ejercicio, no con uno inventado.
+function trucoDiv(n, d){
+  const s = String(n), ult = +s[s.length-1], sd = sumaDig(n), dos = n%100;
+  const corta = sd > 9 ? sumaDig(sd) : sd;
+  const suma = sd > 9 ? `${s.split('').join('+')} = ${sd} → ${String(sd).split('').join('+')} = ${corta}`
+                      : `${s.split('').join('+')} = ${sd}`;
+  const m4 = dos===0     ? 'un 00, y cualquier centena completa ya es múltiplo de 4 → sí'
+           : dos%4===0 ? `${dos} → ${dos/2} → ${dos/4}, exacto las dos veces → sí`
+           : dos%2===0 ? `${dos} → ${dos/2}, y ${dos/2} ya no se parte exacto a la mitad → no`
+           : `${dos} ni siquiera es par → no`;
+  switch(d){
+    case 2: return `Ni mires el resto del número: tapa todo con la mano menos la última cifra. Si esa cifra es 0, 2, 4, 6 u 8, es divisible entre 2 — da igual si el número tiene cuatro cifras o veinte. Ejemplo con este mismo: tapas ${n} y queda el ${ult}, que es ${ult%2===0?'par → sí':'impar → no'}.`;
+    case 5: return `Igual que con el 2, solo cuenta la última cifra: 0 o 5 → sí, cualquier otra → no. Ni sumes ni dividas nada. Ejemplo con este mismo: ${n} termina en ${ult}, que ${(ult===0||ult===5)?'sí es 0 o 5 → sí':'no es 0 ni 5 → no'}.`;
+    case 10: return `La más rápida de todas: ¿termina en 0? Sí. ¿No termina en 0? No. Ejemplo con este mismo: ${n} termina en ${ult} → ${ult===0?'sí':'no'}.`;
+    case 3: return `Si al sumar los dígitos te queda un número grande, vuelve a sumar SUS dígitos y repite hasta quedarte con una sola cifra; si esa cifra es 3, 6 o 9, el número es divisible entre 3. Ejemplo con este mismo: ${suma}, y ${corta} ${sd%3===0?'sí es múltiplo de 3 → sí':'no es múltiplo de 3 → no'}.`;
+    case 9: return `El mismo atajo del 3: suma los dígitos y, si te queda grande, vuelve a sumarlos hasta tener una sola cifra. Solo si esa cifra final es 9 el número es divisible entre 9. Ejemplo con este mismo: ${suma}, y ${corta} ${sd%9===0?'sí es 9 (o múltiplo de 9) → sí':'no llega a 9 → no'}.`;
+    case 4: return `Toma las dos últimas cifras y pártelas a la mitad dos veces seguidas: si las dos veces sale exacto, es divisible entre 4. Ejemplo con este mismo: las dos últimas de ${n} son ${m4}.`;
+    case 6: return `Empieza siempre por lo más barato: ¿es par? Si NO es par ya puedes contestar "no" sin sumar ni un dígito. Ejemplo con este mismo: ${n} ${ult%2===0 ? `sí es par, así que toca revisar el 3: ${suma}, que ${sd%3===0?'sí es múltiplo de 3 → sí':'no es múltiplo de 3 → no'}` : 'no es par → no, y ahí terminaste sin sumar nada'}.`;
+    case 12: return `Empieza por la regla del 4 (solo dos cifras que mirar). Si falla, la respuesta ya es "no" y te ahorras sumar todos los dígitos. Ejemplo con este mismo: las dos últimas de ${n} son ${dos}, que ${dos%4===0 ? `sí se divide entre 4, así que toca el 3: ${suma}, y ${corta} ${sd%3===0?'sí es múltiplo de 3 → sí':'no es múltiplo de 3 → no'}` : 'no se divide exacto entre 4 → no, sin sumar ni un dígito'}.`;
+  }
+  return null;
+}
 function explDivisibilidad(n,d){
-  return _pasosDivisibilidad(n,d).concat(TRUCO_DIV[d] ? 'TRUCO: '+TRUCO_DIV[d] : []);
+  const t = trucoDiv(n, d);
+  return _pasosDivisibilidad(n,d).concat(t ? 'TRUCO: '+t : []);
 }
 function _pasosDivisibilidad(n,d){
   const s = String(n), ult = +s[s.length-1], sd = sumaDig(n), dos = n%100;
@@ -278,7 +291,14 @@ function _pasosDivisibilidad(n,d){
 
 const TRAMPAS = [51,57,87,91,111,119,133,143,161,187,203,209,217,221,247,253,289,299];
 
-const TRUCO_PRIMO = 'TRUCO: antes de ponerte a dividir, descarta lo fácil de un vistazo. Si es par y no es el 2 → compuesto. Si termina en 5 y no es el 5 → compuesto. Si sus dígitos suman múltiplo de 3 → compuesto. Solo si sobrevive a esas tres hay que probar dividiendo, y basta con 7, 11, 13... parando en cuanto el primo por sí mismo pase del número. Ejemplo: 91 no es par, no termina en 5, y 9+1 = 10 no es múltiplo de 3 — parece primo, pero al probar el 7 sale 91 = 7 × 13, o sea compuesto. Por eso conviene probar hasta el final.';
+function trucoPrimo(n){
+  const sd = sumaDig(n), ult = n%10, lim = Math.floor(Math.sqrt(n));
+  const par = n%2===0 && n!==2, cinco = ult===5 && n!==5, tres = sd%3===0 && n!==3;
+  const revisa = `${n} ${par?'sí es par → compuesto':'no es par'}; ${cinco?'termina en 5 → compuesto':'no termina en 5'}; sus dígitos suman ${sd}, que ${tres?'sí es múltiplo de 3 → compuesto':'no es múltiplo de 3'}`;
+  const cola = (par||cinco||tres) ? ' Con eso ya quedó resuelto, sin dividir nada.'
+    : ` Como pasó las tres, no queda otra que dividir — pero basta probar hasta ${lim}, porque de ahí en adelante el primo por sí mismo ya pasa de ${n}.`;
+  return `TRUCO: antes de ponerte a dividir, descarta lo fácil de un vistazo: ¿es par y no es el 2? ¿termina en 5 y no es el 5? ¿sus dígitos suman múltiplo de 3? Con que una sola diga que sí, ya es compuesto. Ejemplo con este mismo: ${revisa}.${cola}`;
+}
 function explPrimo(n){
   const intro = 'Un número "primo" es el que solo se puede dividir exacto entre 1 y entre sí mismo, sin ningún otro divisor. Si tiene algún otro divisor más, se llama "compuesto".';
   if(esPrimo(n)){
@@ -289,7 +309,7 @@ function explPrimo(n){
     li.push(ps.length ? `Probamos dividir ${n} entre ${ps.join(', ')}: en ningún caso da una división exacta.`
                       : `Como √${n} es menor que 2, no hay ningún primo más pequeño que probar.`);
     li.push(`→ ${n} no tiene más divisores que 1 y él mismo, así que es PRIMO.`);
-    li.push(TRUCO_PRIMO);
+    li.push(trucoPrimo(n));
     return li;
   }
   let d = 2; while(n%d !== 0) d++;
@@ -298,10 +318,16 @@ function explPrimo(n){
   li.push(`${n} ÷ ${d} = ${n/d}, y esa división sale exacta (sin residuo).`);
   li.push(`Como ${n} = ${d} × ${n/d}, ya tiene un divisor además de 1 y de sí mismo → es COMPUESTO, no primo.`);
   if(TRAMPAS.indexOf(n) >= 0) li.push(`Este es de los que engañan: ${n} no se ve tan obviamente compuesto a simple vista, por eso conviene probar varios primos antes de decidir.`);
-  li.push(TRUCO_PRIMO);
+  li.push(trucoPrimo(n));
   return li;
 }
 
+// lista los primos repetidos (2 × 2 × 3) para poder comprobar multiplicando
+function planosDe(n){
+  const f = factorizar(n), out = [];
+  Object.keys(f).map(Number).sort((a,b)=>a-b).forEach(p => { for(let i=0;i<f[p];i++) out.push(p); });
+  return out.join(' × ');
+}
 function explFactorizar(n){
   const li = ['"Factorizar" un número significa escribirlo como una multiplicación de números primos (números que solo se dividen entre 1 y entre sí mismos). Se hace dividiendo entre primos, empezando siempre por el más pequeño que quepa exacto:'];
   let m = n, d = 2;
@@ -310,7 +336,7 @@ function explFactorizar(n){
     else d++;
   }
   li.push(`Llegamos a 1, así que ya no hay más que dividir. Juntando todos los primos que usamos: ${n} = ${fmtFactores(factorizar(n))}`);
-  li.push('TRUCO: hazlo en "escalerita" — el número a la izquierda, el primo entre el que divides a la derecha, y NO subas al siguiente primo mientras el de ahora siga entrando exacto. Al final multiplica todo lo que quedó en la columna derecha: tiene que darte el número original. Si no da, hubo un error en algún renglón. Ejemplo con 60: 60÷2 = 30, 30÷2 = 15 (el 2 ya no entra), 15÷3 = 5, 5÷5 = 1. Queda 60 = 2 × 2 × 3 × 5, y multiplicando eso vuelve a dar 60.');
+  li.push(`TRUCO: hazlo en "escalerita" — el número a la izquierda, el primo entre el que divides a la derecha, y NO subas al siguiente primo mientras el de ahora siga entrando exacto. Al final multiplica toda la columna de la derecha: tiene que darte el número original. Ejemplo con este mismo: multiplica ${planosDe(n)} y te vuelve a dar ${n}; si no diera, habría un error en algún renglón.`);
   return li;
 }
 
@@ -322,7 +348,7 @@ function explMcmListado(a,b){
           `Múltiplos de ${a} (${a}, ${a}×2, ${a}×3...): ${la.join(', ')}`,
           `Múltiplos de ${b} (${b}, ${b}×2, ${b}×3...): ${lb.join(', ')}`,
           `El primer número que aparece en las dos listas es ${m} → MCM(${a}, ${b}) = ${m}`,
-          `TRUCO: no hace falta escribir las dos listas. Ve nombrando solo los múltiplos del número MÁS GRANDE (${Math.max(a,b)}, ${Math.max(a,b)*2}, ${Math.max(a,b)*3}...) y en cada uno pregúntate "¿se divide exacto entre ${Math.min(a,b)}?". El primero que sí, es el MCM. Y si el grande ya se divide exacto entre el chico, el MCM es el grande sin hacer nada más. Ejemplo de ese atajo: el MCM de 4 y 12 es 12, porque 12 ya se divide exacto entre 4 — no hay nada que listar.`];
+          `TRUCO: no hace falta escribir las dos listas. Ve nombrando solo los múltiplos del número MÁS GRANDE y en cada uno pregúntate si se divide exacto entre el chico; el primero que sí, es el MCM. Ejemplo con estos mismos: ${(()=>{ const G=Math.max(a,b), C=Math.min(a,b), ps=[]; for(let k=1; G*k<=m; k++) ps.push(`${G*k}${(G*k)%C===0?` sí se divide entre ${C}`:' no'}`); return ps.join(', '); })()} → MCM = ${m}, y te ahorraste escribir la lista de ${Math.min(a,b)}.`];
 }
 
 function explMcmFactores(ns){
@@ -337,11 +363,17 @@ function explMcmFactores(ns){
   });
   const partes = primos.map(p=>{ const e = Math.max.apply(null, fs.map(f=>f[p]||0)); return e>1 ? p+sup(e) : ''+p; });
   li.push(`Multiplicando esos primos con sus mayores exponentes: MCM = ${partes.join(' × ')} = ${ns.reduce(mcm)}`);
-  li.push('TRUCO: antes de factorizar nada, revisa dos atajos. Si el número más grande ya se divide exacto entre los otros, el MCM es ese grande y ya terminaste. Y si los números no comparten ningún factor (como 4 y 9), el MCM es simplemente multiplicarlos todos. Ejemplos: MCM de 5 y 20 es 20 (20 ya es múltiplo de 5); MCM de 4 y 9 es 36, porque no comparten ningún factor y hay que multiplicarlos.');
+  li.push(`TRUCO: antes de factorizar nada, revisa dos atajos. Si el número más grande ya se divide exacto entre los otros, el MCM es ese grande y terminaste. Y si los números no comparten ningún factor, el MCM es simplemente multiplicarlos. Ejemplo con estos mismos: ${(()=>{ const M=Math.max.apply(null,ns), prod=ns.reduce((x,y)=>x*y,1), r=ns.reduce(mcm); if(ns.every(x=>M%x===0)) return `${M} ya se divide exacto entre ${ns.filter(x=>x!==M).join(' y ')}, así que el MCM es ${M} sin factorizar nada`; if(r===prod) return `${ns.join(', ')} no comparten ningún factor, así que el MCM es ${ns.join(' × ')} = ${r}`; return `no aplica ninguno de los dos atajos (${M} no se divide exacto entre los otros, y sí comparten factores), así que toca factorizar como arriba`; })()}.`);
   return li;
 }
 
-const TRUCO_MCD = 'TRUCO: dos cosas que ahorran mucho tiempo. (1) El MCD nunca puede ser más grande que el número más chico, así que si el chico divide exacto al grande, el MCD ES el chico. (2) Si no lo ves, no factorices: divide el grande entre el chico y quédate con el RESIDUO; ahora divide el chico entre ese residuo, y sigue así hasta que el residuo dé 0. El último número entre el que dividiste es el MCD. Ejemplo del (1): el MCD de 6 y 24 es 6. Ejemplo del (2) con 48 y 18: 48 entre 18 sobra 12; 18 entre 12 sobra 6; 12 entre 6 sobra 0 → el MCD es 6.';
+function trucoMcd(ns){
+  let a = Math.max.apply(null, ns), b = Math.min.apply(null, ns);
+  const ps = [];
+  while(b){ ps.push(`${a} entre ${b} sobra ${a%b}`); const r = a%b; a = b; b = r; }
+  const extra = ns.length > 2 ? ` Con tres números, repites lo mismo entre ese resultado y el que falta.` : '';
+  return `TRUCO: dos cosas que ahorran mucho tiempo. (1) El MCD nunca puede ser mayor que el número más chico, así que si el chico divide exacto al grande, el MCD ES el chico. (2) Si no lo ves, no factorices: divide el grande entre el chico y quédate con el RESIDUO; después divide el chico entre ese residuo, y sigue hasta que sobre 0 — el último número entre el que dividiste es el MCD. Ejemplo con estos mismos: ${ps.join('; ')} → el MCD es ${a}.${extra}`;
+}
 function explMcd(ns){
   const fs = ns.map(factorizar);
   const li = ['El "MCD" (máximo común divisor) es el número más grande que divide exacto a todos los números a la vez. Con factorización prima:',
@@ -350,7 +382,7 @@ function explMcd(ns){
   if(!comunes.length){
     li.push('Ningún primo se repite en TODAS las factorizaciones a la vez.');
     li.push(`Sin ningún factor primo en común, el MCD es 1 — se dice que estos números son "primos entre sí".`);
-    li.push(TRUCO_MCD);
+    li.push(trucoMcd(ns));
     return li;
   }
   li.push('El MCD se arma con SOLO los primos que aparecen en TODAS las factorizaciones, tomando el MENOR exponente en que aparecen:');
@@ -360,7 +392,7 @@ function explMcd(ns){
   });
   const partes = comunes.map(p=>{ const e = Math.min.apply(null, fs.map(f=>f[p])); return e>1 ? p+sup(e) : ''+p; });
   li.push(`Multiplicando esos primos comunes con sus menores exponentes: MCD = ${partes.join(' × ')} = ${ns.reduce(mcd)}`);
-  li.push(TRUCO_MCD);
+  li.push(trucoMcd(ns));
   return li;
 }
 
@@ -373,11 +405,11 @@ function explComparar(a,b){
     `${b.n}/${b.d} → se multiplica arriba y abajo por ${kb} (porque ${b.d}×${kb}=${m}) → ${nb}/${m}`,
     `Con el mismo denominador, ya se pueden comparar solo los numeradores: ${na} ${s} ${nb}`,
     `→ ${a.n}/${a.d} ${s} ${b.n}/${b.d}`,
-    `TRUCO: cuando son SOLO DOS fracciones, ni busques el MCM — multiplica en cruz. Numerador de la primera por denominador de la segunda (${a.n} × ${b.d} = ${a.n*b.d}) contra numerador de la segunda por denominador de la primera (${b.n} × ${a.d} = ${b.n*a.d}). El lado que dé más grande es la fracción mayor: ${a.n*b.d} ${s} ${b.n*a.d}, igual que la respuesta. Otro ejemplo con números fáciles: 2/3 contra 3/5 → 2 × 5 = 10 y 3 × 3 = 9; como 10 es mayor que 9, gana 2/3.`];
+    `TRUCO: cuando son SOLO DOS fracciones, ni busques el MCM — multiplica en cruz: numerador de una por denominador de la otra, en los dos sentidos, y gana el lado más grande. Ejemplo con estas mismas: ${a.n} × ${b.d} = ${a.n*b.d} contra ${b.n} × ${a.d} = ${b.n*a.d}; como ${a.n*b.d} ${s} ${b.n*a.d}, queda ${a.n}/${a.d} ${s} ${b.n}/${b.d} — lo mismo que por el camino largo, en dos multiplicaciones.`];
 }
 
-const TRUCO_PERIM = 'TRUCO: perímetro es lo que CAMINAS alrededor de la figura, así que se suman lados — nunca se multiplica largo por ancho (eso sería área). Si la figura tiene lados repetidos, ahorra tiempo: cuadrado y rombo son 4 × lado, rectángulo y romboide son 2 × un lado + 2 × el otro. El círculo es el único sin lados: su vuelta se llama circunferencia y sale de C = 2πr. Ejemplo: un rectángulo de 5 por 3 tiene perímetro 5+3+5+3 = 16. Su área sería 5×3 = 15 — dos números distintos, esa es la señal de que no los confundiste.';
-const TRUCO_AREA = 'TRUCO: área es lo que PINTAS por dentro, y siempre sale de multiplicar (por eso se mide en unidades cuadradas). Dos señales que ahorran memoria: si la figura termina en punta o se define por dos diagonales (triángulo, rombo, trapecio), la fórmula lleva un "÷ 2"; y la altura es la distancia derechita, en escuadra, NUNCA el lado inclinado — si te dan un lado inclinado en un problema de área, es un dato de sobra puesto a propósito. Ejemplo: un triángulo de base 6 y altura 4 tiene área (6 × 4) ÷ 2 = 12. El rectángulo completo de 6 por 4 daría 24, y el triángulo es justo la mitad.';
+const TRUCO_PERIM = 'TRUCO: perímetro es lo que CAMINAS alrededor de la figura, así que se SUMAN lados — nunca se multiplica largo por ancho (eso sería área). Si la figura tiene lados repetidos, ahorra tiempo: cuadrado y rombo son 4 × lado, rectángulo y romboide son 2 × un lado + 2 × el otro. El círculo es el único sin lados: su vuelta se llama circunferencia y sale de C = 2πr.';
+const TRUCO_AREA = 'TRUCO: área es lo que PINTAS por dentro, y siempre sale de MULTIPLICAR (por eso se mide en unidades cuadradas). Dos señales que ahorran memoria: si la figura termina en punta o se define por dos diagonales (triángulo, rombo, trapecio), la fórmula lleva un ÷ 2; y la altura es la distancia derechita, en escuadra, NUNCA el lado inclinado — si en un problema de área te dan un lado inclinado, es un dato de sobra puesto a propósito.';
 
 /* ══════════════════════════════════════════════════════════
    3. MÓDULOS  — cada uno devuelve enunciado + respuesta + explicación
@@ -419,7 +451,7 @@ const MODULOS = [
           'Un número es "Irracional" cuando NO se puede escribir como una fracción exacta: su forma decimal sigue para siempre sin repetirse en ningún patrón.',
           `${num} es de ese tipo — no existe ninguna fracción a/b que lo represente con exactitud.`,
           `→ Es Irracional.`]).concat(
-          'TRUCO: hazte las preguntas en este orden y quédate con la PRIMERA que dé "sí". ¿Sirve para contar (1, 2, 3...)? → Natural. ¿Tiene un menos delante, o es 0? → Entero. ¿Está escrito como fracción, o es un decimal que termina o se repite? → Racional. ¿Es una raíz que no sale exacta, o π? → Irracional. Ejemplos: 7 → Natural. −7 → Entero. 3/4 y 0,75 → Racional. √2 y π → Irracional.')
+          `TRUCO: hazte las preguntas en este orden y quédate con la PRIMERA que dé "sí". ¿Sirve para contar (1, 2, 3...)? → Natural. ¿Tiene un menos delante, o es 0? → Entero. ¿Está escrito como fracción, o es un decimal que termina o se repite? → Racional. ¿Es una raíz que no sale exacta, o π? → Irracional. Ejemplo con este mismo: ${num} ${tipo==='nat' ? 'sirve para contar, así que la primera pregunta ya dio sí' : tipo==='ent' ? 'no sirve para contar porque lleva un menos, pero sí es entero' : tipo==='rac' ? 'no es entero, pero está escrito como fracción' : 'no se puede escribir como fracción exacta'} → ${correcta}.`)
     };
   }
 },
@@ -428,7 +460,7 @@ const MODULOS = [
   gen(nv){
     const alto = porNivel(nv, 15, 40, 99);
     const n = R(1, alto);
-    const T = 'TRUCO: las barras borran el signo de lo que quede adentro, sin importar cuántos menos haya. Hazlo siempre en este orden: 1) resuelve TODO lo de adentro, 2) quítale el signo, 3) recién ahí mira lo de afuera. Un menos que esté FUERA de las barras sobrevive siempre — ese no lo borra nadie. Ejemplo: −|−8| → adentro queda 8 porque las barras le borran el menos, pero el menos de afuera sigue ahí → −8.';
+    const T = `TRUCO: las barras borran el signo de lo que quede adentro, sin importar cuántos menos haya. Hazlo siempre en este orden: 1) resuelve TODO lo de adentro, 2) quítale el signo, 3) recién ahí mira lo de afuera. Un menos que esté FUERA de las barras sobrevive siempre. Ejemplo con este mismo número: |−${n}| = ${n} porque las barras le borran el menos, pero −|${n}| = −${n}, porque ese menos está afuera y no lo borra nadie.`;
     const variante = pick(['simple','neg-fuera','doble-neg','doble-neg-resta']);
     if(variante==='simple'){
       const m = pick([1,-1])*n;
@@ -467,7 +499,7 @@ const MODULOS = [
       return { enunciado:`(${A}) + (${B}) =`, tipo:'num', respuesta:r,
         explicacion:[`Cuando los dos números tienen EL MISMO signo, se suman sus valores (sin el signo) y el resultado se queda con ese mismo signo.`,
           `${a} + ${b} = ${a+b}`, `→ (${A}) + (${B}) = ${r}`,
-          'TRUCO: piénsalo como dinero. El + es lo que tienes y el − es lo que debes. Si los dos son del mismo tipo, se acumulan sin más: debes 5 y debes 3 → debes 8. El signo ni se piensa, se copia tal cual. Ejemplo: (−5) + (−3) = −8, igual que deber 5 y deber 3.'] };
+          `TRUCO: piénsalo como dinero: el + es lo que tienes y el − es lo que debes. Si los dos son del mismo tipo se acumulan, y el signo ni se piensa, se copia tal cual. Ejemplo con este mismo: (${A}) + (${B}) es ${signo<0?`deber ${a} y deber ${b} → debes ${a+b}`:`tener ${a} y tener ${b} → tienes ${a+b}`} → ${r}.`] };
     }
     if(variante==='suma-dif'){
       const A=a, B=-b, r=A+B, mayor = a>=b?A:B;
@@ -476,14 +508,14 @@ const MODULOS = [
           `Sin el signo, los valores son ${a} y ${b}.`,
           `${Math.max(a,b)} − ${Math.min(a,b)} = ${Math.abs(r)}, y como ${mayor} era el de mayor valor, el resultado lleva su signo.`,
           `→ (${A}) + (${B}) = ${r}`,
-          'TRUCO: también es dinero, pero de tipos distintos: tienes por un lado y debes por el otro, así que se cancelan entre sí. Gana el más grande y la respuesta se queda con SU signo. Si lo que debes era más, la respuesta sale negativa. Ejemplo: (−9) + 4 → debes 9 y tienes 4; se cancelan 4 y queda una deuda de 5 → −5.'] };
+          `TRUCO: también es dinero, pero de tipos distintos: tienes por un lado y debes por el otro, así que se cancelan entre sí. Gana el más grande y la respuesta se queda con SU signo. Ejemplo con este mismo: (${A}) + (${B}) es tener ${a} y deber ${b}; se cancelan ${Math.min(a,b)} y queda ${Math.abs(r)} ${r<0?'de deuda → ':'a favor → '}${r}.`] };
     }
     if(variante==='resta'){
       const A=a, B=-b, r=A+b;
       return { enunciado:`${A} − (${B}) =`, tipo:'num', respuesta:r,
         explicacion:[`Restar un número negativo es lo mismo que sumar su opuesto positivo — los dos signos de "menos" seguidos se cancelan entre sí.`,
           `${A} − (${B}) se convierte en ${A} + ${b}`, `→ = ${r}`,
-          'TRUCO: cuando veas dos rayitas de menos seguidas, táchalas y escribe un + encima antes de calcular nada. Quitarte una deuda es lo mismo que recibir dinero. Ejemplo: 7 − (−3) → tachas las dos rayitas y queda 7 + 3 = 10.'] };
+          `TRUCO: cuando veas dos rayitas de menos seguidas, táchalas y escribe un + encima antes de calcular nada — quitarte una deuda es lo mismo que recibir dinero. Ejemplo con este mismo: ${A} − (${B}) → tachas las dos rayitas → ${A} + ${b} = ${r}.`] };
     }
     const op = pick(['mult','div']);
     const signoA = pick([1,-1]), signoB = pick([1,-1]), igual = signoA===signoB;
@@ -493,14 +525,14 @@ const MODULOS = [
         explicacion:[`Para multiplicar: si los dos signos son iguales (los dos + o los dos −), el resultado sale positivo; si son diferentes, sale negativo.`,
           igual?`${A} y ${B} tienen el mismo signo.`:`${A} y ${B} tienen signos diferentes.`,
           `Se multiplican los valores sin el signo: ${a} × ${b} = ${a*b}`, `→ (${A}) × (${B}) = ${r}`,
-          'TRUCO: no memorices la tabla de signos — cuenta cuántos signos menos hay. Cantidad PAR de menos (0, 2, 4...) → resultado positivo. Cantidad IMPAR (1, 3...) → negativo. Y sirve igual aunque multipliques tres o cuatro números de un tirón. Ejemplos: (−2) × (−5) tiene dos menos, cantidad par → +10. (−2) × 5 tiene uno solo, impar → −10.'] };
+          `TRUCO: no memorices la tabla de signos — cuenta cuántos signos menos hay. Cantidad PAR de menos (0, 2, 4...) → positivo. Cantidad IMPAR (1, 3...) → negativo. Sirve igual aunque multipliques tres o cuatro números de un tirón. Ejemplo con este mismo: (${A}) × (${B}) tiene ${(A<0?1:0)+(B<0?1:0)} menos, cantidad ${igual?'par':'impar'} → resultado ${r<0?'negativo':'positivo'}: ${r}.`] };
     }
     const A=signoA*(a*b), B=signoB*b, r=A/B;
     return { enunciado:`(${A}) ÷ (${B}) =`, tipo:'num', respuesta:r,
       explicacion:[`Para dividir aplica la misma regla que para multiplicar: signos iguales dan positivo, signos diferentes dan negativo.`,
         igual?`${A} y ${B} tienen el mismo signo.`:`${A} y ${B} tienen signos diferentes.`,
         `Se dividen los valores sin el signo: ${Math.abs(A)} ÷ ${b} = ${a}`, `→ (${A}) ÷ (${B}) = ${r}`,
-        'TRUCO: el mismo de la multiplicación — cuenta los signos menos. Cantidad PAR de menos → positivo; cantidad IMPAR → negativo. Haz la división con los números "limpios" (sin signo) y pégale el signo al final, así no te confundes a mitad de cuenta. Ejemplos: (−20) ÷ (−4) tiene dos menos → +5. (−20) ÷ 4 tiene uno → −5.'] };
+        `TRUCO: el mismo de la multiplicación — cuenta los signos menos: cantidad par → positivo, impar → negativo. Haz la división con los números limpios (sin signo) y pégale el signo al final, así no te confundes a mitad de cuenta. Ejemplo con este mismo: ${Math.abs(A)} ÷ ${b} = ${a}, y como hay ${(A<0?1:0)+(B<0?1:0)} signo(s) menos (cantidad ${igual?'par':'impar'}), la respuesta es ${r}.`] };
   }
 },
 {
@@ -519,7 +551,7 @@ const MODULOS = [
             `El orden de operaciones dice: primero lo que está entre paréntesis, luego exponentes, luego multiplicación/división, y al final suma/resta.`,
             `Agrupación: ${c} − ${d} = ${agr}`, `Exponente: ${agr}² significa ${agr} × ${agr} = ${pot}`,
             `Multiplicación: ${b} × ${pot} = ${prod}`, `Suma (lo último): ${x} + ${prod} = ${resp}`,
-            `TRUCO: al sustituir, escribe el valor entre paréntesis — x se convierte en (${x}), no en ${x} suelto. Parece tontería, pero es lo que evita que se pierda un signo o que se pegue con el número de al lado. Y sustituye primero en TODA la expresión; no empieces a calcular hasta que no quede ninguna letra. Ejemplo: si x = 3, la expresión 2x se escribe 2(3) = 6; escrito sin paréntesis parecería 23.`] };
+            `TRUCO: al sustituir, escribe el valor entre paréntesis — parece tontería, pero es lo que evita que se pierda un signo o que el número se pegue con el de al lado. Y sustituye en TODA la expresión antes de calcular nada: no empieces mientras quede una letra. Ejemplo con este mismo: x vale ${x}, así que queda (${x}) + ${b}(${c} − ${d})², y recién ahí se empieza por el paréntesis.`] };
       }
       const a = R(1,chico), resp = a + prod;
       return { enunciado:`${a} + ${b}(${c} − ${d})²`, tipo:'num', respuesta:resp,
@@ -528,7 +560,7 @@ const MODULOS = [
           `Exponente: ${agr}² significa ${agr} × ${agr} = ${pot}`,
           `Multiplicación: ${b} × ${pot} = ${prod}`,
           `Suma (lo último que queda): ${a} + ${prod} = ${resp}`,
-          'TRUCO: vuelve a escribir la operación ENTERA en cada renglón, cambiando solo el pedacito que acabas de resolver. Casi todos los errores salen de intentar hacer dos pasos de cabeza al mismo tiempo. Y recuerda que un número pegado a un paréntesis, como ' + `${b}(...)` + ', significa multiplicar. Ejemplo: 2 + 3(4 − 1)² se resuelve así, renglón por renglón: 2 + 3(3)² → 2 + 3 × 9 → 2 + 27 = 29.'] };
+          `TRUCO: vuelve a escribir la operación ENTERA en cada renglón, cambiando solo el pedacito que acabas de resolver; casi todos los errores salen de hacer dos pasos de cabeza a la vez. Y un número pegado a un paréntesis significa multiplicar. Ejemplo con este mismo, renglón por renglón: ${a} + ${b}(${c} − ${d})² → ${a} + ${b}(${agr})² → ${a} + ${b} × ${pot} → ${a} + ${prod} = ${resp}.`] };
     }
     if(plantilla==='trampa-div'){
       const c = R(2,chico), a = R(2,chico*3), d = R(1,chico), q = R(1,chico), bb = c*q;
@@ -538,14 +570,14 @@ const MODULOS = [
           `División primero: ${bb} ÷ ${c} = ${q}`,
           `Ahora solo quedan suma y resta, que tienen la MISMA prioridad — se resuelven de izquierda a derecha: ${a} − ${q} + ${d}`,
           `${a} − ${q} = ${a-q}`, `${a-q} + ${d} = ${resp}`,
-          'TRUCO: antes de calcular, pásale el lápiz por encima a la multiplicación y la división de toda la línea — esas van primero. Lo que sobra (sumas y restas) se resuelve de izquierda a derecha, como se lee. Ojo: multiplicar y dividir EMPATAN entre sí, no va toda la multiplicación primero; manda el que esté más a la izquierda. Ejemplo: 10 − 6 ÷ 2 + 1 → primero 6 ÷ 2 = 3 → 10 − 3 + 1 → 7 + 1 = 8. Si hubieras restado primero te daría 3, que está mal.'] };
+          `TRUCO: antes de calcular, pásale el lápiz por encima a las multiplicaciones y divisiones de toda la línea — esas van primero. Lo que sobra (sumas y restas) se resuelve de izquierda a derecha, como se lee. Ojo: multiplicar y dividir EMPATAN entre sí, manda el que esté más a la izquierda. Ejemplo con este mismo: subrayas ${bb} ÷ ${c} = ${q}, queda ${a} − ${q} + ${d} = ${resp}. Si hubieras restado primero, ${a} − ${bb} = ${a-bb}, y de ahí ya no salía.`] };
     }
     const b2 = R(1,chico), a2 = b2 + R(1,chico), c2 = R(2,chico), agr2 = a2-b2, resp2 = agr2*c2;
     return { enunciado:`(${a2} − ${b2}) × ${c2}`, tipo:'num', respuesta:resp2,
       explicacion:[`Lo que está dentro de un paréntesis siempre se resuelve primero, antes que cualquier multiplicación de afuera.`,
         `Paréntesis: ${a2} − ${b2} = ${agr2}`,
         `Ahora sí la multiplicación: ${agr2} × ${c2} = ${resp2}`,
-        'TRUCO: el paréntesis es una "cajita cerrada" — nada de afuera entra hasta que adentro quede un solo número. Resuélvelo, reemplázalo por ese número, y recién entonces sigue con el resto. Ejemplo: (7 − 2) × 3 → la cajita da 5 → 5 × 3 = 15. Multiplicando primero daría 7 − 6 = 1, que está mal.'] };
+        `TRUCO: el paréntesis es una "cajita cerrada": nada de afuera entra hasta que adentro quede un solo número. Resuélvelo, reemplázalo por ese número, y recién entonces sigue. Ejemplo con este mismo: (${a2} − ${b2}) × ${c2} → la cajita da ${agr2} → ${agr2} × ${c2} = ${resp2}. Multiplicando primero daría ${a2} − ${b2*c2}, que está mal.`] };
   }
 },
 {
@@ -562,14 +594,14 @@ const MODULOS = [
       explicacion:[`En una expresión algebraica, el "coeficiente" es el número que está multiplicando a la letra (la variable).`,
         coefUno ? `Cuando la letra aparece sola, sin ningún número escrito delante, su coeficiente es 1 (aunque no se escriba) — ${letra} es lo mismo que 1${letra}.` : `En ${coef}${letra}, el número ${coef} es el que multiplica a ${letra}.`,
         `→ El coeficiente es ${coef}.`,
-        'TRUCO: tapa la letra con el dedo. Lo que quede pegado justo delante de tu dedo es el coeficiente; si no quedó nada, el coeficiente es 1. El número que anda suelto por ahí, sin ninguna letra al lado, es la constante. Ejemplo: en 7y − 4, tapas la y y queda el 7 → coeficiente 7 (y la constante es −4). En y + 5 no queda nada delante → coeficiente 1.'] };
+        `TRUCO: tapa la letra con el dedo: lo que quede pegado justo delante es el coeficiente, y si no queda nada el coeficiente es 1. El número que anda suelto, sin letra al lado, es la constante. Ejemplo con este mismo: en ${expr} tapas la ${letra} y ${coefUno?'no queda nada delante, así que el coeficiente es 1':`queda ${coef}, ese es el coeficiente`}.`] };
     const respConst = signoConst==='+' ? cons : -cons;
     return {
       enunciado:`En la expresión <b>${expr}</b>, ¿cuál es la constante?`, tipo:'num', respuesta:respConst,
       explicacion:[`En una expresión algebraica, la "constante" es el número que NO tiene ninguna letra pegada — un valor fijo que no cambia.`,
         `En ${expr}, el término sin variable es ${signoConst==='+'?cons:'−'+cons}, incluyendo su signo.`,
         `→ La constante es ${respConst}.`,
-        'TRUCO: el signo viaja SIEMPRE con el número que tiene a la derecha. Si delante del número hay un −, la constante es negativa; no lo dejes afuera al contestar. Ese es el error que más se repite en este tema. Ejemplo: en 3x − 8 la constante es −8, no 8. En 3x + 8 sí es 8.'] };
+        `TRUCO: el signo viaja SIEMPRE con el número que tiene a la derecha. Si delante hay un −, la constante es negativa; no lo dejes afuera al contestar. Ese es el error que más se repite en este tema. Ejemplo con este mismo: en ${expr} la constante es ${respConst}${signoConst==='−'?`, con el menos incluido — no ${cons}`:''}.`] };
   }
 },
 {
@@ -590,7 +622,7 @@ const MODULOS = [
       explicacion:[`Para traducir una frase a álgebra, se cambia el número desconocido por una letra (aquí, x) y las palabras clave por su operación: "más que" o "aumentado en" es +, "menos que" es −, "el doble/triple de" es multiplicar por 2 o 3, "dividido entre" es ÷.`,
         `"${t.frase}" se traduce como ${t.correcta}.`,
         `Ojo con el orden: en español una frase con "menos que" o "más que" a veces menciona el número antes que la variable, pero en la expresión el orden puede ser distinto de cómo se lee — hay que fijarse bien en qué le resta o le suma a qué.`,
-        `TRUCO: si dudas del orden, pruébalo con un número fácil. Cambia la x por 10 y lee la frase en español: "${t.frase.replace(/un número x|x/g,'10')}". Calcula cuánto da eso de cabeza y luego mira cuál de las opciones da lo mismo con x = 10. La que coincida es la correcta — no hay que adivinar. Ejemplo: "3 menos que un número x" con x = 10 se lee "3 menos que 10", o sea 7. Probando las opciones: x − 3 da 10 − 3 = 7 (esa es), mientras que 3 − x daría 3 − 10 = −7. Por eso "menos que" se escribe al revés de como se lee.`] };
+        `TRUCO: si dudas del orden, pruébalo con un número fácil en vez de razonarlo. Ejemplo con esta misma frase: cambia la x por 10 y léela — "${t.frase.replace(/un número x|x/g,'10')}". Calcula de cabeza cuánto da eso y después prueba las opciones poniendo x = 10; la que dé el mismo número es la correcta. Así se ve solo que "menos que" se escribe al revés de como se lee.`] };
   }
 },
 {
@@ -631,7 +663,7 @@ const MODULOS = [
     return { enunciado:`¿Qué propiedad se usa en esta igualdad?<br><b>${cs.enun}</b>`,
       tipo:'opciones', opciones: shuffle(['Conmutativa','Asociativa','Identidad','Distributiva']),
       respuesta: cs.cat, explicacion: cs.expl.concat(
-        'TRUCO: no memorices las definiciones — compara los dos lados del igual y pregúntate qué fue lo ÚNICO que cambió. ¿Cambió el orden de los números? Conmutativa (conmutar = intercambiar). ¿Los números siguen en el mismo orden y solo se movieron los paréntesis? Asociativa (cambió con quién se asocia cada uno). ¿Aparece un 0 o un 1 que no hace ningún efecto? Identidad. ¿Un número de afuera se repartió a cada cosa de adentro del paréntesis? Distributiva (se distribuyó). Ejemplos: 2 + 3 = 3 + 2 → Conmutativa. (2 + 3) + 4 = 2 + (3 + 4) → Asociativa. 9 × 1 = 9 → Identidad. 5(2 + 4) = 5 × 2 + 5 × 4 → Distributiva.') };
+        `TRUCO: no memorices las definiciones — compara los dos lados del igual y pregúntate qué fue lo ÚNICO que cambió. ¿El orden de los números? Conmutativa. ¿Solo se movieron los paréntesis? Asociativa. ¿Aparece un 0 o un 1 que no hace nada? Identidad. ¿Un número de afuera se repartió a cada término de adentro? Distributiva. Ejemplo con este mismo: en ${cs.enun} lo único que cambió fue ${({Conmutativa:'el orden de los números',Asociativa:'dónde están los paréntesis, porque los números siguen igual',Identidad:'que aparece un número que no altera nada',Distributiva:'que el de afuera se repartió a cada término de adentro'})[cs.cat]} → ${cs.cat}.`) };
   }
 },
 {
@@ -663,7 +695,7 @@ const MODULOS = [
           `Coeficientes: ${c1} × ${c2} = ${c1*c2}`,
           `Letras: ${letra} × ${letra} = ${letra}² (multiplicar una letra por sí misma sube su exponente).`,
           `→ ${c1*c2}${letra}²`,
-          'TRUCO: aquí NO vale el truco de las frutas — ese solo sirve para sumar y restar. Al multiplicar se junta todo con todo: números por números, letras por letras. Y cuando una letra se multiplica por sí misma, el exponente cuenta cuántas veces aparece: ' + `${letra} × ${letra} = ${letra}²` + '. Ejemplo: (2x)(3x) = 6x², mientras que 2x + 3x sería solo 5x.'] };
+          `TRUCO: aquí NO vale el truco de las frutas — ese solo sirve para sumar y restar. Al multiplicar se junta todo con todo: números por números, letras por letras, y la letra por sí misma sube el exponente. Ejemplo con este mismo: (${c1}${letra})(${c2}${letra}) = ${c1*c2}${letra}², mientras que ${c1}${letra} + ${c2}${letra} sería solo ${c1+c2}${letra}.`] };
     }
     const c1=R(2,alto), c2=R(2,alto), letra2 = pick(['y','a','b','n'].filter(l=>l!==letra));
     return { enunciado:`¿Se pueden combinar estos términos?<br><b>${c1}${letra} + ${c2}${letra2}</b>`,
@@ -681,29 +713,29 @@ const MODULOS = [
     const x = R(-alto, alto) || 1;
     const letra = pick(['x','y','n']);
     const pasos = porNivel(nv, 1, Math.random()<0.5?2:1, 2);
-    const T = `TRUCO: mira qué le están haciendo a ${letra} y hazle lo CONTRARIO en los dos lados — si suma, restas; si resta, sumas; si multiplica, divides; si divide, multiplicas. Y comprueba gratis al final: mete tu respuesta en la ecuación original y haz la cuenta. Si los dos lados dan lo mismo, está bien seguro, sin depender de que te la corrijan. Ejemplo: en x + 4 = 11, al 4 le haces lo contrario (restar) en los dos lados → x = 11 − 4 = 7. Comprobación: 7 + 4 = 11, correcto.`;
+    const T = (ecu, val) => `TRUCO: mira qué le están haciendo a ${letra} y hazle lo CONTRARIO en los dos lados: si suma, restas; si resta, sumas; si multiplica, divides; si divide, multiplicas. Y la comprobación es gratis: mete tu respuesta en la ecuación original. Ejemplo con este mismo: la ecuación era ${ecu}; pones ${letra} = ${val}, haces la cuenta, y si los dos lados dan igual está bien seguro, sin esperar a que te la corrijan.`;
     if(pasos===1){
       const tipoOp = pick(['suma','resta','mult','div']);
       if(tipoOp==='suma'){ const c=R(1,alto), r=x+c;
         return { enunciado:`${letra} + ${c} = ${r}`, tipo:'num', respuesta:x,
           explicacion:[`"Despejar" ${letra} significa dejarla sola en un lado de la igualdad, para saber cuánto vale.`,
             `Aquí le están sumando ${c} a ${letra}. Para deshacer esa suma se hace la operación contraria — restar ${c} — en LOS DOS lados de la igualdad, así se mantiene el equilibrio.`,
-            `${letra} = ${r} − ${c} = ${x}`, T] }; }
+            `${letra} = ${r} − ${c} = ${x}`, T(`${letra} + ${c} = ${r}`, x)] }; }
       if(tipoOp==='resta'){ const c=R(1,alto), r=x-c;
         return { enunciado:`${letra} − ${c} = ${r}`, tipo:'num', respuesta:x,
           explicacion:[`"Despejar" ${letra} significa dejarla sola en un lado de la igualdad.`,
             `Aquí le están restando ${c} a ${letra}. La operación contraria de restar es sumar, así que se suma ${c} en los dos lados.`,
-            `${letra} = ${r} + ${c} = ${x}`, T] }; }
+            `${letra} = ${r} + ${c} = ${x}`, T(`${letra} − ${c} = ${r}`, x)] }; }
       if(tipoOp==='mult'){ const c=R(2,10), r=x*c;
         return { enunciado:`${c}${letra} = ${r}`, tipo:'num', respuesta:x,
           explicacion:[`"Despejar" ${letra} significa dejarla sola en un lado de la igualdad.`,
             `Aquí ${letra} está multiplicada por ${c}. La operación contraria de multiplicar es dividir, así que se divide entre ${c} en los dos lados.`,
-            `${letra} = ${r} ÷ ${c} = ${x}`, T] }; }
+            `${letra} = ${r} ÷ ${c} = ${x}`, T(`${c}${letra} = ${r}`, x)] }; }
       const c=R(2,10), k=R(1,alto), sol=k*c;
       return { enunciado:`${letra} ÷ ${c} = ${k}`, tipo:'num', respuesta:sol,
         explicacion:[`"Despejar" ${letra} significa dejarla sola en un lado de la igualdad.`,
           `Aquí ${letra} está dividida entre ${c}. La operación contraria de dividir es multiplicar, así que se multiplica por ${c} en los dos lados.`,
-          `${letra} = ${k} × ${c} = ${sol}`, T] };
+          `${letra} = ${k} × ${c} = ${sol}`, T(`${letra} ÷ ${c} = ${k}`, sol)] };
     }
     const c1 = R(2,10), c2 = R(1,alto), sig = pick(['+','−']);
     const r = sig==='+' ? c1*x + c2 : c1*x - c2;
@@ -711,7 +743,7 @@ const MODULOS = [
       explicacion:[`Esta ecuación necesita dos pasos porque a ${letra} le están haciendo dos cosas a la vez: multiplicarla por ${c1} y ${sig==='+'?'sumarle':'restarle'} ${c2}.`,
         `Paso 1 — deshacer la suma/resta primero (fue lo último que se le hizo a ${letra}, así que se deshace primero): ${sig==='+'?`${r} − ${c2}`:`${r} + ${c2}`} = ${c1*x}`,
         `Paso 2 — deshacer la multiplicación: ${c1*x} ÷ ${c1} = ${x}`, `→ ${letra} = ${x}`,
-        `TRUCO: deshazlo en orden inverso, como quitarte la ropa — primero lo que está más LEJOS de ${letra} (el número que suma o resta), y de último lo que está pegado a ella (el que la multiplica). Nunca al revés. Y comprueba metiendo tu respuesta en la ecuación original: ${c1}×${x} ${sig} ${c2} tiene que dar ${r}. Otro ejemplo: en 3x + 5 = 20, primero quitas el 5 (20 − 5 = 15) y después divides entre 3 → x = 5.`] };
+        `TRUCO: deshazlo en orden inverso, como quitarte la ropa: primero lo que está más LEJOS de ${letra} (el número que suma o resta) y de último lo que está pegado a ella (el que la multiplica). Nunca al revés. Ejemplo con este mismo: ${r} ${sig==='+'?'−':'+'} ${c2} = ${c1*x}, y ${c1*x} ÷ ${c1} = ${x}; para comprobar, ${c1}×${x} ${sig} ${c2} tiene que dar ${r}.`] };
   }
 },
 {
@@ -743,7 +775,7 @@ const MODULOS = [
     ];
     const t = pick(plantillas)();
     return { enunciado: t.enunciado, tipo:'num', respuesta: sol, explicacion: t.expl.concat(
-      'TRUCO: empieza por la PREGUNTA, no por el principio del cuento — lo que te preguntan es la x. Después traduce frase por frase con las palabras clave: "le dio", "más", "en total" → sumar; "se retiraron", "quedaron", "gastó" → restar; "cada uno" junto a un total → dividir; "cuestan", "veces", "por cada" → multiplicar. Y al terminar, vuelve a leer el cuento con tu número puesto: si suena lógico, está bien. Ejemplo: tenía algo, le dieron 6 y ahora tiene 15 → x + 6 = 15 → x = 9. Se relee: tenía 9, le dieron 6, tiene 15. Cuadra.') };
+      `TRUCO: empieza por la PREGUNTA, no por el principio del cuento: lo que te preguntan es la x. Después traduce frase por frase con las palabras clave — "le dio", "más", "en total" → sumar; "se retiraron", "quedaron", "gastó" → restar; "cada uno" junto a un total → dividir; "cuestan", "veces", "por cada" → multiplicar. Ejemplo con este mismo: la x era justo lo que preguntaba el enunciado y salió ${sol}; vuelve a leer el cuento poniendo ${sol} en su lugar y tiene que cuadrar solo.`) };
   }
 },
 {
@@ -759,7 +791,7 @@ const MODULOS = [
         `Se calcula así: se suman todos los valores, y esa suma se divide entre la cantidad de valores que hay.`,
         `Suma: ${vals.join(' + ')} = ${suma}`, `Cantidad de valores: hay ${cuantos} números en la lista.`,
         `${suma} ÷ ${cuantos} = ${media}`,
-        `TRUCO: comprueba sin volver a calcular. El promedio SIEMPRE tiene que caer entre el número más chico de la lista (${Math.min.apply(null,vals)}) y el más grande (${Math.max.apply(null,vals)}). Si te dio fuera de ahí, el error está en la suma o en la cantidad de datos. Y ojo con la cantidad: se divide entre cuántos números hay, no entre el último de ellos. Ejemplo: el promedio de 4, 6 y 20 es 30 ÷ 3 = 10, y el 10 cae entre 4 y 20, así que es creíble.`] };
+        `TRUCO: comprueba sin volver a calcular: el promedio SIEMPRE tiene que caer entre el dato más chico y el más grande. Si te dio fuera de ahí, el error está en la suma o en la cantidad de datos (se divide entre cuántos números hay, no entre el último de ellos). Ejemplo con este mismo: te dio ${media}, y ${media} cae entre ${Math.min.apply(null,vals)} y ${Math.max.apply(null,vals)}, así que es creíble.`] };
   }
 },
 {
@@ -774,7 +806,7 @@ const MODULOS = [
         tipo:'opciones', opciones: shuffle(['Agudo','Recto','Obtuso','Llano']), respuesta: nombre,
         explicacion:[`Los ángulos se clasifican según cuánto miden: Agudo es menor que 90° (más "cerrado"), Recto es exactamente 90° (como la esquina de un cuadrado), Obtuso está entre 90° y 180° (más "abierto"), y Llano es exactamente 180° (una línea recta).`,
           `${deg}° ${tipo==='recto'?'es igual a 90°':tipo==='llano'?'es igual a 180°':tipo==='agudo'?'es menor que 90°':'está entre 90° y 180°'} → ${nombre}`,
-          'TRUCO: usa el 90 como frontera y compáralo de un vistazo. Menos de 90 → Agudo ("agudo" como una punta, bien cerrado). Justo 90 → Recto (la esquina de una hoja de papel). Más de 90 pero menos de 180 → Obtuso (abierto, como una silla reclinada). Justo 180 → Llano (ya es una línea recta, plana). Ejemplos: 45° → Agudo. 90° → Recto. 120° → Obtuso. 180° → Llano.'] };
+          `TRUCO: usa el 90 como frontera y compara de un vistazo. Menos de 90 → Agudo (como una punta, bien cerrado). Justo 90 → Recto (la esquina de una hoja). Entre 90 y 180 → Obtuso (abierto, como una silla reclinada). Justo 180 → Llano (ya es una línea recta). Ejemplo con este mismo: ${deg}° ${tipo==='recto'?'cae justo en la frontera':tipo==='llano'?'es la línea recta completa':tipo==='agudo'?'no llega a 90':'pasó de 90 pero no llega a 180'} → ${nombre}.`] };
     }
     if(variante==='complemento'){
       const a = R(10,80);
@@ -782,7 +814,7 @@ const MODULOS = [
         explicacion:[`Dos ángulos son "complementarios" cuando, juntos, suman exactamente 90°.`,
           `Si uno mide ${a}°, el otro (x) tiene que completar hasta 90°: x + ${a}° = 90°`,
           `x = 90 − ${a} = ${90-a}`,
-          'TRUCO: para no confundir cuál es cuál, acuérdate del abecedario: la C va antes que la S, y el 90 va antes que el 180. Complemento → 90 menos el ángulo. Suplemento → 180 menos el ángulo. Es una resta, nada más. Ejemplo: de un ángulo de 30°, el complemento es 90 − 30 = 60° y el suplemento es 180 − 30 = 150°.'] };
+          `TRUCO: para no confundir cuál es cuál, acuérdate del abecedario: la C va antes que la S, igual que el 90 va antes que el 180. Complemento → 90 menos el ángulo. Suplemento → 180 menos el ángulo. Es una resta, nada más. Ejemplo con este mismo ángulo de ${a}°: el complemento es 90 − ${a} = ${90-a}, y el suplemento sería 180 − ${a} = ${180-a}.`] };
     }
     if(variante==='suplemento'){
       const a = R(10,170);
@@ -790,7 +822,7 @@ const MODULOS = [
         explicacion:[`Dos ángulos son "suplementarios" cuando, juntos, suman exactamente 180° (forman una línea recta).`,
           `Si uno mide ${a}°, el otro (x) tiene que completar hasta 180°: x + ${a}° = 180°`,
           `x = 180 − ${a} = ${180-a}`,
-          'TRUCO: el mismo del abecedario: C antes que S, 90 antes que 180. Complemento → 90 − ángulo. Suplemento → 180 − ángulo. Otra señal: si el ángulo que te dan ya pasa de 90°, solo puede ser un suplemento (no existe complemento de un ángulo mayor que 90°). Ejemplo: de 30° el suplemento es 180 − 30 = 150°; de 120° también hay suplemento (60°), pero complemento no, porque 120 ya pasó de 90.'] };
+          `TRUCO: el mismo del abecedario: C antes que S, 90 antes que 180. Complemento → 90 − ángulo. Suplemento → 180 − ángulo. Otra señal: si el ángulo ya pasa de 90°, solo puede tener suplemento. Ejemplo con este mismo ángulo de ${a}°: el suplemento es 180 − ${a} = ${180-a}${a>90?`, y complemento no tiene, porque ${a} ya pasó de 90`:`, y el complemento sería 90 − ${a} = ${90-a}`}.`] };
     }
     const a = R(10,170);
     return { enunciado:`Dos rectas se cruzan. Uno de los ángulos mide <b>${a}°</b>. ¿Cuánto mide el ángulo opuesto por el vértice?`,
@@ -798,7 +830,7 @@ const MODULOS = [
       explicacion:[`Cuando dos rectas se cruzan se forman 4 ángulos. Los dos que quedan uno frente al otro, como una "X", se llaman "opuestos por el vértice" y siempre miden exactamente lo mismo (son congruentes).`,
         `Como uno mide ${a}°, el que está exactamente enfrente también mide ${a}°.`,
         `→ el ángulo opuesto mide ${a}°`,
-        'TRUCO: en estos no hay nada que calcular — dibuja una X y márcala. Los que están "en espejo" (arriba-abajo, o izquierda-derecha) son iguales; los que están pegados, uno al lado del otro, suman 180°. Si te preguntan por el de al lado en vez del de enfrente, entonces sí: 180 menos el que te dieron. Ejemplo: si uno mide 70°, el de enfrente mide 70° y cada uno de los de al lado mide 110°, porque 70 + 110 = 180.'] };
+        `TRUCO: en estos no hay nada que calcular — dibuja una X y márcala. Los que quedan en espejo, uno frente al otro, son iguales; los que quedan pegados, uno al lado del otro, suman 180°. Ejemplo con este mismo: uno mide ${a}°, el de enfrente mide ${a}° también, y cada uno de los de al lado mide ${180-a}°, porque ${a} + ${180-a} = 180.`] };
   }
 },
 {
@@ -815,7 +847,7 @@ const MODULOS = [
       tipo:'opciones', opciones: shuffle(['Equilátero','Isósceles','Escaleno']), respuesta: nombre,
       explicacion:[`Según sus lados, un triángulo puede ser: Equilátero (sus 3 lados miden exactamente lo mismo), Isósceles (solo 2 lados iguales y el tercero diferente), o Escaleno (los 3 lados son todos diferentes entre sí).`,
         `Los lados dados son ${a}, ${b} y ${c}.`, `→ ${nombre}`,
-        'TRUCO: solo cuenta cuántos lados IGUALES hay, no hace falta nada más. ¿3 iguales? Equilátero ("equi" = igual, como en equivalente). ¿Exactamente 2 iguales? Isósceles ("iso" = igual también, pero solo dos). ¿Ninguno igual? Escaleno (piensa en escalera: todos los escalones distintos). Ejemplos: 5, 5, 5 → Equilátero. 5, 5, 8 → Isósceles. 4, 6, 9 → Escaleno.'] };
+        `TRUCO: solo cuenta cuántos lados IGUALES hay, no hace falta nada más. ¿3 iguales? Equilátero (equi = igual). ¿Exactamente 2? Isósceles (iso = igual, pero solo dos). ¿Ninguno? Escaleno (piensa en escalera: todos los escalones distintos). Ejemplo con este mismo: ${a}, ${b} y ${c} → ${tipo==='equilatero'?'los 3 miden lo mismo':tipo==='isosceles'?'hay 2 iguales y 1 distinto':'los 3 son distintos'} → ${nombre}.`] };
   }
 },
 {
@@ -824,7 +856,10 @@ const MODULOS = [
   // en vez de repetirlo en los 14 returns de _gen.
   gen(nv){
     const e = this._gen(nv);
-    e.explicacion = e.explicacion.concat(/área/.test(e.enunciado) ? TRUCO_AREA : TRUCO_PERIM);
+    const esArea = /área/.test(e.enunciado);
+    e.explicacion = e.explicacion.concat((esArea ? TRUCO_AREA : TRUCO_PERIM) + (esArea
+      ? ` Ejemplo con este mismo: te dio ${e.respuesta} multiplicando las medidas; si en vez de eso sumaras los lados saldría otro número, y ese sería el perímetro.`
+      : ` Ejemplo con este mismo: te dio ${e.respuesta} sumando lo que rodea la figura; si multiplicaras las medidas saldría otro número, y ese sería el área.`));
     return e;
   },
   _gen(nv){
@@ -991,14 +1026,14 @@ const MODULOS = [
         `Comparamos los denominadores para hallar por cuánto se multiplicó: ${d*k} ÷ ${d} = ${k}. Ese ${k} es el "factor de conversión".`,
         `Lo que se le hace al denominador hay que hacérselo también al numerador: ${n} × ${k} = ${n*k}`,
         `→ ${n}/${d} = ${n*k}/${d*k}`,
-        `TRUCO: busca siempre el lado que está COMPLETO (aquí, los denominadores) y pregúntate "¿por cuánto se multiplicó?". Ese mismo número va al otro lado, sin pensar más. Y para comprobar que no te equivocaste, multiplica en cruz: ${n} × ${d*k} tiene que dar lo mismo que ${n*k} × ${d} (${n*(d*k)} en los dos casos). Otro ejemplo, con números fáciles: 2/3 = ?/12 → como 12 ÷ 3 = 4, arriba va 2 × 4 = 8 → 8/12.`] };
+        `TRUCO: busca siempre el lado que está COMPLETO (aquí, los denominadores) y pregúntate por cuánto se multiplicó; ese mismo número va al otro lado, sin pensar más. Ejemplo con este mismo: ${d} × ${k} = ${d*k}, entonces arriba ${n} × ${k} = ${n*k}. Y para comprobar, multiplica en cruz: ${n} × ${d*k} y ${n*k} × ${d} dan ${n*(d*k)} las dos.`] };
     return {
       enunciado:`Completa: ${fr(n,d)} = ${fr(n*k, '?')}`, tipo:'num', respuesta: d*k,
       explicacion:[`Dos fracciones son "equivalentes" cuando representan la misma cantidad aunque se vean diferentes — se obtienen multiplicando (o dividiendo) arriba Y abajo por el mismo número.`,
         `Esta vez comparamos los numeradores para hallar el factor de conversión: ${n*k} ÷ ${n} = ${k}.`,
         `Lo que se le hace al numerador hay que hacérselo también al denominador: ${d} × ${k} = ${d*k}`,
         `→ ${n}/${d} = ${n*k}/${d*k}`,
-        `TRUCO: da igual si lo que falta está arriba o abajo — el método es el mismo. Mira el lado que está COMPLETO (aquí los numeradores), averigua por cuánto se multiplicó, y hazle eso mismo al otro lado. Comprobación en cruz: ${n} × ${d*k} y ${n*k} × ${d} tienen que dar igual (${n*(d*k)}). Otro ejemplo, con números fáciles: 2/3 = 8/? → como 8 ÷ 2 = 4, abajo va 3 × 4 = 12 → 8/12.`] };
+        `TRUCO: da igual si lo que falta está arriba o abajo, el método es el mismo: mira el lado COMPLETO (aquí los numeradores), averigua por cuánto se multiplicó y hazle eso mismo al otro lado. Ejemplo con este mismo: ${n} × ${k} = ${n*k}, entonces abajo ${d} × ${k} = ${d*k}. Comprobación en cruz: ${n} × ${d*k} y ${n*k} × ${d} dan ${n*(d*k)} las dos.`] };
   }
 },
 {
@@ -1020,7 +1055,7 @@ const MODULOS = [
         `MCD(${n}, ${d}) = ${mcd(n,d)}`,
         `Se divide cada parte entre ese MCD: ${n} ÷ ${mcd(n,d)} = ${bn}, y ${d} ÷ ${mcd(n,d)} = ${bd}`,
         `→ ${n}/${d} = ${bn}/${bd}, y ya no se puede simplificar más`,
-        'TRUCO: si no ves el MCD de un golpe, no lo busques — ve bajando de a poquito. Mientras arriba y abajo sean los dos pares, divide entre 2 y repite. Después, si los dos suman múltiplo de 3, entre 3. Después entre 5 si los dos terminan en 0 o 5. Llegas al mismo resultado sin calcular ningún MCD, y sabes que terminaste cuando ya no queda ningún número que divida a los dos. Ejemplo con 24/36: los dos son pares → 12/18; otra vez pares → 6/9; ya no son pares, pero los dos se dividen entre 3 → 2/3. Y ahí se acabó.'] };
+        `TRUCO: si no ves el MCD de un golpe, no lo busques: ve bajando de a poquito. Mientras arriba y abajo sean pares, divide entre 2 y repite; después entre 3 si los dos suman múltiplo de 3; después entre 5 si los dos terminan en 0 o 5. Llegas al mismo resultado sin calcular ningún MCD, y terminaste cuando ya no queda ningún número que divida a los dos. Ejemplo con este mismo: ${(()=>{ let x=n, y=d; const pasos=[`${x}/${y}`]; for(let p=2; p<=y; p++){ while(x%p===0 && y%p===0){ x/=p; y/=p; pasos.push(`entre ${p} → ${x}/${y}`); } } return pasos.join(', '); })()}.`] };
   }
 },
 {
@@ -1051,7 +1086,7 @@ const MODULOS = [
         ...conv.map(c=>`${c.f.n}/${c.f.d} → ${c.v}/${m}`),
         `Ya con el mismo denominador, ordenamos los numeradores de ${asc?'menor a mayor':'mayor a menor'}: ${orden.map(o=>o.v).join(' , ')}`,
         `→ ${orden.map(o=>`${o.f.n}/${o.f.d}`).join(' , ')}`,
-        'TRUCO: antes de sacar cuentas, compara cada fracción contra 1/2 — mira si el numerador llega a la mitad del denominador o no. Las que no llegan son las chiquitas y las que pasan son las grandes; muchas veces eso ya te deja el orden casi armado y solo tienes que decidir entre dos. Para esas dos que queden parejas, sí busca el denominador común (o multiplica en cruz). Ejemplo: 2/5 no llega a la mitad (2 es menos que 2,5) y 5/8 la pasa (5 es más que 4) → 2/5 es la menor, sin hacer ninguna cuenta.'] };
+        `TRUCO: antes de sacar cuentas, compara cada fracción contra 1/2 — mira si el numerador llega a la mitad del denominador o no. Las que no llegan son las chiquitas y las que la pasan son las grandes; muchas veces eso ya deja el orden casi armado y solo hay que decidir entre dos. Ejemplo con estas mismas: ${fs.map(f=>`${f.n}/${f.d} ${f.n*2<f.d?'no llega a la mitad':f.n*2>f.d?'pasa la mitad':'es justo la mitad'}`).join(', ')}. Para las que queden parejas, ahí sí busca el denominador común o multiplica en cruz.`] };
   }
 },
 {
@@ -1068,7 +1103,7 @@ const MODULOS = [
         `Se multiplica el entero por el denominador: ${e} × ${d} = ${e*d} (así se cuenta cuántas partes de tamaño 1/${d} hay en los ${e} enteros completos).`,
         `Se le suma el numerador de la fracción: ${e*d} + ${n} = ${imp}`,
         `El denominador se queda exactamente igual.`, `→ ${e} ${n}/${d} = ${imp}/${d}`,
-        `TRUCO: hazlo en círculo, de abajo hacia arriba: el de abajo (${d}) multiplica al entero (${e}), y al resultado le sumas el de arriba (${n}). Abajo no se toca nunca. Comprobación rápida: el numerador que te queda (${imp}) tiene que ser MÁS GRANDE que el denominador (${d}); si te quedó más chico, multiplicaste o sumaste al revés. Otro ejemplo: 2 3/4 → 4 × 2 = 8, y 8 + 3 = 11 → 11/4.`] };
+        `TRUCO: hazlo en círculo, de abajo hacia arriba: el de abajo multiplica al entero, y a eso le sumas el de arriba. El denominador no se toca nunca. Ejemplo con este mismo: ${d} × ${e} = ${e*d}, y ${e*d} + ${n} = ${imp} → ${imp}/${d}. Comprobación rápida: ${imp} tiene que ser MAYOR que ${d}; si te hubiera quedado más chico, multiplicaste o sumaste al revés.`] };
     return {
       enunciado:`Convierte ${fr(imp,d)} en número mixto.`,
       tipo:'mixto', respuesta:{e, n, d},
@@ -1077,7 +1112,7 @@ const MODULOS = [
         `${d} × ${e} = ${e*d}, y sobran ${imp} − ${e*d} = ${n} (ese sobrante es el residuo de la división).`,
         `El cociente (${e}) se convierte en la parte entera, y el residuo (${n}) es el nuevo numerador — el denominador no cambia.`,
         `→ ${imp}/${d} = ${e} ${n}/${d}`,
-        `TRUCO: es una división de toda la vida, la de la "casita": el cociente sale afuera como entero y el residuo se queda arriba. Comprobación instantánea: el numerador que te quede (${n}) SIEMPRE tiene que ser menor que el denominador (${d}). Si te quedó igual o más grande, es que todavía cabía otro entero más. Otro ejemplo: 11/4 → 11 ÷ 4 da 2 y sobran 3 → 2 3/4, y el 3 es menor que el 4, así que está bien.`] };
+        `TRUCO: es una división de toda la vida, la de la casita: el cociente sale afuera como entero y el residuo se queda arriba. Ejemplo con este mismo: ${imp} ÷ ${d} da ${e} y sobran ${n} → ${e} ${n}/${d}. Comprobación instantánea: ${n} tiene que ser menor que ${d}; si te queda igual o mayor, es que todavía cabía otro entero.`] };
   }
 },
 {
@@ -1101,7 +1136,7 @@ const MODULOS = [
         `Igual que cualquier fracción, se simplifica dividiendo arriba y abajo entre su MCD: MCD(${a}, ${b}) = ${mcd(a,b)}`,
         `${a} ÷ ${mcd(a,b)} = ${sn}, y ${b} ÷ ${mcd(a,b)} = ${sd}`,
         `→ la razón simplificada es ${sn} : ${sd}`,
-        'TRUCO: subraya en el enunciado las dos cosas que se comparan ANTES de calcular nada, en el orden en que aparecen. La primera va arriba, la segunda abajo — "razón de niñas a niños" no es lo mismo que "de niños a niñas", son respuestas distintas. Y la simplificación no cambia la razón: 20 a 30 y 2 a 3 significan exactamente lo mismo. Ejemplo: 8 niñas y 12 niños → la razón de niñas a niños es 8/12, que simplificada es 2 : 3. Al revés, de niños a niñas, sería 3 : 2, que es otra respuesta.'] };
+        `TRUCO: subraya en el enunciado las dos cosas que se comparan ANTES de calcular nada, en el orden en que aparecen: la primera va arriba y la segunda abajo. Cambiar el orden da otra respuesta distinta. Ejemplo con este mismo: ${a} a ${b} se escribe ${a}/${b}, que simplificado es ${sn} : ${sd}; al revés sería ${sd} : ${sn}, que ya no responde lo que preguntaban. Simplificar no cambia la razón: ${a} a ${b} y ${sn} a ${sd} significan lo mismo.`] };
   }
 }
 ];
