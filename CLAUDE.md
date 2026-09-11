@@ -52,6 +52,13 @@ pueden desincronizar porque no hay dos fuentes. Al agregar un módulo nuevo, seg
 patrón: la explicación debe definir los términos que usa y mostrar el razonamiento, no
 solo el paso mecánico (fue el pedido explícito de la usuaria — "como si no supiera nada").
 
+**Línea `TRUCO:` — obligatoria.** Toda explicación termina con una línea que empieza con
+`TRUCO: ` y da el atajo para resolver ese ejercicio más rápido la próxima vez (no un
+resumen de los pasos: el camino corto, la regla mnemotécnica o la comprobación que evita
+rehacer la cuenta). `explPasos()` la saca de la lista numerada y la pinta como recuadro
+aparte (`.truco`), poniéndole mayúscula inicial. El autotest lo verifica: si algún `return`
+de un `gen()` se queda sin línea `TRUCO:`, ese módulo FALLA (contador `sinTruco`).
+
 Los `tipo` de entrada (7): `sino`, `cmp`, `opciones`, `num`, `texto`, `frac`, `mixto`,
 `orden`. `entradaHTML()` decide qué pintar según el tipo; `verificar()` decide si la
 respuesta es correcta, para los 7 sin excepción. Si se agrega un módulo, casi seguro
