@@ -1409,10 +1409,8 @@ function restaurarSesion(){
   ordenSel = s.ordenSel || []; ultimoFeedback = s.ultimoFeedback || null;
   ultimoProceso = s.ultimoProceso || '';
   pintarEjercicio();
-  if(respondido){
-    if(vioExpl) _pintarVistaExplicacion();
-    else if(ultimoFeedback) mostrarFb(ultimoFeedback, false);
-  }
+  if(respondido && ultimoFeedback) mostrarFb(ultimoFeedback, false);   // ya contestó de verdad
+  else if(vioExpl) _pintarVistaExplicacion();                          // solo vio la explicación, sigue pudiendo responder
   return true;
 }
 
@@ -1652,16 +1650,13 @@ function saltarEjercicio(){
   nuevoEjercicio(esTemaFijo ? modActual.id : capFijo ? capFijo : undefined, true);
 }
 function verExplicacion(){
-  if(respondido) return;
-  vioExpl = true; respondido = true;
+  if(respondido) return;             // ya contestó de verdad: eso sí queda cerrado
+  vioExpl = true;                    // solo "espió" la explicación — el ejercicio sigue abierto
   ultimoProceso = ($('inProceso') || {}).value || '';
   _pintarVistaExplicacion();
   guardarSesion();
 }
 function _pintarVistaExplicacion(){
-  $('zonaEntrada').style.opacity = '.5';
-  $('zonaEntrada').style.pointerEvents = 'none';
-  $('accionesPre').style.display = 'none';
   $('zonaFb').innerHTML = `
     <div class="fb medio">Respuesta: <b>${fmtRespuesta(ejActual)}</b>
       <small>Este ejercicio no cuenta para las estadísticas.</small></div>
