@@ -196,30 +196,39 @@ function toggleSigno(id){
 function explDivisibilidad(n,d){
   const s = String(n), ult = +s[s.length-1], sd = sumaDig(n), dos = n%100;
   const ok = n%d===0, si = ok?'sí':'no';
-  const final = `→ ${n} ${si} es divisible por ${d}.`;
-  const sumaTxt = `${s.split('').join(' + ')} = ${sd}`;
+  const intro = 'Que un número sea "divisible" entre otro significa que, al dividirlos, el resultado es exacto — no sobra nada (el residuo es 0).';
+  const final = `→ Por eso, ${n} ${si} es divisible por ${d}.`;
+  const sumaTxt = `Sumamos sus dígitos: ${s.split('').join(' + ')} = ${sd}.`;
   switch(d){
-    case 2: return ['Regla del 2: el último dígito tiene que ser par (0, 2, 4, 6 u 8).',
-      `El último dígito de ${n} es ${ult}.`, `${ult} ${ult%2===0?'es par':'no es par'}. ${final}`];
-    case 5: return ['Regla del 5: el último dígito tiene que ser 0 o 5.',
-      `El último dígito de ${n} es ${ult}.`, `${ult} ${(ult===0||ult===5)?'sí es':'no es'} 0 ni 5. ${final}`];
-    case 10:return ['Regla del 10: el último dígito tiene que ser 0.',
-      `El último dígito de ${n} es ${ult}.`, `${ult} ${ult===0?'sí es':'no es'} 0. ${final}`];
-    case 3: return ['Regla del 3: la suma de los dígitos tiene que ser múltiplo de 3.',
+    case 2: return [intro,
+      'Para el 2 basta con mirar el último dígito (las demás cifras no importan): si es 0, 2, 4, 6 u 8 — un número par — sí es divisible entre 2.',
+      `El último dígito de ${n} es ${ult}.`, `${ult} ${ult%2===0?'es par':'es impar (no par)'}. ${final}`];
+    case 5: return [intro,
+      'Para el 5 basta con mirar el último dígito: solo es divisible entre 5 si termina en 0 o en 5.',
+      `El último dígito de ${n} es ${ult}.`, `${ult} ${(ult===0||ult===5)?'sí es 0 o 5':'no es ni 0 ni 5'}. ${final}`];
+    case 10:return [intro,
+      'Para el 10 basta con mirar el último dígito: solo es divisible entre 10 si termina exactamente en 0.',
+      `El último dígito de ${n} es ${ult}.`, `${ult} ${ult===0?'sí es 0':'no es 0'}. ${final}`];
+    case 3: return [intro,
+      'Para el 3 hay un atajo: se suman todos los dígitos, y si esa suma es múltiplo de 3 (0, 3, 6, 9, 12...), el número completo también lo es.',
       sumaTxt, `${sd} ${sd%3===0?'sí es':'no es'} múltiplo de 3. ${final}`];
-    case 9: return ['Regla del 9: la suma de los dígitos tiene que ser múltiplo de 9.',
+    case 9: return [intro,
+      'Para el 9 el atajo es parecido: se suman todos los dígitos, y si esa suma es múltiplo de 9 (0, 9, 18, 27...), el número completo también lo es.',
       sumaTxt, `${sd} ${sd%9===0?'sí es':'no es'} múltiplo de 9. ${final}`];
-    case 4: return ['Regla del 4: el número formado por los dos últimos dígitos tiene que ser divisible por 4.',
-      `Los dos últimos dígitos de ${n} forman el ${dos}.`,
-      `${dos} ÷ 4 ${dos%4===0?`= ${dos/4}, exacto`:'no da exacto'}. ${final}`];
-    case 6: return ['Regla del 6: tiene que ser divisible por 2 Y por 3 a la vez.',
-      `¿Por 2? El último dígito es ${ult} → ${ult%2===0?'sí':'no'}.`,
-      `¿Por 3? ${sumaTxt} → ${sd%3===0?'sí':'no'}.`,
-      `${ok?'Cumple las dos condiciones':'Falla al menos una condición'}. ${final}`];
-    case 12:return ['Regla del 12: tiene que ser divisible por 3 Y por 4 a la vez.',
-      `¿Por 3? ${sumaTxt} → ${sd%3===0?'sí':'no'}.`,
-      `¿Por 4? Los dos últimos dígitos forman el ${dos} → ${dos%4===0?'sí':'no'}.`,
-      `${ok?'Cumple las dos condiciones':'Falla al menos una condición'}. ${final}`];
+    case 4: return [intro,
+      'Para el 4 no hace falta mirar el número entero: solo importan sus dos últimos dígitos, porque cualquier "centena completa" ya es múltiplo de 4 por sí sola.',
+      `Los dos últimos dígitos de ${n} forman el número ${dos}.`,
+      `${dos} ÷ 4 ${dos%4===0?`= ${dos/4}, división exacta`:'no da exacta (sobra residuo)'}. ${final}`];
+    case 6: return [intro,
+      '6 = 2 × 3, así que un número es divisible entre 6 solo si cumple LAS DOS reglas a la vez: la del 2 y la del 3.',
+      `¿Entre 2? El último dígito es ${ult}, que ${ult%2===0?'sí es par → sí':'no es par → no'}.`,
+      `¿Entre 3? ${sumaTxt} ${sd%3===0?'Sí es múltiplo de 3 → sí':'No es múltiplo de 3 → no'}.`,
+      `${ok?'Cumple las dos condiciones':'Falla al menos una de las dos condiciones'}. ${final}`];
+    case 12:return [intro,
+      '12 = 3 × 4, así que un número es divisible entre 12 solo si cumple LAS DOS reglas a la vez: la del 3 y la del 4.',
+      `¿Entre 3? ${sumaTxt} ${sd%3===0?'Sí es múltiplo de 3 → sí':'No es múltiplo de 3 → no'}.`,
+      `¿Entre 4? Los dos últimos dígitos forman ${dos}; ${dos%4===0?`${dos}÷4 es exacto → sí`:`${dos}÷4 no es exacto → no`}.`,
+      `${ok?'Cumple las dos condiciones':'Falla al menos una de las dos condiciones'}. ${final}`];
   }
   return [`${n} ${si} es divisible por ${d}.`];
 }
@@ -227,32 +236,34 @@ function explDivisibilidad(n,d){
 const TRAMPAS = [51,57,87,91,111,119,133,143,161,187,203,209,217,221,247,253,289,299];
 
 function explPrimo(n){
+  const intro = 'Un número "primo" es el que solo se puede dividir exacto entre 1 y entre sí mismo, sin ningún otro divisor. Si tiene algún otro divisor más, se llama "compuesto".';
   if(esPrimo(n)){
     const lim = Math.floor(Math.sqrt(n));
     const ps = [2,3,5,7,11,13,17].filter(x=>x<=lim);
-    const li = [`Solo hace falta probar los primos hasta √${n} ≈ ${lim}.`];
-    li.push(ps.length ? `Probamos ${ps.join(', ')}: ninguno divide a ${n} de forma exacta.`
-                      : `√${n} es menor que 2, no hay ningún primo que probar.`);
-    li.push(`${n} es PRIMO: solo se puede dividir entre 1 y entre ${n}.`);
+    const li = [intro,
+      `Para comprobarlo no hace falta probar todos los números: si ${n} tuviera un divisor mayor que √${n} (≈ ${lim}), tendría que existir otro divisor más pequeño que lo acompañe — así que basta con probar los primos hasta ${lim}.`];
+    li.push(ps.length ? `Probamos dividir ${n} entre ${ps.join(', ')}: en ningún caso da una división exacta.`
+                      : `Como √${n} es menor que 2, no hay ningún primo más pequeño que probar.`);
+    li.push(`→ ${n} no tiene más divisores que 1 y él mismo, así que es PRIMO.`);
     return li;
   }
   let d = 2; while(n%d !== 0) d++;
-  const li = ['Buscamos el divisor más pequeño distinto de 1.'];
-  if(d>2) li.push(`${n} no es par, así que el 2 no sirve.`);
-  li.push(`${n} ÷ ${d} = ${n/d}, exacto.`);
-  li.push(`Como ${n} = ${d} × ${n/d}, tiene más divisores que 1 y él mismo → es COMPUESTO.`);
-  if(TRAMPAS.indexOf(n) >= 0) li.push(`Ojo con este: ${n} parece primo a simple vista, pero no lo es.`);
+  const li = [intro, 'Buscamos el divisor más pequeño de este número, distinto de 1.'];
+  if(d>2) li.push(`${n} no es par, así que el 2 queda descartado; seguimos probando hacia arriba.`);
+  li.push(`${n} ÷ ${d} = ${n/d}, y esa división sale exacta (sin residuo).`);
+  li.push(`Como ${n} = ${d} × ${n/d}, ya tiene un divisor además de 1 y de sí mismo → es COMPUESTO, no primo.`);
+  if(TRAMPAS.indexOf(n) >= 0) li.push(`Este es de los que engañan: ${n} no se ve tan obviamente compuesto a simple vista, por eso conviene probar varios primos antes de decidir.`);
   return li;
 }
 
 function explFactorizar(n){
-  const li = ['Dividimos entre primos, empezando siempre por el más pequeño que quepa:'];
+  const li = ['"Factorizar" un número significa escribirlo como una multiplicación de números primos (números que solo se dividen entre 1 y entre sí mismos). Se hace dividiendo entre primos, empezando siempre por el más pequeño que quepa exacto:'];
   let m = n, d = 2;
   while(m > 1){
-    if(m % d === 0){ li.push(`${m} ÷ ${d} = ${m/d}`); m = m/d; }
+    if(m % d === 0){ li.push(`${m} ÷ ${d} = ${m/d} (${d} es primo y divide exacto)`); m = m/d; }
     else d++;
   }
-  li.push(`Ya llegamos a 1 → ${n} = ${fmtFactores(factorizar(n))}`);
+  li.push(`Llegamos a 1, así que ya no hay más que dividir. Juntando todos los primos que usamos: ${n} = ${fmtFactores(factorizar(n))}`);
   return li;
 }
 
@@ -260,51 +271,55 @@ function explMcmListado(a,b){
   const m = mcm(a,b), la = [], lb = [];
   for(let k=1; a*k<=m; k++) la.push(a*k);
   for(let k=1; b*k<=m; k++) lb.push(b*k);
-  return [`Múltiplos de ${a}: ${la.join(', ')}`,
-          `Múltiplos de ${b}: ${lb.join(', ')}`,
-          `El primero que aparece en las dos listas es ${m} → MCM(${a}, ${b}) = ${m}`];
+  return [`El "MCM" (mínimo común múltiplo) es el número más pequeño que aparece en la tabla de multiplicar tanto de ${a} como de ${b} — el primer punto de encuentro entre las dos listas de múltiplos.`,
+          `Múltiplos de ${a} (${a}, ${a}×2, ${a}×3...): ${la.join(', ')}`,
+          `Múltiplos de ${b} (${b}, ${b}×2, ${b}×3...): ${lb.join(', ')}`,
+          `El primer número que aparece en las dos listas es ${m} → MCM(${a}, ${b}) = ${m}`];
 }
 
 function explMcmFactores(ns){
   const fs = ns.map(factorizar);
-  const li = ns.map((n,i)=>`${n} = ${fmtFactores(fs[i])}`);
+  const li = ['Otra forma de hallar el MCM es a partir de la factorización prima de cada número:',
+    ...ns.map((n,i)=>`${n} = ${fmtFactores(fs[i])}`)];
   const primos = [...new Set(fs.reduce((ac,f)=>ac.concat(Object.keys(f).map(Number)),[]))].sort((a,b)=>a-b);
-  li.push('Para el MCM se toma cada primo con el MAYOR exponente que aparezca:');
+  li.push('Para que el resultado sea múltiplo de todos ellos a la vez, se toma cada primo que aparezca con su MAYOR exponente, sin importar en cuál de los números apareció:');
   primos.forEach(p=>{
     const es = fs.map(f => f[p]||0);
-    li.push(`${p} → exponentes ${es.join(', ')} · el mayor es ${Math.max.apply(null,es)}`);
+    li.push(`Primo ${p}: aparece con exponente ${es.join(', ')} en cada número → se toma el mayor, ${Math.max.apply(null,es)}`);
   });
   const partes = primos.map(p=>{ const e = Math.max.apply(null, fs.map(f=>f[p]||0)); return e>1 ? p+sup(e) : ''+p; });
-  li.push(`MCM = ${partes.join(' × ')} = ${ns.reduce(mcm)}`);
+  li.push(`Multiplicando esos primos con sus mayores exponentes: MCM = ${partes.join(' × ')} = ${ns.reduce(mcm)}`);
   return li;
 }
 
 function explMcd(ns){
   const fs = ns.map(factorizar);
-  const li = ns.map((n,i)=>`${n} = ${fmtFactores(fs[i])}`);
+  const li = ['El "MCD" (máximo común divisor) es el número más grande que divide exacto a todos los números a la vez. Con factorización prima:',
+    ...ns.map((n,i)=>`${n} = ${fmtFactores(fs[i])}`)];
   const comunes = Object.keys(fs[0]).map(Number).filter(p => fs.every(f=>f[p])).sort((a,b)=>a-b);
   if(!comunes.length){
-    li.push('No hay ningún primo que esté en todas las factorizaciones.');
-    li.push(`Sin factores comunes → MCD = 1 (son primos entre sí).`);
+    li.push('Ningún primo se repite en TODAS las factorizaciones a la vez.');
+    li.push(`Sin ningún factor primo en común, el MCD es 1 — se dice que estos números son "primos entre sí".`);
     return li;
   }
-  li.push('Para el MCD se toman SOLO los primos que están en todos, con el MENOR exponente:');
+  li.push('El MCD se arma con SOLO los primos que aparecen en TODAS las factorizaciones, tomando el MENOR exponente en que aparecen:');
   comunes.forEach(p=>{
     const es = fs.map(f=>f[p]);
-    li.push(`${p} → exponentes ${es.join(', ')} · el menor es ${Math.min.apply(null,es)}`);
+    li.push(`Primo ${p}: aparece con exponente ${es.join(', ')} en cada número → se toma el menor, ${Math.min.apply(null,es)}`);
   });
   const partes = comunes.map(p=>{ const e = Math.min.apply(null, fs.map(f=>f[p])); return e>1 ? p+sup(e) : ''+p; });
-  li.push(`MCD = ${partes.join(' × ')} = ${ns.reduce(mcd)}`);
+  li.push(`Multiplicando esos primos comunes con sus menores exponentes: MCD = ${partes.join(' × ')} = ${ns.reduce(mcd)}`);
   return li;
 }
 
 function explComparar(a,b){
   const m = mcm(a.d,b.d), ka = m/a.d, kb = m/b.d;
   const na = a.n*ka, nb = b.n*kb, s = cmpSigno(na,nb);
-  return [`Denominador común: MCM(${a.d}, ${b.d}) = ${m}`,
-    `${a.n}/${a.d} → multiplicamos arriba y abajo por ${ka} → ${na}/${m}`,
-    `${b.n}/${b.d} → multiplicamos arriba y abajo por ${kb} → ${nb}/${m}`,
-    `Con el mismo denominador solo se comparan los numeradores: ${na} ${s} ${nb}`,
+  return [`No se pueden comparar directamente dos fracciones con denominadores distintos — primero hay que convertirlas para que tengan el MISMO denominador.`,
+    `El denominador común más chico es el MCM de ${a.d} y ${b.d}: MCM(${a.d}, ${b.d}) = ${m}`,
+    `${a.n}/${a.d} → se multiplica arriba y abajo por ${ka} (porque ${a.d}×${ka}=${m}) → ${na}/${m}`,
+    `${b.n}/${b.d} → se multiplica arriba y abajo por ${kb} (porque ${b.d}×${kb}=${m}) → ${nb}/${m}`,
+    `Con el mismo denominador, ya se pueden comparar solo los numeradores: ${na} ${s} ${nb}`,
     `→ ${a.n}/${a.d} ${s} ${b.n}/${b.d}`];
 }
 
@@ -331,14 +346,23 @@ const MODULOS = [
     return {
       enunciado:`¿Cuál es el conjunto <b>más específico</b> al que pertenece <b>${num}</b>?`,
       tipo:'opciones', opciones: shuffle(['Natural','Entero','Racional','Irracional']), respuesta: correcta,
-      explicacion: tipo==='nat' ? [`${num} es un número entero positivo, sin parte decimal ni fraccionaria.`,
-          `Se puede usar para contar → es Natural (y también Entero y Racional, pero el más específico es Natural).`]
-        : tipo==='ent' ? [`${num} es negativo, así que no puede ser Natural.`,
-          `No tiene parte fraccionaria → es Entero (y también Racional, pero el más específico es Entero).`]
-        : tipo==='rac' ? [`${num} se puede escribir como una fracción a/b con b ≠ 0.`,
-          `No se simplifica a un número entero → es Racional.`]
-        : [`${num} no se puede escribir como una fracción exacta; su decimal no termina ni se repite.`,
-          `→ es Irracional.`]
+      explicacion: tipo==='nat' ? [
+          'Natural, Entero, Racional e Irracional son "familias" de números, cada una dentro de la siguiente (todo Natural es también Entero, y todo Entero es también Racional) — por eso se pide la más específica, la familia más pequeña a la que pertenece.',
+          `${num} es un número entero positivo (1, 2, 3...), sin decimales ni fracciones — los que usamos para contar.`,
+          `→ Es Natural (y por lo tanto también Entero y Racional, pero "Natural" es la respuesta más específica).`]
+        : tipo==='ent' ? [
+          'Natural, Entero, Racional e Irracional son "familias" de números, cada una dentro de la siguiente — se pide la más específica.',
+          `${num} es negativo, y los Naturales son solo los positivos (1, 2, 3...) — así que no puede ser Natural.`,
+          `Sí es un Entero: los enteros incluyen los negativos, el 0 y los positivos, siempre sin parte decimal.`,
+          `→ Es Entero (y también Racional, pero "Entero" es más específico).`]
+        : tipo==='rac' ? [
+          'Un número es "Racional" cuando se puede escribir como una fracción a/b, con a y b enteros y b distinto de 0 — incluye fracciones y decimales que terminan o se repiten.',
+          `${num} ya está escrito como una fracción, y no se simplifica a un número entero.`,
+          `→ Es Racional.`]
+        : [
+          'Un número es "Irracional" cuando NO se puede escribir como una fracción exacta: su forma decimal sigue para siempre sin repetirse en ningún patrón.',
+          `${num} es de ese tipo — no existe ninguna fracción a/b que lo represente con exactitud.`,
+          `→ Es Irracional.`]
     };
   }
 },
@@ -351,23 +375,27 @@ const MODULOS = [
     if(variante==='simple'){
       const m = pick([1,-1])*n;
       return { enunciado:`Calcula: | ${m} |`, tipo:'num', respuesta:n,
-        explicacion:[`El valor absoluto es la distancia al 0, siempre positiva o cero.`,
-          `${m} está a ${n} unidades del 0.`, `→ |${m}| = ${n}`] };
+        explicacion:[`Las barras verticales | | significan "valor absoluto": la distancia de ese número hasta el 0 en la recta numérica. Una distancia nunca es negativa, así que el valor absoluto siempre da positivo o cero.`,
+          `${m} está a ${n} unidades de distancia del 0 (a la izquierda o a la derecha, la distancia se cuenta igual).`,
+          `→ |${m}| = ${n}`] };
     }
     if(variante==='neg-fuera'){
       return { enunciado:`Calcula: −| ${n} |`, tipo:'num', respuesta:-n,
-        explicacion:[`Primero el valor absoluto: |${n}| = ${n}.`,
-          `El signo − de afuera se aplica después.`, `→ −|${n}| = −${n}`] };
+        explicacion:[`Primero se resuelve lo que está DENTRO de las barras: |${n}| = ${n} (la distancia de ${n} al 0).`,
+          `El signo − que está AFUERA de las barras no es parte del valor absoluto — se aplica después, como pedir "el opuesto de ese resultado".`,
+          `→ −|${n}| = −${n}`] };
     }
     if(variante==='doble-neg'){
       return { enunciado:`Calcula: | −(−${n}) |`, tipo:'num', respuesta:n,
-        explicacion:[`Dentro de las barras: −(−${n}) = ${n} (el opuesto del opuesto).`,
-          `El valor absoluto de ${n} es ${n}.`, `→ |−(−${n})| = ${n}`] };
+        explicacion:[`Primero resolvemos lo de adentro: −(−${n}). El signo de afuera invierte el signo de lo que sigue, así que el opuesto de −${n} es ${n}.`,
+          `Ya con ${n} dentro de las barras: su distancia al 0 es ${n}.`,
+          `→ |−(−${n})| = ${n}`] };
     }
     const m = R(1, Math.max(1, Math.floor(n/2)));
     return { enunciado:`Calcula: | −(${n}) | − ${m}`, tipo:'num', respuesta:n-m,
-      explicacion:[`Dentro de las barras: −(${n}) = −${n}.`,
-        `|−${n}| = ${n}.`, `${n} − ${m} = ${n-m}`] };
+      explicacion:[`Dentro de las barras: −(${n}) es simplemente −${n} (el opuesto de ${n}).`,
+        `El valor absoluto de eso es su distancia al 0: |−${n}| = ${n}.`,
+        `Ahora sí se resta el ${m} que quedaba afuera de las barras: ${n} − ${m} = ${n-m}`] };
   }
 },
 {
@@ -379,35 +407,37 @@ const MODULOS = [
     if(variante==='suma-igual'){
       const signo = pick([1,-1]); const A=signo*a, B=signo*b, r=A+B;
       return { enunciado:`(${A}) + (${B}) =`, tipo:'num', respuesta:r,
-        explicacion:[`Mismo signo: se suman los valores y se conserva el signo.`,
+        explicacion:[`Cuando los dos números tienen EL MISMO signo, se suman sus valores (sin el signo) y el resultado se queda con ese mismo signo.`,
           `${a} + ${b} = ${a+b}`, `→ (${A}) + (${B}) = ${r}`] };
     }
     if(variante==='suma-dif'){
       const A=a, B=-b, r=A+B, mayor = a>=b?A:B;
       return { enunciado:`(${A}) + (${B}) =`, tipo:'num', respuesta:r,
-        explicacion:[`Signos diferentes: se restan los valores y se usa el signo del mayor valor absoluto.`,
-          `|${A}| = ${a}, |${B}| = ${b}`,
-          `${Math.max(a,b)} − ${Math.min(a,b)} = ${Math.abs(r)}, con el signo de ${mayor}`,
+        explicacion:[`Cuando los signos son DIFERENTES, no se suman: se restan sus valores (el más grande menos el más chico) y el resultado lleva el signo del que era más grande.`,
+          `Sin el signo, los valores son ${a} y ${b}.`,
+          `${Math.max(a,b)} − ${Math.min(a,b)} = ${Math.abs(r)}, y como ${mayor} era el de mayor valor, el resultado lleva su signo.`,
           `→ (${A}) + (${B}) = ${r}`] };
     }
     if(variante==='resta'){
       const A=a, B=-b, r=A+b;
       return { enunciado:`${A} − (${B}) =`, tipo:'num', respuesta:r,
-        explicacion:[`Restar es lo mismo que sumar el opuesto.`,
-          `${A} − (${B}) = ${A} + ${b}`, `→ = ${r}`] };
+        explicacion:[`Restar un número negativo es lo mismo que sumar su opuesto positivo — los dos signos de "menos" seguidos se cancelan entre sí.`,
+          `${A} − (${B}) se convierte en ${A} + ${b}`, `→ = ${r}`] };
     }
     const op = pick(['mult','div']);
     const signoA = pick([1,-1]), signoB = pick([1,-1]), igual = signoA===signoB;
     if(op==='mult'){
       const A=signoA*a, B=signoB*b, r=A*B;
       return { enunciado:`(${A}) × (${B}) =`, tipo:'num', respuesta:r,
-        explicacion:[igual?'Signos iguales → el resultado es positivo.':'Signos diferentes → el resultado es negativo.',
-          `${a} × ${b} = ${a*b}`, `→ (${A}) × (${B}) = ${r}`] };
+        explicacion:[`Para multiplicar: si los dos signos son iguales (los dos + o los dos −), el resultado sale positivo; si son diferentes, sale negativo.`,
+          igual?`${A} y ${B} tienen el mismo signo.`:`${A} y ${B} tienen signos diferentes.`,
+          `Se multiplican los valores sin el signo: ${a} × ${b} = ${a*b}`, `→ (${A}) × (${B}) = ${r}`] };
     }
     const A=signoA*(a*b), B=signoB*b, r=A/B;
     return { enunciado:`(${A}) ÷ (${B}) =`, tipo:'num', respuesta:r,
-      explicacion:[igual?'Signos iguales → el resultado es positivo.':'Signos diferentes → el resultado es negativo.',
-        `${Math.abs(A)} ÷ ${b} = ${a}`, `→ (${A}) ÷ (${B}) = ${r}`] };
+      explicacion:[`Para dividir aplica la misma regla que para multiplicar: signos iguales dan positivo, signos diferentes dan negativo.`,
+        igual?`${A} y ${B} tienen el mismo signo.`:`${A} y ${B} tienen signos diferentes.`,
+        `Se dividen los valores sin el signo: ${Math.abs(A)} ÷ ${b} = ${a}`, `→ (${A}) ÷ (${B}) = ${r}`] };
   }
 },
 {
@@ -421,27 +451,34 @@ const MODULOS = [
       if(plantilla==='sustituir'){
         const x = R(1,chico), resp = x + prod;
         return { enunciado:`Si x = ${x}, calcula: x + ${b}(${c} − ${d})²`, tipo:'num', respuesta:resp,
-          explicacion:[`Sustituye x por ${x}: ${x} + ${b}(${c} − ${d})²`,
-            `Agrupación: ${c} − ${d} = ${agr}`, `Exponente: ${agr}² = ${pot}`,
-            `Multiplicación: ${b} × ${pot} = ${prod}`, `Suma: ${x} + ${prod} = ${resp}`] };
+          explicacion:[`Primero se reemplaza la variable x por el valor que dieron, ${x}, en todos los lugares donde aparezca.`,
+            `Sustituyendo: ${x} + ${b}(${c} − ${d})²`,
+            `El orden de operaciones dice: primero lo que está entre paréntesis, luego exponentes, luego multiplicación/división, y al final suma/resta.`,
+            `Agrupación: ${c} − ${d} = ${agr}`, `Exponente: ${agr}² significa ${agr} × ${agr} = ${pot}`,
+            `Multiplicación: ${b} × ${pot} = ${prod}`, `Suma (lo último): ${x} + ${prod} = ${resp}`] };
       }
       const a = R(1,chico), resp = a + prod;
       return { enunciado:`${a} + ${b}(${c} − ${d})²`, tipo:'num', respuesta:resp,
-        explicacion:[`Agrupación: ${c} − ${d} = ${agr}`, `Exponente: ${agr}² = ${pot}`,
-          `Multiplicación: ${b} × ${pot} = ${prod}`, `Suma: ${a} + ${prod} = ${resp}`] };
+        explicacion:[`El orden de operaciones dice que siempre hay que resolver en este orden: 1) paréntesis, 2) exponentes, 3) multiplicación y división, 4) suma y resta — sin importar en qué orden aparezcan escritos.`,
+          `Paréntesis primero: ${c} − ${d} = ${agr}`,
+          `Exponente: ${agr}² significa ${agr} × ${agr} = ${pot}`,
+          `Multiplicación: ${b} × ${pot} = ${prod}`,
+          `Suma (lo último que queda): ${a} + ${prod} = ${resp}`] };
     }
     if(plantilla==='trampa-div'){
       const c = R(2,chico), a = R(2,chico*3), d = R(1,chico), q = R(1,chico), bb = c*q;
       const resp = a - q + d;
       return { enunciado:`${a} − ${bb} ÷ ${c} + ${d}`, tipo:'num', respuesta:resp,
-        explicacion:[`División primero: ${bb} ÷ ${c} = ${q}`,
-          `Queda: ${a} − ${q} + ${d}`, `Izquierda a derecha: ${a} − ${q} = ${a-q}`,
-          `${a-q} + ${d} = ${resp}`] };
+        explicacion:[`Aunque la resta aparezca primero de izquierda a derecha, la división tiene MAYOR prioridad y se resuelve antes.`,
+          `División primero: ${bb} ÷ ${c} = ${q}`,
+          `Ahora solo quedan suma y resta, que tienen la MISMA prioridad — se resuelven de izquierda a derecha: ${a} − ${q} + ${d}`,
+          `${a} − ${q} = ${a-q}`, `${a-q} + ${d} = ${resp}`] };
     }
     const b2 = R(1,chico), a2 = b2 + R(1,chico), c2 = R(2,chico), agr2 = a2-b2, resp2 = agr2*c2;
     return { enunciado:`(${a2} − ${b2}) × ${c2}`, tipo:'num', respuesta:resp2,
-      explicacion:[`Agrupación primero: ${a2} − ${b2} = ${agr2}`,
-        `Multiplicación: ${agr2} × ${c2} = ${resp2}`] };
+      explicacion:[`Lo que está dentro de un paréntesis siempre se resuelve primero, antes que cualquier multiplicación de afuera.`,
+        `Paréntesis: ${a2} − ${b2} = ${agr2}`,
+        `Ahora sí la multiplicación: ${agr2} × ${c2} = ${resp2}`] };
   }
 },
 {
@@ -455,13 +492,15 @@ const MODULOS = [
     const expr = `${coefUno?'':coef}${letra} ${signoConst} ${cons}`;
     if(Math.random() < 0.5) return {
       enunciado:`En la expresión <b>${expr}</b>, ¿cuál es el coeficiente?`, tipo:'num', respuesta:coef,
-      explicacion:[`El coeficiente es el número que multiplica a la variable ${letra}.`,
-        coefUno ? `Cuando la variable aparece sola, su coeficiente es 1.` : `En ${coef}${letra}, el coeficiente es ${coef}.`,
+      explicacion:[`En una expresión algebraica, el "coeficiente" es el número que está multiplicando a la letra (la variable).`,
+        coefUno ? `Cuando la letra aparece sola, sin ningún número escrito delante, su coeficiente es 1 (aunque no se escriba) — ${letra} es lo mismo que 1${letra}.` : `En ${coef}${letra}, el número ${coef} es el que multiplica a ${letra}.`,
         `→ El coeficiente es ${coef}.`] };
     const respConst = signoConst==='+' ? cons : -cons;
     return {
       enunciado:`En la expresión <b>${expr}</b>, ¿cuál es la constante?`, tipo:'num', respuesta:respConst,
-      explicacion:[`La constante es el número que no tiene variable.`, `→ La constante es ${respConst}.`] };
+      explicacion:[`En una expresión algebraica, la "constante" es el número que NO tiene ninguna letra pegada — un valor fijo que no cambia.`,
+        `En ${expr}, el término sin variable es ${signoConst==='+'?cons:'−'+cons}, incluyendo su signo.`,
+        `→ La constante es ${respConst}.`] };
   }
 },
 {
@@ -479,8 +518,9 @@ const MODULOS = [
     const t = pick(plantillas);
     return { enunciado:`Traduce a lenguaje algebraico: "<b>${t.frase}</b>"`,
       tipo:'opciones', opciones: shuffle([t.correcta, ...t.mal]), respuesta: t.correcta,
-      explicacion:[`"${t.frase}" se traduce como ${t.correcta}.`,
-        `Fíjate en el orden: "menos que" y "más que" a veces invierten el orden respecto a como se leen.`] };
+      explicacion:[`Para traducir una frase a álgebra, se cambia el número desconocido por una letra (aquí, x) y las palabras clave por su operación: "más que" o "aumentado en" es +, "menos que" es −, "el doble/triple de" es multiplicar por 2 o 3, "dividido entre" es ÷.`,
+        `"${t.frase}" se traduce como ${t.correcta}.`,
+        `Ojo con el orden: en español una frase con "menos que" o "más que" a veces menciona el número antes que la variable, pero en la expresión el orden puede ser distinto de cómo se lee — hay que fijarse bien en qué le resta o le suma a qué.`] };
   }
 },
 {
@@ -491,19 +531,31 @@ const MODULOS = [
     const p = pick(['conmutativa-suma','conmutativa-mult','asociativa-suma','asociativa-mult','identidad-suma','identidad-mult','distributiva']);
     const casos = {
       'conmutativa-suma': { enun:`${a} + ${b} = ${b} + ${a}`, cat:'Conmutativa',
-        expl:[`Cambiar el orden de los sumandos no cambia el resultado.`,`Esa es la propiedad conmutativa.`] },
+        expl:[`La propiedad "conmutativa" dice que se puede cambiar el ORDEN de los números en una suma (o en una multiplicación) sin que el resultado cambie.`,
+          `Aquí ${a} y ${b} solo intercambiaron su posición, y el resultado sigue siendo el mismo.`,
+          `Esa es la propiedad conmutativa.`] },
       'conmutativa-mult': { enun:`${a} × ${b} = ${b} × ${a}`, cat:'Conmutativa',
-        expl:[`Cambiar el orden de los factores no cambia el resultado.`,`Esa es la propiedad conmutativa.`] },
+        expl:[`La propiedad "conmutativa" dice que se puede cambiar el ORDEN de los números en una multiplicación (o en una suma) sin que el resultado cambie.`,
+          `Aquí ${a} y ${b} solo intercambiaron su posición.`,
+          `Esa es la propiedad conmutativa.`] },
       'asociativa-suma': { enun:`(${a} + ${b}) + ${c} = ${a} + (${b} + ${c})`, cat:'Asociativa',
-        expl:[`Cambiar cómo se agrupan los sumandos no cambia el resultado.`,`Esa es la propiedad asociativa.`] },
+        expl:[`La propiedad "asociativa" dice que, al sumar tres o más números, se puede cambiar cuáles se AGRUPAN primero con paréntesis, sin que el resultado cambie — el orden de los números no cambia, solo la agrupación.`,
+          `A la izquierda se agrupan primero ${a} y ${b}; a la derecha se agrupan primero ${b} y ${c}. El resultado final es igual en ambos casos.`,
+          `Esa es la propiedad asociativa.`] },
       'asociativa-mult': { enun:`(${a} × ${b}) × ${c} = ${a} × (${b} × ${c})`, cat:'Asociativa',
-        expl:[`Cambiar cómo se agrupan los factores no cambia el resultado.`,`Esa es la propiedad asociativa.`] },
+        expl:[`La propiedad "asociativa" dice que, al multiplicar tres o más números, se puede cambiar cuáles se AGRUPAN primero con paréntesis, sin que el resultado cambie.`,
+          `A la izquierda se agrupan primero ${a} y ${b}; a la derecha se agrupan primero ${b} y ${c}. El resultado final es igual en ambos casos.`,
+          `Esa es la propiedad asociativa.`] },
       'identidad-suma': { enun:`${a} + 0 = ${a}`, cat:'Identidad',
-        expl:[`Sumar 0 deja el número sin cambiar.`,`El 0 es la identidad aditiva.`] },
+        expl:[`Una "identidad" es un valor especial que, al combinarse con cualquier número, lo deja sin cambiar.`,
+          `Sumar 0 a cualquier número da ese mismo número — por eso el 0 es la "identidad aditiva" (de la suma).`] },
       'identidad-mult': { enun:`${a} × 1 = ${a}`, cat:'Identidad',
-        expl:[`Multiplicar por 1 deja el número sin cambiar.`,`El 1 es la identidad multiplicativa.`] },
+        expl:[`Una "identidad" es un valor especial que, al combinarse con cualquier número, lo deja sin cambiar.`,
+          `Multiplicar cualquier número por 1 da ese mismo número — por eso el 1 es la "identidad multiplicativa" (de la multiplicación).`] },
       'distributiva': { enun:`${a}(${b} + ${c}) = ${a}×${b} + ${a}×${c}`, cat:'Distributiva',
-        expl:[`El número de afuera se multiplica por cada término de adentro.`,`Esa es la propiedad distributiva.`] }
+        expl:[`La propiedad "distributiva" conecta la multiplicación con la suma: cuando un número multiplica a una suma entre paréntesis, se puede "repartir" esa multiplicación a cada término de adentro por separado.`,
+          `${a} multiplica a todo (${b} + ${c}), así que se reparte: ${a} veces ${b}, más ${a} veces ${c}.`,
+          `Esa es la propiedad distributiva.`] }
     };
     const cs = casos[p];
     return { enunciado:`¿Qué propiedad se usa en esta igualdad?<br><b>${cs.enun}</b>`,
@@ -520,27 +572,31 @@ const MODULOS = [
     if(variante==='sumar'){
       const c1=R(2,alto), c2=R(2,alto);
       return { enunciado:`${c1}${letra} + ${c2}${letra} = ___${letra}`, tipo:'num', respuesta:c1+c2,
-        explicacion:[`Son términos semejantes (misma variable ${letra}).`,
-          `Se suman los coeficientes: ${c1} + ${c2} = ${c1+c2}`, `→ ${c1+c2}${letra}`] };
+        explicacion:[`Dos términos son "semejantes" cuando tienen exactamente la misma parte con letra (misma variable, mismo exponente) — aquí, los dos tienen ${letra}.`,
+          `Para sumar términos semejantes, se suman solo los coeficientes (los números) y la letra se queda igual, sin sumarse a sí misma.`,
+          `${c1} + ${c2} = ${c1+c2}`, `→ ${c1+c2}${letra}`] };
     }
     if(variante==='restar'){
       const c2=R(2,alto), c1=c2+R(1,alto);
       return { enunciado:`${c1}${letra} − ${c2}${letra} = ___${letra}`, tipo:'num', respuesta:c1-c2,
-        explicacion:[`Son términos semejantes (misma variable ${letra}).`,
-          `Se restan los coeficientes: ${c1} − ${c2} = ${c1-c2}`, `→ ${c1-c2}${letra}`] };
+        explicacion:[`Son términos semejantes (los dos tienen la letra ${letra}), así que se pueden combinar en uno solo.`,
+          `Para restarlos, se restan solo los coeficientes y la letra se queda igual.`,
+          `${c1} − ${c2} = ${c1-c2}`, `→ ${c1-c2}${letra}`] };
     }
     if(variante==='multiplicar'){
       const c1=R(2,porNivel(nv,8,12,18)), c2=R(2,porNivel(nv,8,12,18));
       return { enunciado:`(${c1}${letra})(${c2}${letra}) = ___${letra}²`, tipo:'num', respuesta:c1*c2,
-        explicacion:[`Al multiplicar, se multiplican los coeficientes y se suman los exponentes de la variable.`,
-          `${c1} × ${c2} = ${c1*c2}`, `${letra} × ${letra} = ${letra}²`, `→ ${c1*c2}${letra}²`] };
+        explicacion:[`Multiplicar es distinto de sumar: aquí SÍ se multiplican tanto los coeficientes como las letras entre sí.`,
+          `Coeficientes: ${c1} × ${c2} = ${c1*c2}`,
+          `Letras: ${letra} × ${letra} = ${letra}² (multiplicar una letra por sí misma sube su exponente).`,
+          `→ ${c1*c2}${letra}²`] };
     }
     const c1=R(2,alto), c2=R(2,alto), letra2 = pick(['y','a','b','n'].filter(l=>l!==letra));
     return { enunciado:`¿Se pueden combinar estos términos?<br><b>${c1}${letra} + ${c2}${letra2}</b>`,
       tipo:'sino', respuesta:false,
-      explicacion:[`Para combinarse, dos términos deben tener exactamente la misma variable (y exponente).`,
-        `${letra} y ${letra2} son variables distintas.`,
-        `→ No se pueden combinar; queda como ${c1}${letra} + ${c2}${letra2}.`] };
+      explicacion:[`Para que dos términos se puedan sumar o restar entre sí (ser "semejantes"), tienen que tener exactamente la misma letra con el mismo exponente.`,
+        `Aquí un término tiene ${letra} y el otro tiene ${letra2} — son letras distintas, así que NO son semejantes.`,
+        `→ No se pueden combinar; la expresión se queda tal cual, ${c1}${letra} + ${c2}${letra2}.`] };
   }
 },
 {
@@ -554,22 +610,31 @@ const MODULOS = [
       const tipoOp = pick(['suma','resta','mult','div']);
       if(tipoOp==='suma'){ const c=R(1,alto), r=x+c;
         return { enunciado:`${letra} + ${c} = ${r}`, tipo:'num', respuesta:x,
-          explicacion:[`Para despejar ${letra}, resta ${c} en ambos lados.`,`${letra} = ${r} − ${c} = ${x}`] }; }
+          explicacion:[`"Despejar" ${letra} significa dejarla sola en un lado de la igualdad, para saber cuánto vale.`,
+            `Aquí le están sumando ${c} a ${letra}. Para deshacer esa suma se hace la operación contraria — restar ${c} — en LOS DOS lados de la igualdad, así se mantiene el equilibrio.`,
+            `${letra} = ${r} − ${c} = ${x}`] }; }
       if(tipoOp==='resta'){ const c=R(1,alto), r=x-c;
         return { enunciado:`${letra} − ${c} = ${r}`, tipo:'num', respuesta:x,
-          explicacion:[`Para despejar ${letra}, suma ${c} en ambos lados.`,`${letra} = ${r} + ${c} = ${x}`] }; }
+          explicacion:[`"Despejar" ${letra} significa dejarla sola en un lado de la igualdad.`,
+            `Aquí le están restando ${c} a ${letra}. La operación contraria de restar es sumar, así que se suma ${c} en los dos lados.`,
+            `${letra} = ${r} + ${c} = ${x}`] }; }
       if(tipoOp==='mult'){ const c=R(2,10), r=x*c;
         return { enunciado:`${c}${letra} = ${r}`, tipo:'num', respuesta:x,
-          explicacion:[`Para despejar ${letra}, divide entre ${c} en ambos lados.`,`${letra} = ${r} ÷ ${c} = ${x}`] }; }
+          explicacion:[`"Despejar" ${letra} significa dejarla sola en un lado de la igualdad.`,
+            `Aquí ${letra} está multiplicada por ${c}. La operación contraria de multiplicar es dividir, así que se divide entre ${c} en los dos lados.`,
+            `${letra} = ${r} ÷ ${c} = ${x}`] }; }
       const c=R(2,10), k=R(1,alto), sol=k*c;
       return { enunciado:`${letra} ÷ ${c} = ${k}`, tipo:'num', respuesta:sol,
-        explicacion:[`Para despejar ${letra}, multiplica por ${c} en ambos lados.`,`${letra} = ${k} × ${c} = ${sol}`] };
+        explicacion:[`"Despejar" ${letra} significa dejarla sola en un lado de la igualdad.`,
+          `Aquí ${letra} está dividida entre ${c}. La operación contraria de dividir es multiplicar, así que se multiplica por ${c} en los dos lados.`,
+          `${letra} = ${k} × ${c} = ${sol}`] };
     }
     const c1 = R(2,10), c2 = R(1,alto), sig = pick(['+','−']);
     const r = sig==='+' ? c1*x + c2 : c1*x - c2;
     return { enunciado:`${c1}${letra} ${sig} ${c2} = ${r}`, tipo:'num', respuesta:x,
-      explicacion:[`Paso 1: deshaz la suma/resta. ${sig==='+'?`${r} − ${c2}`:`${r} + ${c2}`} = ${c1*x}`,
-        `Paso 2: deshaz la multiplicación. ${c1*x} ÷ ${c1} = ${x}`, `→ ${letra} = ${x}`] };
+      explicacion:[`Esta ecuación necesita dos pasos porque a ${letra} le están haciendo dos cosas a la vez: multiplicarla por ${c1} y ${sig==='+'?'sumarle':'restarle'} ${c2}.`,
+        `Paso 1 — deshacer la suma/resta primero (fue lo último que se le hizo a ${letra}, así que se deshace primero): ${sig==='+'?`${r} − ${c2}`:`${r} + ${c2}`} = ${c1*x}`,
+        `Paso 2 — deshacer la multiplicación: ${c1*x} ÷ ${c1} = ${x}`, `→ ${letra} = ${x}`] };
   }
 },
 {
@@ -580,16 +645,24 @@ const MODULOS = [
     const plantillas = [
       () => { const c=R(1,alto); const total=sol+c;
         return { enunciado:`María tenía cierta cantidad de dólares. Su mamá le dio $${c} más y ahora tiene $${total}. ¿Cuánto dinero tenía María al principio?`,
-          expl:[`Palabra clave "más" → suma. Ecuación: x + ${c} = ${total}`, `x = ${total} − ${c} = ${sol}`] }; },
+          expl:[`Se usa una letra (x) para representar la cantidad que no se conoce — aquí, lo que María tenía al principio.`,
+            `La palabra "más" indica que se sumó algo, así que la ecuación es: x + ${c} = ${total}`,
+            `Para despejar x, se hace la operación contraria de sumar, que es restar, en los dos lados: x = ${total} − ${c} = ${sol}`] }; },
       () => { const c=R(1,sol-1); const total=sol-c;
         return { enunciado:`Había cierta cantidad de libros en una mesa. Se retiraron ${c} y quedaron ${total}. ¿Cuántos libros había originalmente?`,
-          expl:[`Palabra clave "se retiraron" → resta. Ecuación: x − ${c} = ${total}`, `x = ${total} + ${c} = ${sol}`] }; },
+          expl:[`x representa la cantidad original de libros, antes de quitar nada.`,
+            `"Se retiraron" indica que se restó algo, así que la ecuación es: x − ${c} = ${total}`,
+            `Para despejar x, se hace la operación contraria de restar, que es sumar: x = ${total} + ${c} = ${sol}`] }; },
       () => { const q=R(2,8); const total=sol*q;
         return { enunciado:`${q} boletos cuestan en total $${total} y todos tienen el mismo precio. ¿Cuánto cuesta cada boleto?`,
-          expl:[`${q} boletos por el precio de cada uno dan el total. Ecuación: ${q}x = ${total}`, `x = ${total} ÷ ${q} = ${sol}`] }; },
+          expl:[`x representa el precio de UN boleto. Si cada uno cuesta x, entonces ${q} boletos cuestan ${q} veces x.`,
+            `Ecuación: ${q}x = ${total}`,
+            `Para despejar x, se hace la operación contraria de multiplicar, que es dividir: x = ${total} ÷ ${q} = ${sol}`] }; },
       () => { const q=R(2,8); const total=sol*q;
         return { enunciado:`Se repartieron ${total} lápices en partes iguales entre ${q} estudiantes. ¿Cuántos lápices recibió cada estudiante?`,
-          expl:[`Palabra clave "repartieron en partes iguales" → división.`, `${total} ÷ ${q} = ${sol}`] }; }
+          expl:[`x representa cuántos lápices recibió cada estudiante.`,
+            `"Repartieron en partes iguales" es una división: el total se reparte entre la cantidad de estudiantes.`,
+            `${total} ÷ ${q} = ${sol}`] }; }
     ];
     const t = pick(plantillas)();
     return { enunciado: t.enunciado, tipo:'num', respuesta: sol, explicacion: t.expl };
@@ -604,8 +677,9 @@ const MODULOS = [
     const suma = vals.reduce((a,b)=>a+b,0);
     const media = Math.round((suma/cuantos)*100)/100;
     return { enunciado:`Halla el promedio de: <b>${vals.join(', ')}</b>`, tipo:'num', respuesta:media,
-      explicacion:[`Media = suma de los valores ÷ cantidad de valores`,
-        `Suma: ${vals.join(' + ')} = ${suma}`, `Cantidad de valores: ${cuantos}`,
+      explicacion:[`El "promedio" (o media aritmética) representa el valor que tendría cada dato si el total se repartiera en partes iguales entre todos.`,
+        `Se calcula así: se suman todos los valores, y esa suma se divide entre la cantidad de valores que hay.`,
+        `Suma: ${vals.join(' + ')} = ${suma}`, `Cantidad de valores: hay ${cuantos} números en la lista.`,
         `${suma} ÷ ${cuantos} = ${media}`] };
   }
 },
@@ -619,24 +693,29 @@ const MODULOS = [
       const nombre = {agudo:'Agudo',recto:'Recto',obtuso:'Obtuso',llano:'Llano'}[tipo];
       return { enunciado:`Un ángulo mide <b>${deg}°</b>. ¿Cómo se clasifica?`,
         tipo:'opciones', opciones: shuffle(['Agudo','Recto','Obtuso','Llano']), respuesta: nombre,
-        explicacion:[`Agudo: menor que 90°. Recto: igual a 90°. Obtuso: entre 90° y 180°. Llano: igual a 180°.`,
-          `${deg}° → ${nombre}`] };
+        explicacion:[`Los ángulos se clasifican según cuánto miden: Agudo es menor que 90° (más "cerrado"), Recto es exactamente 90° (como la esquina de un cuadrado), Obtuso está entre 90° y 180° (más "abierto"), y Llano es exactamente 180° (una línea recta).`,
+          `${deg}° ${tipo==='recto'?'es igual a 90°':tipo==='llano'?'es igual a 180°':tipo==='agudo'?'es menor que 90°':'está entre 90° y 180°'} → ${nombre}`] };
     }
     if(variante==='complemento'){
       const a = R(10,80);
       return { enunciado:`¿Cuál es el complemento de un ángulo de <b>${a}°</b>?`, tipo:'num', respuesta:90-a,
-        explicacion:[`Dos ángulos complementarios suman 90°.`, `x + ${a}° = 90°`, `x = 90 − ${a} = ${90-a}`] };
+        explicacion:[`Dos ángulos son "complementarios" cuando, juntos, suman exactamente 90°.`,
+          `Si uno mide ${a}°, el otro (x) tiene que completar hasta 90°: x + ${a}° = 90°`,
+          `x = 90 − ${a} = ${90-a}`] };
     }
     if(variante==='suplemento'){
       const a = R(10,170);
       return { enunciado:`¿Cuál es el suplemento de un ángulo de <b>${a}°</b>?`, tipo:'num', respuesta:180-a,
-        explicacion:[`Dos ángulos suplementarios suman 180°.`, `x + ${a}° = 180°`, `x = 180 − ${a} = ${180-a}`] };
+        explicacion:[`Dos ángulos son "suplementarios" cuando, juntos, suman exactamente 180° (forman una línea recta).`,
+          `Si uno mide ${a}°, el otro (x) tiene que completar hasta 180°: x + ${a}° = 180°`,
+          `x = 180 − ${a} = ${180-a}`] };
     }
     const a = R(10,170);
     return { enunciado:`Dos rectas se cruzan. Uno de los ángulos mide <b>${a}°</b>. ¿Cuánto mide el ángulo opuesto por el vértice?`,
       tipo:'num', respuesta:a,
-      explicacion:[`Los ángulos opuestos por el vértice son congruentes (miden lo mismo).`,
-        `→ el ángulo opuesto también mide ${a}°`] };
+      explicacion:[`Cuando dos rectas se cruzan se forman 4 ángulos. Los dos que quedan uno frente al otro, como una "X", se llaman "opuestos por el vértice" y siempre miden exactamente lo mismo (son congruentes).`,
+        `Como uno mide ${a}°, el que está exactamente enfrente también mide ${a}°.`,
+        `→ el ángulo opuesto mide ${a}°`] };
   }
 },
 {
@@ -651,8 +730,8 @@ const MODULOS = [
     const nombre = {equilatero:'Equilátero',isosceles:'Isósceles',escaleno:'Escaleno'}[tipo];
     return { enunciado:`Un triángulo tiene lados de <b>${a}, ${b} y ${c}</b>. ¿Cómo se clasifica según sus lados?`,
       tipo:'opciones', opciones: shuffle(['Equilátero','Isósceles','Escaleno']), respuesta: nombre,
-      explicacion:[`Equilátero: los 3 lados iguales. Isósceles: 2 lados iguales. Escaleno: los 3 diferentes.`,
-        `${a}, ${b}, ${c} → ${nombre}`] };
+      explicacion:[`Según sus lados, un triángulo puede ser: Equilátero (sus 3 lados miden exactamente lo mismo), Isósceles (solo 2 lados iguales y el tercero diferente), o Escaleno (los 3 lados son todos diferentes entre sí).`,
+        `Los lados dados son ${a}, ${b} y ${c}.`, `→ ${nombre}`] };
   }
 },
 {
@@ -666,59 +745,79 @@ const MODULOS = [
       const l = R2();
       return medida==='perimetro'
         ? { enunciado:`Halla el <b>perímetro</b> de un cuadrado de lado ${l}.`, tipo:'num', respuesta:4*l,
-            explicacion:[`P = 4 × lado`, `P = 4 × ${l} = ${4*l}`] }
+            explicacion:[`El perímetro es la distancia total alrededor de una figura — la suma de todos sus lados.`,
+              `Un cuadrado tiene 4 lados, y los 4 miden lo mismo, así que el perímetro es 4 veces el lado: P = 4 × lado`,
+              `P = 4 × ${l} = ${4*l}`] }
         : { enunciado:`Halla el <b>área</b> de un cuadrado de lado ${l}.`, tipo:'num', respuesta:l*l,
-            explicacion:[`A = lado²`, `A = ${l}² = ${l*l}`] };
+            explicacion:[`El área es la cantidad de superficie que cubre una figura por dentro, medida en unidades cuadradas.`,
+              `En un cuadrado, el área es el lado multiplicado por sí mismo: A = lado²`,
+              `A = ${l}² = ${l} × ${l} = ${l*l}`] };
     }
     if(forma==='rectangulo'){
       const l=R2(), w=R2();
       return medida==='perimetro'
         ? { enunciado:`Halla el <b>perímetro</b> de un rectángulo de ${l} por ${w}.`, tipo:'num', respuesta:2*l+2*w,
-            explicacion:[`P = 2×largo + 2×ancho`, `P = 2×${l} + 2×${w} = ${2*l+2*w}`] }
+            explicacion:[`El perímetro es la distancia total alrededor de la figura — la suma de sus 4 lados.`,
+              `Un rectángulo tiene 2 lados largos iguales y 2 lados anchos iguales: P = 2×largo + 2×ancho`,
+              `P = 2×${l} + 2×${w} = ${2*l+2*w}`] }
         : { enunciado:`Halla el <b>área</b> de un rectángulo de ${l} por ${w}.`, tipo:'num', respuesta:l*w,
-            explicacion:[`A = largo × ancho`, `A = ${l} × ${w} = ${l*w}`] };
+            explicacion:[`El área es la superficie que cubre la figura por dentro.`,
+              `En un rectángulo, el área es largo por ancho: A = largo × ancho`,
+              `A = ${l} × ${w} = ${l*w}`] };
     }
     if(forma==='triangulo'){
       if(medida==='area'){
         const b=R2(), h=R2(), bb=(b*h)%2===0?b:b+1, a=(bb*h)/2;
         return { enunciado:`Halla el <b>área</b> de un triángulo con base ${bb} y altura ${h}.`, tipo:'num', respuesta:a,
-          explicacion:[`A = (base × altura) ÷ 2`, `A = (${bb} × ${h}) ÷ 2 = ${a}`] };
+          explicacion:[`El área de un triángulo es la mitad de "base por altura" — la altura es la distancia perpendicular (en ángulo recto) desde la base hasta el vértice de enfrente.`,
+            `A = (base × altura) ÷ 2`, `A = (${bb} × ${h}) ÷ 2 = ${bb*h} ÷ 2 = ${a}`] };
       }
       const l1=R2(),l2=R2(),l3=R2();
       return { enunciado:`Halla el <b>perímetro</b> de un triángulo con lados ${l1}, ${l2} y ${l3}.`, tipo:'num', respuesta:l1+l2+l3,
-        explicacion:[`P = suma de los 3 lados`, `P = ${l1} + ${l2} + ${l3} = ${l1+l2+l3}`] };
+        explicacion:[`El perímetro es la distancia total alrededor de la figura — simplemente se suman los 3 lados.`,
+          `P = ${l1} + ${l2} + ${l3} = ${l1+l2+l3}`] };
     }
     if(forma==='circulo'){
       const r = R(2,15);
       if(medida==='perimetro'){ const c = Math.round(2*3.14*r*100)/100;
         return { enunciado:`Halla la <b>circunferencia</b> de un círculo con radio ${r} (usa π ≈ 3.14).`, tipo:'num', respuesta:c,
-          explicacion:[`C = 2πr`, `C = 2 × 3.14 × ${r} = ${c}`] }; }
+          explicacion:[`En un círculo, el "perímetro" se llama circunferencia — la distancia alrededor de todo el borde curvo.`,
+            `π (pi) es un número especial, siempre el mismo para cualquier círculo, aproximadamente 3.14. Fórmula: C = 2πr, donde r es el radio (del centro al borde).`,
+            `C = 2 × 3.14 × ${r} = ${c}`] }; }
       const a = Math.round(3.14*r*r*100)/100;
       return { enunciado:`Halla el <b>área</b> de un círculo con radio ${r} (usa π ≈ 3.14).`, tipo:'num', respuesta:a,
-        explicacion:[`A = πr²`, `A = 3.14 × ${r}² = 3.14 × ${r*r} = ${a}`] };
+        explicacion:[`El área es la superficie que cubre el círculo por dentro.`,
+          `La fórmula es A = πr² (pi por el radio, al cuadrado).`,
+          `A = 3.14 × ${r}² = 3.14 × ${r*r} = ${a}`] };
     }
     if(forma==='trapecio'){
       const B=R2(), b2=R(2,B-1), l1=R2(), l2=R2();
       if(medida==='area'){ const h=R2(), b3=((B+b2)*h)%2===0?b2:b2+1, a=((B+b3)*h)/2;
         return { enunciado:`Halla el <b>área</b> de un trapecio con bases ${B} y ${b3}, y altura ${h}.`, tipo:'num', respuesta:a,
-          explicacion:[`A = ((base mayor + base menor) × altura) ÷ 2`, `A = ((${B} + ${b3}) × ${h}) ÷ 2 = ${a}`] }; }
+          explicacion:[`Un trapecio tiene dos lados paralelos de distinto tamaño, llamados "base mayor" y "base menor". Su área es el promedio de esas dos bases, multiplicado por la altura.`,
+            `A = ((base mayor + base menor) × altura) ÷ 2`, `A = ((${B} + ${b3}) × ${h}) ÷ 2 = ${(B+b3)*h} ÷ 2 = ${a}`] }; }
       return { enunciado:`Halla el <b>perímetro</b> de un trapecio con lados ${B}, ${b2}, ${l1} y ${l2}.`, tipo:'num', respuesta:B+b2+l1+l2,
-        explicacion:[`P = suma de los 4 lados`, `P = ${B} + ${b2} + ${l1} + ${l2} = ${B+b2+l1+l2}`] };
+        explicacion:[`El perímetro es la distancia total alrededor de la figura — se suman los 4 lados.`,
+          `P = ${B} + ${b2} + ${l1} + ${l2} = ${B+b2+l1+l2}`] };
     }
     if(forma==='rombo'){
       const l = R2();
       if(medida==='perimetro') return { enunciado:`Halla el <b>perímetro</b> de un rombo de lado ${l}.`, tipo:'num', respuesta:4*l,
-        explicacion:[`P = 4 × lado`, `P = 4 × ${l} = ${4*l}`] };
+        explicacion:[`Un rombo tiene sus 4 lados iguales (como un cuadrado "inclinado"), así que el perímetro es 4 veces ese lado.`,
+          `P = 4 × lado`, `P = 4 × ${l} = ${4*l}`] };
       const D=R(4,alto), d0=R(2,D-1), d=(D*d0)%2===0?d0:d0+1, a=(D*d)/2;
       return { enunciado:`Halla el <b>área</b> de un rombo con diagonales ${D} y ${d}.`, tipo:'num', respuesta:a,
-        explicacion:[`A = (diagonal mayor × diagonal menor) ÷ 2`, `A = (${D} × ${d}) ÷ 2 = ${a}`] };
+        explicacion:[`Las "diagonales" van de una esquina a la opuesta, cruzando por dentro. El área de un rombo es la mitad del producto de sus dos diagonales.`,
+          `A = (diagonal mayor × diagonal menor) ÷ 2`, `A = (${D} × ${d}) ÷ 2 = ${D*d} ÷ 2 = ${a}`] };
     }
     const b=R2(), h=R2(), l=R2();
     return medida==='area'
       ? { enunciado:`Halla el <b>área</b> de un romboide con base ${b} y altura ${h}.`, tipo:'num', respuesta:b*h,
-          explicacion:[`A = base × altura`, `A = ${b} × ${h} = ${b*h}`] }
+          explicacion:[`Un romboide (paralelogramo) es como un rectángulo "inclinado". Su área se calcula igual: base por altura (la altura es la distancia perpendicular entre las dos bases, no el lado inclinado).`,
+            `A = base × altura`, `A = ${b} × ${h} = ${b*h}`] }
       : { enunciado:`Halla el <b>perímetro</b> de un romboide con lados ${b} y ${l}.`, tipo:'num', respuesta:2*b+2*l,
-          explicacion:[`P = 2×lado a + 2×lado b`, `P = 2×${b} + 2×${l} = ${2*b+2*l}`] };
+          explicacion:[`El perímetro es la distancia alrededor de la figura. Un romboide tiene 2 pares de lados iguales, así que se duplica cada uno y se suman.`,
+            `P = 2×lado a + 2×lado b`, `P = 2×${b} + 2×${l} = ${2*b+2*l}`] };
   }
 },
 {
@@ -797,14 +896,16 @@ const MODULOS = [
     const faltaNum = Math.random()<0.5;
     if(faltaNum) return {
       enunciado:`Completa: ${fr(n,d)} = ${fr('?', d*k)}`, tipo:'num', respuesta: n*k,
-      explicacion:[`Miramos los denominadores: ${d*k} ÷ ${d} = ${k}.`,
-        `El factor de conversión es ${k}: hay que multiplicar arriba y abajo por lo mismo.`,
-        `${n} × ${k} = ${n*k}`, `→ ${n}/${d} = ${n*k}/${d*k}`] };
+      explicacion:[`Dos fracciones son "equivalentes" cuando representan la misma cantidad aunque se vean diferentes — se obtienen multiplicando (o dividiendo) arriba Y abajo por el mismo número.`,
+        `Comparamos los denominadores para hallar por cuánto se multiplicó: ${d*k} ÷ ${d} = ${k}. Ese ${k} es el "factor de conversión".`,
+        `Lo que se le hace al denominador hay que hacérselo también al numerador: ${n} × ${k} = ${n*k}`,
+        `→ ${n}/${d} = ${n*k}/${d*k}`] };
     return {
       enunciado:`Completa: ${fr(n,d)} = ${fr(n*k, '?')}`, tipo:'num', respuesta: d*k,
-      explicacion:[`Miramos los numeradores: ${n*k} ÷ ${n} = ${k}.`,
-        `El factor de conversión es ${k}: hay que multiplicar arriba y abajo por lo mismo.`,
-        `${d} × ${k} = ${d*k}`, `→ ${n}/${d} = ${n*k}/${d*k}`] };
+      explicacion:[`Dos fracciones son "equivalentes" cuando representan la misma cantidad aunque se vean diferentes — se obtienen multiplicando (o dividiendo) arriba Y abajo por el mismo número.`,
+        `Esta vez comparamos los numeradores para hallar el factor de conversión: ${n*k} ÷ ${n} = ${k}.`,
+        `Lo que se le hace al numerador hay que hacérselo también al denominador: ${d} × ${k} = ${d*k}`,
+        `→ ${n}/${d} = ${n*k}/${d*k}`] };
   }
 },
 {
@@ -820,11 +921,12 @@ const MODULOS = [
       enunciado = `Un libro tiene <b>${d}</b> páginas y ya ha leído <b>${n}</b>. `+
                   `¿Qué fracción del libro ha leído? (simplificada)`;
     return { enunciado, tipo:'frac', respuesta:{n:bn, d:bd}, pedirSimple:true,
-      explicacion:[`Buscamos el MCD de ${n} y ${d}.`,
-        `${n} = ${fmtFactores(factorizar(n))} · ${d} = ${fmtFactores(factorizar(d))}`,
+      explicacion:[`"Simplificar" una fracción significa reducirla a la versión más pequeña posible que siga representando el mismo valor — se logra dividiendo arriba y abajo entre el mismo número.`,
+        `Ese número es el MCD (máximo común divisor): el número más grande que divide exacto tanto al numerador como al denominador.`,
+        `${n} = ${fmtFactores(factorizar(n))} y ${d} = ${fmtFactores(factorizar(d))}`,
         `MCD(${n}, ${d}) = ${mcd(n,d)}`,
-        `${n} ÷ ${mcd(n,d)} = ${bn} y ${d} ÷ ${mcd(n,d)} = ${bd}`,
-        `→ ${n}/${d} = ${bn}/${bd}`] };
+        `Se divide cada parte entre ese MCD: ${n} ÷ ${mcd(n,d)} = ${bn}, y ${d} ÷ ${mcd(n,d)} = ${bd}`,
+        `→ ${n}/${d} = ${bn}/${bd}, y ya no se puede simplificar más`] };
   }
 },
 {
@@ -850,9 +952,10 @@ const MODULOS = [
       enunciado:`Ordena estas fracciones de <b>${asc?'menor a mayor':'mayor a menor'}</b>.<br>`+
                 `<small style="opacity:.75">Tócalas en orden.</small>`,
       tipo:'orden', opciones: fs, respuesta: orden.map(o=>o.i),
-      explicacion:[`Denominador común: MCM(${fs.map(f=>f.d).join(', ')}) = ${m}`,
+      explicacion:[`Para ordenar fracciones con denominadores distintos, primero se convierten todas al mismo denominador — así se pueden comparar directamente los numeradores.`,
+        `Denominador común: MCM(${fs.map(f=>f.d).join(', ')}) = ${m}`,
         ...conv.map(c=>`${c.f.n}/${c.f.d} → ${c.v}/${m}`),
-        `Ordenando los numeradores de ${asc?'menor a mayor':'mayor a menor'}: ${orden.map(o=>o.v).join(' , ')}`,
+        `Ya con el mismo denominador, ordenamos los numeradores de ${asc?'menor a mayor':'mayor a menor'}: ${orden.map(o=>o.v).join(' , ')}`,
         `→ ${orden.map(o=>`${o.f.n}/${o.f.d}`).join(' , ')}`] };
   }
 },
@@ -866,15 +969,17 @@ const MODULOS = [
     if(Math.random()<0.5) return {
       enunciado:`Convierte el número mixto <b>${e}</b> ${fr(n,d)} en fracción impropia.`,
       tipo:'frac', respuesta:{n:imp, d}, pedirSimple:false,
-      explicacion:[`Se multiplica el entero por el denominador: ${e} × ${d} = ${e*d}`,
-        `Se le suma el numerador: ${e*d} + ${n} = ${imp}`,
-        `El denominador no cambia.`, `→ ${e} ${n}/${d} = ${imp}/${d}`] };
+      explicacion:[`Un "número mixto" combina un entero con una fracción, como ${e} ${n}/${d}. Una fracción "impropia" es la que tiene el numerador más grande que el denominador — es la misma cantidad, escrita de otra forma.`,
+        `Se multiplica el entero por el denominador: ${e} × ${d} = ${e*d} (así se cuenta cuántas partes de tamaño 1/${d} hay en los ${e} enteros completos).`,
+        `Se le suma el numerador de la fracción: ${e*d} + ${n} = ${imp}`,
+        `El denominador se queda exactamente igual.`, `→ ${e} ${n}/${d} = ${imp}/${d}`] };
     return {
       enunciado:`Convierte ${fr(imp,d)} en número mixto.`,
       tipo:'mixto', respuesta:{e, n, d},
-      explicacion:[`Se divide el numerador entre el denominador: ${imp} ÷ ${d}`,
-        `${d} × ${e} = ${e*d}, y sobran ${imp} − ${e*d} = ${n}`,
-        `El cociente ${e} es el entero, el resto ${n} es el nuevo numerador.`,
+      explicacion:[`Una fracción "impropia" (numerador mayor que el denominador) se puede reescribir como número mixto: un entero más una fracción más pequeña.`,
+        `Se divide el numerador entre el denominador: ${imp} ÷ ${d}`,
+        `${d} × ${e} = ${e*d}, y sobran ${imp} − ${e*d} = ${n} (ese sobrante es el residuo de la división).`,
+        `El cociente (${e}) se convierte en la parte entera, y el residuo (${n}) es el nuevo numerador — el denominador no cambia.`,
         `→ ${imp}/${d} = ${e} ${n}/${d}`] };
   }
 },
@@ -894,10 +999,11 @@ const MODULOS = [
     ];
     return { enunciado: pick(casos), tipo:'frac', respuesta:{n:sn, d:sd}, pedirSimple:true,
       ayuda:'El orden importa: el primer número va arriba.',
-      explicacion:[`"La razón de ${a} a ${b}" se escribe ${a}/${b} — el primer número va arriba.`,
-        `MCD(${a}, ${b}) = ${mcd(a,b)}`,
-        `${a} ÷ ${mcd(a,b)} = ${sn} y ${b} ÷ ${mcd(a,b)} = ${sd}`,
-        `→ la razón es ${sn} : ${sd}`] };
+      explicacion:[`Una "razón" compara dos cantidades mediante una división, y se puede escribir como fracción — el ORDEN en que se mencionan importa: lo primero va arriba (numerador), lo segundo va abajo (denominador).`,
+        `"La razón de ${a} a ${b}" se escribe ${a}/${b}.`,
+        `Igual que cualquier fracción, se simplifica dividiendo arriba y abajo entre su MCD: MCD(${a}, ${b}) = ${mcd(a,b)}`,
+        `${a} ÷ ${mcd(a,b)} = ${sn}, y ${b} ÷ ${mcd(a,b)} = ${sd}`,
+        `→ la razón simplificada es ${sn} : ${sd}`] };
   }
 }
 ];
