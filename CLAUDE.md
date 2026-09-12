@@ -72,8 +72,13 @@ reutiliza uno de estos — no crear un tipo nuevo sin necesidad real.
 
 Todos pasan por `responder()`, que se ramifica según el modo activo:
 
-- **Normal:** ronda de `SESION_TOTAL` (10) ejercicios que se reinicia sola; guarda en
-  `mate_sesion_v1` para retomar exacto donde quedaste al cerrar/reabrir la app.
+- **Normal:** ronda de `SESION_TOTAL` (20) ejercicios. Al llegar al final se PARA de
+  verdad — `pantallaRondaCompleta()` muestra el resumen (aciertos/total) y ofrece "Seguir
+  practicando" (misma mezcla, ronda nueva) o "Volver a inicio"; ya no se reinicia sola en
+  silencio. El límite se aplica dentro de `nuevoEjercicio()`: si `continuar` es true y
+  `sesionHechos >= SESION_TOTAL`, corta ahí en vez de generar el siguiente ejercicio.
+  Guarda en `mate_sesion_v1` (incluye `sesionCorrectos`) para retomar exacto donde
+  quedaste al cerrar/reabrir la app.
 - **Examen** (`examen` no-null): 10 preguntas, 10 minutos, sin "Saltar" ni "Ver
   explicación", sin feedback por pregunta — todo se revela en la pantalla de resultado al
   final. No cuenta para `stats` ni para el historial (es una prueba, no práctica).

@@ -1586,13 +1586,14 @@ let capFijo = null;       // 1/2/3 = mezclando solo los temas de ese capítulo
 let modoErrores = false;  // true = repasando la lista de "errores" en vez de practicar normal
 let examen = null;        // { preguntas:[{ej,ok,completado}], idx, finLimite } o null si no hay examen activo
 let sesionHechos = 0;     // cuántos ejercicios van en esta ronda
-const SESION_TOTAL = 10;  // tamaño de la ronda; al llegar acá se reinicia sola
+let sesionCorrectos = 0;  // cuántos de esos aciertos, para el resumen al terminar la ronda
+const SESION_TOTAL = 20;  // tamaño de la ronda; al llegar acá se para de verdad (pantallaRondaCompleta)
 let ultimoFeedback = null;// resultado de verificar() del último responder(), para poder retomarlo
 let ultimoProceso = '';   // lo que el usuario escribió en "Tu proceso" antes de responder
 
 /* ---------- retomar donde quedó (mate_sesion_v1) ---------- */
 function guardarSesion(){
-  guardar('mate_sesion_v1', { modId: modActual.id, esTemaFijo, capFijo, sesionHechos,
+  guardar('mate_sesion_v1', { modId: modActual.id, esTemaFijo, capFijo, sesionHechos, sesionCorrectos,
     ejActual, respondido, vioExpl, ordenSel, ultimoFeedback, ultimoProceso });
 }
 const borrarSesion = () => { try{ localStorage.removeItem('mate_sesion_v1'); }catch(e){} };
@@ -1601,6 +1602,7 @@ function restaurarSesion(){
   if(!s || !MOD_POR_ID[s.modId] || !s.ejActual) return false;
   modActual = MOD_POR_ID[s.modId];
   esTemaFijo = s.esTemaFijo; capFijo = s.capFijo; sesionHechos = s.sesionHechos || 1;
+  sesionCorrectos = s.sesionCorrectos || 0;
   ejActual = s.ejActual; respondido = s.respondido; vioExpl = s.vioExpl;
   ordenSel = s.ordenSel || []; ultimoFeedback = s.ultimoFeedback || null;
   ultimoProceso = s.ultimoProceso || '';
@@ -1689,7 +1691,9 @@ function quitarClase(){ clase = null; guardar('mate_clase_v1', null); if(syncDoc
 
 /* ---------- práctica ---------- */
 function nuevoEjercicio(arg, continuar){
-  if(!continuar || sesionHechos >= SESION_TOTAL) sesionHechos = 0;  // ronda nueva o recién completada
+  // límite real: al llegar al final de la ronda, no se sigue solo — hay que elegir "seguir" o "terminar"
+  if(continuar && sesionHechos >= SESION_TOTAL) return pantallaRondaCompleta();
+  if(!continuar){ sesionHechos = 0; sesionCorrectos = 0; }  // ronda nueva
   sesionHechos++;
   if(typeof arg === 'number'){       // mezcla dentro de un capítulo
     esTemaFijo = false; capFijo = arg;
@@ -1790,6 +1794,20 @@ function pintarEjercicio(){
   }
 }
 
+function pantallaRondaCompleta(){
+  borrarSesion();
+  const total = sesionHechos, ok = sesionCorrectos, pct_ = total ? Math.round(ok/total*100) : 0;
+  const seguirArg = esTemaFijo ? `'${modActual.id}'` : capFijo ? capFijo : 'undefined';
+  main.innerHTML = `
+    <button class="back" onclick="ir('inicio')">← Inicio</button>
+    <div class="card" style="text-align:center">
+      <h2>¡Ronda completa!</h2>
+      <div class="nota">Acertaste ${ok} de ${total} (${pct_}%)</div>
+      <button class="btn amar" onclick="ir('practica',${seguirArg})">Seguir practicando</button>
+      <button class="btn sec" onclick="ir('inicio')">Volver a inicio</button>
+    </div>`;
+}
+
 function tocarOrden(i){
   if(respondido) return;
   const p = ordenSel.indexOf(i);
@@ -1836,6 +1854,7 @@ function responder(valor){
     if(res.ok){ errores.shift(); guardar('mate_errores_v1', errores); }
   } else {
     if(!vioExpl) anotar(ejActual.__mod, res.ok);
+    if(!vioExpl && res.ok) sesionCorrectos++;
     if(!vioExpl && !res.ok) _registrarError(ejActual);
     guardarSesion();
   }
