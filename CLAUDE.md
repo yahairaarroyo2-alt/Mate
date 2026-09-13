@@ -143,11 +143,19 @@ volver a marcar los temas.
   práctica — reutiliza TODO el motor de mezcla ya existente (`construirCola`,
   `tamanoMezcla`, agrupar/repetir) sin tocarlo. Es una copia, no una referencia: editar o
   borrar el grupo después no afecta la ronda que ya está en curso.
-- **No sincroniza entre aparatos** (a diferencia de `clase`, `stats`, `racha`, `nivel`) —
-  decisión deliberada para no complicar el merge de listas con nombres editables entre dos
-  aparatos. Si algún día se pide, se sincroniza como el resto: `_syncPendiente.grupos = grupos`
-  en `_empujarSync`/`_flushSync`, y en `_escucharSync` con último-en-escribir-gana como
-  `clase`.
+- **Sí sincroniza entre aparatos** (2026-09-13), como `clase`/`nivel`: cada CRUD
+  (`guardarGrupo`/`renombrarGrupo`/`borrarGrupo`) llama a `_guardarGrupos()`, que guarda
+  local Y empuja `{grupos}` a Firestore de una — sin debounce, porque editar un grupo es
+  una acción puntual, no algo que pase por cada respuesta como `stats`. `_escucharSync` lo
+  recibe con último-en-escribir-gana (reemplaza la lista completa, igual que `clase`).
+  **Trampa evitada:** un simple "el que llega de últimas pisa al otro" perdería grupos si
+  los dos aparatos crearon los suyos ANTES de enlazarse por primera vez — por eso
+  `conectarSync()` (que solo corre una vez, al vincular) los une por `id` con
+  `_unirGrupos()` en vez de pisar: como los id son al azar (`idGrupo()`), una colisión
+  entre dos aparatos distintos es prácticamente imposible, así que la unión no pierde
+  ninguno de los dos lados. Después de ese enlace inicial sí es último-en-escribir-gana,
+  igual que el resto — si se editan grupos en los dos aparatos casi al mismo tiempo, gana
+  el que llegue después a Firestore.
 
 **Trampa importante:** `mostrarFb()` decide el `onclick` del botón "Siguiente ejercicio"
 según `modoErrores` — si se agrega un cuarto modo, hay que tocar ese `sigOnclick` también.

@@ -1469,18 +1469,27 @@ function _fusionarStats(a, b){
   });
   return out;
 }
+// junta los grupos de los dos aparatos por id, sin perder ninguno — los id son al azar
+// (idGrupo()) así que una colisión entre dos aparatos distintos es prácticamente imposible
+function _unirGrupos(a, b){
+  const vistos = new Set(a.map(g=>g.id));
+  return a.concat(b.filter(g=>!vistos.has(g.id)));
+}
 async function conectarSync(codigo){           // se llama UNA vez, al vincular este aparato
   const db = await _initFirebase();
   const id = await _hashCodigo(codigo);
   const ref = db.collection('syncs').doc(id);
   const snap = await ref.get();
   const remoto = snap.exists ? snap.data() : {};
+  grupos = _unirGrupos(remoto.grupos || [], grupos);
+  guardar('mate_grupos_v1', grupos);
   await ref.set({
     stats: _fusionarStats(remoto.stats || {}, stats),
     racha: { actual: (remoto.racha && remoto.racha.actual) || racha.actual,
              mejor: Math.max((remoto.racha && remoto.racha.mejor) || 0, racha.mejor) },
     nivel: remoto.nivel || nivel,
-    clase: remoto.clase !== undefined ? remoto.clase : (clase || null)
+    clase: remoto.clase !== undefined ? remoto.clase : (clase || null),
+    grupos
   }, { merge: true });
   syncDoc = ref;
   syncCode = codigo.trim().toUpperCase();
@@ -1509,8 +1518,10 @@ function _escucharSync(){
     if(d.racha){ racha.actual = d.racha.actual||0; racha.mejor = Math.max(racha.mejor||0, d.racha.mejor||0); }
     if(d.nivel) nivel = d.nivel;
     if(d.clase !== undefined) clase = d.clase;
+    if(d.grupos !== undefined) grupos = d.grupos;
     guardar('mate_stats_v1', stats); guardar('mate_racha_v1', racha);
     guardar('mate_nivel_v1', nivel); guardar('mate_clase_v1', clase);
+    guardar('mate_grupos_v1', grupos);
     // si estás mirando Inicio o Progreso cuando llega el cambio del otro aparato, refresca sola
     if(_pantallaActual === pantallaInicio || _pantallaActual === pantallaStats) _pantallaActual();
   }, err => console.warn('sync:', err.message));
@@ -2290,6 +2301,12 @@ function _pintarEditorGrupo(){
         <small id="ctaMezclaCount">${tamanoMezcla(seleccion)} preguntas</small></button>
     </div>`;
 }
+// guarda localmente Y empuja a Firestore de una — como guardarClase(), no se junta/debounce
+// porque crear/editar/borrar un grupo es una acción puntual, no algo que pase por cada respuesta
+function _guardarGrupos(){
+  guardar('mate_grupos_v1', grupos);
+  if(syncDoc) syncDoc.set({grupos},{merge:true}).catch(()=>{});
+}
 function guardarGrupo(){
   if(!seleccion.length) return alert('Marca al menos un tema.');
   if(grupoEditando){
@@ -2300,7 +2317,7 @@ function guardarGrupo(){
     if(!nombre || !nombre.trim()) return;
     grupos.push({ id: idGrupo(), nombre: nombre.trim(), mods: seleccion.slice() });
   }
-  guardar('mate_grupos_v1', grupos);
+  _guardarGrupos();
   ir('grupos');
 }
 function practicarGrupo(id){
@@ -2315,13 +2332,13 @@ function renombrarGrupo(id){
   const nuevo = prompt('Nuevo nombre para este grupo:', g.nombre);
   if(!nuevo || !nuevo.trim()) return;
   g.nombre = nuevo.trim();
-  guardar('mate_grupos_v1', grupos);
+  _guardarGrupos();
   pantallaGrupos();
 }
 function borrarGrupo(id){
   if(!confirm('¿Borrar este grupo? Los temas no se borran, solo el grupo.')) return;
   grupos = grupos.filter(x=>x.id!==id);
-  guardar('mate_grupos_v1', grupos);
+  _guardarGrupos();
   pantallaGrupos();
 }
 
