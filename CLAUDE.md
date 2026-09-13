@@ -92,8 +92,29 @@ Todos pasan por `responder()`, que se ramifica según el modo activo:
     no hay que entrar a descubrirlo. En "Elegir temas", ese contador se actualiza en vivo
     al marcar/desmarcar checkboxes (`toggleMod()` escribe directo en `#ctaMezclaCount`,
     sin repintar toda la pantalla).
-  - Guarda en `mate_sesion_v1` (incluye `sesionCorrectos`, `sesionCola`, `sesionTotal`)
-    para retomar exacto donde quedaste al cerrar/reabrir la app.
+  - Guarda en `mate_sesion_v1` (incluye `sesionCorrectos`, `sesionCola`, `sesionPendientes`,
+    `sesionTotal`) para retomar exacto donde quedaste al cerrar/reabrir la app.
+  - Dos ajustes, guardados en `mate_agrupar_v1`/`mate_repetir_v1`, con su propio botón
+    (no chip) en la fila de estadísticas de la pantalla de práctica — reemplazan los
+    tiles de "mejor racha" y "en este tema" (ese dato sigue disponible en "Mi progreso" y
+    en la lista de temas de Inicio, así que no se perdió, solo se movió):
+    - **Agrupar por tema** (`agruparTema`): cambia cómo arma la mezcla `construirCola()` —
+      agrupado, las `VECES_POR_TEMA` repeticiones de cada tema salen juntas seguidas
+      (se mezcla el ORDEN de los temas, no las repeticiones sueltas); sin agrupar
+      (por defecto), se mezclan todas las repeticiones sueltas y pueden salir intercaladas.
+    - **Repetir si fallo** (`repetirFallo`): si fallás una pregunta (y no la viste con
+      "Ver explicación"), `_programarRepeticion()` la agenda en `sesionPendientes` con
+      un `esperar` al azar (`R(2,4)`) — vuelve a salir IGUAL (mismo enunciado y números,
+      no uno nuevo del mismo tema) más adelante en la ronda, nunca la pregunta
+      inmediata siguiente, y `sesionTotal++` para que la ronda le haga espacio.
+      `nuevoEjercicio()` primero descuenta `esperar` a los pendientes y sirve el que
+      llegue a 0 antes de tocar `sesionCola` — funciona igual en mezcla que en tema fijo
+      (que no tiene cola propia). Caso raro sin resolver: si fallás muy cerca del final
+      de la ronda y te toca el `esperar` más largo (4), puede no alcanzar a reaparecer
+      antes de que la ronda termine — no rompe nada, la repetición pendiente simplemente
+      se descarta al empezar la ronda siguiente.
+    - Ninguno de los dos reordena la ronda YA armada — cambian recién en la próxima que
+      arranques (`toggleAgrupar()`/`toggleRepetir()` solo repintan la pantalla actual).
 - **Examen** (`examen` no-null): 10 preguntas, 10 minutos, sin "Saltar" ni "Ver
   explicación", sin feedback por pregunta — todo se revela en la pantalla de resultado al
   final. No cuenta para `stats` ni para el historial (es una prueba, no práctica).

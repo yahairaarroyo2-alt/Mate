@@ -119,7 +119,9 @@
   .stat .lbl{display:flex;justify-content:space-between;font-size:.9rem}
   .stat .lbl b{color:var(--titulo)}
   .racha{display:flex;gap:10px;text-align:center;margin-bottom:6px}
-  .racha div{flex:1;background:var(--gris);border-radius:12px;padding:12px 6px}
+  .racha div,.racha button{flex:1;background:var(--gris);border-radius:12px;padding:12px 6px}
+  .racha button{border:2px solid transparent;cursor:pointer;font-family:inherit}
+  .racha button.on{border-color:var(--azul3)}
   .racha b{display:block;font-size:1.6rem;color:var(--azul3);line-height:1.2}
   .racha span{font-size:.78rem;color:var(--muted)}
   /* clase */
@@ -1385,6 +1387,8 @@ let racha  = leer('mate_racha_v1', { actual:0, mejor:0 });
 let errores = leer('mate_errores_v1', []);          // [{modId, ej}], más reciente primero, tope 30
 let historial = leer('mate_historial_v1', {});      // { "YYYY-MM-DD": cantidad de ejercicios }
 let rachaDias = leer('mate_racha_dias_v1', { actual:0, mejor:0, ultimoDia:null });
+let agruparTema = leer('mate_agrupar_v1', false);   // true = las repeticiones de un mismo tema salen juntas, no mezcladas
+let repetirFallo = leer('mate_repetir_v1', false);  // true = una pregunta fallada vuelve a salir, igual, más adelante en la ronda
 
 function anotar(modId, ok){
   const s = stats[modId] || (stats[modId] = { ok:0, fallo:0 });
@@ -1588,15 +1592,34 @@ let examen = null;        // { preguntas:[{ej,ok,completado}], idx, finLimite } 
 let sesionHechos = 0;     // cuántos ejercicios van en esta ronda
 let sesionCorrectos = 0;  // cuántos de esos aciertos, para el resumen al terminar la ronda
 let sesionCola = [];      // mezcla: ids de módulo ya sorteados para esta ronda (2 de cada uno), se van sacando
+let sesionPendientes = [];// preguntas falladas en espera de volver a salir: [{modId, ej, esperar}]
 let sesionTotal = 0;      // tamaño de la ronda actual; al llegar acá se para de verdad (pantallaRondaCompleta)
 const SESION_TEMA = 20;   // tamaño de ronda cuando el tema está fijo (no hay de dónde sacar "2 de cada")
 const VECES_POR_TEMA = 2; // mezcla: mínimo garantizado de repeticiones de cada tema activo en la ronda
 const tamanoMezcla = ms => ms.length * VECES_POR_TEMA;   // para mostrarlo en los botones sin arrancar la ronda
 function construirCola(cap){
   const ms = typeof cap === 'number' ? MODULOS.filter(m=>m.secciones[0][0]===String(cap)) : modulosActivos();
+  // agrupada: se mezcla el ORDEN de los temas, pero las repeticiones de cada uno quedan juntas.
+  // no agrupada (por defecto): se mezclan las repeticiones sueltas, así que pueden salir intercaladas.
+  if(agruparTema) return shuffle(ms.map(m=>m.id)).flatMap(id => Array(VECES_POR_TEMA).fill(id));
   const cola = [];
   ms.forEach(m => cola.push(m.id, m.id));
   return shuffle(cola);
+}
+function toggleAgrupar(){
+  agruparTema = !agruparTema; guardar('mate_agrupar_v1', agruparTema);
+  if(modActual) pintarEjercicio();   // no reordena la ronda en curso — se aplica desde la próxima
+}
+function toggleRepetir(){
+  repetirFallo = !repetirFallo; guardar('mate_repetir_v1', repetirFallo);
+  if(modActual) pintarEjercicio();
+}
+// agenda la pregunta fallada para que vuelva a salir, igual (mismo enunciado y números), más
+// adelante en la misma ronda — nunca la próxima (esperar arranca en 2 como mínimo), y la ronda
+// se alarga un puesto para que le entre. Sirve tanto para mezcla (sesionCola) como para tema fijo.
+function _programarRepeticion(){
+  sesionPendientes.push({ modId: ejActual.__mod, ej: Object.assign({}, ejActual), esperar: R(2,4) });
+  sesionTotal++;
 }
 let ultimoFeedback = null;// resultado de verificar() del último responder(), para poder retomarlo
 let ultimoProceso = '';   // lo que el usuario escribió en "Tu proceso" antes de responder
@@ -1604,7 +1627,7 @@ let ultimoProceso = '';   // lo que el usuario escribió en "Tu proceso" antes d
 /* ---------- retomar donde quedó (mate_sesion_v1) ---------- */
 function guardarSesion(){
   guardar('mate_sesion_v1', { modId: modActual.id, esTemaFijo, capFijo, sesionHechos, sesionCorrectos,
-    sesionCola, sesionTotal, ejActual, respondido, vioExpl, ordenSel, ultimoFeedback, ultimoProceso });
+    sesionCola, sesionPendientes, sesionTotal, ejActual, respondido, vioExpl, ordenSel, ultimoFeedback, ultimoProceso });
 }
 const borrarSesion = () => { try{ localStorage.removeItem('mate_sesion_v1'); }catch(e){} };
 function restaurarSesion(){
@@ -1613,6 +1636,7 @@ function restaurarSesion(){
   modActual = MOD_POR_ID[s.modId];
   esTemaFijo = s.esTemaFijo; capFijo = s.capFijo; sesionHechos = s.sesionHechos || 1;
   sesionCorrectos = s.sesionCorrectos || 0; sesionCola = s.sesionCola || [];
+  sesionPendientes = s.sesionPendientes || [];
   sesionTotal = s.sesionTotal || sesionCola.length || SESION_TEMA;
   ejActual = s.ejActual; respondido = s.respondido; vioExpl = s.vioExpl;
   ordenSel = s.ordenSel || []; ultimoFeedback = s.ultimoFeedback || null;
@@ -1706,20 +1730,27 @@ function nuevoEjercicio(arg, continuar){
   // límite real: al llegar al final de la ronda, no se sigue solo — hay que elegir "seguir" o "terminar"
   if(continuar && sesionHechos >= sesionTotal) return pantallaRondaCompleta();
   if(!continuar){                       // ronda nueva: arma la cola y fija el tamaño
-    sesionHechos = 0; sesionCorrectos = 0;
+    sesionHechos = 0; sesionCorrectos = 0; sesionPendientes = [];
     esTemaFijo = typeof arg !== 'number' && !!arg;
     capFijo = typeof arg === 'number' ? arg : null;
     sesionCola = esTemaFijo ? [] : construirCola(capFijo);
     sesionTotal = esTemaFijo ? SESION_TEMA : sesionCola.length;
   }
   sesionHechos++;
-  if(esTemaFijo){
+  sesionPendientes.forEach(p => p.esperar--);
+  const repite = sesionPendientes.find(p => p.esperar <= 0);
+  if(repite){
+    sesionPendientes.splice(sesionPendientes.indexOf(repite), 1);
+    modActual = MOD_POR_ID[repite.modId] || modActual;
+    ejActual = repite.ej;
+  } else if(esTemaFijo){
     modActual = MOD_POR_ID[arg];
+    ejActual = modActual.gen(nivel);
   } else {
     if(!sesionCola.length) sesionCola = construirCola(capFijo);   // red de seguridad, no debería pasar
     modActual = MOD_POR_ID[sesionCola.shift()];
+    ejActual = modActual.gen(nivel);
   }
-  ejActual = modActual.gen(nivel);
   ejActual.__mod = modActual.id;
   respondido = false; vioExpl = false; ordenSel = []; ultimoFeedback = null; ultimoProceso = '';
   pintarEjercicio();
@@ -1798,8 +1829,8 @@ function pintarEjercicio(){
       <div class="racha">
         <div><b>${sesionTotal - sesionHechos}/${sesionTotal}</b><span>te faltan</span></div>
         <div><b>${racha.actual}</b><span>racha actual</span></div>
-        <div><b>${racha.mejor}</b><span>mejor racha</span></div>
-        <div><b>${(stats[modActual.id]&&pct(stats[modActual.id])!==null)?pct(stats[modActual.id])+'%':'—'}</b><span>en este tema</span></div>
+        <button class="${agruparTema?'on':''}" onclick="toggleAgrupar()"><b>${agruparTema?'Sí':'No'}</b><span>agrupar por tema</span></button>
+        <button class="${repetirFallo?'on':''}" onclick="toggleRepetir()"><b>${repetirFallo?'Sí':'No'}</b><span>repetir si fallo</span></button>
       </div>
     </div>`;
   const primero = $('inNum') || $('inTexto') || $('inE') || $('inN');
@@ -1872,7 +1903,10 @@ function responder(valor){
   } else {
     if(!vioExpl) anotar(ejActual.__mod, res.ok);
     if(!vioExpl && res.ok) sesionCorrectos++;
-    if(!vioExpl && !res.ok) _registrarError(ejActual);
+    if(!vioExpl && !res.ok){
+      _registrarError(ejActual);
+      if(repetirFallo) _programarRepeticion();
+    }
     guardarSesion();
   }
   mostrarFb(res, false);
