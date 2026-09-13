@@ -1381,7 +1381,10 @@ const guardar = (k,v) => { try{ localStorage.setItem(k, JSON.stringify(v)); }cat
 const leer = (k,d) => { try{ const v = localStorage.getItem(k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } };
 
 let nivel  = leer('mate_nivel_v1', 'medio');
-let clase  = leer('mate_clase_v1', null);      // { etiqueta, mods:[] }
+let clase  = leer('mate_clase_v1', null);      // { etiqueta, mods:[] } — la mezcla activa ahora mismo
+let grupos = leer('mate_grupos_v1', []);       // [{id, nombre, mods:[]}] — grupos guardados (ej. "Examen 1"),
+                                                // no sincronizan entre aparatos (solo locales, a propósito)
+const idGrupo = () => 'g'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
 let stats  = leer('mate_stats_v1', {});        // { modId:{ok, fallo} }
 let racha  = leer('mate_racha_v1', { actual:0, mejor:0 });
 let errores = leer('mate_errores_v1', []);          // [{modId, ej}], más reciente primero, tope 30
@@ -1563,12 +1566,8 @@ function modulosActivos(){
   }
   return MODULOS;
 }
-/* elige módulo dando más peso a los que van peor; cap (1/2/3) limita la mezcla a ese capítulo */
-function elegirModulo(cap){
-  // "Mezcla del capítulo N" siempre usa TODOS los temas del capítulo, sin importar si hay una
-  // mezcla personalizada activa — si no, pedir el capítulo 3 con una mezcla de solo cap.1 se
-  // quedaba sin candidatos y tronaba.
-  const ms = cap ? MODULOS.filter(m=>m.secciones[0][0]===String(cap)) : modulosActivos();
+/* sortea uno de "ms" dando más peso a los que van peor — la usan elegirModulo() e iniciarExamen() */
+function elegirDe(ms){
   const pesos = ms.map(m => {
     const s = stats[m.id] || { ok:0, fallo:0 };
     return 1 + s.fallo / (s.ok + s.fallo + 1);
@@ -1576,6 +1575,13 @@ function elegirModulo(cap){
   let r = Math.random() * pesos.reduce((a,b)=>a+b, 0);
   for(let i=0; i<ms.length; i++){ r -= pesos[i]; if(r <= 0) return ms[i]; }
   return ms[ms.length-1];
+}
+/* elige módulo para la práctica normal; cap (1/2/3) limita la mezcla a ese capítulo */
+function elegirModulo(cap){
+  // "Mezcla del capítulo N" siempre usa TODOS los temas del capítulo, sin importar si hay una
+  // mezcla personalizada activa — si no, pedir el capítulo 3 con una mezcla de solo cap.1 se
+  // quedaba sin candidatos y tronaba.
+  return elegirDe(cap ? MODULOS.filter(m=>m.secciones[0][0]===String(cap)) : modulosActivos());
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -1663,6 +1669,7 @@ function ir(pantalla, arg, continuar){
   if(pantalla === 'stats')    return pantallaStats();
   if(pantalla === 'clase')    return pantallaClase();
   if(pantalla === 'elegir')   return pantallaElegirTemas();
+  if(pantalla === 'grupos')   return pantallaGrupos();
   if(pantalla === 'sync')     return pantallaSync();
   if(pantalla === 'examen')   return iniciarExamen();
   if(pantalla === 'errores')  return pantallaErrores();
@@ -1713,6 +1720,8 @@ function pantallaInicio(){
     <div class="card">
       <button class="btn" onclick="ir('elegir')">Elegir temas para mezclar
         <small>combina los que quieras, por ejemplo capítulo 1 con capítulo 2</small></button>
+      <button class="btn" onclick="ir('grupos')">Grupos de examen
+        <small>${grupos.length ? `${grupos.length} guardado${grupos.length===1?'':'s'} — junta capítulos y ponles nombre` : 'junta capítulos o temas y ponles nombre, ej. "Examen 1"'}</small></button>
       <button class="btn" onclick="ir('clase')">Material de clase
         <small>Pega o sube la presentación y te digo qué practicar</small></button>
       <button class="btn sec" onclick="ir('stats')">Mi progreso</button>
@@ -2018,7 +2027,7 @@ let _examenTimerIv = null;
 function iniciarExamen(){
   examen = { preguntas: [], idx: 0, finLimite: Date.now() + EXAMEN_SEGUNDOS*1000 };
   for(let i=0; i<EXAMEN_TOTAL; i++){
-    const m = elegirModulo();
+    const m = elegirDe(MODULOS);   // siempre de TODOS los temas — no se limita a la mezcla/grupo activo
     const ej = m.gen(nivel); ej.__mod = m.id; ej.__modNombre = m.nombre;
     examen.preguntas.push({ ej, ok:null, completado:false });
   }
@@ -2199,6 +2208,27 @@ function borrarProgreso(){
 /* ---------- elegir temas a mano (mezclar lo que quieras, ej. cap.1 con cap.2) ---------- */
 let analisis = null, seleccion = [];
 
+// bloque de checkboxes por capítulo, compartido entre "Elegir temas" y el editor de grupos —
+// "repintar" es el nombre (sin comillas) de la función que hay que llamar tras marcar/desmarcar
+const _bloquesCapitulos = repintar => [1,2,3].map(cap => { const ms = MODULOS.filter(m=>m.secciones[0][0]===String(cap));
+  const n = ms.filter(m=>seleccion.indexOf(m.id)>=0).length; return `
+  <h3 style="display:flex;justify-content:space-between;align-items:center">
+    <span>Capítulo ${cap}</span>
+    <button class="btn sec chico" style="width:auto;margin:0;padding:5px 11px;font-size:.78rem"
+      onclick="_marcarCapitulo(${cap}, ${repintar})">Marcar/quitar todo</button>
+  </h3>
+  <details ${n>0?'open':''}>
+    <summary>${n} de ${ms.length} marcados</summary>
+    ${listaCheckHTML(ms)}
+  </details>
+`; }).join('');
+function _marcarCapitulo(cap, repintar){
+  const ms = MODULOS.filter(m=>m.secciones[0][0]===String(cap));
+  const todosMarcados = ms.every(m=>seleccion.indexOf(m.id)>=0);
+  ms.forEach(m=>toggleMod(m.id, !todosMarcados));
+  (repintar || _pintarElegirTemas)();
+}
+
 function pantallaElegirTemas(){
   seleccion = (clase && clase.mods) ? clase.mods.slice() : [];
   analisis = null;
@@ -2211,28 +2241,88 @@ function _pintarElegirTemas(){
       <h2>Elige los temas a mezclar</h2>
       <div class="nota">Marca cualquier combinación de temas, de cualquier capítulo — por
         ejemplo, capítulo 1 con capítulo 2.</div>
-      ${[1,2,3].map(cap => { const ms = MODULOS.filter(m=>m.secciones[0][0]===String(cap));
-        const n = ms.filter(m=>seleccion.indexOf(m.id)>=0).length; return `
-        <h3 style="display:flex;justify-content:space-between;align-items:center">
-          <span>Capítulo ${cap}</span>
-          <button class="btn sec chico" style="width:auto;margin:0;padding:5px 11px;font-size:.78rem"
-            onclick="_marcarCapitulo(${cap})">Marcar/quitar todo</button>
-        </h3>
-        <details ${n>0?'open':''}>
-          <summary>${n} de ${ms.length} marcados</summary>
-          ${listaCheckHTML(ms)}
-        </details>
-      `; }).join('')}
+      ${_bloquesCapitulos('_pintarElegirTemas')}
       <div id="zonaClase"></div>
       <button class="btn amar" style="margin-top:10px" onclick="guardarClase()">Practicar esta mezcla
         <small id="ctaMezclaCount">${tamanoMezcla(seleccion)} preguntas</small></button>
     </div>`;
 }
-function _marcarCapitulo(cap){
-  const ms = MODULOS.filter(m=>m.secciones[0][0]===String(cap));
-  const todosMarcados = ms.every(m=>seleccion.indexOf(m.id)>=0);
-  ms.forEach(m=>toggleMod(m.id, !todosMarcados));
-  _pintarElegirTemas();
+
+/* ---------- grupos de examen (varios, guardados, con nombre — ej. "Examen 1" = cap. 1 y 2) ---------- */
+let grupoEditando = null;   // id del grupo en edición, o null si se está creando uno nuevo
+function pantallaGrupos(){
+  main.innerHTML = `
+    <button class="back" onclick="ir('inicio')">← Inicio</button>
+    <div class="card">
+      <h2>Grupos de examen</h2>
+      <div class="nota">Junta los capítulos o temas que entran en cada examen, ponle un
+        nombre, y practica ese grupo cuando quieras.</div>
+      <button class="btn amar" onclick="crearGrupo()">+ Crear grupo nuevo</button>
+    </div>
+    ${grupos.map(g => `
+      <div class="card">
+        <h3 style="margin-top:0">${escHtml(g.nombre)}</h3>
+        <div class="nota">${g.mods.length} temas · ${tamanoMezcla(g.mods)} preguntas</div>
+        <div class="row">
+          <button class="btn amar chico" onclick="practicarGrupo('${g.id}')">Practicar</button>
+          <button class="btn sec chico" onclick="editarGrupo('${g.id}')">Editar temas</button>
+        </div>
+        <div class="row">
+          <button class="btn sec chico" onclick="renombrarGrupo('${g.id}')">Renombrar</button>
+          <button class="btn sec chico" onclick="borrarGrupo('${g.id}')">Borrar</button>
+        </div>
+      </div>`).join('')}`;
+}
+function crearGrupo(){ grupoEditando = null; seleccion = []; _pintarEditorGrupo(); }
+function editarGrupo(id){
+  const g = grupos.find(x=>x.id===id); if(!g) return;
+  grupoEditando = id; seleccion = g.mods.slice();
+  _pintarEditorGrupo();
+}
+function _pintarEditorGrupo(){
+  main.innerHTML = `
+    <button class="back" onclick="ir('grupos')">← Grupos de examen</button>
+    <div class="card">
+      <h2>${grupoEditando ? 'Editar grupo' : 'Grupo nuevo'}</h2>
+      <div class="nota">Marca los capítulos o temas que entran en este grupo.</div>
+      ${_bloquesCapitulos('_pintarEditorGrupo')}
+      <button class="btn amar" style="margin-top:10px" onclick="guardarGrupo()">${grupoEditando ? 'Guardar cambios' : 'Guardar grupo'}
+        <small id="ctaMezclaCount">${tamanoMezcla(seleccion)} preguntas</small></button>
+    </div>`;
+}
+function guardarGrupo(){
+  if(!seleccion.length) return alert('Marca al menos un tema.');
+  if(grupoEditando){
+    const g = grupos.find(x=>x.id===grupoEditando);
+    if(g) g.mods = seleccion.slice();
+  } else {
+    const nombre = prompt('Nombre para este grupo (ej. "Examen 1"):', `Examen ${grupos.length+1}`);
+    if(!nombre || !nombre.trim()) return;
+    grupos.push({ id: idGrupo(), nombre: nombre.trim(), mods: seleccion.slice() });
+  }
+  guardar('mate_grupos_v1', grupos);
+  ir('grupos');
+}
+function practicarGrupo(id){
+  const g = grupos.find(x=>x.id===id); if(!g) return;
+  clase = { etiqueta: g.nombre, mods: g.mods.slice() };
+  guardar('mate_clase_v1', clase);
+  if(syncDoc) syncDoc.set({clase},{merge:true}).catch(()=>{});
+  ir('practica');
+}
+function renombrarGrupo(id){
+  const g = grupos.find(x=>x.id===id); if(!g) return;
+  const nuevo = prompt('Nuevo nombre para este grupo:', g.nombre);
+  if(!nuevo || !nuevo.trim()) return;
+  g.nombre = nuevo.trim();
+  guardar('mate_grupos_v1', grupos);
+  pantallaGrupos();
+}
+function borrarGrupo(id){
+  if(!confirm('¿Borrar este grupo? Los temas no se borran, solo el grupo.')) return;
+  grupos = grupos.filter(x=>x.id!==id);
+  guardar('mate_grupos_v1', grupos);
+  pantallaGrupos();
 }
 
 /* ---------- pantalla de sincronizar ---------- */

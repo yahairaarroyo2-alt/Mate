@@ -117,9 +117,37 @@ Todos pasan por `responder()`, que se ramifica según el modo activo:
       arranques (`toggleAgrupar()`/`toggleRepetir()` solo repintan la pantalla actual).
 - **Examen** (`examen` no-null): 10 preguntas, 10 minutos, sin "Saltar" ni "Ver
   explicación", sin feedback por pregunta — todo se revela en la pantalla de resultado al
-  final. No cuenta para `stats` ni para el historial (es una prueba, no práctica).
+  final. No cuenta para `stats` ni para el historial (es una prueba, no práctica). Sortea
+  siempre de `MODULOS` completo (`elegirDe(MODULOS)`, no `elegirModulo()`) — a propósito NO
+  respeta ninguna mezcla/grupo activo, ni la vieja `clase` ni los grupos de examen nuevos.
 - **Repasar errores** (`modoErrores`): cicla la lista `errores` (últimos 30 fallos
   reales, más reciente primero); si aciertas se quita de la lista.
+
+## Grupos de examen
+
+Extensión de "Elegir temas para mezclar": mientras esa pantalla arma UNA mezcla sin nombre
+y sin guardar (pisa la anterior), "Grupos de examen" (`pantallaGrupos()`) guarda VARIOS a
+la vez, cada uno con nombre editable — pensado para juntar, por ejemplo, "Examen 1" = cap.
+1 y 2, "Examen 2" = cap. 3, y tenerlos ahí para practicar cuando quieras sin tener que
+volver a marcar los temas.
+
+- `grupos` (`mate_grupos_v1`): `[{id, nombre, mods:[]}]`. CRUD completo desde
+  `pantallaGrupos()`: `crearGrupo()`/`editarGrupo(id)` abren el mismo picker de capítulos
+  que "Elegir temas" (`_bloquesCapitulos()`, factorizado para que ambas pantallas lo
+  compartan — el parámetro es el NOMBRE de la función a la que hay que volver a llamar
+  tras marcar/desmarcar, `_pintarElegirTemas` o `_pintarEditorGrupo`), `guardarGrupo()`
+  pide el nombre con `prompt()` solo si es nuevo, `renombrarGrupo()`/`borrarGrupo()` hacen
+  lo suyo.
+- **"Practicar" un grupo** (`practicarGrupo(id)`) simplemente copia `{etiqueta, mods}` del
+  grupo hacia la `clase` activa (igual que hoy hace "Practicar esta mezcla") y arranca la
+  práctica — reutiliza TODO el motor de mezcla ya existente (`construirCola`,
+  `tamanoMezcla`, agrupar/repetir) sin tocarlo. Es una copia, no una referencia: editar o
+  borrar el grupo después no afecta la ronda que ya está en curso.
+- **No sincroniza entre aparatos** (a diferencia de `clase`, `stats`, `racha`, `nivel`) —
+  decisión deliberada para no complicar el merge de listas con nombres editables entre dos
+  aparatos. Si algún día se pide, se sincroniza como el resto: `_syncPendiente.grupos = grupos`
+  en `_empujarSync`/`_flushSync`, y en `_escucharSync` con último-en-escribir-gana como
+  `clase`.
 
 **Trampa importante:** `mostrarFb()` decide el `onclick` del botón "Siguiente ejercicio"
 según `modoErrores` — si se agrega un cuarto modo, hay que tocar ese `sigOnclick` también.
@@ -129,7 +157,9 @@ según `modoErrores` — si se agrega un cuarto modo, hay que tocar ese `sigOncl
 | Clave | Contenido |
 |---|---|
 | `mate_nivel_v1` | `'facil'` / `'medio'` / `'dificil'` |
-| `mate_clase_v1` | `{ etiqueta, mods:[] }` — mezcla personalizada / detectada del material de clase |
+| `mate_clase_v1` | `{ etiqueta, mods:[] }` — la mezcla ACTIVA ahora mismo (personalizada, detectada del material de clase, o copiada de un grupo al tocar "Practicar") |
+| `mate_grupos_v1` | `[{id, nombre, mods:[]}]` — grupos de examen guardados (ej. "Examen 1" = cap. 1 y 2); **no sincroniza entre aparatos**, a propósito (ver más abajo) |
+| `mate_agrupar_v1` / `mate_repetir_v1` | `true`/`false` — los dos ajustes de la fila de estadísticas en práctica (agrupar por tema / repetir si fallo, ver "Modos de práctica") |
 | `mate_stats_v1` | `{ modId: {ok, fallo} }` |
 | `mate_racha_v1` | `{ actual, mejor }` — racha de aciertos seguidos |
 | `mate_racha_dias_v1` | `{ actual, mejor, ultimoDia }` — racha de *días* practicados (distinta de la de arriba) |
