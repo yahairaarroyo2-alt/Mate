@@ -72,13 +72,28 @@ reutiliza uno de estos — no crear un tipo nuevo sin necesidad real.
 
 Todos pasan por `responder()`, que se ramifica según el modo activo:
 
-- **Normal:** ronda de `SESION_TOTAL` (20) ejercicios. Al llegar al final se PARA de
-  verdad — `pantallaRondaCompleta()` muestra el resumen (aciertos/total) y ofrece "Seguir
-  practicando" (misma mezcla, ronda nueva) o "Volver a inicio"; ya no se reinicia sola en
-  silencio. El límite se aplica dentro de `nuevoEjercicio()`: si `continuar` es true y
-  `sesionHechos >= SESION_TOTAL`, corta ahí en vez de generar el siguiente ejercicio.
-  Guarda en `mate_sesion_v1` (incluye `sesionCorrectos`) para retomar exacto donde
-  quedaste al cerrar/reabrir la app.
+- **Normal:** el tamaño de la ronda depende de si estás mezclando o en un tema fijo.
+  - **Tema fijo** (`esTemaFijo`, ej. practicar solo "Divisibilidad"): ronda de
+    `SESION_TEMA` (20) ejercicios de ese único módulo.
+  - **Mezcla** (todos los temas, un capítulo, o una selección personalizada): la ronda
+    garantiza `VECES_POR_TEMA` (2) apariciones de CADA tema activo — `construirCola()`
+    arma un array con cada id de módulo repetido 2 veces y lo mezcla (`shuffle`); el
+    tamaño de la ronda (`sesionTotal`) es simplemente `sesionCola.length`. Así, mezclar
+    los 25 temas da una ronda de 50, un capítulo de 4 temas da 8, etc. — nunca queda un
+    tema activo sin practicar en la ronda, ni tampoco se repite desparejo (nada de "3 de
+    divisibilidad, 0 de MCD" como podía pasar con el sorteo puramente al azar de antes).
+  - En los dos casos, al llegar al final se PARA de verdad — `pantallaRondaCompleta()`
+    muestra el resumen (aciertos/total) y ofrece "Seguir practicando" (misma mezcla o
+    tema, ronda nueva) o "Volver a inicio"; ya no se reinicia sola en silencio. El límite
+    se aplica dentro de `nuevoEjercicio()`: si `continuar` es true y
+    `sesionHechos >= sesionTotal`, corta ahí en vez de generar el siguiente ejercicio.
+  - Los botones que arrancan una mezcla ("Empezar a practicar", "Mezcla del capítulo N",
+    "Practicar esta mezcla") muestran el total de antemano con `tamanoMezcla(ms)` — así
+    no hay que entrar a descubrirlo. En "Elegir temas", ese contador se actualiza en vivo
+    al marcar/desmarcar checkboxes (`toggleMod()` escribe directo en `#ctaMezclaCount`,
+    sin repintar toda la pantalla).
+  - Guarda en `mate_sesion_v1` (incluye `sesionCorrectos`, `sesionCola`, `sesionTotal`)
+    para retomar exacto donde quedaste al cerrar/reabrir la app.
 - **Examen** (`examen` no-null): 10 preguntas, 10 minutos, sin "Saltar" ni "Ver
   explicación", sin feedback por pregunta — todo se revela en la pantalla de resultado al
   final. No cuenta para `stats` ni para el historial (es una prueba, no práctica).

@@ -1587,14 +1587,24 @@ let modoErrores = false;  // true = repasando la lista de "errores" en vez de pr
 let examen = null;        // { preguntas:[{ej,ok,completado}], idx, finLimite } o null si no hay examen activo
 let sesionHechos = 0;     // cuántos ejercicios van en esta ronda
 let sesionCorrectos = 0;  // cuántos de esos aciertos, para el resumen al terminar la ronda
-const SESION_TOTAL = 20;  // tamaño de la ronda; al llegar acá se para de verdad (pantallaRondaCompleta)
+let sesionCola = [];      // mezcla: ids de módulo ya sorteados para esta ronda (2 de cada uno), se van sacando
+let sesionTotal = 0;      // tamaño de la ronda actual; al llegar acá se para de verdad (pantallaRondaCompleta)
+const SESION_TEMA = 20;   // tamaño de ronda cuando el tema está fijo (no hay de dónde sacar "2 de cada")
+const VECES_POR_TEMA = 2; // mezcla: mínimo garantizado de repeticiones de cada tema activo en la ronda
+const tamanoMezcla = ms => ms.length * VECES_POR_TEMA;   // para mostrarlo en los botones sin arrancar la ronda
+function construirCola(cap){
+  const ms = typeof cap === 'number' ? MODULOS.filter(m=>m.secciones[0][0]===String(cap)) : modulosActivos();
+  const cola = [];
+  ms.forEach(m => cola.push(m.id, m.id));
+  return shuffle(cola);
+}
 let ultimoFeedback = null;// resultado de verificar() del último responder(), para poder retomarlo
 let ultimoProceso = '';   // lo que el usuario escribió en "Tu proceso" antes de responder
 
 /* ---------- retomar donde quedó (mate_sesion_v1) ---------- */
 function guardarSesion(){
   guardar('mate_sesion_v1', { modId: modActual.id, esTemaFijo, capFijo, sesionHechos, sesionCorrectos,
-    ejActual, respondido, vioExpl, ordenSel, ultimoFeedback, ultimoProceso });
+    sesionCola, sesionTotal, ejActual, respondido, vioExpl, ordenSel, ultimoFeedback, ultimoProceso });
 }
 const borrarSesion = () => { try{ localStorage.removeItem('mate_sesion_v1'); }catch(e){} };
 function restaurarSesion(){
@@ -1602,7 +1612,8 @@ function restaurarSesion(){
   if(!s || !MOD_POR_ID[s.modId] || !s.ejActual) return false;
   modActual = MOD_POR_ID[s.modId];
   esTemaFijo = s.esTemaFijo; capFijo = s.capFijo; sesionHechos = s.sesionHechos || 1;
-  sesionCorrectos = s.sesionCorrectos || 0;
+  sesionCorrectos = s.sesionCorrectos || 0; sesionCola = s.sesionCola || [];
+  sesionTotal = s.sesionTotal || sesionCola.length || SESION_TEMA;
   ejActual = s.ejActual; respondido = s.respondido; vioExpl = s.vioExpl;
   ordenSel = s.ordenSel || []; ultimoFeedback = s.ultimoFeedback || null;
   ultimoProceso = s.ultimoProceso || '';
@@ -1641,7 +1652,7 @@ function pantallaInicio(){
     <div class="card">
       ${bannerClase}
       <button class="btn amar" onclick="ir('practica')">Empezar a practicar
-        <small>${clase && clase.mods.length ? clase.mods.length+' temas de tu clase' : 'todos los temas mezclados'} · ${SESION_TOTAL} preguntas</small></button>
+        <small>${clase && clase.mods.length ? clase.mods.length+' temas de tu clase' : 'todos los temas mezclados'} · ${tamanoMezcla(modulosActivos())} preguntas</small></button>
       ${rachaDias.actual > 0 ? `<div class="nota">🔥 ${rachaDias.actual} ${rachaDias.actual===1?'día seguido':'días seguidos'} practicando (mejor: ${rachaDias.mejor})</div>` : ''}
       <div class="row">
         <button class="btn sec chico" onclick="ir('examen')">Modo examen</button>
@@ -1660,7 +1671,7 @@ function pantallaInicio(){
       ${[1,2,3].map(cap => { const ms = MODULOS.filter(m=>m.secciones[0][0]===String(cap)); return `
         <h3>Capítulo ${cap}</h3>
         <button class="btn amar chico" onclick="ir('practica',${cap})">Mezcla del capítulo ${cap}
-          <small>${SESION_TOTAL} preguntas</small></button>
+          <small>${tamanoMezcla(ms)} preguntas</small></button>
         <details>
           <summary>Ver los ${ms.length} temas del capítulo ${cap}</summary>
           ${ms.map(m=>{
@@ -1693,15 +1704,20 @@ function quitarClase(){ clase = null; guardar('mate_clase_v1', null); if(syncDoc
 /* ---------- práctica ---------- */
 function nuevoEjercicio(arg, continuar){
   // límite real: al llegar al final de la ronda, no se sigue solo — hay que elegir "seguir" o "terminar"
-  if(continuar && sesionHechos >= SESION_TOTAL) return pantallaRondaCompleta();
-  if(!continuar){ sesionHechos = 0; sesionCorrectos = 0; }  // ronda nueva
+  if(continuar && sesionHechos >= sesionTotal) return pantallaRondaCompleta();
+  if(!continuar){                       // ronda nueva: arma la cola y fija el tamaño
+    sesionHechos = 0; sesionCorrectos = 0;
+    esTemaFijo = typeof arg !== 'number' && !!arg;
+    capFijo = typeof arg === 'number' ? arg : null;
+    sesionCola = esTemaFijo ? [] : construirCola(capFijo);
+    sesionTotal = esTemaFijo ? SESION_TEMA : sesionCola.length;
+  }
   sesionHechos++;
-  if(typeof arg === 'number'){       // mezcla dentro de un capítulo
-    esTemaFijo = false; capFijo = arg;
-    modActual = elegirModulo(arg);
+  if(esTemaFijo){
+    modActual = MOD_POR_ID[arg];
   } else {
-    esTemaFijo = !!arg; capFijo = null;   // si vino con tema, "Siguiente" se queda en ese tema
-    modActual = arg ? MOD_POR_ID[arg] : elegirModulo();
+    if(!sesionCola.length) sesionCola = construirCola(capFijo);   // red de seguridad, no debería pasar
+    modActual = MOD_POR_ID[sesionCola.shift()];
   }
   ejActual = modActual.gen(nivel);
   ejActual.__mod = modActual.id;
@@ -1780,7 +1796,7 @@ function pintarEjercicio(){
     </div>
     <div class="card" style="padding:14px 20px">
       <div class="racha">
-        <div><b>${SESION_TOTAL - sesionHechos}/${SESION_TOTAL}</b><span>te faltan</span></div>
+        <div><b>${sesionTotal - sesionHechos}/${sesionTotal}</b><span>te faltan</span></div>
         <div><b>${racha.actual}</b><span>racha actual</span></div>
         <div><b>${racha.mejor}</b><span>mejor racha</span></div>
         <div><b>${(stats[modActual.id]&&pct(stats[modActual.id])!==null)?pct(stats[modActual.id])+'%':'—'}</b><span>en este tema</span></div>
@@ -2171,7 +2187,7 @@ function _pintarElegirTemas(){
       `; }).join('')}
       <div id="zonaClase"></div>
       <button class="btn amar" style="margin-top:10px" onclick="guardarClase()">Practicar esta mezcla
-        <small>${SESION_TOTAL} preguntas</small></button>
+        <small id="ctaMezclaCount">${tamanoMezcla(seleccion)} preguntas</small></button>
     </div>`;
 }
 function _marcarCapitulo(cap){
@@ -2318,6 +2334,7 @@ function toggleMod(id, on){
   if(on && i < 0) seleccion.push(id);
   if(!on && i >= 0) seleccion.splice(i,1);
   const el = $('mc_'+id); if(el) el.classList.toggle('on', on);
+  const cta = $('ctaMezclaCount'); if(cta) cta.textContent = tamanoMezcla(seleccion) + ' preguntas';
 }
 function guardarClase(){
   if(!seleccion.length) return $('zonaClase').insertAdjacentHTML('beforeend',
