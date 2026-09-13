@@ -135,16 +135,27 @@ volver a marcar los temas.
   `pantallaGrupos()`: `crearGrupo()`/`editarGrupo(id)` abren el mismo picker de capítulos
   que "Elegir temas" (`_bloquesCapitulos()`, factorizado para que ambas pantallas lo
   compartan — el parámetro es el NOMBRE de la función a la que hay que volver a llamar
-  tras marcar/desmarcar, `_pintarElegirTemas` o `_pintarEditorGrupo`), `guardarGrupo()`
-  pide el nombre con `prompt()` solo si es nuevo, `renombrarGrupo()`/`borrarGrupo()` hacen
-  lo suyo.
+  tras marcar/desmarcar, `_pintarElegirTemas` o `_pintarEditorGrupo`). El nombre se edita
+  con un `<input class="campo">` normal DENTRO de esa misma pantalla (junto a los temas),
+  no aparte — así "editar el nombre" y "editar los temas" son la misma acción, sin un botón
+  "Renombrar" separado. `guardarGrupo()` lee ese input al guardar.
+  **Trampa real, ya pasó:** el nombre NO se pide con `window.prompt()` — en el teléfono, con
+  la app instalada en la pantalla de inicio (modo standalone), `prompt()` no muestra ningún
+  diálogo y devuelve vacío en silencio, así que el botón "Guardar grupo" parecía no hacer
+  nada. `alert()`/`confirm()` sí funcionan ahí (los usa el resto de la app) — es `prompt()`
+  específicamente el que no. No usar `prompt()` en ningún lado nuevo; para pedir texto,
+  siempre un `<input>` en la pantalla. El valor sobrevive al repintado que dispara "Marcar/
+  quitar todo" gracias a `nombreGrupoTmp` (variable aparte, actualizada por `oninput` en
+  cada tecla) — si solo se leyera `$('inNombreGrupo').value` en el momento de guardar sin
+  esa variable, funcionaría igual de bien; `nombreGrupoTmp` existe para que el VALOR
+  se mantenga visible en el input después de un repintado de por medio, no solo al guardar.
 - **"Practicar" un grupo** (`practicarGrupo(id)`) simplemente copia `{etiqueta, mods}` del
   grupo hacia la `clase` activa (igual que hoy hace "Practicar esta mezcla") y arranca la
   práctica — reutiliza TODO el motor de mezcla ya existente (`construirCola`,
   `tamanoMezcla`, agrupar/repetir) sin tocarlo. Es una copia, no una referencia: editar o
   borrar el grupo después no afecta la ronda que ya está en curso.
 - **Sí sincroniza entre aparatos** (2026-09-13), como `clase`/`nivel`: cada CRUD
-  (`guardarGrupo`/`renombrarGrupo`/`borrarGrupo`) llama a `_guardarGrupos()`, que guarda
+  (`guardarGrupo`/`borrarGrupo`) llama a `_guardarGrupos()`, que guarda
   local Y empuja `{grupos}` a Firestore de una — sin debounce, porque editar un grupo es
   una acción puntual, no algo que pase por cada respuesta como `stats`. `_escucharSync` lo
   recibe con último-en-escribir-gana (reemplaza la lista completa, igual que `clase`).

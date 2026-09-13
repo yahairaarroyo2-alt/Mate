@@ -2276,18 +2276,21 @@ function pantallaGrupos(){
         <div class="nota">${g.mods.length} temas · ${tamanoMezcla(g.mods)} preguntas</div>
         <div class="row">
           <button class="btn amar chico" onclick="practicarGrupo('${g.id}')">Practicar</button>
-          <button class="btn sec chico" onclick="editarGrupo('${g.id}')">Editar temas</button>
-        </div>
-        <div class="row">
-          <button class="btn sec chico" onclick="renombrarGrupo('${g.id}')">Renombrar</button>
+          <button class="btn sec chico" onclick="editarGrupo('${g.id}')">Editar</button>
           <button class="btn sec chico" onclick="borrarGrupo('${g.id}')">Borrar</button>
         </div>
       </div>`).join('')}`;
 }
-function crearGrupo(){ grupoEditando = null; seleccion = []; _pintarEditorGrupo(); }
+// nombre del grupo mientras se edita — variable aparte (no solo el valor del <input>) para que
+// sobreviva al repintado que dispara "Marcar/quitar todo" (si no, se perdía lo ya escrito)
+let nombreGrupoTmp = '';
+function crearGrupo(){
+  grupoEditando = null; seleccion = []; nombreGrupoTmp = `Examen ${grupos.length+1}`;
+  _pintarEditorGrupo();
+}
 function editarGrupo(id){
   const g = grupos.find(x=>x.id===id); if(!g) return;
-  grupoEditando = id; seleccion = g.mods.slice();
+  grupoEditando = id; seleccion = g.mods.slice(); nombreGrupoTmp = g.nombre;
   _pintarEditorGrupo();
 }
 function _pintarEditorGrupo(){
@@ -2295,6 +2298,8 @@ function _pintarEditorGrupo(){
     <button class="back" onclick="ir('grupos')">← Grupos de examen</button>
     <div class="card">
       <h2>${grupoEditando ? 'Editar grupo' : 'Grupo nuevo'}</h2>
+      <input class="campo" id="inNombreGrupo" autocomplete="off" placeholder='Nombre del grupo, ej. "Examen 1"'
+        value="${escHtml(nombreGrupoTmp)}" oninput="nombreGrupoTmp=this.value" style="margin-bottom:14px">
       <div class="nota">Marca los capítulos o temas que entran en este grupo.</div>
       ${_bloquesCapitulos('_pintarEditorGrupo')}
       <button class="btn amar" style="margin-top:10px" onclick="guardarGrupo()">${grupoEditando ? 'Guardar cambios' : 'Guardar grupo'}
@@ -2309,13 +2314,13 @@ function _guardarGrupos(){
 }
 function guardarGrupo(){
   if(!seleccion.length) return alert('Marca al menos un tema.');
+  const nombre = (nombreGrupoTmp || '').trim();
+  if(!nombre) return alert('Ponle un nombre al grupo.');
   if(grupoEditando){
     const g = grupos.find(x=>x.id===grupoEditando);
-    if(g) g.mods = seleccion.slice();
+    if(g){ g.nombre = nombre; g.mods = seleccion.slice(); }
   } else {
-    const nombre = prompt('Nombre para este grupo (ej. "Examen 1"):', `Examen ${grupos.length+1}`);
-    if(!nombre || !nombre.trim()) return;
-    grupos.push({ id: idGrupo(), nombre: nombre.trim(), mods: seleccion.slice() });
+    grupos.push({ id: idGrupo(), nombre, mods: seleccion.slice() });
   }
   _guardarGrupos();
   ir('grupos');
@@ -2326,14 +2331,6 @@ function practicarGrupo(id){
   guardar('mate_clase_v1', clase);
   if(syncDoc) syncDoc.set({clase},{merge:true}).catch(()=>{});
   ir('practica');
-}
-function renombrarGrupo(id){
-  const g = grupos.find(x=>x.id===id); if(!g) return;
-  const nuevo = prompt('Nuevo nombre para este grupo:', g.nombre);
-  if(!nuevo || !nuevo.trim()) return;
-  g.nombre = nuevo.trim();
-  _guardarGrupos();
-  pantallaGrupos();
 }
 function borrarGrupo(id){
   if(!confirm('¿Borrar este grupo? Los temas no se borran, solo el grupo.')) return;
