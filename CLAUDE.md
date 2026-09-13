@@ -175,6 +175,17 @@ batería/radio innecesariamente.
 la estás mirando (solo Inicio y Progreso; la pantalla de práctica nunca se auto-repinta,
 para no interrumpir un ejercicio a medias).
 
+**Trampa ya arreglada una vez, no repetirla:** `_pantallaActual` solo se ASIGNA dentro de
+`pantallaInicio()`/`pantallaStats()`, nunca se limpiaba al salir de ahí — así que se quedaba
+"pegado" en `pantallaInicio` para siempre después de la primera vez que abrías la app. Bug
+real: entrabas a Inicio, pasabas a practicar, y unos segundos después de responder (cuando
+`_flushSync` mandaba tu propia respuesta y el `onSnapshot` la recibía de vuelta) la condición
+de arriba se cumplía igual y te repintaba Inicio ENCIMA de la práctica a medio ejercicio, en
+cualquier aparato con sync activo. `ir()` ahora lo limpia (`_pantallaActual = null`) cada vez
+que la pantalla destino NO es `'inicio'` ni `'stats'` — si se agrega una pantalla nueva fuera
+de `ir()` (como `restaurarSesion()` al arrancar, que llama `pintarEjercicio()` directo), no
+hace falta tocarlo porque `_pantallaActual` ya nace en `null`.
+
 ## CSS — variables de color
 
 Dos roles que NO deben mezclarse (fue un bug real, ver commit del modo oscuro):

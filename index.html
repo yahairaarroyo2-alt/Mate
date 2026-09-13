@@ -1654,6 +1654,10 @@ function ir(pantalla, arg, continuar){
   // práctica normal queda contaminado (responder() y el botón "Siguiente" siguen esas reglas)
   if(pantalla !== 'examen'){ examen = null; clearInterval(_examenTimerIv); }
   if(pantalla !== 'errores') modoErrores = false;
+  // _pantallaActual solo debe apuntar a Inicio/Progreso mientras de verdad estás ahí — si no,
+  // queda "pegado" ahí y un cambio remoto de sync te saca de la práctica solo, a media ronda
+  // (bug real: pasaba en cualquier pantalla a la que entraras después de haber visto Inicio).
+  if(pantalla !== 'inicio' && pantalla !== 'stats') _pantallaActual = null;
   if(pantalla === 'inicio')   return pantallaInicio();
   if(pantalla === 'practica') return nuevoEjercicio(arg, continuar);
   if(pantalla === 'stats')    return pantallaStats();
