@@ -55,6 +55,10 @@
     font-size:.75rem;padding:4px 12px;border-radius:20px;margin-bottom:9px}
   .nota{background:var(--gris);border-left:4px solid var(--acento);padding:10px 13px;
     border-radius:8px;margin:10px 0;font-size:.9rem;color:var(--muted)}
+  /* confirmación propia en vez de confirm() nativo — ver confirmarAccion() */
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;
+    justify-content:center;padding:20px;z-index:50}
+  .overlay .card{max-width:360px;margin:0;width:100%}
   /* chips de nivel / tema */
   .chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px}
   .chip{border:2px solid var(--gris2);background:var(--superficie);color:var(--titulo2);
@@ -1600,6 +1604,35 @@ function elegirModulo(cap){
    ══════════════════════════════════════════════════════════ */
 const $ = id => document.getElementById(id);
 const main = $('main');
+// diálogos propios — NUNCA usar window.alert()/confirm()/prompt() para nada nuevo: confirmado
+// con evidencia (devuelven al instante, en 1-2ms, sin bloquear ni mostrar nada) que en el
+// entorno donde se prueba esta app esos tres diálogos nativos quedan suprimidos en silencio.
+function confirmarAccion(mensaje, siConfirma){
+  const ov = document.createElement('div');
+  ov.className = 'overlay';
+  ov.innerHTML = `<div class="card">
+    <div class="nota" style="margin:0 0 14px">${mensaje}</div>
+    <button class="btn amar">Sí, continuar</button>
+    <button class="btn sec" style="margin-bottom:0">Cancelar</button>
+  </div>`;
+  document.body.appendChild(ov);
+  const cerrar = () => ov.remove();
+  ov.querySelector('.btn.amar').onclick = () => { cerrar(); siConfirma(); };
+  ov.querySelector('.btn.sec').onclick = cerrar;
+  ov.onclick = e => { if(e.target === ov) cerrar(); };   // tocar afuera de la tarjeta cancela
+}
+// mismo componente que confirmarAccion() pero para un simple aviso — un solo botón, y
+// alCerrar (opcional) corre recién cuando el usuario lo cierra, no antes
+function avisar(mensaje, alCerrar){
+  const ov = document.createElement('div');
+  ov.className = 'overlay';
+  ov.innerHTML = `<div class="card">
+    <div class="nota" style="margin:0 0 14px">${mensaje}</div>
+    <button class="btn amar" style="margin-bottom:0">Entendido</button>
+  </div>`;
+  document.body.appendChild(ov);
+  ov.querySelector('.btn.amar').onclick = () => { ov.remove(); if(alCerrar) alCerrar(); };
+}
 let ejActual = null, modActual = null, respondido = false, vioExpl = false, ordenSel = [];
 let _pantallaActual = null;   // qué pantalla-función se repinta sola si llega un cambio de sync
 let esTemaFijo = false;   // true = practicando un tema concreto, no la mezcla
@@ -2045,10 +2078,11 @@ function iniciarExamen(){
   pintarExamen();
 }
 function _abandonarExamen(){
-  if(!confirm('¿Abandonar el examen? No se guarda ningún resultado.')) return;
-  clearInterval(_examenTimerIv);
-  examen = null;
-  ir('inicio');
+  confirmarAccion('¿Abandonar el examen? No se guarda ningún resultado.', () => {
+    clearInterval(_examenTimerIv);
+    examen = null;
+    ir('inicio');
+  });
 }
 function pintarExamen(){
   const p = examen.preguntas[examen.idx];
@@ -2198,22 +2232,22 @@ function importarRespaldo(file){
     // no debe borrar el progreso que ya había
     const claves = (datos && typeof datos === 'object' && !Array.isArray(datos))
       ? Object.keys(datos).filter(k => k.startsWith('mate_')) : [];
-    if(!claves.length){ alert('Ese archivo no es un respaldo válido de esta app.'); return; }
+    if(!claves.length){ avisar('Ese archivo no es un respaldo válido de esta app.'); return; }
     claves.forEach(k => localStorage.setItem(k, datos[k]));
-    alert('Progreso restaurado. La app se va a recargar.');
-    location.reload();
+    avisar('Progreso restaurado. La app se va a recargar.', () => location.reload());
   };
   reader.readAsText(file);
 }
 function practicarTema(id){ ir('practica', id); }
 function borrarProgreso(){
-  if(!confirm('¿Borrar todas tus estadísticas y la racha?')) return;
-  stats = {}; racha = { actual:0, mejor:0 };
-  guardar('mate_stats_v1', stats); guardar('mate_racha_v1', racha);
-  // sin {merge:true}: un merge con {} no borra nada en Firestore, hay que reemplazar el documento
-  // entero (por eso van también nivel/clase, para no perderlos de paso)
-  if(syncDoc) syncDoc.set({ stats, racha, nivel, clase: clase||null }).catch(()=>{});
-  pantallaStats();
+  confirmarAccion('¿Borrar todas tus estadísticas y la racha?', () => {
+    stats = {}; racha = { actual:0, mejor:0 };
+    guardar('mate_stats_v1', stats); guardar('mate_racha_v1', racha);
+    // sin {merge:true}: un merge con {} no borra nada en Firestore, hay que reemplazar el
+    // documento entero (por eso van también nivel/clase, para no perderlos de paso)
+    if(syncDoc) syncDoc.set({ stats, racha, nivel, clase: clase||null }).catch(()=>{});
+    pantallaStats();
+  });
 }
 
 /* ---------- elegir temas a mano (mezclar lo que quieras, ej. cap.1 con cap.2) ---------- */
@@ -2302,6 +2336,7 @@ function _pintarEditorGrupo(){
         value="${escHtml(nombreGrupoTmp)}" oninput="nombreGrupoTmp=this.value" style="margin-bottom:14px">
       <div class="nota">Marca los capítulos o temas que entran en este grupo.</div>
       ${_bloquesCapitulos('_pintarEditorGrupo')}
+      <div id="zonaGrupo"></div>
       <button class="btn amar" style="margin-top:10px" onclick="guardarGrupo()">${grupoEditando ? 'Guardar cambios' : 'Guardar grupo'}
         <small id="ctaMezclaCount">${tamanoMezcla(seleccion)} preguntas</small></button>
     </div>`;
@@ -2313,9 +2348,9 @@ function _guardarGrupos(){
   if(syncDoc) syncDoc.set({grupos},{merge:true}).catch(()=>{});
 }
 function guardarGrupo(){
-  if(!seleccion.length) return alert('Marca al menos un tema.');
+  if(!seleccion.length) return $('zonaGrupo').innerHTML = `<div class="fb medio">Marca al menos un tema.</div>`;
   const nombre = (nombreGrupoTmp || '').trim();
-  if(!nombre) return alert('Ponle un nombre al grupo.');
+  if(!nombre) return $('zonaGrupo').innerHTML = `<div class="fb medio">Ponle un nombre al grupo.</div>`;
   if(grupoEditando){
     const g = grupos.find(x=>x.id===grupoEditando);
     if(g){ g.nombre = nombre; g.mods = seleccion.slice(); }
@@ -2333,10 +2368,11 @@ function practicarGrupo(id){
   ir('practica');
 }
 function borrarGrupo(id){
-  if(!confirm('¿Borrar este grupo? Los temas no se borran, solo el grupo.')) return;
-  grupos = grupos.filter(x=>x.id!==id);
-  _guardarGrupos();
-  pantallaGrupos();
+  confirmarAccion('¿Borrar este grupo? Los temas no se borran, solo el grupo.', () => {
+    grupos = grupos.filter(x=>x.id!==id);
+    _guardarGrupos();
+    pantallaGrupos();
+  });
 }
 
 /* ---------- pantalla de sincronizar ---------- */
@@ -2379,9 +2415,10 @@ async function _conectarYRefrescar(){
     btn.textContent = 'Conectar'; btn.disabled = false; }
 }
 function _desconectarYRefrescar(){
-  if(!confirm('¿Desconectar este aparato? Tu progreso actual se queda aquí, pero deja de compartirse con el otro aparato.')) return;
-  desconectarSync();
-  pantallaSync();
+  confirmarAccion('¿Desconectar este aparato? Tu progreso actual se queda aquí, pero deja de compartirse con el otro aparato.', () => {
+    desconectarSync();
+    pantallaSync();
+  });
 }
 
 /* ---------- material de clase ---------- */

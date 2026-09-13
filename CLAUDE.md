@@ -139,16 +139,43 @@ volver a marcar los temas.
   con un `<input class="campo">` normal DENTRO de esa misma pantalla (junto a los temas),
   no aparte — así "editar el nombre" y "editar los temas" son la misma acción, sin un botón
   "Renombrar" separado. `guardarGrupo()` lee ese input al guardar.
-  **Trampa real, ya pasó:** el nombre NO se pide con `window.prompt()` — en el teléfono, con
-  la app instalada en la pantalla de inicio (modo standalone), `prompt()` no muestra ningún
-  diálogo y devuelve vacío en silencio, así que el botón "Guardar grupo" parecía no hacer
-  nada. `alert()`/`confirm()` sí funcionan ahí (los usa el resto de la app) — es `prompt()`
-  específicamente el que no. No usar `prompt()` en ningún lado nuevo; para pedir texto,
-  siempre un `<input>` en la pantalla. El valor sobrevive al repintado que dispara "Marcar/
-  quitar todo" gracias a `nombreGrupoTmp` (variable aparte, actualizada por `oninput` en
-  cada tecla) — si solo se leyera `$('inNombreGrupo').value` en el momento de guardar sin
-  esa variable, funcionaría igual de bien; `nombreGrupoTmp` existe para que el VALOR
-  se mantenga visible en el input después de un repintado de por medio, no solo al guardar.
+  El nombre se pide con un `<input>` en pantalla, nunca con `prompt()` — ver la regla
+  general de diálogos nativos, un poco más abajo. El valor sobrevive al repintado que
+  dispara "Marcar/quitar todo" gracias a `nombreGrupoTmp` (variable aparte, actualizada por
+  `oninput` en cada tecla) — si solo se leyera `$('inNombreGrupo').value` en el momento de
+  guardar sin esa variable, funcionaría igual para guardar, pero el campo se vería vacío
+  en pantalla después de marcar un capítulo entero (el repintado lo resetea a partir de
+  esta variable, no del DOM).
+
+### Nada de `alert`/`confirm`/`prompt` nativos — en ningún lado, nunca
+
+**Bug real, pasó dos veces seguidas (2026-09-13):** primero "Guardar grupo" no hacía nada
+(usaba `prompt()` para el nombre), después "Borrar" tampoco (usaba `confirm()`). Se
+comprobó con evidencia — no es una sospecha — que en el entorno donde se prueba esta app
+los tres diálogos nativos (`alert`, `confirm`, `prompt`) vuelven en 1-2ms sin bloquear ni
+mostrar nada: `confirm()` siempre da `false` (como si el usuario hubiera cancelado) y
+`prompt()` siempre da vacío, así que cualquier `if(!confirm(...)) return;` o
+`const x = prompt(...); if(!x) return;` corta la función en silencio y el botón "no sirve".
+
+Por eso el proyecto tiene sus propios reemplazos (junto a `$`/`main`, cerca del principio de
+la sección de interfaz):
+- **Confirmar algo** (antes `confirm()`) → `confirmarAccion(mensaje, siConfirma)` — overlay
+  con "Sí, continuar" / "Cancelar" (tocar afuera de la tarjeta también cancela); `siConfirma`
+  corre solo si se acepta.
+- **Avisar algo** (antes `alert()`) → `avisar(mensaje, alCerrar)` — mismo overlay con un
+  solo botón "Entendido"; `alCerrar` (opcional) corre recién al cerrar, no antes — útil
+  cuando el aviso precede a algo irreversible como `location.reload()`.
+- **Pedir texto** (antes `prompt()`) → un `<input class="campo">` normal en la pantalla,
+  nunca un diálogo — ver el ejemplo de arriba (`inNombreGrupo`/`nombreGrupoTmp`).
+- **Avisos de validación de un formulario ya en pantalla** (ej. "marca al menos un tema"):
+  ni `avisar()` ni `alert()` — un `<div class="fb medio">…</div>` inyectado en una zona
+  reservada de esa misma pantalla (ver `guardarGrupo()` → `#zonaGrupo`, o el patrón ya
+  viejo de `guardarClase()` → `#zonaClase`). Reservar el overlay para cuando de verdad hay
+  que interrumpir con algo aparte de la pantalla actual.
+
+Si alguna vez se agrega una función nueva que necesite preguntar, avisar o pedir texto:
+**no usar el diálogo nativo aunque parezca más rápido de escribir** — usar uno de los
+cuatro de arriba.
 - **"Practicar" un grupo** (`practicarGrupo(id)`) simplemente copia `{etiqueta, mods}` del
   grupo hacia la `clase` activa (igual que hoy hace "Practicar esta mezcla") y arranca la
   práctica — reutiliza TODO el motor de mezcla ya existente (`construirCola`,
