@@ -206,46 +206,54 @@
   /* test */
   pre.test{background:var(--contraste);color:#d6f5c8;padding:14px;border-radius:12px;
     font-size:.82rem;overflow-x:auto;white-space:pre-wrap}
-  /* modo oscuro automático — sigue el sistema, sin botón propio.
-     Ojo: --azul/--azul2/--blanco NO se redefinen aquí a propósito — siguen sirviendo de fondo
-     de marca (header, enunciado, chip.on) y de texto claro sobre esos fondos oscuros, y esos
-     dos papeles ya funcionan bien tal cual. Lo que sí cambia es la SUPERFICIE de las tarjetas
-     (antes literalmente blanca) y el TÍTULO que se lee encima de ella. */
-  /* modo oscuro: el mismo vidrio pero oscuro, con los valores de body.night de Fit-F */
-  @media (prefers-color-scheme: dark){
-    :root{
-      --acento:#ffc93c; --acento2:#ffe08a;
-      --verde:#2ecc71; --verde-bg:#123322;
-      --rojo:#e74c3c; --rojo-bg:#3a1c1c;
-      --ambar:#f39c12; --ambar-bg:#3a2c10;
-      --gris:rgba(255,255,255,.06); --gris2:rgba(255,255,255,.14);
-      --texto:#f5f5f7; --muted:#9a9aa4;
-      --card:rgba(28,28,30,.72);
-      --lg-border:1px solid rgba(255,255,255,.12);
-      --lg-shadow:0 8px 32px rgba(0,0,0,.55), 0 2px 8px rgba(0,0,0,.4),
-                  inset 0 1px 0 rgba(255,255,255,.06), inset 0 -1px 0 rgba(0,0,0,.3);
-      --titulo:var(--texto); --titulo2:var(--muted);
-      --superficie:var(--card);
-      --contraste:rgba(255,255,255,.14); --contraste-texto:#f5f5f7;
-    }
-    body{background:#000}
-    body::before{opacity:.05}
-    .btn{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.14);color:var(--texto);
-      box-shadow:0 4px 18px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.06)}
-    .btn.amar{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.24)}
-    .btn.sec{background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.10);color:var(--muted)}
-    .pill{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.18);color:var(--texto)}
-    .nota{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.1)}
-    .chip{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.14);color:var(--muted)}
-    .fb.ok{color:#7be3a8} .fb.mal{color:#f19c92} .fb.medio{color:#f5c877}
-    .drop.hover{background:rgba(255,255,255,.10)}
-    .bottom-nav{background:rgba(28,28,30,.82);border-color:rgba(255,255,255,.12);
-      box-shadow:0 8px 30px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08)}
-    .bn-lens{background:linear-gradient(to bottom,rgba(255,255,255,.08),rgba(255,255,255,0));
-      border-color:rgba(255,255,255,.15);
-      box-shadow:inset 0 1.5px 1px rgba(255,255,255,.12),inset 0 -3px 6px rgba(255,255,255,.04),
-        0 3px 10px rgba(0,0,0,.4)}
+  /* modo oscuro: antes seguía el sistema solo (media query), ahora es elegible a mano
+     (Ajustes → Tema) — por eso vive en la clase body.night, no en @media, igual que en
+     Fit-F/Fit-M (ver aplicarTema()/resolverNoche()). "Automático (celular)" sigue
+     poniendo/quitando esta misma clase según el sistema, así que se ve idéntico a antes.
+     Ojo: --azul/--azul2/--blanco NO se redefinen aquí a propósito — ya no se usan en ningún
+     lado (quedaron del rediseño), no reutilizarlas para nada nuevo. */
+  body.night{
+    --acento:#ffc93c; --acento2:#ffe08a;
+    --verde:#2ecc71; --verde-bg:#123322;
+    --rojo:#e74c3c; --rojo-bg:#3a1c1c;
+    --ambar:#f39c12; --ambar-bg:#3a2c10;
+    --gris:rgba(255,255,255,.06); --gris2:rgba(255,255,255,.14);
+    --texto:#f5f5f7; --muted:#9a9aa4;
+    --card:rgba(28,28,30,.72);
+    --lg-border:1px solid rgba(255,255,255,.12);
+    --lg-shadow:0 8px 32px rgba(0,0,0,.55), 0 2px 8px rgba(0,0,0,.4),
+                inset 0 1px 0 rgba(255,255,255,.06), inset 0 -1px 0 rgba(0,0,0,.3);
+    --titulo:var(--texto); --titulo2:var(--muted);
+    --superficie:var(--card);
+    --contraste:rgba(255,255,255,.14); --contraste-texto:#f5f5f7;
   }
+  body.night{background:#000}
+  body.night::before{opacity:.05}
+  body.night .btn{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.14);color:var(--texto);
+    box-shadow:0 4px 18px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.06)}
+  body.night .btn.amar{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.24)}
+  body.night .btn.sec{background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.10);color:var(--muted)}
+  body.night .pill{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.18);color:var(--texto)}
+  body.night .nota{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.1)}
+  body.night .chip{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.14);color:var(--muted)}
+  body.night .fb.ok{color:#7be3a8} body.night .fb.mal{color:#f19c92} body.night .fb.medio{color:#f5c877}
+  body.night .drop.hover{background:rgba(255,255,255,.10)}
+  body.night .bottom-nav{background:rgba(28,28,30,.82);border-color:rgba(255,255,255,.12);
+    box-shadow:0 8px 30px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08)}
+  body.night .bn-lens{background:linear-gradient(to bottom,rgba(255,255,255,.08),rgba(255,255,255,0));
+    border-color:rgba(255,255,255,.15);
+    box-shadow:inset 0 1.5px 1px rgba(255,255,255,.12),inset 0 -3px 6px rgba(255,255,255,.04),
+      0 3px 10px rgba(0,0,0,.4)}
+  /* filas de Ajustes/Tema — tarjeta de vidrio con filas apiladas, igual que renderMas() de Fit-F */
+  .ajCard{background:var(--card);backdrop-filter:var(--lg-blur);-webkit-backdrop-filter:var(--lg-blur);
+    border:var(--lg-border);border-radius:16px;overflow:hidden;box-shadow:var(--lg-shadow);margin-bottom:14px}
+  .ajRow{width:100%;background:none;border:none;color:var(--texto);cursor:pointer;
+    padding:14px;display:flex;align-items:center;gap:12px;text-align:left;font-family:inherit}
+  .ajRow + .ajRow{border-top:1px solid var(--gris2)}
+  .ajTitulo{font-size:.95rem;font-weight:800;line-height:1.2}
+  .ajSub{font-size:.78rem;color:var(--muted);margin-top:3px}
+  .ajChevron{font-size:1.1rem;opacity:.5;flex-shrink:0;color:var(--texto)}
+  .ajCheck{font-size:1rem;font-weight:900;color:var(--verde);flex-shrink:0}
 </style>
 </head>
 <body>
@@ -1823,6 +1831,7 @@ function ir(pantalla, arg, continuar){
   if(pantalla === 'practica') return nuevoEjercicio(arg, continuar);
   if(pantalla === 'stats')    return pantallaStats();
   if(pantalla === 'ajustes')  return pantallaAjustes();
+  if(pantalla === 'tema')     return pantallaTema();
   if(pantalla === 'clase')    return pantallaClase();
   if(pantalla === 'elegir')   return pantallaElegirTemas();
   if(pantalla === 'grupos')   return pantallaGrupos();
@@ -1882,11 +1891,20 @@ function pantallaTemas(){
 }
 
 /* ---------- ajustes: nivel, material de clase, sincronización ---------- */
+const _MODO_TEMA_ETIQUETA = { 'auto-system':'Automático (celular)', 'auto-hour':'Automático (por hora)', light:'Siempre claro', dark:'Siempre oscuro' };
 function pantallaAjustes(){
   _barra('ajustes');
   main.innerHTML = `
+    <h3>Apariencia</h3>
+    <div class="ajCard">
+      <button class="ajRow" onclick="ir('tema')">
+        <div style="flex:1"><div class="ajTitulo">Tema</div><div class="ajSub">${_MODO_TEMA_ETIQUETA[getTemaModo()]}</div></div>
+        <span class="ajChevron">›</span>
+      </button>
+    </div>
+
+    <h3>Nivel</h3>
     <div class="card">
-      <h3>Nivel</h3>
       <div class="chips" id="chipsNivel">
         ${['facil','medio','dificil'].map(nv=>`<button class="chip ${nivel===nv?'on':''}"
           onclick="setNivel('${nv}')">${nv==='facil'?'Fácil':nv==='medio'?'Medio':'Difícil'}</button>`).join('')}
@@ -1894,12 +1912,75 @@ function pantallaAjustes(){
       <div class="nota">Los niveles cambian el tamaño de los números, no el tipo de ejercicio.</div>
     </div>
 
-    <div class="card">
-      <button class="btn" onclick="ir('clase')">Material de clase
-        <small>Pega o sube la presentación y te digo qué practicar</small></button>
-      <button class="btn" onclick="ir('sync')">${syncCode ? 'Sincronización activa' : 'Sincronizar entre aparatos'}
-        <small>${syncCode ? 'Código: '+syncCode : 'Comparte tu progreso con tu otro aparato'}</small></button>
+    <h3>Datos</h3>
+    <div class="ajCard">
+      <button class="ajRow" onclick="ir('clase')">
+        <div style="flex:1"><div class="ajTitulo">Material de clase</div><div class="ajSub">Pega o sube la presentación y te digo qué practicar</div></div>
+        <span class="ajChevron">›</span>
+      </button>
+      <button class="ajRow" onclick="ir('sync')">
+        <div style="flex:1"><div class="ajTitulo">${syncCode ? 'Sincronización activa' : 'Sincronizar entre aparatos'}</div>
+          <div class="ajSub">${syncCode ? 'Código: '+syncCode : 'Comparte tu progreso con tu otro aparato'}</div></div>
+        <span class="ajChevron">›</span>
+      </button>
+      <button class="ajRow" onclick="exportarRespaldo()">
+        <div style="flex:1"><div class="ajTitulo">Exportar respaldo</div><div class="ajSub">Descarga una copia de tu progreso</div></div>
+        <span class="ajChevron">›</span>
+      </button>
+      <label class="ajRow" style="margin:0">
+        <div style="flex:1"><div class="ajTitulo">Importar respaldo</div><div class="ajSub">Reemplaza tu progreso actual por uno guardado</div></div>
+        <span class="ajChevron">›</span>
+        <input type="file" accept=".json" style="display:none" onchange="if(this.files[0]) importarRespaldo(this.files[0])">
+      </label>
     </div>`;
+}
+function pantallaTema(){
+  _barra('ajustes');
+  const actual = getTemaModo();
+  const opciones = [
+    { k:'auto-system', t:'Automático (celular)', d:'Sigue el modo oscuro de tu teléfono' },
+    { k:'auto-hour',   t:'Automático (por hora)', d:'Oscuro de 7 pm a 6 am' },
+    { k:'light',       t:'Siempre claro',         d:'Modo día fijo' },
+    { k:'dark',        t:'Siempre oscuro',        d:'Modo noche fijo' },
+  ];
+  main.innerHTML = `
+    <button class="back" onclick="ir('ajustes')">← Ajustes</button>
+    <div class="ajCard">
+      ${opciones.map(o => `
+        <button class="ajRow" onclick="setTemaModo('${o.k}')">
+          <div style="flex:1"><div class="ajTitulo">${o.t}</div><div class="ajSub">${o.d}</div></div>
+          <span class="ajCheck" style="opacity:${actual===o.k?1:0}">✓</span>
+        </button>`).join('')}
+    </div>`;
+}
+// tema claro/oscuro elegible a mano — mismo patrón que Fit-F/Fit-M (getThemeMode/resolveNight/
+// applyThemeMode), pero por defecto "auto-system" para no cambiarle la vista a quien ya lo
+// tenía siguiendo el sistema solo (antes era la única opción, vía @media)
+function getTemaModo(){ return leer('mate_tema_v1', 'auto-system'); }
+function resolverNoche(){
+  const m = getTemaModo();
+  if(m === 'dark') return true;
+  if(m === 'light') return false;
+  if(m === 'auto-hour'){ const h = new Date().getHours(); return h >= 19 || h < 6; }
+  return !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+}
+function aplicarTema(){
+  const noche = resolverNoche();
+  document.body.classList.toggle('night', noche);
+  const tc = document.querySelector('meta[name="theme-color"]');
+  if(tc) tc.content = noche ? '#000000' : '#d2d2da';
+}
+function setTemaModo(m){
+  guardar('mate_tema_v1', m);
+  aplicarTema();
+  pantallaTema();
+}
+if(window.matchMedia){
+  try{
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+      if(getTemaModo() === 'auto-system') aplicarTema();
+    });
+  }catch(e){}
 }
 function setNivel(nv){
   nivel = nv; guardar('mate_nivel_v1', nv);
@@ -2330,12 +2411,6 @@ function pantallaStats(){
           <div class="barra-ext"><div class="barra-int" style="width:${p}%;background:${color}"></div></div>
         </div>`;
       }).join('') : '<div class="nota">Todavía no has hecho ningún ejercicio.</div>'}
-      <div class="row" style="margin-top:10px">
-        <button class="btn sec chico" onclick="exportarRespaldo()">Exportar respaldo</button>
-        <button class="btn sec chico" onclick="$('fileRespaldo').click()">Importar respaldo</button>
-      </div>
-      <input type="file" id="fileRespaldo" accept=".json" style="display:none"
-        onchange="if(this.files[0]) importarRespaldo(this.files[0])">
       ${total ? `<button class="btn sec chico" style="margin-top:10px" onclick="borrarProgreso()">Borrar mi progreso</button>` : ''}
     </div>`;
 }
@@ -2754,6 +2829,7 @@ function autotest(){
 /* ══════════════════════════════════════════════════════════
    9. ARRANQUE
    ══════════════════════════════════════════════════════════ */
+aplicarTema();
 if(location.search.indexOf('test') >= 0) autotest();
 else if(!restaurarSesion()) pantallaInicio();
 if(syncCode) _reengancharSync();

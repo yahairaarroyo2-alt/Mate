@@ -213,6 +213,7 @@ según `modoErrores` — si se agrega un cuarto modo, hay que tocar ese `sigOncl
 | `mate_errores_v1` | `[{modId, ej}]`, tope 30, más reciente primero |
 | `mate_sesion_v1` | snapshot del ejercicio actual, para retomar donde quedaste (no se sincroniza entre aparatos — a propósito) |
 | `mate_sync_code_v1` | el código de sincronización de ESTE aparato, si está conectado |
+| `mate_tema_v1` | `'auto-system'` (por defecto) / `'auto-hour'` / `'light'` / `'dark'` — preferencia de claro/oscuro (Ajustes → Tema); **no sincroniza entre aparatos**, a propósito: es una preferencia de pantalla, no de progreso |
 
 Al agregar una clave nueva: prefijo `mate_`, y si es algo que debe viajar entre aparatos,
 agregarla también a `conectarSync()`/`_escucharSync()` (ver abajo) y a
@@ -282,17 +283,21 @@ Si algo nuevo muestra texto DENTRO de una `.card`, usar `--titulo`/`--titulo2`/`
 si necesita un fondo sólido que resalte (no la superficie de vidrio), usar `--contraste`/
 `--contraste-texto` — nunca fabricar un color fijo a mano, se rompe en modo oscuro.
 
-El modo oscuro es automático (`prefers-color-scheme`), sin botón ni preferencia guardada
-— sigue el sistema operativo del aparato.
+El modo oscuro es elegible a mano (Ajustes → Tema: Automático por celular / Automático por
+hora / Siempre claro / Siempre oscuro — `mate_tema_v1`, por defecto "auto-system"). Vive en
+la clase `body.night`, **no** en `@media (prefers-color-scheme: dark)` — así "Siempre claro"
+puede ganarle al sistema aunque el teléfono esté en oscuro, y viceversa. `aplicarTema()`
+decide con `resolverNoche()` y pone/quita la clase; se llama una vez al arrancar y cada vez
+que `setTemaModo()` cambia la preferencia. Si agregas CSS nuevo que dependa del tema, usa
+`body.night .tu-selector{...}` (nunca `@media`) para que respete la preferencia manual.
 
 ## Barra de navegación flotante (abajo)
 
 Cuatro pestañas fijas, **copiadas tal cual de Fit-F** (mismas clases CSS `.bottom-nav`/
-`.bn-item`/`.bn-lbl`/`.bn-lens`, mismos valores de vidrio y la misma lente Liquid Glass que
-se desliza sobre la pestaña activa vía `_posicionarLente()`), salvo dos diferencias
-deliberadas: sin los iconos de emoji de Fit-F (pedido explícito — solo texto), y con
-`prefers-color-scheme` en vez de la clase `.night` porque así funciona el modo oscuro en
-Mate. Pestañas: **Practicar** (`inicio`) / **Temas** (`temas`) / **Progreso** (`stats`) /
+`.bn-item`/`.bn-lbl`/`.bn-lens`/`body.night`, mismos valores de vidrio y la misma lente
+Liquid Glass que se desliza sobre la pestaña activa vía `_posicionarLente()`) — la única
+diferencia deliberada es que no tiene los iconos de emoji de Fit-F (pedido explícito, solo
+texto). Pestañas: **Practicar** (`inicio`) / **Temas** (`temas`) / **Progreso** (`stats`) /
 **Ajustes** (`ajustes`). Vive en el HTML fuera de `#main` (así no se borra cada vez que una
 pantalla repinta `main.innerHTML`) y cada pantalla llama a `_barra(nombre)` para mostrarse
 marcada como activa, o `_barra(null)` para ocultarse.
@@ -301,8 +306,8 @@ Se oculta a propósito durante práctica, examen, repaso de errores y "ronda com
 solo queda el botón único "← Inicio"/"← Abandonar examen" de siempre, para que un toque de
 más en la barra no saque a media pregunta (por la misma razón que ya motivó lo de
 `_pantallaActual` más abajo). Se muestra en las 4 pestañas y también en las pantallas que
-cuelgan de ellas (elegir temas, grupos, material de clase, sincronizar), resaltando la
-pestaña "padre" (`temas` o `ajustes`) aunque no sea literalmente esa pantalla.
+cuelgan de ellas (elegir temas, grupos, material de clase, sincronizar, selector de tema),
+resaltando la pestaña "padre" (`temas` o `ajustes`) aunque no sea literalmente esa pantalla.
 
 Si agregas una pantalla nueva: decide si es una "pestaña" (llama a `_barra('esa-pestaña')`)
 o es parte del flujo de responder preguntas (llama a `_barra(null)`) — no la dejes sin
