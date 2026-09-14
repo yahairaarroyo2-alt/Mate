@@ -123,7 +123,9 @@
   .chip{border:1.5px solid rgba(255,255,255,.45);background:rgba(255,255,255,.3);color:var(--muted);
     border-radius:20px;padding:7px 15px;font-size:.88rem;font-weight:700;cursor:pointer;font-family:inherit;
     backdrop-filter:var(--lg-blur);-webkit-backdrop-filter:var(--lg-blur)}
-  .chip.on{background:var(--contraste);border-color:var(--contraste);color:var(--contraste-texto)}
+  /* mismo color que el botón principal (.btn.amar) — pedido explícito, para que "elegido"
+     se vea igual en toda la app */
+  .chip.on{background:rgba(255,255,255,.72);border-color:rgba(255,255,255,.85);color:var(--texto)}
   /* flechita para plegar/desplegar listas de temas */
   details{margin:2px 0 10px}
   summary{cursor:pointer;color:var(--titulo2);font-weight:600;font-size:.85rem;
@@ -239,9 +241,10 @@
   body.night .pill{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.18);color:var(--texto)}
   body.night .nota{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.1)}
   body.night .chip{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.14);color:var(--muted)}
-  /* --contraste en modo oscuro (.14) queda casi igual al chip sin marcar (.07/.14 de borde) —
-     acá SÍ hace falta que resalte fuerte, así que el seleccionado usa su propio valor */
-  body.night .chip.on{background:rgba(255,255,255,.32);border-color:rgba(255,255,255,.5);color:#fff}
+  /* mismo blanco translúcido que .btn.amar, pero con más opacidad — en oscuro el amar
+     está muy bajito (.06, casi igual al chip sin marcar en .07) y ahí sí hace falta que
+     se note cuál está elegido */
+  body.night .chip.on{background:rgba(255,255,255,.3);border-color:rgba(255,255,255,.45);color:var(--texto)}
   body.night .fb.ok{color:#7be3a8} body.night .fb.mal{color:#f19c92} body.night .fb.medio{color:#f5c877}
   body.night .drop.hover{background:rgba(255,255,255,.10)}
   body.night .bottom-nav{background:rgba(28,28,30,.82);border-color:rgba(255,255,255,.12);
