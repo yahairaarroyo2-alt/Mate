@@ -83,9 +83,6 @@
       0 3px 10px rgba(0,0,0,.14);
     transition:left .5s cubic-bezier(.32,1.45,.5,1),width .5s cubic-bezier(.32,1.45,.5,1),
       top .5s cubic-bezier(.32,1.45,.5,1),height .5s cubic-bezier(.32,1.45,.5,1),opacity .3s}
-  header.top{text-align:center;color:var(--texto);padding:10px 6px 18px}
-  header.top h1{font-size:1.35rem;letter-spacing:-.4px;font-weight:800}
-  header.top p{opacity:.6;font-size:.87rem;margin-top:3px}
   .card{background:var(--card);backdrop-filter:var(--lg-blur);-webkit-backdrop-filter:var(--lg-blur);
     border:var(--lg-border);border-radius:24px;box-shadow:var(--lg-shadow);padding:20px;margin-bottom:14px}
   h2{color:var(--titulo);font-size:1.18rem;margin-bottom:12px;font-weight:800;letter-spacing:-.3px}
@@ -274,10 +271,6 @@
 </head>
 <body>
 <div class="app">
-  <header class="top">
-    <h1>Práctica de Matemáticas</h1>
-    <p>Números · Álgebra · Geometría · Fracciones</p>
-  </header>
   <main id="main"></main>
 </div>
 <nav id="bn" class="bottom-nav oculta" role="navigation" aria-label="Navegación principal">
@@ -1851,6 +1844,9 @@ function menuGrupos(e){
         <div class="nota" style="margin:0 0 10px">Todavía no tienes ningún grupo.</div>
         <button class="btn amar chico" style="margin:0" onclick="cerrarMenuGrupos();ir('grupos')">+ Crear grupo nuevo</button>
       </div>`;
+  menu._btn = btn;   // el propio botón cuenta como "adentro" — si no, un 2do toque lo cierra
+                      // y lo vuelve a abrir en el mismo clic (el listener de afuera es capture,
+                      // corre antes que el onclick del botón)
   document.body.appendChild(menu);
   const ancho = Math.min(300, window.innerWidth - 16);
   menu.style.width = ancho + 'px';
@@ -1862,7 +1858,11 @@ function cerrarMenuGrupos(){
   const m = $('menuGrupos'); if(m) m.remove();
   document.removeEventListener('click', _cerrarMenuGruposFuera, true);
 }
-function _cerrarMenuGruposFuera(e){ if(!e.target.closest('#menuGrupos')) cerrarMenuGrupos(); }
+function _cerrarMenuGruposFuera(e){
+  const m = $('menuGrupos');
+  if(m && (m.contains(e.target) || e.target === m._btn || (m._btn && m._btn.contains(e.target)))) return;
+  cerrarMenuGrupos();
+}
 
 function ir(pantalla, arg, continuar){
   cerrarMenuGrupos();   // cambiar de pantalla no debe dejar la tarjeta flotando encima
