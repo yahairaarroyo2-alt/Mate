@@ -131,6 +131,9 @@
   summary::-webkit-details-marker{display:none}
   summary::before{content:'▶';display:inline-block;margin-right:6px;font-size:.65rem;transition:transform .15s}
   details[open] summary::before{transform:rotate(90deg)}
+  /* resumen de capítulo — mismo look que h3, pero es el propio interruptor de abrir/cerrar */
+  .temaCap > summary{color:var(--titulo2);font-size:.78rem;margin:16px 0 8px;font-weight:700;
+    text-transform:uppercase;letter-spacing:.8px;padding:0}
   /* enunciado */
   .enunciado{background:var(--contraste);color:var(--contraste-texto);border-radius:20px;padding:22px 18px;
     font-size:1.22rem;text-align:center;margin-bottom:16px;line-height:1.6}
@@ -1869,11 +1872,10 @@ function pantallaTemas(){
     <div class="card">
       <h2>Practicar un tema suelto</h2>
       ${[1,2,3].map(cap => { const ms = MODULOS.filter(m=>m.secciones[0][0]===String(cap)); return `
-        <h3>Capítulo ${cap}</h3>
-        <button class="btn amar chico" onclick="ir('practica',${cap})">Mezcla del capítulo ${cap}
-          <small>${tamanoMezcla(ms)} preguntas</small></button>
-        <details>
-          <summary>Ver los ${ms.length} temas del capítulo ${cap}</summary>
+        <details class="temaCap">
+          <summary>Capítulo ${cap}</summary>
+          <button class="btn amar chico" onclick="ir('practica',${cap})">Mezcla del capítulo ${cap}
+            <small>${tamanoMezcla(ms)} preguntas</small></button>
           ${ms.map(m=>{
             const s = stats[m.id], p = s ? pct(s) : null;
             return `<button class="btn sec chico" onclick="ir('practica','${m.id}')">${m.nombre}
