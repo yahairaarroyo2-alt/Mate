@@ -287,10 +287,15 @@ El modo oscuro es automático (`prefers-color-scheme`), sin botón ni preferenci
 
 ## Barra de navegación flotante (abajo)
 
-Cuatro pestañas fijas, estilo Fit-F: **Practicar** (`inicio`) / **Temas** (`temas`) /
-**Progreso** (`stats`) / **Ajustes** (`ajustes`). Vive en el HTML fuera de `#main` (así no
-se borra cada vez que una pantalla repinta `main.innerHTML`) y cada pantalla llama a
-`_barra(nombre)` para mostrarse marcada como activa, o `_barra(null)` para ocultarse.
+Cuatro pestañas fijas, **copiadas tal cual de Fit-F** (mismas clases CSS `.bottom-nav`/
+`.bn-item`/`.bn-lbl`/`.bn-lens`, mismos valores de vidrio y la misma lente Liquid Glass que
+se desliza sobre la pestaña activa vía `_posicionarLente()`), salvo dos diferencias
+deliberadas: sin los iconos de emoji de Fit-F (pedido explícito — solo texto), y con
+`prefers-color-scheme` en vez de la clase `.night` porque así funciona el modo oscuro en
+Mate. Pestañas: **Practicar** (`inicio`) / **Temas** (`temas`) / **Progreso** (`stats`) /
+**Ajustes** (`ajustes`). Vive en el HTML fuera de `#main` (así no se borra cada vez que una
+pantalla repinta `main.innerHTML`) y cada pantalla llama a `_barra(nombre)` para mostrarse
+marcada como activa, o `_barra(null)` para ocultarse.
 
 Se oculta a propósito durante práctica, examen, repaso de errores y "ronda completa" — ahí
 solo queda el botón único "← Inicio"/"← Abandonar examen" de siempre, para que un toque de

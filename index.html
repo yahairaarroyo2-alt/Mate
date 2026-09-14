@@ -53,18 +53,36 @@
     background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
     background-size:200px 200px;
   }
-  .app{max-width:720px;margin:0 auto;padding-bottom:96px}
-  /* barra flotante de navegación, abajo — misma receta que la de Fit-F (vidrio + env() para
-     no quedar tapada por la barra de gestos del teléfono) */
-  .bn{position:fixed;left:50%;bottom:calc(14px + env(safe-area-inset-bottom));transform:translateX(-50%);
-    z-index:40;display:flex;gap:4px;background:var(--card);backdrop-filter:var(--lg-blur);
-    -webkit-backdrop-filter:var(--lg-blur);border:var(--lg-border);box-shadow:var(--lg-shadow);
-    border-radius:26px;padding:6px;max-width:calc(100% - 28px)}
-  .bn.oculta{display:none}
-  .bn button{border:none;background:none;cursor:pointer;font-family:inherit;color:var(--muted);
-    font-size:.72rem;font-weight:700;padding:9px 16px;border-radius:20px;white-space:nowrap;
-    transition:background .15s,color .15s}
-  .bn button.on{background:var(--contraste);color:var(--contraste-texto)}
+  .app{max-width:720px;margin:0 auto;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 88px)}
+  /* barra flotante de navegación, abajo — copiada tal cual de Fit-F (pastilla vidrio +
+     lente Liquid Glass que se desliza sobre la pestaña activa), sin los emoji de sus iconos */
+  .bottom-nav{position:fixed;left:50%;transform:translateX(-50%);
+    bottom:calc(env(safe-area-inset-bottom,0px) + 10px);
+    z-index:400;display:flex;gap:2px;max-width:calc(100% - 24px);
+    background:rgba(255,255,255,.12);border:1.5px solid rgba(255,255,255,.3);border-radius:28px;
+    padding:8px 10px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.4)}
+  .bottom-nav.oculta{display:none}
+  .bn-item{position:relative;z-index:1;font-family:inherit;background:none;border:none;cursor:pointer;
+    display:flex;flex-direction:column;align-items:center;gap:3px;
+    padding:6px 13px;border-radius:22px;min-width:62px;
+    color:var(--muted);transition:color .25s,transform .15s}
+  .bn-item:active{transform:scale(.9)}
+  .bn-lbl{font-size:10px;font-weight:700;letter-spacing:.2px;transition:font-weight .2s}
+  .bn-item.active{color:var(--texto)}
+  .bn-item.active .bn-lbl{font-weight:800}
+  /* lente Liquid Glass (iOS 26) — se desliza sobre la pestaña activa */
+  .bn-lens{position:absolute;z-index:0;top:8px;left:0;width:0;height:0;
+    border-radius:21px;opacity:0;pointer-events:none;
+    background:linear-gradient(to bottom,rgba(255,255,255,.35),rgba(255,255,255,0));
+    backdrop-filter:blur(1px) saturate(210%) brightness(1.14);
+    -webkit-backdrop-filter:blur(1px) saturate(210%) brightness(1.14);
+    border:1px solid rgba(255,255,255,.75);
+    box-shadow:inset 0 1.5px 1px rgba(255,255,255,.45),inset 0 -3px 6px rgba(255,255,255,.15),
+      inset 3px 0 7px rgba(0,190,255,.03),inset -3px 0 7px rgba(255,40,150,.03),
+      0 3px 10px rgba(0,0,0,.14);
+    transition:left .5s cubic-bezier(.32,1.45,.5,1),width .5s cubic-bezier(.32,1.45,.5,1),
+      top .5s cubic-bezier(.32,1.45,.5,1),height .5s cubic-bezier(.32,1.45,.5,1),opacity .3s}
   header.top{text-align:center;color:var(--texto);padding:10px 6px 18px}
   header.top h1{font-size:1.35rem;letter-spacing:-.4px;font-weight:800}
   header.top p{opacity:.6;font-size:.87rem;margin-top:3px}
@@ -221,6 +239,12 @@
     .chip{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.14);color:var(--muted)}
     .fb.ok{color:#7be3a8} .fb.mal{color:#f19c92} .fb.medio{color:#f5c877}
     .drop.hover{background:rgba(255,255,255,.10)}
+    .bottom-nav{background:rgba(28,28,30,.82);border-color:rgba(255,255,255,.12);
+      box-shadow:0 8px 30px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08)}
+    .bn-lens{background:linear-gradient(to bottom,rgba(255,255,255,.08),rgba(255,255,255,0));
+      border-color:rgba(255,255,255,.15);
+      box-shadow:inset 0 1.5px 1px rgba(255,255,255,.12),inset 0 -3px 6px rgba(255,255,255,.04),
+        0 3px 10px rgba(0,0,0,.4)}
   }
 </style>
 </head>
@@ -232,11 +256,12 @@
   </header>
   <main id="main"></main>
 </div>
-<nav class="bn oculta" id="bn">
-  <button data-tab="inicio" onclick="ir('inicio')">Practicar</button>
-  <button data-tab="temas" onclick="ir('temas')">Temas</button>
-  <button data-tab="stats" onclick="ir('stats')">Progreso</button>
-  <button data-tab="ajustes" onclick="ir('ajustes')">Ajustes</button>
+<nav id="bn" class="bottom-nav oculta" role="navigation" aria-label="Navegación principal">
+  <span id="bnLens" class="bn-lens" aria-hidden="true"></span>
+  <button class="bn-item" data-tab="inicio" onclick="ir('inicio')" aria-label="Practicar"><span class="bn-lbl">Practicar</span></button>
+  <button class="bn-item" data-tab="temas" onclick="ir('temas')" aria-label="Temas"><span class="bn-lbl">Temas</span></button>
+  <button class="bn-item" data-tab="stats" onclick="ir('stats')" aria-label="Progreso"><span class="bn-lbl">Progreso</span></button>
+  <button class="bn-item" data-tab="ajustes" onclick="ir('ajustes')" aria-label="Ajustes"><span class="bn-lbl">Ajustes</span></button>
 </nav>
 
 <script>
@@ -1761,9 +1786,25 @@ function restaurarSesion(){
 // barra flotante de abajo — cada pantalla llama esto con su pestaña (o con null para
 // ocultarla durante una ronda/examen, donde un toque de más te sacaría a media pregunta)
 const bn = $('bn');
+// lente Liquid Glass que se desliza sobre la pestaña activa — igual que positionBnLens() de Fit-F
+let _bnLenteLista = false;
+function _posicionarLente(){
+  const lente = $('bnLens');
+  const activo = bn.querySelector('.bn-item.active');
+  if(!lente || !activo){ if(lente) lente.style.opacity = '0'; return; }
+  if(!_bnLenteLista) lente.style.transition = 'none';   // el primer posicionamiento no se anima
+  lente.style.opacity = '1';
+  lente.style.left = activo.offsetLeft + 'px';
+  lente.style.top = activo.offsetTop + 'px';
+  lente.style.width = activo.offsetWidth + 'px';
+  lente.style.height = activo.offsetHeight + 'px';
+  if(!_bnLenteLista){ void lente.offsetWidth; lente.style.transition = ''; _bnLenteLista = true; }
+}
+window.onresize = () => { _bnLenteLista = false; _posicionarLente(); };
 function _barra(activa){
   bn.classList.toggle('oculta', !activa);
-  bn.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.tab === activa));
+  bn.querySelectorAll('.bn-item').forEach(b => b.classList.toggle('active', b.dataset.tab === activa));
+  if(activa) _posicionarLente();
 }
 
 function ir(pantalla, arg, continuar){
