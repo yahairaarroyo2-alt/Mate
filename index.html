@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#d2d2da">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icons/favicon-32.png">
@@ -53,7 +53,18 @@
     background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
     background-size:200px 200px;
   }
-  .app{max-width:720px;margin:0 auto;padding-bottom:30px}
+  .app{max-width:720px;margin:0 auto;padding-bottom:96px}
+  /* barra flotante de navegación, abajo — misma receta que la de Fit-F (vidrio + env() para
+     no quedar tapada por la barra de gestos del teléfono) */
+  .bn{position:fixed;left:50%;bottom:calc(14px + env(safe-area-inset-bottom));transform:translateX(-50%);
+    z-index:40;display:flex;gap:4px;background:var(--card);backdrop-filter:var(--lg-blur);
+    -webkit-backdrop-filter:var(--lg-blur);border:var(--lg-border);box-shadow:var(--lg-shadow);
+    border-radius:26px;padding:6px;max-width:calc(100% - 28px)}
+  .bn.oculta{display:none}
+  .bn button{border:none;background:none;cursor:pointer;font-family:inherit;color:var(--muted);
+    font-size:.72rem;font-weight:700;padding:9px 16px;border-radius:20px;white-space:nowrap;
+    transition:background .15s,color .15s}
+  .bn button.on{background:var(--contraste);color:var(--contraste-texto)}
   header.top{text-align:center;color:var(--texto);padding:10px 6px 18px}
   header.top h1{font-size:1.35rem;letter-spacing:-.4px;font-weight:800}
   header.top p{opacity:.6;font-size:.87rem;margin-top:3px}
@@ -221,6 +232,12 @@
   </header>
   <main id="main"></main>
 </div>
+<nav class="bn oculta" id="bn">
+  <button data-tab="inicio" onclick="ir('inicio')">Practicar</button>
+  <button data-tab="temas" onclick="ir('temas')">Temas</button>
+  <button data-tab="stats" onclick="ir('stats')">Progreso</button>
+  <button data-tab="ajustes" onclick="ir('ajustes')">Ajustes</button>
+</nav>
 
 <script>
 /* ══════════════════════════════════════════════════════════
@@ -1741,6 +1758,14 @@ function restaurarSesion(){
   return true;
 }
 
+// barra flotante de abajo — cada pantalla llama esto con su pestaña (o con null para
+// ocultarla durante una ronda/examen, donde un toque de más te sacaría a media pregunta)
+const bn = $('bn');
+function _barra(activa){
+  bn.classList.toggle('oculta', !activa);
+  bn.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.tab === activa));
+}
+
 function ir(pantalla, arg, continuar){
   window.scrollTo(0,0);
   if(pantalla !== 'practica') borrarSesion();   // salir de la práctica = ronda terminada
@@ -1753,8 +1778,10 @@ function ir(pantalla, arg, continuar){
   // (bug real: pasaba en cualquier pantalla a la que entraras después de haber visto Inicio).
   if(pantalla !== 'inicio' && pantalla !== 'stats') _pantallaActual = null;
   if(pantalla === 'inicio')   return pantallaInicio();
+  if(pantalla === 'temas')    return pantallaTemas();
   if(pantalla === 'practica') return nuevoEjercicio(arg, continuar);
   if(pantalla === 'stats')    return pantallaStats();
+  if(pantalla === 'ajustes')  return pantallaAjustes();
   if(pantalla === 'clase')    return pantallaClase();
   if(pantalla === 'elegir')   return pantallaElegirTemas();
   if(pantalla === 'grupos')   return pantallaGrupos();
@@ -1766,6 +1793,7 @@ function ir(pantalla, arg, continuar){
 /* ---------- inicio ---------- */
 function pantallaInicio(){
   _pantallaActual = pantallaInicio;
+  _barra('inicio');
   const bannerClase = clase && clase.mods.length ? `
     <div class="banner">
       <span>Practicando: ${clase.etiqueta}</span>
@@ -1781,14 +1809,13 @@ function pantallaInicio(){
         <button class="btn sec chico" onclick="ir('examen')">Modo examen</button>
         <button class="btn sec chico" onclick="ir('errores')">Repasar mis errores${errores.length?` (${errores.length})`:''}</button>
       </div>
-      <h3>Nivel</h3>
-      <div class="chips" id="chipsNivel">
-        ${['facil','medio','dificil'].map(nv=>`<button class="chip ${nivel===nv?'on':''}"
-          onclick="setNivel('${nv}')">${nv==='facil'?'Fácil':nv==='medio'?'Medio':'Difícil'}</button>`).join('')}
-      </div>
-      <div class="nota">Los niveles cambian el tamaño de los números, no el tipo de ejercicio.</div>
-    </div>
+    </div>`;
+}
 
+/* ---------- temas: tema suelto, elegir para mezclar, grupos de examen ---------- */
+function pantallaTemas(){
+  _barra('temas');
+  main.innerHTML = `
     <div class="card">
       <h2>Practicar un tema suelto</h2>
       ${[1,2,3].map(cap => { const ms = MODULOS.filter(m=>m.secciones[0][0]===String(cap)); return `
@@ -1810,10 +1837,26 @@ function pantallaInicio(){
         <small>combina los que quieras, por ejemplo capítulo 1 con capítulo 2</small></button>
       <button class="btn" onclick="ir('grupos')">Grupos de examen
         <small>${grupos.length ? `${grupos.length} guardado${grupos.length===1?'':'s'} — junta capítulos y ponles nombre` : 'junta capítulos o temas y ponles nombre, ej. "Examen 1"'}</small></button>
+    </div>`;
+}
+
+/* ---------- ajustes: nivel, material de clase, sincronización ---------- */
+function pantallaAjustes(){
+  _barra('ajustes');
+  main.innerHTML = `
+    <div class="card">
+      <h3>Nivel</h3>
+      <div class="chips" id="chipsNivel">
+        ${['facil','medio','dificil'].map(nv=>`<button class="chip ${nivel===nv?'on':''}"
+          onclick="setNivel('${nv}')">${nv==='facil'?'Fácil':nv==='medio'?'Medio':'Difícil'}</button>`).join('')}
+      </div>
+      <div class="nota">Los niveles cambian el tamaño de los números, no el tipo de ejercicio.</div>
+    </div>
+
+    <div class="card">
       <button class="btn" onclick="ir('clase')">Material de clase
         <small>Pega o sube la presentación y te digo qué practicar</small></button>
-      <button class="btn sec" onclick="ir('stats')">Mi progreso</button>
-      <button class="btn sec" onclick="ir('sync')">${syncCode ? 'Sincronización activa' : 'Sincronizar entre aparatos'}
+      <button class="btn" onclick="ir('sync')">${syncCode ? 'Sincronización activa' : 'Sincronizar entre aparatos'}
         <small>${syncCode ? 'Código: '+syncCode : 'Comparte tu progreso con tu otro aparato'}</small></button>
     </div>`;
 }
@@ -1910,6 +1953,7 @@ function entradaHTML(ej){
 }
 
 function pintarEjercicio(){
+  _barra(null);
   main.innerHTML = `
     <button class="back" onclick="ir('inicio')">← Inicio</button>
     <div class="card">
@@ -1944,6 +1988,7 @@ function pintarEjercicio(){
 }
 
 function pantallaRondaCompleta(){
+  _barra(null);
   borrarSesion();
   const total = sesionHechos, ok = sesionCorrectos, pct_ = total ? Math.round(ok/total*100) : 0;
   const seguirArg = esTemaFijo ? `'${modActual.id}'` : capFijo ? capFijo : 'undefined';
@@ -2079,6 +2124,7 @@ function _pintarVistaExplicacion(){
 
 /* ---------- repasar mis errores ---------- */
 function pantallaErrores(){
+  _barra(null);
   modoErrores = true;
   if(!errores.length){
     main.innerHTML = `<button class="back" onclick="ir('inicio')">← Inicio</button>
@@ -2113,6 +2159,7 @@ function _pintarSiguienteError(){
 const EXAMEN_TOTAL = 10, EXAMEN_SEGUNDOS = 60 * EXAMEN_TOTAL;   // 1 minuto por pregunta
 let _examenTimerIv = null;
 function iniciarExamen(){
+  _barra(null);
   examen = { preguntas: [], idx: 0, finLimite: Date.now() + EXAMEN_SEGUNDOS*1000 };
   for(let i=0; i<EXAMEN_TOTAL; i++){
     const m = elegirDe(MODULOS);   // siempre de TODOS los temas — no se limita a la mezcla/grupo activo
@@ -2198,6 +2245,7 @@ function finalizarExamen(){
 /* ---------- progreso ---------- */
 function pantallaStats(){
   _pantallaActual = pantallaStats;
+  _barra('stats');
   const conDatos = MODULOS.filter(m => stats[m.id] && (stats[m.id].ok + stats[m.id].fallo) > 0);
   const total = conDatos.reduce((a,m)=>a + stats[m.id].ok + stats[m.id].fallo, 0);
   const aciertos = conDatos.reduce((a,m)=>a + stats[m.id].ok, 0);
@@ -2321,6 +2369,7 @@ function _marcarCapitulo(cap, repintar){
 function pantallaElegirTemas(){
   seleccion = (clase && clase.mods) ? clase.mods.slice() : [];
   analisis = null;
+  _barra('temas');
   _pintarElegirTemas();
 }
 function _pintarElegirTemas(){
@@ -2340,6 +2389,7 @@ function _pintarElegirTemas(){
 /* ---------- grupos de examen (varios, guardados, con nombre — ej. "Examen 1" = cap. 1 y 2) ---------- */
 let grupoEditando = null;   // id del grupo en edición, o null si se está creando uno nuevo
 function pantallaGrupos(){
+  _barra('temas');
   main.innerHTML = `
     <button class="back" onclick="ir('inicio')">← Inicio</button>
     <div class="card">
@@ -2372,6 +2422,7 @@ function editarGrupo(id){
   _pintarEditorGrupo();
 }
 function _pintarEditorGrupo(){
+  _barra('temas');
   main.innerHTML = `
     <button class="back" onclick="ir('grupos')">← Grupos de examen</button>
     <div class="card">
@@ -2421,6 +2472,7 @@ function borrarGrupo(id){
 
 /* ---------- pantalla de sincronizar ---------- */
 function pantallaSync(){
+  _barra('ajustes');
   main.innerHTML = `
     <button class="back" onclick="ir('inicio')">← Inicio</button>
     <div class="card">
@@ -2468,6 +2520,7 @@ function _desconectarYRefrescar(){
 /* ---------- material de clase ---------- */
 
 function pantallaClase(){
+  _barra('ajustes');
   main.innerHTML = `
     <button class="back" onclick="ir('inicio')">← Inicio</button>
     <div class="card">

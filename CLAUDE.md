@@ -264,18 +264,44 @@ hace falta tocarlo porque `_pantallaActual` ya nace en `null`.
 
 ## CSS — variables de color
 
-Dos roles que NO deben mezclarse (fue un bug real, ver commit del modo oscuro):
-- `--azul` / `--azul2` / `--blanco` = colores de **fondo de marca** (header, `.enunciado`,
-  chip seleccionado) y de **texto claro sobre esos fondos** — no cambian entre modo claro/oscuro.
-- `--superficie` = fondo de tarjeta/chip/input (blanco en claro, azul muy oscuro en oscuro).
-- `--titulo` / `--titulo2` = color de texto de h2/h3/chip-no-seleccionado/etc. sobre esa
-  superficie (azul oscuro en claro, azul clarito en oscuro).
+Desde el rediseño "vidrio esmerilado" (estilo Fit-F, commit `cfd47a5`) la app ya no tiene
+azul de marca — `--azul`/`--azul2`/`--azul3`/`--blanco` quedaron declaradas pero **sin
+ningún uso real** (solo aparecen en comentarios); no las reutilices para nada nuevo, es
+código muerto que puede borrarse el día que se limpie a fondo.
 
-Si algo nuevo muestra texto DENTRO de una `.card`, usar `--titulo`/`--titulo2`/`--texto`,
-nunca `--azul`/`--azul2` directo — si no, se vuelve ilegible en modo oscuro.
+Los roles que SÍ están vivos y que NO deben mezclarse (fue un bug real, ver el punto de
+"doble papel" en el commit del modo oscuro):
+- `--superficie` = fondo de tarjeta/chip/input (vidrio translúcido claro/oscuro).
+- `--titulo` / `--titulo2` = color de texto de h2/h3/chip-no-seleccionado/etc. sobre esa
+  superficie.
+- `--contraste` / `--contraste-texto` = fondo SÓLIDO de contraste (`.enunciado`, chip
+  elegido, insignias) y su texto — a propósito separado de `--texto`, porque usar `--texto`
+  como fondo es blanco-sobre-blanco en modo oscuro (la misma trampa de doble papel).
+
+Si algo nuevo muestra texto DENTRO de una `.card`, usar `--titulo`/`--titulo2`/`--texto`;
+si necesita un fondo sólido que resalte (no la superficie de vidrio), usar `--contraste`/
+`--contraste-texto` — nunca fabricar un color fijo a mano, se rompe en modo oscuro.
 
 El modo oscuro es automático (`prefers-color-scheme`), sin botón ni preferencia guardada
 — sigue el sistema operativo del aparato.
+
+## Barra de navegación flotante (abajo)
+
+Cuatro pestañas fijas, estilo Fit-F: **Practicar** (`inicio`) / **Temas** (`temas`) /
+**Progreso** (`stats`) / **Ajustes** (`ajustes`). Vive en el HTML fuera de `#main` (así no
+se borra cada vez que una pantalla repinta `main.innerHTML`) y cada pantalla llama a
+`_barra(nombre)` para mostrarse marcada como activa, o `_barra(null)` para ocultarse.
+
+Se oculta a propósito durante práctica, examen, repaso de errores y "ronda completa" — ahí
+solo queda el botón único "← Inicio"/"← Abandonar examen" de siempre, para que un toque de
+más en la barra no saque a media pregunta (por la misma razón que ya motivó lo de
+`_pantallaActual` más abajo). Se muestra en las 4 pestañas y también en las pantallas que
+cuelgan de ellas (elegir temas, grupos, material de clase, sincronizar), resaltando la
+pestaña "padre" (`temas` o `ajustes`) aunque no sea literalmente esa pantalla.
+
+Si agregas una pantalla nueva: decide si es una "pestaña" (llama a `_barra('esa-pestaña')`)
+o es parte del flujo de responder preguntas (llama a `_barra(null)`) — no la dejes sin
+llamar a ninguna, o hereda el estado de la pantalla anterior por error.
 
 ## Convenciones
 
