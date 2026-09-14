@@ -239,6 +239,9 @@
   body.night .pill{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.18);color:var(--texto)}
   body.night .nota{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.1)}
   body.night .chip{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.14);color:var(--muted)}
+  /* --contraste en modo oscuro (.14) queda casi igual al chip sin marcar (.07/.14 de borde) —
+     acá SÍ hace falta que resalte fuerte, así que el seleccionado usa su propio valor */
+  body.night .chip.on{background:rgba(255,255,255,.32);border-color:rgba(255,255,255,.5);color:#fff}
   body.night .fb.ok{color:#7be3a8} body.night .fb.mal{color:#f19c92} body.night .fb.medio{color:#f5c877}
   body.night .drop.hover{background:rgba(255,255,255,.10)}
   body.night .bottom-nav{background:rgba(28,28,30,.82);border-color:rgba(255,255,255,.12);
@@ -1897,14 +1900,6 @@ const _MODO_TEMA_ETIQUETA = { 'auto-system':'Automático (celular)', 'auto-hour'
 function pantallaAjustes(){
   _barra('ajustes');
   main.innerHTML = `
-    <h3>Apariencia</h3>
-    <div class="ajCard">
-      <button class="ajRow" onclick="ir('tema')">
-        <div style="flex:1"><div class="ajTitulo">Tema</div><div class="ajSub">${_MODO_TEMA_ETIQUETA[getTemaModo()]}</div></div>
-        <span class="ajChevron">›</span>
-      </button>
-    </div>
-
     <h3>Nivel</h3>
     <div class="card">
       <div class="chips" id="chipsNivel">
@@ -1912,6 +1907,14 @@ function pantallaAjustes(){
           onclick="setNivel('${nv}')">${nv==='facil'?'Fácil':nv==='medio'?'Medio':'Difícil'}</button>`).join('')}
       </div>
       <div class="nota">Los niveles cambian el tamaño de los números, no el tipo de ejercicio.</div>
+    </div>
+
+    <h3>Apariencia</h3>
+    <div class="ajCard">
+      <button class="ajRow" onclick="ir('tema')">
+        <div style="flex:1"><div class="ajTitulo">Tema</div><div class="ajSub">${_MODO_TEMA_ETIQUETA[getTemaModo()]}</div></div>
+        <span class="ajChevron">›</span>
+      </button>
     </div>
 
     <h3>Datos</h3>
