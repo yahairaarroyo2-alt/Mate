@@ -1862,7 +1862,7 @@ function pantallaInicio(){
         <small>${clase && clase.mods.length ? clase.mods.length+' temas de tu clase' : 'todos los temas mezclados'} · ${tamanoMezcla(modulosActivos())} preguntas</small></button>
       ${rachaDias.actual > 0 ? `<div class="nota">🔥 ${rachaDias.actual} ${rachaDias.actual===1?'día seguido':'días seguidos'} practicando (mejor: ${rachaDias.mejor})</div>` : ''}
       <div class="row">
-        <button class="btn sec chico" onclick="ir('examen')">Modo examen</button>
+        <button class="btn sec chico" onclick="ir('grupos')">Grupos de examen</button>
         <button class="btn sec chico" onclick="ir('errores')">Repasar mis errores${errores.length?` (${errores.length})`:''}</button>
       </div>
     </div>`;
