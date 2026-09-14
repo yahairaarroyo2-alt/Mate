@@ -263,6 +263,10 @@
   .ajSub{font-size:.78rem;color:var(--muted);margin-top:3px}
   .ajChevron{font-size:1.1rem;opacity:.5;flex-shrink:0;color:var(--texto)}
   .ajCheck{font-size:1rem;font-weight:900;color:var(--verde);flex-shrink:0}
+  .flechita{display:inline-block;margin-left:4px;font-size:.75em;opacity:.7}
+  /* tarjeta flotante anclada a un botón (ej. "Grupos de examen" desde Inicio) —
+     mismo vidrio que .card, pero angosta y con las filas de .ajRow adentro */
+  .menuFlot{position:fixed;z-index:60;padding:6px;max-height:60vh;overflow-y:auto;margin:0}
 </style>
 </head>
 <body>
@@ -1824,7 +1828,41 @@ function _barra(activa){
   if(activa) _posicionarLente();
 }
 
+// tarjeta flotante de "Grupos de examen" desde Inicio — sin salir de la pantalla para
+// elegir cuál practicar; "Ver todos los grupos" sigue llevando a la pantalla de editar/crear
+function menuGrupos(e){
+  e.stopPropagation();
+  if($('menuGrupos')){ cerrarMenuGrupos(); return; }
+  const btn = e.currentTarget;
+  const r = btn.getBoundingClientRect();
+  const menu = document.createElement('div');
+  menu.id = 'menuGrupos';
+  menu.className = 'card menuFlot';
+  menu.innerHTML = grupos.length ? grupos.map(g => `
+      <button class="ajRow" onclick="cerrarMenuGrupos();practicarGrupo('${g.id}')">
+        <div style="flex:1"><div class="ajTitulo">${escHtml(g.nombre)}</div>
+          <div class="ajSub">${g.mods.length} temas · ${tamanoMezcla(g.mods)} preguntas</div></div>
+      </button>`).join('') +
+      `<button class="ajRow" onclick="cerrarMenuGrupos();ir('grupos')"><div class="ajTitulo">Ver todos los grupos</div></button>`
+    : `<div style="padding:10px">
+        <div class="nota" style="margin:0 0 10px">Todavía no tienes ningún grupo.</div>
+        <button class="btn amar chico" style="margin:0" onclick="cerrarMenuGrupos();ir('grupos')">+ Crear grupo nuevo</button>
+      </div>`;
+  document.body.appendChild(menu);
+  const ancho = Math.min(300, window.innerWidth - 16);
+  menu.style.width = ancho + 'px';
+  menu.style.left = Math.max(8, Math.min(r.left, window.innerWidth - ancho - 8)) + 'px';
+  menu.style.top = (r.bottom + 6) + 'px';
+  setTimeout(() => document.addEventListener('click', _cerrarMenuGruposFuera, true), 0);
+}
+function cerrarMenuGrupos(){
+  const m = $('menuGrupos'); if(m) m.remove();
+  document.removeEventListener('click', _cerrarMenuGruposFuera, true);
+}
+function _cerrarMenuGruposFuera(e){ if(!e.target.closest('#menuGrupos')) cerrarMenuGrupos(); }
+
 function ir(pantalla, arg, continuar){
+  cerrarMenuGrupos();   // cambiar de pantalla no debe dejar la tarjeta flotando encima
   window.scrollTo(0,0);
   if(pantalla !== 'practica') borrarSesion();   // salir de la práctica = ronda terminada
   // salir de examen/errores sin terminar no debe dejar el modo "pegado" — si no, el modo
@@ -1865,7 +1903,7 @@ function pantallaInicio(){
         <small>${clase && clase.mods.length ? clase.mods.length+' temas de tu clase' : 'todos los temas mezclados'} · ${tamanoMezcla(modulosActivos())} preguntas</small></button>
       ${rachaDias.actual > 0 ? `<div class="nota">🔥 ${rachaDias.actual} ${rachaDias.actual===1?'día seguido':'días seguidos'} practicando (mejor: ${rachaDias.mejor})</div>` : ''}
       <div class="row">
-        <button class="btn sec chico" onclick="ir('grupos')">Grupos de examen</button>
+        <button class="btn sec chico" onclick="menuGrupos(event)">Grupos de examen<span class="flechita">▾</span></button>
         <button class="btn sec chico" onclick="ir('errores')">Repasar mis errores${errores.length?` (${errores.length})`:''}</button>
       </div>
     </div>`;
