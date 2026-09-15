@@ -112,8 +112,10 @@
   .nota{background:rgba(255,255,255,.22);border:1px solid rgba(255,255,255,.4);padding:11px 14px;
     border-radius:14px;margin:10px 0;font-size:.9rem;color:var(--muted)}
   /* confirmación propia en vez de confirm() nativo — ver confirmarAccion() */
+  /* z-index arriba del de .bottom-nav (400, copiado tal cual de Fit-F) — si no, un diálogo
+     en una pantalla con la barra visible queda tapado por ella */
   .overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;
-    justify-content:center;padding:20px;z-index:50}
+    justify-content:center;padding:20px;z-index:450}
   .overlay .card{max-width:360px;margin:0;width:100%}
   /* chips de nivel / tema */
   .chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px}
@@ -264,6 +266,28 @@
   .ajChevron{font-size:1.1rem;opacity:.5;flex-shrink:0;color:var(--texto)}
   .ajCheck{font-size:1rem;font-weight:900;color:var(--verde);flex-shrink:0}
   .flechita{display:inline-block;margin-left:4px;font-size:.75em;opacity:.7}
+  /* botón flotante de la calculadora — visible en toda la app, incluso practicando */
+  .calcBtn{position:fixed;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 76px);
+    z-index:70;width:52px;height:52px;border-radius:50%;
+    border:1.5px solid rgba(255,255,255,.5);background:rgba(255,255,255,.55);
+    backdrop-filter:var(--lg-blur);-webkit-backdrop-filter:var(--lg-blur);
+    box-shadow:0 6px 20px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.8);
+    font-size:1.35rem;font-weight:800;color:var(--texto);cursor:pointer;font-family:inherit}
+  body.night .calcBtn{background:rgba(255,255,255,.10);border-color:rgba(255,255,255,.2);
+    box-shadow:0 6px 20px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.06)}
+  .calcCard{max-width:300px}
+  .calcPantalla{background:var(--contraste);color:var(--contraste-texto);border-radius:16px;
+    padding:18px 16px;text-align:right;font-size:1.9rem;font-weight:700;margin-bottom:14px;
+    overflow-x:auto;white-space:nowrap}
+  .calcGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  .calcGrid button{border:1.5px solid rgba(255,255,255,.45);border-radius:14px;padding:16px 0;
+    font-size:1.15rem;font-weight:700;cursor:pointer;font-family:inherit;color:var(--texto);
+    background:rgba(255,255,255,.35);backdrop-filter:var(--lg-blur);-webkit-backdrop-filter:var(--lg-blur)}
+  .calcGrid button:active{transform:scale(.95)}
+  .calcGrid .calcOp{background:rgba(255,255,255,.6);border-color:rgba(255,255,255,.75)}
+  .calcGrid .calcCero{grid-column:span 2}
+  body.night .calcGrid button{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.14)}
+  body.night .calcGrid .calcOp{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.26)}
   /* tarjeta flotante anclada a un botón (ej. "Grupos de examen" desde Inicio) —
      mismo vidrio que .card, pero angosta y con las filas de .ajRow adentro */
   .menuFlot{position:fixed;z-index:60;padding:6px;max-height:60vh;overflow-y:auto;margin:0}
@@ -280,6 +304,40 @@
   <button class="bn-item" data-tab="stats" onclick="ir('stats')" aria-label="Progreso"><span class="bn-lbl">Progreso</span></button>
   <button class="bn-item" data-tab="ajustes" onclick="ir('ajustes')" aria-label="Ajustes"><span class="bn-lbl">Ajustes</span></button>
 </nav>
+
+<!-- calculadora — botón flotante visible en toda la app, incluso practicando -->
+<button class="calcBtn" onclick="abrirCalc()" aria-label="Calculadora">=</button>
+<div class="overlay" id="calcOv" style="display:none" onclick="if(event.target===this) cerrarCalc()">
+  <div class="card calcCard">
+    <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px">
+      <h2 style="margin:0">Calculadora</h2>
+      <button onclick="cerrarCalc()" aria-label="Cerrar"
+        style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--texto);font-family:inherit;flex:none;width:auto">✕</button>
+    </div>
+    <div class="calcPantalla" id="calcPantalla">0</div>
+    <div class="calcGrid">
+      <button onclick="calcClear()">C</button>
+      <button onclick="calcSigno()">±</button>
+      <button onclick="calcPorcentaje()">%</button>
+      <button class="calcOp" onclick="calcOp('÷')">÷</button>
+      <button onclick="calcDigito('7')">7</button>
+      <button onclick="calcDigito('8')">8</button>
+      <button onclick="calcDigito('9')">9</button>
+      <button class="calcOp" onclick="calcOp('×')">×</button>
+      <button onclick="calcDigito('4')">4</button>
+      <button onclick="calcDigito('5')">5</button>
+      <button onclick="calcDigito('6')">6</button>
+      <button class="calcOp" onclick="calcOp('-')">−</button>
+      <button onclick="calcDigito('1')">1</button>
+      <button onclick="calcDigito('2')">2</button>
+      <button onclick="calcDigito('3')">3</button>
+      <button class="calcOp" onclick="calcOp('+')">+</button>
+      <button class="calcCero" onclick="calcDigito('0')">0</button>
+      <button onclick="calcPunto()">.</button>
+      <button class="calcOp" onclick="calcIgual()">=</button>
+    </div>
+  </div>
+</div>
 
 <script>
 /* ══════════════════════════════════════════════════════════
@@ -1864,8 +1922,66 @@ function _cerrarMenuGruposFuera(e){
   cerrarMenuGrupos();
 }
 
+// calculadora — botón flotante, disponible en toda la app (incluso practicando) para
+// comprobar una cuenta a mano; no toca ninguna variable de la práctica
+let calcVal = '0', calcAnterior = null, calcOperador = null, calcNuevo = false;
+function abrirCalc(){
+  calcVal = '0'; calcAnterior = null; calcOperador = null; calcNuevo = false;
+  $('calcPantalla').textContent = calcVal;
+  $('calcOv').style.display = 'flex';
+}
+function cerrarCalc(){ $('calcOv').style.display = 'none'; }
+function calcDigito(d){
+  if(calcNuevo || calcVal === '0'){ calcVal = d; calcNuevo = false; }
+  else if(calcVal.length < 12) calcVal += d;
+  $('calcPantalla').textContent = calcVal;
+}
+function calcPunto(){
+  if(calcNuevo){ calcVal = '0.'; calcNuevo = false; }
+  else if(calcVal.indexOf('.') === -1) calcVal += '.';
+  $('calcPantalla').textContent = calcVal;
+}
+function calcSigno(){
+  calcVal = calcVal.startsWith('-') ? calcVal.slice(1) : (calcVal === '0' ? '0' : '-'+calcVal);
+  $('calcPantalla').textContent = calcVal;
+}
+function calcPorcentaje(){
+  calcVal = _calcFormato(parseFloat(calcVal) / 100);
+  $('calcPantalla').textContent = calcVal;
+}
+function calcClear(){
+  calcVal = '0'; calcAnterior = null; calcOperador = null; calcNuevo = false;
+  $('calcPantalla').textContent = calcVal;
+}
+function _calcOperar(a, b, op){
+  if(op === '+') return a + b;
+  if(op === '-') return a - b;
+  if(op === '×') return a * b;
+  if(op === '÷') return b === 0 ? NaN : a / b;
+}
+function _calcFormato(n){
+  if(!isFinite(n)) return 'Error';
+  return String(Math.round(n * 1e8) / 1e8);   // recorta el ruido de coma flotante
+}
+function calcOp(op){
+  const actual = parseFloat(calcVal);
+  if(calcOperador && !calcNuevo){
+    calcVal = _calcFormato(_calcOperar(calcAnterior, actual, calcOperador));
+    calcAnterior = parseFloat(calcVal);
+  } else calcAnterior = actual;
+  calcOperador = op; calcNuevo = true;
+  $('calcPantalla').textContent = calcVal;
+}
+function calcIgual(){
+  if(calcOperador == null) return;
+  calcVal = _calcFormato(_calcOperar(calcAnterior, parseFloat(calcVal), calcOperador));
+  calcAnterior = null; calcOperador = null; calcNuevo = true;
+  $('calcPantalla').textContent = calcVal;
+}
+
 function ir(pantalla, arg, continuar){
   cerrarMenuGrupos();   // cambiar de pantalla no debe dejar la tarjeta flotando encima
+  cerrarCalc();         // ni la calculadora abierta
   window.scrollTo(0,0);
   if(pantalla !== 'practica') borrarSesion();   // salir de la práctica = ronda terminada
   // salir de examen/errores sin terminar no debe dejar el modo "pegado" — si no, el modo

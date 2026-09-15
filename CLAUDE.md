@@ -313,6 +313,23 @@ Si agregas una pantalla nueva: decide si es una "pestaña" (llama a `_barra('esa
 o es parte del flujo de responder preguntas (llama a `_barra(null)`) — no la dejes sin
 llamar a ninguna, o hereda el estado de la pantalla anterior por error.
 
+## Calculadora
+
+Botón flotante (`.calcBtn`, círculo con "=", abajo a la derecha) visible en **toda la
+app, incluida la práctica activa y el examen** (pedido explícito) — a propósito no está
+atado a `_barra()`, no se oculta nunca. Abre una tarjeta (`abrirCalc()`/`#calcOv`, reutiliza
+la clase `.overlay`) con las 4 operaciones básicas, signo, porcentaje y decimales —
+`calcOp()`/`calcIgual()` en `index.html`. No toca ninguna variable de la sesión de
+práctica (`sesionHechos`, `ejActual`, etc.) — es una herramienta aparte, sin persistencia
+(cada vez que se abre arranca en `0`). `ir()` la cierra al cambiar de pantalla
+(`cerrarCalc()`), igual que hace con la tarjeta de "Grupos de examen".
+
+**Ojo con el z-index si tocas overlays:** `.bottom-nav` quedó en `z-index:400` (copiado
+tal cual de Fit-F). `.overlay` — la clase que ya usaban `confirmarAccion()`/`avisar()`, y
+ahora también la calculadora — estaba en 50, por debajo de la barra; se subió a 450. Si
+agregas otro elemento `position:fixed`, revisa que su z-index quede por encima de 400 o se
+va a ver tapado por la barra en cualquier pantalla donde esté visible.
+
 ## Convenciones
 
 - Español, tono directo y alentador, sin emoji decorativo salvo 🔥 (racha) — mismo criterio
