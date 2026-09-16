@@ -1357,6 +1357,59 @@ const MODULOS = [
         `TRUCO: subraya en el enunciado las dos cosas que se comparan ANTES de calcular nada, en el orden en que aparecen: la primera va arriba y la segunda abajo. Cambiar el orden da otra respuesta distinta. Ejemplo con este mismo: ${a} a ${b} se escribe ${a}/${b}, que simplificado es ${sn} : ${sd}; al revés sería ${sd} : ${sn}, que ya no responde lo que preguntaban. Simplificar no cambia la razón: ${a} a ${b} y ${sn} a ${sd} significan lo mismo.`] };
   }
 },
+{
+  id:'tasas-porciento', nombre:'Tasas y porciento', secciones:['3.8'],
+  gen(nv){
+    const tipo = pick(['tasa-unitaria','tasa-frac','porc-frac','frac-porc']);
+    if(tipo==='tasa-unitaria'){
+      const b = R(2, porNivel(nv,5,8,12)), k = R(porNivel(nv,5,10,15), porNivel(nv,30,60,90)), a = k*b;
+      const casos = [
+        { e:`Un carro recorre <b>${a} millas</b> en <b>${b} horas</b>. ¿Cuál es su tasa en millas por hora?`, u:'millas por hora', x:'millas', y:'horas' },
+        { e:`Una bolsa de <b>${b} libras</b> de arroz cuesta <b>$${a}</b>. ¿Cuánto cuesta cada libra?`, u:'dólares por libra', x:'dólares', y:'libras' },
+        { e:`Una máquina produce <b>${a} piezas</b> en <b>${b} minutos</b>. ¿Cuántas piezas produce por minuto?`, u:'piezas por minuto', x:'piezas', y:'minutos' }
+      ];
+      const c = pick(casos);
+      return { enunciado:c.e, tipo:'num', respuesta:k,
+        explicacion:[`Una "tasa" compara dos cantidades de DISTINTO tipo (${c.x} y ${c.y}). La tasa unitaria dice cuánto corresponde a UNA unidad del segundo: ${c.x} por cada 1 ${c.y.replace(/s$/,'')}.`,
+          `Se divide la primera cantidad entre la segunda: ${a} ÷ ${b} = ${k}.`,
+          `→ ${k} ${c.u}`,
+          `TRUCO: la palabra "por" (por hora, por libra, por minuto) te dice qué va ABAJO en la división: siempre divides entre eso. "Millas por hora" = millas ÷ horas. Si el problema pregunta "cada una" o "por unidad", es lo mismo: divide hasta que abajo quede 1.`] };
+    }
+    if(tipo==='tasa-frac'){
+      const k = R(2, porNivel(nv,4,6,9)); let a = R(2, porNivel(nv,9,15,25)), b = R(2, porNivel(nv,9,15,25)); if(a===b) b++;
+      const [sn,sd] = simplificar(a,b); a *= k; b *= k;
+      const casos = [
+        { e:`Escribe como fracción simplificada la tasa de <b>${a} millas</b> a <b>${b} galones</b>.`, x:'millas', y:'galones' },
+        { e:`En un salón hay <b>${a} estudiantes</b> y <b>${b} computadoras</b>. Escribe la tasa de estudiantes por computadora como fracción simplificada.`, x:'estudiantes', y:'computadoras' },
+        { e:`Una receta usa <b>${a} tazas</b> de harina para <b>${b} huevos</b>. Escribe la tasa de tazas a huevos en su forma más simple.`, x:'tazas', y:'huevos' }
+      ];
+      const c = pick(casos);
+      return { enunciado:c.e, tipo:'frac', respuesta:{n:sn, d:sd}, pedirSimple:true,
+        ayuda:'El primero va arriba, el segundo abajo.',
+        explicacion:[`Una tasa se escribe como fracción igual que una razón: lo primero arriba (${c.x}) y lo segundo abajo (${c.y}): ${a}/${b}.`,
+          `Se simplifica dividiendo arriba y abajo entre MCD(${a}, ${b}) = ${mcd(a,b)}: ${a} ÷ ${mcd(a,b)} = ${sn}, ${b} ÷ ${mcd(a,b)} = ${sd}.`,
+          `→ ${sn}/${sd}, es decir, ${sn} ${c.x} por cada ${sd} ${c.y}`,
+          `TRUCO: la diferencia entre razón y tasa es solo que la tasa lleva UNIDADES distintas (${c.x} y ${c.y}), y esas unidades se quedan escritas en la respuesta; la aritmética es la misma: primero arriba, segundo abajo, y simplifica.`] };
+    }
+    if(tipo==='porc-frac'){
+      const p = pick(nv==='facil' ? [10,20,25,50,75,40,60,80] : nv==='medio' ? [5,15,35,45,65,85,12,36,48,64] : [2,4,6,8,14,18,22,26,38,42,55,72,84,95]);
+      const [sn,sd] = simplificar(p,100);
+      return { enunciado:`Escribe <b>${p}%</b> como fracción en su forma más simple.`, tipo:'frac', respuesta:{n:sn, d:sd}, pedirSimple:true,
+        explicacion:[`"Por ciento" significa "por cada 100": ${p}% = ${p}/100.`,
+          `Se simplifica dividiendo arriba y abajo entre MCD(${p}, 100) = ${mcd(p,100)}: ${p} ÷ ${mcd(p,100)} = ${sn}, 100 ÷ ${mcd(p,100)} = ${sd}.`,
+          `→ ${p}% = ${sn}/${sd}`,
+          `TRUCO: el símbolo % es una fracción con 100 abajo, sin excepción. Escribe el número sobre 100 y simplifica como cualquier fracción: si termina en 0 divide entre 10 primero; si termina en 5, entre 5; y recuerda los fijos: 25% = 1/4, 50% = 1/2, 75% = 3/4, 20% = 1/5, 10% = 1/10.`] };
+    }
+    const d = pick(nv==='facil' ? [2,4,5,10] : nv==='medio' ? [4,5,10,20,25] : [20,25,50,10,4]);
+    let n; do { n = R(1, d-1); } while(mcd(n,d)!==1);
+    const k = 100/d;
+    return { enunciado:`Escribe ${fr(n,d)} como porciento.`, tipo:'num', respuesta:n*k, ayuda:'Escribe solo el número, sin el símbolo %.',
+      explicacion:[`Un porciento es una fracción con denominador 100, así que hay que convertir ${n}/${d} a una fracción equivalente con 100 abajo.`,
+        `100 ÷ ${d} = ${k}, así que se multiplica arriba y abajo por ${k}: ${n}/${d} = ${n*k}/100.`,
+        `→ ${n}/${d} = ${n*k}%`,
+        `TRUCO: pregúntate "¿por cuánto multiplico el de abajo para llegar a 100?" y multiplica el de arriba por ese mismo número: ese resultado ya ES el porciento. Si el denominador no divide a 100 exacto, entonces divide arriba entre abajo y multiplica por 100 (${n} ÷ ${d} = ${n/d}, × 100 = ${n*k}).`] };
+  }
+},
 /* ── CAPÍTULO 4: Operaciones con fracciones (EducoSoft, E-Book cap. 4) ── */
 {
   id:'suma-resta-frac', nombre:'Sumar y restar fracciones', secciones:['4.1'],
@@ -1801,7 +1854,7 @@ const SECMAP = {
   '3.5': ['simplificar','comparar'],
   '3.6': ['comparar'],
   '3.7': ['mixtos'],
-  '3.8': ['razones'],
+  '3.8': ['razones','tasas-porciento'],
   '4.1': ['suma-resta-frac','resta-mental-frac','propiedades-frac'],
   '4.2': ['mult-div-frac','reciproco','propiedades-frac'],
   '4.3': ['orden-op-frac','frac-compleja']
@@ -1833,6 +1886,7 @@ const CLAVES = {
   'comparar':         ['comparar','compare','comparing fractions','order','ordenar','greater than','less than','mayor que','menor que'],
   'mixtos':           ['mixto','mixtos','mixed number','mixed numbers','improper','impropia','impropias','número mixto'],
   'razones':          ['razón','razones','ratio','ratios','rate','proporción','proportion'],
+  'tasas-porciento':  ['tasa','tasas','tasa unitaria','unit rate','rates','porciento','por ciento','porcentaje','percent','percentage'],
   'suma-resta-frac':  ['suma de fracciones','resta de fracciones','sumar fracciones','restar fracciones','denominador común','mínimo común denominador','fracciones homogéneas','adding fractions','subtracting fractions','common denominator','least common denominator','lcd'],
   'resta-mental-frac':['resta mental','cómputo mental','cómputos mentales','mentalmente','mental math','subtract from 1'],
   'propiedades-frac': ['propiedades de la suma','propiedad de la suma','inverso aditivo','opuesto','identidad de la suma','additive inverse','additive identity','properties of addition','propiedades de la multiplicación','cero como factor','zero property','properties of multiplication'],
