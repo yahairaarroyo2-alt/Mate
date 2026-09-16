@@ -16,23 +16,18 @@
 <noscript><link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&display=swap" rel="stylesheet"></noscript>
 <style>
   :root{
-    --azul:#1e2a52; --azul2:#2b3c72; --azul3:#3b52a0;
-    --acento:#ffc93c; --acento2:#ffe08a;
+    --acento:#ffc93c;
     --verde:#2ecc71; --verde-bg:#e8f9f0;
     --rojo:#e74c3c; --rojo-bg:#fdeceb;
     --ambar:#f39c12; --ambar-bg:#fef6e7;
-    --blanco:#fff; --gris:rgba(255,255,255,.30); --gris2:rgba(255,255,255,.45);
+    --gris:rgba(255,255,255,.30); --gris2:rgba(255,255,255,.45);
     --texto:#1a1a2e; --muted:#5a6275;
-    --sombra:0 8px 32px rgba(0,0,0,.12);
     /* Liquid Glass — mismos valores que Fit-F, para que las dos apps se vean iguales */
     --card:rgba(255,255,255,.28);
     --lg-blur:blur(40px) saturate(180%);
     --lg-border:1px solid rgba(255,255,255,.55);
     --lg-shadow:0 8px 32px rgba(0,0,0,.12), 0 2px 8px rgba(0,0,0,.08),
                 inset 0 1px 0 rgba(255,255,255,.8), inset 0 -1px 0 rgba(0,0,0,.04);
-    /* --azul/--azul2 hacen doble papel: fondo de marca (header, enunciado, chip.on) Y texto de
-       título sobre tarjeta blanca (h2, h3, chip...). En modo oscuro esos dos papeles necesitan
-       colores distintos, así que el texto de título vive en variables propias. */
     --titulo:var(--texto); --titulo2:var(--muted);
     --superficie:var(--card);   /* fondo de tarjeta/chip — ahora vidrio, no blanco sólido */
     /* superficie SÓLIDA de contraste (enunciado, chip elegido, insignias). Va aparte de
@@ -53,7 +48,11 @@
     background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
     background-size:200px 200px;
   }
-  .app{max-width:720px;margin:0 auto;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 88px)}
+  /* padding-bottom cubre la barra Y el botón de la calculadora: el botón mide 52px y su
+     borde inferior queda a 76+52=128px del fondo — con menos que eso, su mitad superior
+     tapaba el último elemento visible de cualquier pantalla (ej. la fila de estadísticas
+     de práctica), incluso con la barra oculta, porque este padding no depende de ella */
+  .app{max-width:720px;margin:0 auto;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 140px)}
   /* barra flotante de navegación, abajo — copiada tal cual de Fit-F (pastilla vidrio +
      lente Liquid Glass que se desliza sobre la pestaña activa), sin los emoji de sus iconos */
   .bottom-nav{position:fixed;left:50%;transform:translateX(-50%);
@@ -88,11 +87,16 @@
   h2{color:var(--titulo);font-size:1.18rem;margin-bottom:12px;font-weight:800;letter-spacing:-.3px}
   h3{color:var(--titulo2);font-size:.78rem;margin:16px 0 8px;font-weight:700;
     text-transform:uppercase;letter-spacing:.8px}
-  /* pastillas de vidrio, como los botones de Fit-F */
+  /* pastillas de vidrio, como los botones de Fit-F.
+     Sin backdrop-filter propio: viven siempre dentro de una .card/.ajCard ya esmerilada,
+     así que el blur no aportaba nada visible y sí un costo real de batería/GPU — cada
+     capa con backdrop-filter es una recomposición aparte, y llegaban a coexistir 30+ a
+     la vez en pantallas como "Temas". Confirmar visualmente antes de quitarlo también de
+     .chip/.calcGrid button (mismo motivo, no aplicado todavía). */
   .btn{display:block;width:100%;border:1.5px solid rgba(255,255,255,.45);border-radius:22px;
     cursor:pointer;padding:15px;font-size:1.02rem;font-weight:700;margin-bottom:10px;
     font-family:inherit;transition:transform .15s,box-shadow .2s;
-    background:rgba(255,255,255,.42);backdrop-filter:var(--lg-blur);-webkit-backdrop-filter:var(--lg-blur);
+    background:rgba(255,255,255,.42);
     color:var(--texto);box-shadow:0 4px 18px rgba(0,0,0,.09),inset 0 1px 0 rgba(255,255,255,.75)}
   .btn:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(0,0,0,.13),inset 0 1px 0 rgba(255,255,255,.85)}
   .btn:active{transform:scale(.98)}
@@ -213,11 +217,9 @@
   /* modo oscuro: antes seguía el sistema solo (media query), ahora es elegible a mano
      (Ajustes → Tema) — por eso vive en la clase body.night, no en @media, igual que en
      Fit-F/Fit-M (ver aplicarTema()/resolverNoche()). "Automático (celular)" sigue
-     poniendo/quitando esta misma clase según el sistema, así que se ve idéntico a antes.
-     Ojo: --azul/--azul2/--blanco NO se redefinen aquí a propósito — ya no se usan en ningún
-     lado (quedaron del rediseño), no reutilizarlas para nada nuevo. */
+     poniendo/quitando esta misma clase según el sistema, así que se ve idéntico a antes. */
   body.night{
-    --acento:#ffc93c; --acento2:#ffe08a;
+    --acento:#ffc93c;
     --verde:#2ecc71; --verde-bg:#123322;
     --rojo:#e74c3c; --rojo-bg:#3a1c1c;
     --ambar:#f39c12; --ambar-bg:#3a2c10;
@@ -247,6 +249,10 @@
      está muy bajito (.06, casi igual al chip sin marcar en .07) y ahí sí hace falta que
      se note cuál está elegido */
   body.night .chip.on{background:rgba(255,255,255,.3);border-color:rgba(255,255,255,.45);color:var(--texto)}
+  /* mismo motivo que .chip.on: en oscuro rgba(255,255,255,.55) fijo queda ilegible — el número
+     insignia usa --contraste, que en body.night ya es un blanco translúcido, no el navy sólido
+     de modo claro, así que también hacía falta redefinir el fondo del chip elegido */
+  body.night .ordenChip.on{background:rgba(255,255,255,.22);border-color:rgba(255,255,255,.5)}
   body.night .fb.ok{color:#7be3a8} body.night .fb.mal{color:#f19c92} body.night .fb.medio{color:#f5c877}
   body.night .drop.hover{background:rgba(255,255,255,.10)}
   body.night .bottom-nav{background:rgba(28,28,30,.82);border-color:rgba(255,255,255,.12);
@@ -376,6 +382,10 @@ function fmtFactoresPlano(f){
 }
 const sumaDig = n => String(n).split('').reduce((s,c)=>s + (+c), 0);
 const porNivel = (nv,f,m,d) => nv==='facil' ? f : nv==='medio' ? m : d;
+// el resto de la app escribe el signo menos como '−' (U+2212), pero un número negativo
+// interpolado en un template (${n} con n<0) sale con el guion ASCII '-' de JS — mm() lo
+// pareja donde un enunciado muestra el número crudo (no ya envuelto en su propio "− ${n}")
+const mm = n => String(n).replace('-','−');
 // fracción apilada para el enunciado
 const fr = (n,d) => `<span class="fr"><b>${n}</b><i>${d}</i></span>`;
 const cmpSigno = (a,b) => a<b ? '<' : a>b ? '>' : '=';
@@ -631,10 +641,10 @@ const MODULOS = [
     const variante = pick(['simple','neg-fuera','doble-neg','doble-neg-resta']);
     if(variante==='simple'){
       const m = pick([1,-1])*n;
-      return { enunciado:`Calcula: | ${m} |`, tipo:'num', respuesta:n,
+      return { enunciado:`Calcula: | ${mm(m)} |`, tipo:'num', respuesta:n,
         explicacion:[`Las barras verticales | | significan "valor absoluto": la distancia de ese número hasta el 0 en la recta numérica. Una distancia nunca es negativa, así que el valor absoluto siempre da positivo o cero.`,
-          `${m} está a ${n} unidades de distancia del 0 (a la izquierda o a la derecha, la distancia se cuenta igual).`,
-          `→ |${m}| = ${n}`, T] };
+          `${mm(m)} está a ${n} unidades de distancia del 0 (a la izquierda o a la derecha, la distancia se cuenta igual).`,
+          `→ |${mm(m)}| = ${n}`, T] };
     }
     if(variante==='neg-fuera'){
       return { enunciado:`Calcula: −| ${n} |`, tipo:'num', respuesta:-n,
@@ -663,43 +673,43 @@ const MODULOS = [
     const variante = pick(['suma-igual','suma-dif','resta','mult','div']);
     if(variante==='suma-igual'){
       const signo = pick([1,-1]); const A=signo*a, B=signo*b, r=A+B;
-      return { enunciado:`(${A}) + (${B}) =`, tipo:'num', respuesta:r,
+      return { enunciado:`(${mm(A)}) + (${mm(B)}) =`, tipo:'num', respuesta:r,
         explicacion:[`Cuando los dos números tienen EL MISMO signo, se suman sus valores (sin el signo) y el resultado se queda con ese mismo signo.`,
-          `${a} + ${b} = ${a+b}`, `→ (${A}) + (${B}) = ${r}`,
-          `TRUCO: piénsalo como dinero: el + es lo que tienes y el − es lo que debes. Si los dos son del mismo tipo se acumulan, y el signo ni se piensa, se copia tal cual. Ejemplo con este mismo: (${A}) + (${B}) es ${signo<0?`deber ${a} y deber ${b} → debes ${a+b}`:`tener ${a} y tener ${b} → tienes ${a+b}`} → ${r}.`] };
+          `${a} + ${b} = ${a+b}`, `→ (${mm(A)}) + (${mm(B)}) = ${mm(r)}`,
+          `TRUCO: piénsalo como dinero: el + es lo que tienes y el − es lo que debes. Si los dos son del mismo tipo se acumulan, y el signo ni se piensa, se copia tal cual. Ejemplo con este mismo: (${mm(A)}) + (${mm(B)}) es ${signo<0?`deber ${a} y deber ${b} → debes ${a+b}`:`tener ${a} y tener ${b} → tienes ${a+b}`} → ${mm(r)}.`] };
     }
     if(variante==='suma-dif'){
       const A=a, B=-b, r=A+B, mayor = a>=b?A:B;
-      return { enunciado:`(${A}) + (${B}) =`, tipo:'num', respuesta:r,
+      return { enunciado:`(${A}) + (${mm(B)}) =`, tipo:'num', respuesta:r,
         explicacion:[`Cuando los signos son DIFERENTES, no se suman: se restan sus valores (el más grande menos el más chico) y el resultado lleva el signo del que era más grande.`,
           `Sin el signo, los valores son ${a} y ${b}.`,
-          `${Math.max(a,b)} − ${Math.min(a,b)} = ${Math.abs(r)}, y como ${mayor} era el de mayor valor, el resultado lleva su signo.`,
-          `→ (${A}) + (${B}) = ${r}`,
-          `TRUCO: también es dinero, pero de tipos distintos: tienes por un lado y debes por el otro, así que se cancelan entre sí. Gana el más grande y la respuesta se queda con SU signo. Ejemplo con este mismo: (${A}) + (${B}) es tener ${a} y deber ${b}; se cancelan ${Math.min(a,b)} y queda ${Math.abs(r)} ${r<0?'de deuda → ':'a favor → '}${r}.`] };
+          `${Math.max(a,b)} − ${Math.min(a,b)} = ${Math.abs(r)}, y como ${mm(mayor)} era el de mayor valor, el resultado lleva su signo.`,
+          `→ (${A}) + (${mm(B)}) = ${mm(r)}`,
+          `TRUCO: también es dinero, pero de tipos distintos: tienes por un lado y debes por el otro, así que se cancelan entre sí. Gana el más grande y la respuesta se queda con SU signo. Ejemplo con este mismo: (${A}) + (${mm(B)}) es tener ${a} y deber ${b}; se cancelan ${Math.min(a,b)} y queda ${Math.abs(r)} ${r<0?'de deuda → ':'a favor → '}${mm(r)}.`] };
     }
     if(variante==='resta'){
       const A=a, B=-b, r=A+b;
-      return { enunciado:`${A} − (${B}) =`, tipo:'num', respuesta:r,
+      return { enunciado:`${A} − (${mm(B)}) =`, tipo:'num', respuesta:r,
         explicacion:[`Restar un número negativo es lo mismo que sumar su opuesto positivo — los dos signos de "menos" seguidos se cancelan entre sí.`,
-          `${A} − (${B}) se convierte en ${A} + ${b}`, `→ = ${r}`,
-          `TRUCO: cuando veas dos rayitas de menos seguidas, táchalas y escribe un + encima antes de calcular nada — quitarte una deuda es lo mismo que recibir dinero. Ejemplo con este mismo: ${A} − (${B}) → tachas las dos rayitas → ${A} + ${b} = ${r}.`] };
+          `${A} − (${mm(B)}) se convierte en ${A} + ${b}`, `→ = ${r}`,
+          `TRUCO: cuando veas dos rayitas de menos seguidas, táchalas y escribe un + encima antes de calcular nada — quitarte una deuda es lo mismo que recibir dinero. Ejemplo con este mismo: ${A} − (${mm(B)}) → tachas las dos rayitas → ${A} + ${b} = ${r}.`] };
     }
     const op = pick(['mult','div']);
     const signoA = pick([1,-1]), signoB = pick([1,-1]), igual = signoA===signoB;
     if(op==='mult'){
       const A=signoA*a, B=signoB*b, r=A*B;
-      return { enunciado:`(${A}) × (${B}) =`, tipo:'num', respuesta:r,
+      return { enunciado:`(${mm(A)}) × (${mm(B)}) =`, tipo:'num', respuesta:r,
         explicacion:[`Para multiplicar: si los dos signos son iguales (los dos + o los dos −), el resultado sale positivo; si son diferentes, sale negativo.`,
-          igual?`${A} y ${B} tienen el mismo signo.`:`${A} y ${B} tienen signos diferentes.`,
-          `Se multiplican los valores sin el signo: ${a} × ${b} = ${a*b}`, `→ (${A}) × (${B}) = ${r}`,
-          `TRUCO: no memorices la tabla de signos — cuenta cuántos signos menos hay. Cantidad PAR de menos (0, 2, 4...) → positivo. Cantidad IMPAR (1, 3...) → negativo. Sirve igual aunque multipliques tres o cuatro números de un tirón. Ejemplo con este mismo: (${A}) × (${B}) tiene ${(A<0?1:0)+(B<0?1:0)} menos, cantidad ${igual?'par':'impar'} → resultado ${r<0?'negativo':'positivo'}: ${r}.`] };
+          igual?`${mm(A)} y ${mm(B)} tienen el mismo signo.`:`${mm(A)} y ${mm(B)} tienen signos diferentes.`,
+          `Se multiplican los valores sin el signo: ${a} × ${b} = ${a*b}`, `→ (${mm(A)}) × (${mm(B)}) = ${mm(r)}`,
+          `TRUCO: no memorices la tabla de signos — cuenta cuántos signos menos hay. Cantidad PAR de menos (0, 2, 4...) → positivo. Cantidad IMPAR (1, 3...) → negativo. Sirve igual aunque multipliques tres o cuatro números de un tirón. Ejemplo con este mismo: (${mm(A)}) × (${mm(B)}) tiene ${(A<0?1:0)+(B<0?1:0)} menos, cantidad ${igual?'par':'impar'} → resultado ${r<0?'negativo':'positivo'}: ${mm(r)}.`] };
     }
     const A=signoA*(a*b), B=signoB*b, r=A/B;
-    return { enunciado:`(${A}) ÷ (${B}) =`, tipo:'num', respuesta:r,
+    return { enunciado:`(${mm(A)}) ÷ (${mm(B)}) =`, tipo:'num', respuesta:r,
       explicacion:[`Para dividir aplica la misma regla que para multiplicar: signos iguales dan positivo, signos diferentes dan negativo.`,
-        igual?`${A} y ${B} tienen el mismo signo.`:`${A} y ${B} tienen signos diferentes.`,
-        `Se dividen los valores sin el signo: ${Math.abs(A)} ÷ ${b} = ${a}`, `→ (${A}) ÷ (${B}) = ${r}`,
-        `TRUCO: el mismo de la multiplicación — cuenta los signos menos: cantidad par → positivo, impar → negativo. Haz la división con los números limpios (sin signo) y pégale el signo al final, así no te confundes a mitad de cuenta. Ejemplo con este mismo: ${Math.abs(A)} ÷ ${b} = ${a}, y como hay ${(A<0?1:0)+(B<0?1:0)} signo(s) menos (cantidad ${igual?'par':'impar'}), la respuesta es ${r}.`] };
+        igual?`${mm(A)} y ${mm(B)} tienen el mismo signo.`:`${mm(A)} y ${mm(B)} tienen signos diferentes.`,
+        `Se dividen los valores sin el signo: ${Math.abs(A)} ÷ ${b} = ${a}`, `→ (${mm(A)}) ÷ (${mm(B)}) = ${mm(r)}`,
+        `TRUCO: el mismo de la multiplicación — cuenta los signos menos: cantidad par → positivo, impar → negativo. Haz la división con los números limpios (sin signo) y pégale el signo al final, así no te confundes a mitad de cuenta. Ejemplo con este mismo: ${Math.abs(A)} ÷ ${b} = ${a}, y como hay ${(A<0?1:0)+(B<0?1:0)} signo(s) menos (cantidad ${igual?'par':'impar'}), la respuesta es ${mm(r)}.`] };
   }
 },
 {
@@ -1065,7 +1075,12 @@ const MODULOS = [
           explicacion:[`El área de un triángulo es la mitad de "base por altura" — la altura es la distancia perpendicular (en ángulo recto) desde la base hasta el vértice de enfrente.`,
             `A = (base × altura) ÷ 2`, `A = (${bb} × ${h}) ÷ 2 = ${bb*h} ÷ 2 = ${a}`] };
       }
-      const l1=R2(),l2=R2(),l3=R2();
+      const l1=R2(), l2=R2();
+      // un lado al azar podía violar la desigualdad triangular (cada lado < suma de los
+      // otros dos) — l3 se acota al rango que sí forma un triángulo real; si ese rango
+      // queda vacío (alto muy chico), el lado más largo repetido siempre es válido
+      const _lo = Math.max(3, Math.abs(l1-l2)+1), _hi = Math.min(alto, l1+l2-1);
+      const l3 = _lo<=_hi ? R(_lo,_hi) : Math.max(l1,l2);
       return { enunciado:`Halla el <b>perímetro</b> de un triángulo con lados ${l1}, ${l2} y ${l3}.`, tipo:'num', respuesta:l1+l2+l3,
         explicacion:[`El perímetro es la distancia total alrededor de la figura — simplemente se suman los 3 lados.`,
           `P = ${l1} + ${l2} + ${l3} = ${l1+l2+l3}`] };
@@ -1084,11 +1099,19 @@ const MODULOS = [
           `A = 3.14 × ${r}² = 3.14 × ${r*r} = ${a}`] };
     }
     if(forma==='trapecio'){
-      const B=R2(), b2=R(2,B-1), l1=R2(), l2=R2();
-      if(medida==='area'){ const h=R2(), b3=((B+b2)*h)%2===0?b2:b2+1, a=((B+b3)*h)/2;
+      const B=R2(), b2=R(2,B-1);
+      if(medida==='area'){ const h=R2();
+        let b3=((B+b2)*h)%2===0?b2:b2+1;
+        if(b3>=B) b3=B-1;   // el +1 de arriba podía igualar a la base mayor — "bases X y X" no es un trapecio
+        const a=((B+b3)*h)/2;
         return { enunciado:`Halla el <b>área</b> de un trapecio con bases ${B} y ${b3}, y altura ${h}.`, tipo:'num', respuesta:a,
           explicacion:[`Un trapecio tiene dos lados paralelos de distinto tamaño, llamados "base mayor" y "base menor". Su área es el promedio de esas dos bases, multiplicado por la altura.`,
             `A = ((base mayor + base menor) × altura) ÷ 2`, `A = ((${B} + ${b3}) × ${h}) ÷ 2 = ${(B+b3)*h} ÷ 2 = ${a}`] }; }
+      let l1=R2(), l2=R2();
+      // los dos lados no paralelos tienen que alcanzar a cerrar la diferencia entre las dos
+      // bases (B−b2) — si no, ninguna figura real los conecta; se ajusta l2 cuando hace falta
+      const _offset = B-b2;
+      if(l1+l2 <= _offset) l2 = Math.min(alto, _offset-l1+R(1,3));
       return { enunciado:`Halla el <b>perímetro</b> de un trapecio con lados ${B}, ${b2}, ${l1} y ${l2}.`, tipo:'num', respuesta:B+b2+l1+l2,
         explicacion:[`El perímetro es la distancia total alrededor de la figura — se suman los 4 lados.`,
           `P = ${B} + ${b2} + ${l1} + ${l2} = ${B+b2+l1+l2}`] };
@@ -1147,7 +1170,7 @@ const MODULOS = [
   id:'mcm-listado', nombre:'MCM por listado', secciones:['3.3'],
   gen(nv){
     const alto = porNivel(nv, 12, 20, 30);
-    const a = R(2,alto), b = R(2,alto);
+    const a = R(2,alto); let b; do { b = R(2,alto); } while(b===a);   // MCM de un número consigo mismo es trivial
     return { enunciado:`Halla el <b>MCM</b> de <b>${a}</b> y <b>${b}</b> listando sus múltiplos.`,
              tipo:'num', respuesta: mcm(a,b), explicacion: explMcmListado(a,b) };
   }
@@ -1310,7 +1333,7 @@ const MODULOS = [
 const MOD_POR_ID = {}; MODULOS.forEach(m => MOD_POR_ID[m.id] = m);
 
 /* ══════════════════════════════════════════════════════════
-   4. VERIFICACIÓN  — una función para los 6 tipos de entrada
+   4. VERIFICACIÓN  — una función para los 8 tipos de entrada
    ══════════════════════════════════════════════════════════ */
 function parseFactores(s){
   s = String(s).toLowerCase().replace(/[×·]/g,'*').replace(/\s+/g,'').replace(/x/g,'*');
@@ -1473,12 +1496,15 @@ function analizarTexto(txt){
   const secsValidas = [...secs].filter(s => SECMAP[s]).sort();
   secsValidas.forEach(s => SECMAP[s].forEach(id => puntos[id] += 5));
 
-  // (c) palabras clave
+  // (c) palabras clave — límite de palabra en LOS DOS lados, no solo uno. Con solo un lado
+  // (como antes: " k" O "k "), una clave corta como "rate" hacía match dentro de "corporate ",
+  // o "order" dentro de "disorder" — bastaba con que un solo extremo tuviera espacio.
   const encontradas = {};
   MODULOS.forEach(m=>{
     encontradas[m.id] = [];
     CLAVES[m.id].forEach(k=>{
-      if(t.indexOf(' '+k) >= 0 || t.indexOf(k+' ') >= 0){
+      const re = new RegExp('(?:^|[^a-záéíóúñ0-9])' + k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '(?:$|[^a-záéíóúñ0-9])');
+      if(re.test(t)){
         puntos[m.id] += 1; encontradas[m.id].push(k);
       }
     });
@@ -1544,6 +1570,12 @@ async function textoDeArchivo(file){
    ══════════════════════════════════════════════════════════ */
 const guardar = (k,v) => { try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} };
 const leer = (k,d) => { try{ const v = localStorage.getItem(k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } };
+// fecha del CALENDARIO LOCAL, no UTC — toISOString() usa Greenwich, así que cualquier práctica
+// después de las 8 pm (Puerto Rico, UTC-4) se anotaba en el día siguiente: el heatmap de
+// "Últimos 14 días" pintaba la barra equivocada y la racha de días se rompía a media noche
+// local en vez de a media noche real. Mismo patrón que localDateStr() en Fit-F.
+const fechaLocal = d => { d = d || new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
+const fechaHaceDias = n => { const d = new Date(); d.setDate(d.getDate()-n); return fechaLocal(d); };
 
 let nivel  = leer('mate_nivel_v1', 'medio');
 let clase  = leer('mate_clase_v1', null);      // { etiqueta, mods:[] } — la mezcla activa ahora mismo
@@ -1557,6 +1589,10 @@ let historial = leer('mate_historial_v1', {});      // { "YYYY-MM-DD": cantidad 
 let rachaDias = leer('mate_racha_dias_v1', { actual:0, mejor:0, ultimoDia:null });
 let agruparTema = leer('mate_agrupar_v1', false);   // true = las repeticiones de un mismo tema salen juntas, no mezcladas
 let repetirFallo = leer('mate_repetir_v1', false);  // true = una pregunta fallada vuelve a salir, igual, más adelante en la ronda
+// [{fecha, correctas, total}], tope 30 — historial de resultados de "Modo examen" (ver
+// finalizarExamen). El modo en sí no tiene botón que lo abra ahora mismo (ver CLAUDE.md,
+// "Modo examen"); esto solo asegura que el resultado quede guardado el día que se reexponga.
+let examenes = leer('mate_examenes_v1', []);
 
 function anotar(modId, ok){
   const s = stats[modId] || (stats[modId] = { ok:0, fallo:0 });
@@ -1569,18 +1605,30 @@ function anotar(modId, ok){
   _registrarHistorialYRachaDias();
 }
 function _registrarHistorialYRachaDias(){
-  const hoy = new Date().toISOString().slice(0,10);
+  const hoy = fechaLocal();
   historial[hoy] = (historial[hoy]||0) + 1;
   guardar('mate_historial_v1', historial);
   if(rachaDias.ultimoDia !== hoy){
-    const ayer = new Date(Date.now()-86400000).toISOString().slice(0,10);
+    const ayer = fechaHaceDias(1);
     rachaDias.actual = (rachaDias.ultimoDia === ayer) ? rachaDias.actual+1 : 1;
     rachaDias.mejor = Math.max(rachaDias.mejor, rachaDias.actual);
     rachaDias.ultimoDia = hoy;
     guardar('mate_racha_dias_v1', rachaDias);
   }
 }
+// la racha de días guardada no caduca sola (solo se actualiza al practicar) — esto es lo que
+// hay que leer para MOSTRARLA, no rachaDias.actual directo, o "3 días seguidos" se queda
+// pegado en pantalla una semana después de haber dejado de practicar
+function _rachaDiasVigente(){
+  if(rachaDias.actual <= 0 || !rachaDias.ultimoDia) return 0;
+  const hoy = fechaLocal(), ayer = fechaHaceDias(1);
+  return (rachaDias.ultimoDia === hoy || rachaDias.ultimoDia === ayer) ? rachaDias.actual : 0;
+}
 function _registrarError(ej){
+  // si la MISMA pregunta (repetirFallo la reprograma igual, mismo enunciado) se acaba de
+  // fallar dos veces seguidas dentro de la misma ronda, no la dupliques en la lista — es
+  // el mismo error, no dos distintos
+  if(errores[0] && errores[0].modId === ej.__mod && errores[0].ej.enunciado === ej.enunciado) return;
   errores.unshift({ modId: ej.__mod, ej });
   errores = errores.slice(0, 30);
   guardar('mate_errores_v1', errores);
@@ -1731,6 +1779,20 @@ document.addEventListener('visibilitychange', () => {
   } else if(document.visibilityState === 'visible' && syncDoc && !syncListo){
     _escucharSync();
   }
+});
+// "Automático (por hora)" solo se reevaluaba al arrancar o al cambiar la preferencia — si la
+// app se queda abierta cruzando las 7 pm/6 am, se quedaba en el tema de antes hasta reabrirla.
+// aplicarTema() es barata (lee un color de localStorage y alterna una clase) y no hace nada
+// en los otros 3 modos (el color no cambió), así que no hace falta filtrar por getTemaModo().
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState === 'visible') aplicarTema();
+});
+// reintenta la sincronización sola al recuperar internet — antes se quedaba desconectada
+// hasta la próxima vez que se abriera la app
+window.addEventListener('online', () => {
+  if(!syncCode) return;
+  if(!syncDoc) _reengancharSync().catch(()=>{});
+  else if(!syncListo) _escucharSync();
 });
 const pct = s => { const t = s.ok + s.fallo; return t ? Math.round(s.ok*100/t) : null; };
 
@@ -1978,8 +2040,28 @@ function calcIgual(){
   calcAnterior = null; calcOperador = null; calcNuevo = true;
   $('calcPantalla').textContent = calcVal;
 }
+// teclado físico para la calculadora — antes solo funcionaba a clics, incómodo en la compu.
+// Solo actúa mientras el overlay está abierto, así que no interfiere con Enter en los
+// inputs de la práctica ni con ningún otro atajo de la página.
+document.addEventListener('keydown', e => {
+  if($('calcOv').style.display !== 'flex') return;
+  if(/^[0-9]$/.test(e.key)) calcDigito(e.key);
+  else if(e.key === '.' || e.key === ',') calcPunto();
+  else if(e.key === '+') calcOp('+');
+  else if(e.key === '-') calcOp('-');
+  else if(e.key === '*') calcOp('×');
+  else if(e.key === '/'){ e.preventDefault(); calcOp('÷'); }   // '/' abre la búsqueda rápida en Firefox
+  else if(e.key === '%') calcPorcentaje();
+  else if(e.key === 'Enter' || e.key === '=') calcIgual();
+  else if(e.key === 'Escape') cerrarCalc();
+  else if(e.key === 'Backspace'){ calcVal = calcVal.length>1 ? calcVal.slice(0,-1) : '0'; $('calcPantalla').textContent = calcVal; }
+  else return;
+  e.preventDefault();
+});
 
+let _swReloadPendiente = false;   // ver el listener 'controllerchange' en ARRANQUE
 function ir(pantalla, arg, continuar){
+  if(_swReloadPendiente){ window.location.reload(); return; }
   cerrarMenuGrupos();   // cambiar de pantalla no debe dejar la tarjeta flotando encima
   cerrarCalc();         // ni la calculadora abierta
   window.scrollTo(0,0);
@@ -2015,12 +2097,13 @@ function pantallaInicio(){
       <span>Practicando: ${clase.etiqueta}</span>
       <button onclick="quitarClase()">Quitar</button>
     </div>` : '';
+  const _rachaViva = _rachaDiasVigente();
   main.innerHTML = `
     <div class="card">
       ${bannerClase}
       <button class="btn amar" onclick="ir('practica')">Empezar a practicar
         <small>${clase && clase.mods.length ? clase.mods.length+' temas de tu clase' : 'todos los temas mezclados'} · ${tamanoMezcla(modulosActivos())} preguntas</small></button>
-      ${rachaDias.actual > 0 ? `<div class="nota">🔥 ${rachaDias.actual} ${rachaDias.actual===1?'día seguido':'días seguidos'} practicando (mejor: ${rachaDias.mejor})</div>` : ''}
+      ${_rachaViva > 0 ? `<div class="nota">🔥 ${_rachaViva} ${_rachaViva===1?'día seguido':'días seguidos'} practicando (mejor: ${rachaDias.mejor})</div>` : ''}
       <div class="row">
         <button class="btn sec chico" onclick="menuGrupos(event)">Grupos de examen<span class="flechita">▾</span></button>
         <button class="btn sec chico" onclick="ir('errores')">Repasar mis errores${errores.length?` (${errores.length})`:''}</button>
@@ -2190,19 +2273,22 @@ function nuevoEjercicio(arg, continuar){
 
 function entradaHTML(ej){
   switch(ej.tipo){
-    case 'sino': return `<div class="opt" role="radiogroup" aria-label="Sí o no">
-        <button class="btn" role="radio" aria-checked="false" onclick="responder(true)">Sí</button>
-        <button class="btn" role="radio" aria-checked="false" onclick="responder(false)">No</button></div>`;
-    case 'cmp': return `<div class="opt" role="radiogroup" aria-label="Comparación">
-        <button class="btn" role="radio" aria-checked="false" onclick="responder('<')">&lt;</button>
-        <button class="btn" role="radio" aria-checked="false" onclick="responder('=')">=</button>
-        <button class="btn" role="radio" aria-checked="false" onclick="responder('>')">&gt;</button></div>`;
-    case 'opciones': return `<div role="radiogroup" aria-label="Opciones de respuesta">${ej.opciones.map((o,i)=>
-        `<button class="btn" role="radio" aria-checked="false" onclick="responder(ejActual.opciones[${i}])">${o}</button>`).join('')}</div>`;
+    // Botones de acción única (tocar = responder de una), no un selector que quede marcado —
+    // role="radio"/aria-checked implicaba un estado persistente que estos botones nunca tenían
+    // (aria-checked se quedaba fijo en "false" siempre). role="group" describe lo que son.
+    case 'sino': return `<div class="opt" role="group" aria-label="Sí o no">
+        <button class="btn" onclick="responder(true)">Sí</button>
+        <button class="btn" onclick="responder(false)">No</button></div>`;
+    case 'cmp': return `<div class="opt" role="group" aria-label="Comparación">
+        <button class="btn" onclick="responder('<')">&lt;</button>
+        <button class="btn" onclick="responder('=')">=</button>
+        <button class="btn" onclick="responder('>')">&gt;</button></div>`;
+    case 'opciones': return `<div role="group" aria-label="Opciones de respuesta">${ej.opciones.map((o,i)=>
+        `<button class="btn" onclick="responder(ejActual.opciones[${i}])">${o}</button>`).join('')}</div>`;
     case 'num': return `
         <div class="numRow">
           <button type="button" class="btn sec signo" onclick="toggleSigno('inNum')">±</button>
-          <input class="campo" id="inNum" inputmode="numeric" autocomplete="off" placeholder="Tu respuesta">
+          <input class="campo" id="inNum" inputmode="decimal" autocomplete="off" placeholder="Tu respuesta">
         </div>
         <button class="btn amar" style="margin-top:10px" onclick="responder()">Comprobar</button>`;
     case 'texto': return `
@@ -2251,9 +2337,11 @@ function pintarEjercicio(){
           placeholder="Tu proceso (opcional) — escribe aquí los pasos antes de responder">${(respondido || vioExpl) ? escHtml(ultimoProceso) : ''}</textarea>
         ${entradaHTML(ejActual)}
       </div>
+      <div id="zonaPista"></div>
       <div id="zonaFb"></div>
       <div class="row" id="accionesPre">
         <button class="btn sec chico" onclick="saltarEjercicio()">Saltar</button>
+        <button class="btn sec chico" onclick="verPista()">Pista</button>
         <button class="btn sec chico" onclick="verExplicacion()">Ver explicación</button>
       </div>
     </div>
@@ -2261,8 +2349,8 @@ function pintarEjercicio(){
       <div class="racha">
         <div><b>${sesionTotal - sesionHechos}/${sesionTotal}</b><span>te faltan</span></div>
         <div><b>${racha.actual}</b><span>racha actual</span></div>
-        <button class="${agruparTema?'on':''}" onclick="toggleAgrupar()"><b>${agruparTema?'Sí':'No'}</b><span>agrupar por tema</span></button>
-        <button class="${repetirFallo?'on':''}" onclick="toggleRepetir()"><b>${repetirFallo?'Sí':'No'}</b><span>repetir si fallo</span></button>
+        <button class="${agruparTema?'on':''}" onclick="toggleAgrupar()"><b>${agruparTema?'Sí':'No'}</b><span>agrupar</span></button>
+        <button class="${repetirFallo?'on':''}" onclick="toggleRepetir()"><b>${repetirFallo?'Sí':'No'}</b><span>repetir</span></button>
       </div>
     </div>`;
   const primero = $('inNum') || $('inTexto') || $('inE') || $('inN');
@@ -2332,7 +2420,10 @@ function responder(valor){
   ultimoFeedback = res;
   ultimoProceso = ($('inProceso') || {}).value || '';
   if(modoErrores){
-    if(res.ok){ errores.shift(); guardar('mate_errores_v1', errores); }
+    // acierto → sale de la lista. Fallo → se manda al final en vez de quedarse en el frente,
+    // o "Siguiente ejercicio" volvía a mostrar EXACTAMENTE la misma pregunta que acabas de fallar
+    if(res.ok){ errores.shift(); } else { errores.push(errores.shift()); }
+    guardar('mate_errores_v1', errores);
   } else {
     if(!vioExpl) anotar(ejActual.__mod, res.ok);
     if(!vioExpl && res.ok) sesionCorrectos++;
@@ -2363,10 +2454,12 @@ function mostrarFb(res, soloAviso){
       ${vioExpl ? `<small>Este no cuenta para las estadísticas (viste la explicación antes).</small>` : ''}
     </div>
     ${explHTML()}
-    <button class="btn amar" onclick="${sigOnclick}">Siguiente ejercicio</button>`;
+    <button class="btn amar" onclick="${sigOnclick}">Siguiente ejercicio</button>
+    ${!modoErrores ? `<button class="btn sec chico" style="margin-top:8px" onclick="otroDelMismoTema()">Otro de este tema<small>no gasta tu ronda</small></button>` : ''}`;
   $('zonaEntrada').style.opacity = '.5';
   $('zonaEntrada').style.pointerEvents = 'none';
   $('accionesPre').style.display = 'none';
+  $('zonaPista').innerHTML = '';
   zona.scrollIntoView({behavior:'smooth', block:'start'});
 }
 
@@ -2391,6 +2484,26 @@ const explHTML = () => `
 function saltarEjercicio(){
   if(respondido) return;
   nuevoEjercicio(esTemaFijo ? modActual.id : capFijo ? capFijo : undefined, true);
+}
+// Muestra solo el atajo (TRUCO) sin revelar la respuesta ni el resto de "Por qué" — a
+// diferencia de "Ver explicación", NO marca vioExpl: el ejercicio sigue contando para las
+// estadísticas si lo respondes bien después de leer la pista.
+function verPista(){
+  if(respondido) return;
+  const trucos = (ejActual.explicacion || []).filter(l => /^TRUCO:/.test(l)).map(l => l.replace(/^TRUCO:\s*/,''));
+  if(!trucos.length) return;
+  const t = trucos[0];
+  $('zonaPista').innerHTML = `<div class="truco"><b>PISTA</b>${(t.charAt(0).toUpperCase()+t.slice(1))
+    .replace(/ ((?:Otro )?Ejemplos?\b[^:]{0,40}:)/g, '<br>$1')}</div>`;
+}
+// Genera otro ejercicio del MISMO tema, con otros números, sin tocar sesionHechos/sesionCola
+// — para seguir practicando ese tema puntual sin gastar un puesto de la ronda en curso.
+function otroDelMismoTema(){
+  ejActual = modActual.gen(nivel);
+  ejActual.__mod = modActual.id;
+  respondido = false; vioExpl = false; ordenSel = []; ultimoFeedback = null; ultimoProceso = '';
+  pintarEjercicio();
+  guardarSesion();
 }
 function verExplicacion(){
   if(respondido) return;             // ya contestó de verdad: eso sí queda cerrado
@@ -2508,6 +2621,9 @@ function finalizarExamen(){
   const total = examen.preguntas.length;
   const correctas = examen.preguntas.filter(p=>p.ok===true).length;
   const nota = Math.round(correctas*100/total);
+  examenes.unshift({ fecha: fechaLocal(), correctas, total });
+  examenes = examenes.slice(0, 30);
+  guardar('mate_examenes_v1', examenes);
   main.innerHTML = `
     <div class="card">
       <h2>Resultado del examen</h2>
@@ -2556,6 +2672,11 @@ function pantallaStats(){
       <p style="margin-bottom:12px">Vas al <b>${pct(stats[flojo.id])}%</b> en <b>${flojo.nombre}</b>. Es el que más te conviene repasar.</p>
       <button class="btn amar" onclick="practicarTema('${flojo.id}')">Practicar ${flojo.nombre}</button>
     </div>` : ''}
+    ${examenes.length ? `<div class="card">
+      <h2>Exámenes</h2>
+      ${examenes.slice(0,5).map(e => `<div class="stat"><div class="lbl"><span>${e.fecha}</span>
+        <b>${e.correctas}/${e.total} · ${Math.round(e.correctas*100/e.total)}%</b></div></div>`).join('')}
+    </div>` : ''}
     <div class="card">
       <h2>Últimos 14 días</h2>
       <div style="display:flex;gap:4px;align-items:flex-end;height:50px">
@@ -2582,7 +2703,7 @@ function pantallaStats(){
 function _historialUltimosDias(n){
   const out = [];
   for(let i=n-1; i>=0; i--){
-    const d = new Date(Date.now()-i*86400000).toISOString().slice(0,10);
+    const d = fechaHaceDias(i);
     out.push({ dia:d, n: historial[d]||0 });
   }
   return out;
@@ -2593,7 +2714,7 @@ function exportarRespaldo(){
   const blob = new Blob([JSON.stringify(datos)], {type:'application/json'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'mate-respaldo-'+new Date().toISOString().slice(0,10)+'.json';
+  a.download = 'mate-respaldo-'+fechaLocal()+'.json';
   a.click();
 }
 function importarRespaldo(file){
@@ -2613,12 +2734,16 @@ function importarRespaldo(file){
 }
 function practicarTema(id){ ir('practica', id); }
 function borrarProgreso(){
-  confirmarAccion('¿Borrar todas tus estadísticas y la racha?', () => {
-    stats = {}; racha = { actual:0, mejor:0 };
+  // el botón dice "Borrar MI PROGRESO" — antes solo tocaba stats/racha y dejaba el heatmap
+  // de días, la racha de días y los errores guardados intactos, sin avisarlo
+  confirmarAccion('¿Borrar todo tu progreso? Se borran las estadísticas por tema, la racha, el historial de días practicados y tus errores guardados.', () => {
+    stats = {}; racha = { actual:0, mejor:0 }; historial = {}; rachaDias = { actual:0, mejor:0, ultimoDia:null }; errores = [];
     guardar('mate_stats_v1', stats); guardar('mate_racha_v1', racha);
+    guardar('mate_historial_v1', historial); guardar('mate_racha_dias_v1', rachaDias); guardar('mate_errores_v1', errores);
     // sin {merge:true}: un merge con {} no borra nada en Firestore, hay que reemplazar el
-    // documento entero (por eso van también nivel/clase, para no perderlos de paso)
-    if(syncDoc) syncDoc.set({ stats, racha, nivel, clase: clase||null }).catch(()=>{});
+    // documento entero — grupos va también ahora, o el próximo set() sin merge se lo llevaba
+    // por delante en el otro aparato (bug real: "Borrar mi progreso" borraba tus grupos remotos)
+    if(syncDoc) syncDoc.set({ stats, racha, nivel, clase: clase||null, grupos }).catch(()=>{});
     pantallaStats();
   });
 }
@@ -2655,7 +2780,7 @@ function pantallaElegirTemas(){
 }
 function _pintarElegirTemas(){
   main.innerHTML = `
-    <button class="back" onclick="ir('inicio')">← Inicio</button>
+    <button class="back" onclick="ir('temas')">← Temas</button>
     <div class="card">
       <h2>Elige los temas a mezclar</h2>
       <div class="nota">Marca cualquier combinación de temas, de cualquier capítulo — por
@@ -2672,7 +2797,7 @@ let grupoEditando = null;   // id del grupo en edición, o null si se está crea
 function pantallaGrupos(){
   _barra('temas');
   main.innerHTML = `
-    <button class="back" onclick="ir('inicio')">← Inicio</button>
+    <button class="back" onclick="ir('temas')">← Temas</button>
     <div class="card">
       <h2>Grupos de examen</h2>
       <div class="nota">Junta los capítulos o temas que entran en cada examen, ponle un
@@ -2755,7 +2880,7 @@ function borrarGrupo(id){
 function pantallaSync(){
   _barra('ajustes');
   main.innerHTML = `
-    <button class="back" onclick="ir('inicio')">← Inicio</button>
+    <button class="back" onclick="ir('ajustes')">← Ajustes</button>
     <div class="card">
       <h2>Sincronizar entre aparatos</h2>
       ${syncCode ? `
@@ -2803,7 +2928,7 @@ function _desconectarYRefrescar(){
 function pantallaClase(){
   _barra('ajustes');
   main.innerHTML = `
-    <button class="back" onclick="ir('inicio')">← Inicio</button>
+    <button class="back" onclick="ir('ajustes')">← Ajustes</button>
     <div class="card">
       <h2>Material de clase</h2>
       <p style="font-size:.93rem;color:var(--muted);margin-bottom:12px">
@@ -2857,6 +2982,7 @@ function mostrarAnalisis(a, fuente){
       <div class="fb medio">No reconocí ningún tema en ${fuente}.
         <small>Puedes elegirlos a mano abajo.</small></div>
       ${listaCheckHTML(MODULOS)}
+      <div id="zonaClaseMsg"></div>
       <button class="btn amar" onclick="guardarClase()">Usar estos temas</button>`;
     seleccion = [];
     return;
@@ -2871,6 +2997,7 @@ function mostrarAnalisis(a, fuente){
       <summary style="cursor:pointer;font-size:.88rem;color:var(--muted)">Ver los demás temas</summary>
       <div style="margin-top:8px">${listaCheckHTML(MODULOS.filter(m => a.detectados.indexOf(m) < 0), a)}</div>
     </details>
+    <div id="zonaClaseMsg"></div>
     <button class="btn amar" onclick="guardarClase()">Practicar solo estos temas</button>`;
 }
 
@@ -2894,8 +3021,9 @@ function toggleMod(id, on){
   const cta = $('ctaMezclaCount'); if(cta) cta.textContent = tamanoMezcla(seleccion) + ' preguntas';
 }
 function guardarClase(){
-  if(!seleccion.length) return $('zonaClase').insertAdjacentHTML('beforeend',
-    `<div class="fb medio">Marca al menos un tema.</div>`);
+  // innerHTML= en su propia zona (no insertAdjacentHTML en zonaClase entera) — si no, cada
+  // toque de "Practicar solo estos temas" sin marcar nada apilaba otro aviso más debajo del anterior
+  if(!seleccion.length) return $('zonaClaseMsg').innerHTML = `<div class="fb medio">Marca al menos un tema.</div>`;
   const secs = analisis && analisis.secciones.length ? analisis.secciones : null;
   const etiqueta = secs
     ? (secs.length > 1 ? `${secs[0]}–${secs[secs.length-1]}` : secs[0])
@@ -2973,6 +3101,62 @@ function autotest(){
   chk('mixto 1 7/4 → incompleto',         verificar(ejM,{e:'1',n:'7',d:'4'}).incompleto === true);
   chk('mixto 2 3/4 → ok',                 verificar(ejM,{e:'2',n:'3',d:'4'}).ok === true);
 
+  lineas.push('', '── validez geométrica y unicidad (2ª auditoría) ──');
+  {
+    let malTri=0, malTrapArea=0, malTrapPerim=0;
+    for(let i=0;i<3000;i++){
+      const e = MOD_POR_ID['perimetro-area']._gen('dificil');
+      let m;
+      if((m=e.enunciado.match(/triángulo con lados (\d+), (\d+) y (\d+)/))){
+        const [a,b,c]=m.slice(1).map(Number);
+        if(a+b<=c || a+c<=b || b+c<=a) malTri++;
+      }
+      if((m=e.enunciado.match(/trapecio con bases (\d+) y (\d+)/)) && m[1]===m[2]) malTrapArea++;
+      if((m=e.enunciado.match(/trapecio con lados (\d+), (\d+), (\d+) y (\d+)/))){
+        const [B,b2,l1,l2]=m.slice(1).map(Number);
+        if(l1+l2 <= B-b2) malTrapPerim++;
+      }
+    }
+    chk('triángulos generados siempre cumplen la desigualdad triangular', malTri===0);
+    chk('trapecio (área) nunca genera las dos bases iguales',             malTrapArea===0);
+    chk('trapecio (perímetro) los lados no paralelos alcanzan a cerrarlo', malTrapPerim===0);
+  }
+  {
+    let iguales=0;
+    for(let i=0;i<1000;i++){
+      const e = MOD_POR_ID['mcm-listado'].gen('facil');
+      const m = e.enunciado.match(/de <b>(\d+)<\/b> y <b>(\d+)<\/b>/);
+      if(m && m[1]===m[2]) iguales++;
+    }
+    chk('MCM por listado nunca compara un número consigo mismo', iguales===0);
+  }
+
+  lineas.push('', '── fechas locales y racha de días (2ª auditoría) ──');
+  chk('fechaLocal usa el calendario local, no UTC (toISOString usaba UTC)', fechaLocal(new Date(2026,0,15,23,30)) === '2026-01-15');
+  {
+    const hoy = new Date(), ayerEsperado = new Date(hoy); ayerEsperado.setDate(hoy.getDate()-1);
+    chk('fechaHaceDias(1) es el día de calendario anterior a hoy', fechaHaceDias(1) === fechaLocal(ayerEsperado));
+  }
+  {
+    const _backup = rachaDias;
+    rachaDias = { actual:5, mejor:5, ultimoDia: fechaHaceDias(3) };
+    chk('racha de días caduca si pasó más de 1 día sin practicar', _rachaDiasVigente() === 0);
+    rachaDias = { actual:5, mejor:5, ultimoDia: fechaHaceDias(1) };
+    chk('racha de días sigue viva si se practicó ayer',            _rachaDiasVigente() === 5);
+    rachaDias = _backup;
+  }
+  {
+    const _backupErrores = errores, _backupLS = localStorage.getItem('mate_errores_v1');
+    errores = [];
+    _registrarError({ __mod:'divisibilidad', enunciado:'¿Es 10 divisible por 2?' });
+    _registrarError({ __mod:'divisibilidad', enunciado:'¿Es 10 divisible por 2?' });
+    chk('_registrarError no duplica el mismo fallo repetido seguido', errores.length === 1);
+    _registrarError({ __mod:'divisibilidad', enunciado:'¿Es 7 divisible por 2?' });
+    chk('_registrarError sí agrega un fallo distinto', errores.length === 2);
+    errores = _backupErrores;
+    if(_backupLS === null) localStorage.removeItem('mate_errores_v1'); else localStorage.setItem('mate_errores_v1', _backupLS);
+  }
+
   lineas.push('', '── modo clase ──');
   const a1 = analizarTexto('Homework on 3.1 - 3.3 due Friday');
   chk('rango 3.1-3.3 → 3 secciones',      eq(a1.secciones, ['3.1','3.2','3.3']));
@@ -2983,6 +3167,7 @@ function autotest(){
   chk('claves en inglés (LCM/GCF)',       a3.detectados.some(m=>m.id==='mcd') && a3.detectados.some(m=>m.id.indexOf('mcm')===0));
   chk('3.14 no se cuela como sección',    analizarTexto('pi vale 3.14').secciones.length === 0);
   chk('texto vacío no detecta nada',      analizarTexto('').detectados.length === 0);
+  chk('"corporate" no dispara la clave "rate" (límite de palabra en los 2 lados)', !analizarTexto('the corporate structure').detectados.some(m=>m.id==='razones'));
 
   const total = lineas.filter(l => /^(  ok  |FALLA)/.test(l)).length;
   main.innerHTML = `<div class="card">
@@ -2997,7 +3182,7 @@ function autotest(){
 aplicarTema();
 if(location.search.indexOf('test') >= 0) autotest();
 else if(!restaurarSesion()) pantallaInicio();
-if(syncCode) _reengancharSync();
+if(syncCode) _reengancharSync().catch(()=>{});
 
 // ── SERVICE WORKER (PWA offline) ──
 if('serviceWorker' in navigator){
@@ -3011,6 +3196,9 @@ if('serviceWorker' in navigator){
   let _swWasControlled = !!navigator.serviceWorker.controller;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if(!_swWasControlled){ _swWasControlled = true; return; }  // primera instalación
+    // Si hay una pregunta sin responder a medio escribir, el reload la tiraba sin avisar —
+    // se pospone hasta el próximo cambio de pantalla real (ir() lo aplica al entrar).
+    if(ejActual && !respondido && !examen){ _swReloadPendiente = true; return; }
     window.location.reload();
   });
 }

@@ -17,7 +17,7 @@ con sincronización opcional entre aparatos vía Firebase.
 
 ```
 Mate/
-├── index.html      # todo: HTML + CSS + JS (~2000 líneas)
+├── index.html      # todo: HTML + CSS + JS (~3150 líneas)
 ├── manifest.json   # PWA manifest
 ├── sw.js           # Service Worker — sube el número de versión (mate-vN) en cada deploy
 ├── icons/          # 4 íconos PWA (generados con un <canvas>, sin herramienta externa)
@@ -27,8 +27,11 @@ Mate/
 ## Cómo probar / desplegar
 
 - Abrir `index.html?test` corre `autotest()`: 200 tiradas × 3 niveles × cada uno de los
-  25 módulos, más casos borde de `verificar()` y de `analizarTexto()`. Debe decir "Las 107
-  comprobaciones PASAN".
+  25 módulos, más casos borde de `verificar()`/`analizarTexto()`, validez geométrica
+  (triángulos/trapecios generados), unicidad (MCM de un número consigo mismo), fechas
+  locales (`fechaLocal`/`fechaHaceDias`), caducidad de la racha de días y deduplicado de
+  `_registrarError` — el número exacto de comprobaciones lo dice el propio resultado (no
+  lo hardcodees en la doc, sumó ~14 en la auditoría de 2026-09-16 respecto a las 107 de antes).
 - `node --check index.html` no sirve directo (es HTML) — hay que extraer el `<script>` a un
   `.js` primero. El autotest de arriba ya cubre errores de sintaxis igual.
 - Deploy: `git push` a `main` — GitHub Pages redespliega solo en 1-2 minutos. **Subir
@@ -63,10 +66,20 @@ ejemplo: ..."), con números, no en abstracto — también fue pedido explícito
 autotest verifica que exista: si algún `return` de un `gen()` se queda sin línea `TRUCO:`,
 ese módulo FALLA (contador `sinTruco`).
 
-Los `tipo` de entrada (7): `sino`, `cmp`, `opciones`, `num`, `texto`, `frac`, `mixto`,
+Los `tipo` de entrada (8): `sino`, `cmp`, `opciones`, `num`, `texto`, `frac`, `mixto`,
 `orden`. `entradaHTML()` decide qué pintar según el tipo; `verificar()` decide si la
-respuesta es correcta, para los 7 sin excepción. Si se agrega un módulo, casi seguro
+respuesta es correcta, para los 8 sin excepción. Si se agrega un módulo, casi seguro
 reutiliza uno de estos — no crear un tipo nuevo sin necesidad real.
+`inputmode` del tipo `num` es `"decimal"`, no `"numeric"` — varios módulos (promedio,
+círculo) dan respuesta con decimales, y `"numeric"` no muestra el punto en iOS.
+
+**"Pista" vs "Ver explicación" (2026-09-16):** dos botones distintos con una diferencia de
+propósito, no solo de contenido. `verPista()` solo muestra la línea `TRUCO:` (en `#zonaPista`,
+separado de `#zonaFb`) y **no** marca `vioExpl` — el ejercicio sigue contando para las
+estadísticas si lo respondes bien después. `verExplicacion()` muestra todo "Por qué" y sí
+marca `vioExpl` (te descalifica esa respuesta de las estadísticas), como siempre. Si agregas
+un tercer "botón de ayuda", decide primero si debe descalificar o no y sigue el patrón que
+corresponda — no asumas que toda ayuda debe marcar `vioExpl`.
 
 ## Modos de práctica
 
@@ -117,9 +130,19 @@ Todos pasan por `responder()`, que se ramifica según el modo activo:
       arranques (`toggleAgrupar()`/`toggleRepetir()` solo repintan la pantalla actual).
 - **Examen** (`examen` no-null): 10 preguntas, 10 minutos, sin "Saltar" ni "Ver
   explicación", sin feedback por pregunta — todo se revela en la pantalla de resultado al
-  final. No cuenta para `stats` ni para el historial (es una prueba, no práctica). Sortea
-  siempre de `MODULOS` completo (`elegirDe(MODULOS)`, no `elegirModulo()`) — a propósito NO
-  respeta ninguna mezcla/grupo activo, ni la vieja `clase` ni los grupos de examen nuevos.
+  final. No cuenta para `stats` ni para el historial (es una prueba, no práctica) pero sí
+  queda en `mate_examenes_v1` (nota/fecha, ver tabla de localStorage), y esas 3-5 más
+  recientes aparecen en Progreso si hay alguna. Sortea siempre de `MODULOS` completo
+  (`elegirDe(MODULOS)`, no `elegirModulo()`) — a propósito NO respeta ninguna mezcla/grupo
+  activo, ni la vieja `clase` ni los grupos de examen nuevos.
+  **Sin punto de entrada desde la UI (2026-09-16, auditoría) — código muerto por ahora.**
+  `ir('examen')`/`iniciarExamen()` siguen intactos y funcionan si se llaman, pero ningún
+  botón hace ese llamado desde que el commit `c5303a5` reemplazó el botón suelto "Modo
+  examen" de Inicio por "Grupos de examen". La forma obvia de revivirlo — un botón
+  "Simular examen" colgando de cada grupo en `pantallaGrupos()` — se propuso y la usuaria
+  la declinó por ahora; no la agregues sin que lo pida. Si necesitas exponerlo de nuevo,
+  pregunta primero cómo (¿botón suelto como antes? ¿atado a un grupo? ¿otro lado?) — las
+  dos veces que se tocó este tema hubo una decisión de UX real detrás, no fue descuido.
 - **Repasar errores** (`modoErrores`): cicla la lista `errores` (últimos 30 fallos
   reales, más reciente primero); si aciertas se quita de la lista.
 
@@ -200,11 +223,18 @@ según `modoErrores` — si se agrega un cuarto modo, hay que tocar ese `sigOncl
 
 ## localStorage — todas las claves (prefijo `mate_`)
 
+**Fecha "de hoy" — usa `fechaLocal()`/`fechaHaceDias(n)`, nunca `toISOString().slice(0,10)`.**
+`toISOString()` da la fecha en UTC; en Puerto Rico (UTC-4) cualquier cosa después de las 8 pm
+caía en el día siguiente — bug real (2026-09-16): el heatmap de "Últimos 14 días" pintaba la
+barra equivocada y la racha de días se rompía a media noche LOCAL en vez de a media noche
+real. Los dos helpers viven junto a `guardar`/`leer`, arriba del todo de "ALMACENAMIENTO".
+
 | Clave | Contenido |
 |---|---|
 | `mate_nivel_v1` | `'facil'` / `'medio'` / `'dificil'` |
 | `mate_clase_v1` | `{ etiqueta, mods:[] }` — la mezcla ACTIVA ahora mismo (personalizada, detectada del material de clase, o copiada de un grupo al tocar "Practicar") |
-| `mate_grupos_v1` | `[{id, nombre, mods:[]}]` — grupos de examen guardados (ej. "Examen 1" = cap. 1 y 2); **no sincroniza entre aparatos**, a propósito (ver más abajo) |
+| `mate_grupos_v1` | `[{id, nombre, mods:[]}]` — grupos de examen guardados (ej. "Examen 1" = cap. 1 y 2); **sí sincroniza entre aparatos** (2026-09-13), ver "Grupos de examen" más abajo — la nota vieja aquí decía "no sincroniza, a propósito" y estaba desactualizada/contradecía esa sección; no vuelvas a escribirla sin corregir la otra |
+| `mate_examenes_v1` | `[{fecha, correctas, total}]`, tope 30 — resultados de "Modo examen" (ver más abajo, sección "Modo examen"); se sigue guardando aunque el modo esté sin botón que lo abra |
 | `mate_agrupar_v1` / `mate_repetir_v1` | `true`/`false` — los dos ajustes de la fila de estadísticas en práctica (agrupar por tema / repetir si fallo, ver "Modos de práctica") |
 | `mate_stats_v1` | `{ modId: {ok, fallo} }` |
 | `mate_racha_v1` | `{ actual, mejor }` — racha de aciertos seguidos |
@@ -266,9 +296,22 @@ hace falta tocarlo porque `_pantallaActual` ya nace en `null`.
 ## CSS — variables de color
 
 Desde el rediseño "vidrio esmerilado" (estilo Fit-F, commit `cfd47a5`) la app ya no tiene
-azul de marca — `--azul`/`--azul2`/`--azul3`/`--blanco` quedaron declaradas pero **sin
-ningún uso real** (solo aparecen en comentarios); no las reutilices para nada nuevo, es
-código muerto que puede borrarse el día que se limpie a fondo.
+azul de marca — `--azul`/`--azul2`/`--azul3`/`--blanco`/`--acento2`/`--sombra` ya NO existen
+(se borraron en la auditoría de 2026-09-16, no tenían ningún `var(--x)` real en todo el
+archivo). `manifest.json` (`background_color`/`theme_color`) y el `OFFLINE_HTML` de `sw.js`
+también usaban ese azul viejo `#1e2a52` — ya corregidos a `#d2d2da` (mismo color que el
+`<meta name="theme-color">` del HTML); si cambias la paleta de la app, revisa esos dos
+archivos también, no solo `index.html`.
+
+**`.btn` sin `backdrop-filter` propio (2026-09-16) — batería.** `.btn`/`.chip`/`.card`
+viven siempre unos DENTRO de otros (un botón siempre está sobre una `.card` ya esmerilada),
+y cada `backdrop-filter` es una capa de composición GPU aparte — en pantallas como "Temas"
+llegaban a coexistir 50+ elementos con blur a la vez. Se quitó de `.btn` (sin cambio visual,
+ya que el blur de la `.card` de abajo sigue ahí); **`.chip` y `.calcGrid button` se dejaron
+con su blur tal cual** — mismo razonamiento, mismo candidato, pero no se tocaron todavía
+(pendiente de una segunda pasada, no lo hagas sin confirmar primero, ver la regla de UI de
+arriba). Si quitas más `backdrop-filter`, comprueba visualmente que de verdad no cambia nada
+antes de asumirlo — depende de la opacidad del elemento y de qué haya debajo.
 
 Los roles que SÍ están vivos y que NO deben mezclarse (fue un bug real, ver el punto de
 "doble papel" en el commit del modo oscuro):
@@ -322,7 +365,17 @@ la clase `.overlay`) con las 4 operaciones básicas, signo, porcentaje y decimal
 `calcOp()`/`calcIgual()` en `index.html`. No toca ninguna variable de la sesión de
 práctica (`sesionHechos`, `ejActual`, etc.) — es una herramienta aparte, sin persistencia
 (cada vez que se abre arranca en `0`). `ir()` la cierra al cambiar de pantalla
-(`cerrarCalc()`), igual que hace con la tarjeta de "Grupos de examen".
+(`cerrarCalc()`), igual que hace con la tarjeta de "Grupos de examen". Tiene teclado físico
+(2026-09-16): dígitos, `+-*/`, `.`/`,`, `%`, Enter/`=`, Escape, Backspace — un solo listener
+en `document` que solo actúa mientras `#calcOv` está `display:flex`.
+
+**`.app` padding-bottom (140px) tiene que cubrir toda la altura del botón, no solo la
+barra.** `.calcBtn` mide 52px y su borde de arriba queda a `76+52=128px` del fondo — con
+menos padding que eso, la mitad de arriba del botón tapaba el último elemento visible de
+cualquier pantalla (bug real: tapaba "repetir si fallo" en la fila de estadísticas de
+práctica), y esto pasaba SIEMPRE, no solo con `.bottom-nav` oculta — el padding no depende
+de la barra. Si cambias el tamaño o la posición de `.calcBtn`, revisa que el padding lo
+siga cubriendo.
 
 **Ojo con el z-index si tocas overlays:** `.bottom-nav` quedó en `z-index:400` (copiado
 tal cual de Fit-F). `.overlay` — la clase que ya usaban `confirmarAccion()`/`avisar()`, y
