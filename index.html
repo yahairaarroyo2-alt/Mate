@@ -666,7 +666,15 @@ const MODULOS = [
     const alto = porNivel(nv, 15, 40, 99);
     const n = R(1, alto);
     const T = `TRUCO: las barras borran el signo de lo que quede adentro, sin importar cuántos menos haya. Hazlo siempre en este orden: 1) resuelve TODO lo de adentro, 2) quítale el signo, 3) recién ahí mira lo de afuera. Un menos que esté FUERA de las barras sobrevive siempre. Ejemplo con este mismo número: |−${n}| = ${n} porque las barras le borran el menos, pero −|${n}| = −${n}, porque ese menos está afuera y no lo borra nadie.`;
-    const variante = pick(['simple','neg-fuera','doble-neg','doble-neg-resta']);
+    const variante = pick(['simple','neg-fuera','doble-neg','doble-neg-resta','opuesto']);
+    if(variante==='opuesto'){
+      const m = pick([1,-1])*n;
+      return { enunciado:`Halla el opuesto de <b>${mm(m)}</b>.`, tipo:'num', respuesta:-m,
+        explicacion:[`El "opuesto" (o inverso aditivo) de un número es el que está a la MISMA distancia del 0, pero del otro lado — se obtiene solo cambiándole el signo.`,
+          `${mm(m)} está a ${Math.abs(m)} unidades del 0; su opuesto está también a ${Math.abs(m)} unidades, pero del otro lado.`,
+          `→ el opuesto de ${mm(m)} es ${mm(-m)}`,
+          `TRUCO: opuesto = cambiar el signo, nada más — si es positivo se vuelve negativo y viceversa, el valor sin el signo NUNCA cambia. No lo confundas con el valor absoluto: |${mm(m)}| = ${Math.abs(m)} (siempre positivo, pierde el signo), pero el opuesto de ${mm(m)} es ${mm(-m)} (se queda con signo, solo que al revés).`] };
+    }
     if(variante==='simple'){
       const m = pick([1,-1])*n;
       return { enunciado:`Calcula: | ${mm(m)} |`, tipo:'num', respuesta:n,
@@ -741,6 +749,63 @@ const MODULOS = [
   }
 },
 {
+  id:'comparar-enteros', nombre:'Comparar enteros', secciones:['1.2'],
+  gen(nv){
+    const alto = porNivel(nv, 15, 40, 99);
+    let a = R(-alto,alto), b = R(-alto,alto);
+    if(Math.random()<0.15) b = a;
+    const s = cmpSigno(a,b);
+    const posA = a<0?`${Math.abs(a)} unidades a la izquierda del 0`:a>0?`${a} unidades a la derecha del 0`:'exactamente en el 0';
+    const posB = b<0?`${Math.abs(b)} unidades a la izquierda del 0`:b>0?`${b} unidades a la derecha del 0`:'exactamente en el 0';
+    const razon = (a<0&&b<0) ? `los dos son negativos, así que compara ${Math.abs(a)} y ${Math.abs(b)} y GANA el que tenga el valor absoluto más CHICO`
+                : (a>=0&&b>=0) ? 'los dos son positivos o cero, así que compara normal — gana el número más grande'
+                : 'uno es negativo y el otro positivo o cero — automáticamente gana el que no es negativo';
+    return { enunciado:`¿Qué signo va en el medio?<br>${mm(a)} &nbsp;___&nbsp; ${mm(b)}`, tipo:'cmp', respuesta:s,
+      explicacion:[`En la recta numérica, los números crecen de izquierda a derecha: mientras más a la derecha esté un número, más grande es — sin importar el signo.`,
+        `${mm(a)} está ${posA}, y ${mm(b)} está ${posB}.`,
+        `→ ${mm(a)} ${s} ${mm(b)}`,
+        `TRUCO: todo positivo es mayor que todo negativo, sin excepción — ni lo pienses. Si los dos son negativos, gana el que tiene el valor absoluto más CHICO (−2 es mayor que −10, aunque 10 "se vea más grande"). Ejemplo con estos mismos: ${razon} → ${mm(a)} ${s} ${mm(b)}.`] };
+  }
+},
+{
+  id:'problemas-enteros', nombre:'Problemas con enteros (aplicaciones)', secciones:['1.3'],
+  gen(nv){
+    const alto = porNivel(nv, 15, 30, 60);
+    const plantillas = [
+      () => { const a = R(-alto,alto), b = R(1,alto);
+        return { enunciado:`La temperatura era de <b>${mm(a)}°</b> y bajó <b>${b}°</b>. ¿Cuál es la temperatura ahora?`,
+          resp: a-b,
+          expl:[`"Bajar" una temperatura es restar. La operación es: ${mm(a)} − ${b}.`,
+            `Restar es sumar el opuesto: ${mm(a)} + (${mm(-b)}) = ${mm(a-b)}`,
+            `→ ${mm(a-b)}°`] }; },
+      () => { const a = R(-alto,-1), b = R(a+1,alto);
+        return { enunciado:`La temperatura subió de <b>${mm(a)}°</b> a <b>${mm(b)}°</b>. ¿Cuántos grados subió?`,
+          resp: b-a,
+          expl:[`El cambio se calcula restando la temperatura FINAL menos la INICIAL: ${mm(b)} − (${mm(a)}).`,
+            `Restar un negativo es sumar su opuesto: ${mm(b)} + ${-a} = ${b-a}`,
+            `→ subió ${b-a}°`] }; },
+      () => { const a = R(20,alto*2), b = R(1,a-5);
+        return { enunciado:`Tenías <b>$${a}</b> en tu cuenta y retiraste <b>$${b}</b>. ¿Cuál es tu nuevo balance?`,
+          resp: a-b,
+          expl:[`Retirar dinero es restar: ${a} − ${b}.`, `= ${a-b}`, `→ $${a-b}`] }; },
+      () => { const a = R(5,alto), b = R(5,alto);
+        return { enunciado:`Un buzo está a <b>${a} pies</b> bajo el nivel del mar y desciende <b>${b} pies</b> más. ¿A qué profundidad está ahora? <small style="opacity:.75">(el nivel del mar es 0; usa negativo para "bajo el nivel del mar")</small>`,
+          resp: -(a+b),
+          expl:[`El nivel del mar es 0. "Bajo el nivel del mar" se representa con números negativos, así que empieza en ${mm(-a)}.`,
+            `Descender más es restar (o sumar otro negativo): ${mm(-a)} − ${b} = ${mm(-(a+b))}`,
+            `→ ${mm(-(a+b))} pies`] }; },
+      () => { const a = R(1,alto), b = R(1,alto);
+        return { enunciado:`Un equipo de fútbol ganó <b>${a} yardas</b> en una jugada y perdió <b>${b} yardas</b> en la siguiente. ¿Cuál fue el cambio total?`,
+          resp: a-b,
+          expl:[`"Ganar" yardas es positivo y "perder" yardas es negativo: ${a} + (${mm(-b)}).`,
+            `= ${a-b}`, `→ ${a-b>=0?`ganó ${a-b} yardas en total`:`perdió ${Math.abs(a-b)} yardas en total`} (${mm(a-b)})`] }; }
+    ];
+    const t = pick(plantillas)();
+    return { enunciado: t.enunciado, tipo:'num', respuesta: t.resp, explicacion: t.expl.concat(
+      `TRUCO: en estos problemas, primero decide el signo de cada cantidad ANTES de operar — "bajar", "perder", "retirar", "bajo el nivel de" son negativos; "subir", "ganar", "depositar", "sobre el nivel de" son positivos. Una vez que tienes los signos correctos, es la suma/resta de enteros de siempre.`) };
+  }
+},
+{
   id:'orden-operaciones-1', nombre:'Orden de operaciones', secciones:['1.4'],
   gen(nv){
     const chico = porNivel(nv, 6, 10, 15);
@@ -783,6 +848,27 @@ const MODULOS = [
         `Paréntesis: ${a2} − ${b2} = ${agr2}`,
         `Ahora sí la multiplicación: ${agr2} × ${c2} = ${resp2}`,
         `TRUCO: el paréntesis es una "cajita cerrada": nada de afuera entra hasta que adentro quede un solo número. Resuélvelo, reemplázalo por ese número, y recién entonces sigue. Ejemplo con este mismo: (${a2} − ${b2}) × ${c2} → la cajita da ${agr2} → ${agr2} × ${c2} = ${resp2}. Multiplicando primero daría ${a2} − ${b2*c2}, que está mal.`] };
+  }
+},
+{
+  id:'potencias-10', nombre:'Potencias de 10', secciones:['1.4'],
+  gen(nv){
+    const k = R(2, porNivel(nv,3,5,6));
+    const d = R(1,9);
+    const N = d * Math.pow(10,k);
+    if(Math.random()<0.5){
+      return { enunciado:`Completa el exponente:<br><b>${N} = ${d} × 10<sup>?</sup></b>`, tipo:'num', respuesta:k,
+        explicacion:[`Cada vez que se multiplica por 10 se le agrega un cero al número.`,
+          `${N} tiene ${k} ceros después del ${d}, así que hubo que multiplicar por 10 un total de ${k} veces.`,
+          `→ el exponente es ${k}`,
+          `TRUCO: cuenta los ceros — esa cantidad ES el exponente. ${N} tiene ${k} ceros → 10${sup(k)}. No hace falta multiplicar nada, solo contar.`] };
+    }
+    return { enunciado:`Halla el valor: <b>${d} × 10<sup>${k}</sup></b>`, tipo:'num', respuesta:N,
+      explicacion:[`10 elevado a un exponente positivo da siempre un 1 seguido de esa cantidad de ceros.`,
+        `10${sup(k)} = ${Math.pow(10,k)} (un 1 con ${k} ceros)`,
+        `${d} × ${Math.pow(10,k)} = ${N}`,
+        `→ ${N}`,
+        `TRUCO: multiplicar por 10${sup(k)} es "pegarle" ${k} ceros al número, sin multiplicar nada de verdad. ${d} con ${k} ceros detrás es directamente ${N}.`] };
   }
 },
 {
@@ -986,6 +1072,23 @@ const MODULOS = [
 {
   id:'promedio', nombre:'Media aritmética (promedio)', secciones:['2.5'],
   gen(nv){
+    if(Math.random()<0.35){                                          // falta un dato, dado el promedio
+      const cuantos = R(3, porNivel(nv,4,5,6));
+      const media = R(porNivel(nv,8,15,25), porNivel(nv,30,60,100));
+      const total = media*cuantos;
+      const spread = porNivel(nv,6,12,20);
+      let conocidos, falta;
+      do {
+        conocidos = []; for(let i=0;i<cuantos-1;i++) conocidos.push(R(Math.max(1,media-spread), media+spread));
+        falta = total - conocidos.reduce((a,b)=>a+b,0);
+      } while(falta < 1 || falta > media*3);
+      return { enunciado:`El promedio de estos ${cuantos} números es <b>${media}</b>: ${conocidos.join(', ')}, y <b>x</b>. Halla x.`, tipo:'num', respuesta:falta,
+        explicacion:[`Si el promedio de ${cuantos} números es ${media}, la SUMA de todos ellos tiene que ser ${media} × ${cuantos} = ${total} (el promedio es la suma dividida entre la cantidad, así que al revés se multiplica).`,
+          `Suma de los que ya se conocen: ${conocidos.join(' + ')} = ${total-falta}`,
+          `Al número que falta (x) le toca completar hasta ${total}: x = ${total} − ${total-falta} = ${falta}`,
+          `→ x = ${falta}`,
+          `TRUCO: "deshaz" el promedio multiplicando por la cantidad de datos para recuperar la suma total; de ahí es una resta común para encontrar lo que falta. Comprobación: suma TODOS los números (incluyendo x = ${falta}) y divide entre ${cuantos}; tiene que dar ${media} otra vez.`] };
+    }
     const cuantos = R(3, porNivel(nv,4,5,6));
     const alto = porNivel(nv, 20, 100, 200);
     const vals = []; for(let i=0;i<cuantos;i++) vals.push(R(1,alto));
@@ -1837,9 +1940,9 @@ function fmtRespuesta(ej){
    ══════════════════════════════════════════════════════════ */
 const SECMAP = {
   '1.1': ['conjuntos-numericos'],
-  '1.2': ['valor-absoluto'],
-  '1.3': ['reglas-signos'],
-  '1.4': ['orden-operaciones-1'],
+  '1.2': ['valor-absoluto','comparar-enteros'],
+  '1.3': ['reglas-signos','problemas-enteros'],
+  '1.4': ['orden-operaciones-1','potencias-10'],
   '2.1': ['lenguaje-algebraico','traducir-algebra'],
   '2.2': ['propiedades'],
   '2.3': ['terminos-semejantes'],
@@ -1863,8 +1966,11 @@ const SECMAP = {
 const CLAVES = {
   'conjuntos-numericos': ['conjunto numérico','conjuntos numéricos','number set','naturales','números naturales','números enteros','racionales','irracionales','números reales','natural numbers','integers','rational numbers','irrational numbers','real numbers'],
   'valor-absoluto':    ['valor absoluto','absolute value'],
+  'comparar-enteros':  ['comparación de enteros','comparar enteros','comparing integers','recta numérica','number line'],
   'reglas-signos':     ['regla de signos','reglas de signos','signed numbers','integer rules','suma de enteros','resta de enteros','multiplying integers','dividing integers'],
+  'problemas-enteros': ['aplicación basada en resta','aplicaciones con enteros','temperatura','nivel del mar','sea level','integer word problem','integer applications'],
   'orden-operaciones-1': ['orden de operaciones','order of operations','pemdas','agrupación','grouping symbols'],
+  'potencias-10':      ['potencia de 10','potencias de 10','power of 10','powers of ten'],
   'lenguaje-algebraico': ['lenguaje algebraico','algebraic expression','algebraic expressions','coeficiente','variable','constante','coefficient','constant'],
   'traducir-algebra':  ['traducir','translate to algebra','palabra clave','key words','verbal expression'],
   'propiedades':       ['propiedad','propiedades','property','properties','conmutativa','asociativa','distributiva','identidad','commutative property','associative property','distributive property','identity property'],
