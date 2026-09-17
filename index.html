@@ -2957,11 +2957,9 @@ function pintarEjercicio(){
           placeholder="Tu proceso (opcional) — escribe aquí los pasos antes de responder">${(respondido || vioExpl) ? escHtml(ultimoProceso) : ''}</textarea>
         ${entradaHTML(ejActual)}
       </div>
-      <div id="zonaPista"></div>
       <div id="zonaFb"></div>
       <div class="row" id="accionesPre">
         <button class="btn sec chico" onclick="saltarEjercicio()">Saltar</button>
-        <button class="btn sec chico" onclick="verPista()">Pista</button>
         <button class="btn sec chico" onclick="verExplicacion()">Ver explicación</button>
       </div>
     </div>
@@ -3080,7 +3078,6 @@ function mostrarFb(res, soloAviso){
   $('zonaEntrada').style.opacity = '.5';
   $('zonaEntrada').style.pointerEvents = 'none';
   $('accionesPre').style.display = 'none';
-  $('zonaPista').innerHTML = '';
   zona.scrollIntoView({behavior:'smooth', block:'start'});
 }
 
@@ -3105,17 +3102,6 @@ const explHTML = () => `
 function saltarEjercicio(){
   if(respondido) return;
   nuevoEjercicio(esTemaFijo ? modActual.id : capFijo ? capFijo : undefined, true);
-}
-// Muestra solo el atajo (TRUCO) sin revelar la respuesta ni el resto de "Por qué" — a
-// diferencia de "Ver explicación", NO marca vioExpl: el ejercicio sigue contando para las
-// estadísticas si lo respondes bien después de leer la pista.
-function verPista(){
-  if(respondido) return;
-  const trucos = (ejActual.explicacion || []).filter(l => /^TRUCO:/.test(l)).map(l => l.replace(/^TRUCO:\s*/,''));
-  if(!trucos.length) return;
-  const t = trucos[0];
-  $('zonaPista').innerHTML = `<div class="truco"><b>PISTA</b>${(t.charAt(0).toUpperCase()+t.slice(1))
-    .replace(/ ((?:Otro )?Ejemplos?\b[^:]{0,40}:)/g, '<br>$1')}</div>`;
 }
 // Genera otro ejercicio del MISMO tema, con otros números, sin tocar sesionHechos/sesionCola
 // — para seguir practicando ese tema puntual sin gastar un puesto de la ronda en curso.
