@@ -325,8 +325,14 @@
   <div class="card calcCard">
     <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px">
       <h2 style="margin:0">Calculadora</h2>
-      <button onclick="cerrarCalc()" aria-label="Cerrar"
-        style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--texto);font-family:inherit;flex:none;width:auto">✕</button>
+      <div style="display:flex;align-items:center;gap:8px">
+        <button onclick="calcUsar()" id="calcUsarBtn" aria-label="Usar este resultado como respuesta"
+          style="background:rgba(255,255,255,.14);border:1.5px solid rgba(255,255,255,.35);border-radius:10px;
+          padding:5px 11px;font-size:.76rem;font-weight:700;cursor:pointer;color:var(--texto);font-family:inherit;
+          flex:none;width:auto;white-space:nowrap">↵ Usar</button>
+        <button onclick="cerrarCalc()" aria-label="Cerrar"
+          style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--texto);font-family:inherit;flex:none;width:auto">✕</button>
+      </div>
     </div>
     <div class="calcPantalla" id="calcPantalla">0</div>
     <div class="calcGrid">
@@ -2584,9 +2590,19 @@ function _calcRender(){
 function abrirCalc(){
   calcVal = '0'; calcNuevo = false; calcTokens = [];
   _calcRender();
+  // "Usar" solo tiene sentido si hay un campo de respuesta numérico simple donde ponerlo
+  // (tipo num, o frac como entero con denominador 1) — en mixto/ángulos/opciones no aplica
+  $('calcUsarBtn').style.display = ($('inNum') || ($('inN') && !$('inE'))) ? '' : 'none';
   $('calcOv').style.display = 'flex';
 }
 function cerrarCalc(){ $('calcOv').style.display = 'none'; }
+function calcUsar(){
+  if(calcVal === 'Error') return;
+  if($('inNum')) $('inNum').value = calcVal;
+  else if($('inN') && !$('inE')){ $('inN').value = calcVal; $('inD').value = '1'; }
+  else return;
+  cerrarCalc();
+}
 function calcDigito(d){
   if(calcNuevo || calcVal === '0'){ calcVal = d; calcNuevo = false; }
   else if(calcVal.length < 12) calcVal += d;
