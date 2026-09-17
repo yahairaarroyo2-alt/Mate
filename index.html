@@ -123,6 +123,8 @@
   .overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;
     justify-content:center;padding:20px;z-index:450}
   .overlay .card{max-width:360px;margin:0;width:100%}
+  /* la calculadora se abre pegada abajo, no en el centro, para no tapar el ejercicio que está arriba */
+  #calcOv{align-items:flex-end;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 92px)}
   /* chips de nivel / tema */
   .chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px}
   .chip{border:1.5px solid rgba(255,255,255,.45);background:rgba(255,255,255,.3);color:var(--muted);
