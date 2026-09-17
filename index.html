@@ -375,6 +375,29 @@ function fmtFactores(f){
   if(!ps.length) return '1';
   return ps.map(p => f[p]>1 ? p+sup(f[p]) : ''+p).join(' × ');
 }
+// dos rectas cruzadas: ∠1 = g (dado, en dorado), ∠2 = 180-g (adyacente), ∠3 = g (opuesto por el vértice)
+function svgCruce(g, uid){
+  const cx=150, cy=110, R=90, rArc=40, rTxt=60;
+  const rad = a => a*Math.PI/180;
+  const pt = (a,r) => ({ x:(cx + r*Math.cos(rad(a))).toFixed(1), y:(cy - r*Math.sin(rad(a))).toFixed(1) });
+  const p0=pt(0,R), p180=pt(180,R), pg=pt(g,R), pgOp=pt(g+180,R);
+  const t1=pt(g/2,rTxt), t2=pt((g+180)/2,rTxt), t3=pt(180+g/2,rTxt);
+  const arc = (a1,a2) => { const q1=pt(a1,rArc), q2=pt(a2,rArc); return `M ${q1.x} ${q1.y} A ${rArc} ${rArc} 0 0 1 ${q2.x} ${q2.y}`; };
+  return `<svg viewBox="0 0 300 200" style="width:100%;max-width:300px;height:auto;color:var(--texto);display:block;margin:10px auto 0" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="fe${uid}" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="currentColor"/></marker>
+      <marker id="fs${uid}" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse"><path d="M0,0 L8,4 L0,8 Z" fill="currentColor"/></marker>
+    </defs>
+    <line x1="${p180.x}" y1="${p180.y}" x2="${p0.x}" y2="${p0.y}" stroke="currentColor" stroke-width="2" marker-start="url(#fs${uid})" marker-end="url(#fe${uid})"/>
+    <line x1="${pgOp.x}" y1="${pgOp.y}" x2="${pg.x}" y2="${pg.y}" stroke="currentColor" stroke-width="2" marker-start="url(#fs${uid})" marker-end="url(#fe${uid})"/>
+    <path d="${arc(0,g)}" fill="none" stroke="var(--acento)" stroke-width="2"/>
+    <path d="${arc(g,180)}" fill="none" stroke="currentColor" stroke-width="1.3" opacity=".55"/>
+    <path d="${arc(180,180+g)}" fill="none" stroke="currentColor" stroke-width="1.3" opacity=".55"/>
+    <text x="${t1.x}" y="${t1.y}" fill="var(--acento)" font-size="16" font-weight="800" text-anchor="middle" dominant-baseline="middle">${g}°</text>
+    <text x="${t2.x}" y="${t2.y}" fill="currentColor" font-size="14" font-weight="700" text-anchor="middle" dominant-baseline="middle">∠2</text>
+    <text x="${t3.x}" y="${t3.y}" fill="currentColor" font-size="14" font-weight="700" text-anchor="middle" dominant-baseline="middle">∠3</text>
+  </svg>`;
+}
 function fmtFactoresPlano(f){
   const ps = Object.keys(f).map(Number).sort((a,b)=>a-b);
   if(!ps.length) return '1';
@@ -1142,6 +1165,21 @@ const MODULOS = [
   }
 },
 {
+  id:'angulos-figura', nombre:'Ángulos con figura (rectas que se cruzan)', secciones:['2.6'],
+  gen(nv){
+    const posibles = [20,25,30,35,40,45,50,55,60,65,70,75,80,100,105,110,115,120,125,130,135,140,145,150,155,160];
+    const g = pick(posibles), a2 = 180-g, a3 = g;
+    const uid = Math.random().toString(36).slice(2,8);
+    return { enunciado:`Dos rectas se cruzan. Si m∠1 = <b>${g}°</b> (en dorado), halla m∠2 y m∠3.${svgCruce(g,uid)}`,
+      tipo:'angulo2', respuesta:{a:a2, b:a3},
+      explicacion:[`Cuando dos rectas se cruzan se forman 4 ángulos alrededor del cruce, de dos en dos: los que están uno AL LADO del otro (adyacentes) suman 180° entre sí, y los que quedan uno ENFRENTE del otro (opuestos por el vértice) miden exactamente lo mismo.`,
+        `∠2 está al lado de ∠1 (adyacente), así que son suplementarios: ∠2 = 180° − ${g}° = ${a2}°`,
+        `∠3 está enfrente de ∠1 (opuesto por el vértice), así que mide lo mismo: ∠3 = ${g}°`,
+        `→ ∠2 = ${a2}°, ∠3 = ${a3}°`,
+        `TRUCO: en una "X" formada por dos rectas solo hay DOS valores distintos en total: el que te dan y su complemento a 180°. Los de enfrente (en espejo) son gemelos — mismo valor; los de al lado se completan hasta 180°. Ejemplo con esta misma figura: ${g}° y ${a2}° son los dos únicos valores; ∠1 y ∠3 comparten ${g}° (opuestos), y ∠2 tiene el otro valor, ${a2}° (adyacente).`] };
+  }
+},
+{
   id:'triangulos', nombre:'Triángulos según sus lados', secciones:['2.6'],
   gen(nv){
     const alto = porNivel(nv, 15, 25, 40);
@@ -1898,6 +1936,11 @@ function verificar(ej, ent){
       if(mcd(n,d) !== 1) return { ok:false, incompleto:true, msg:'Falta simplificar la parte fraccionaria.' };
       return { ok:true };
     }
+    case 'angulo2': {
+      const a = numLimpio(ent.a), b = numLimpio(ent.b);
+      if(!isFinite(a) || !isFinite(b) || ent.a==='' || ent.b==='') return { ok:false, vacio:true };
+      return { ok: a === ej.respuesta.a && b === ej.respuesta.b };
+    }
     case 'texto': {
       const f = parseFactores(ent);
       if(!f) return { ok:false, msg:'No entendí lo que escribiste. Ejemplo: <b>2^3 * 5</b>' };
@@ -1919,6 +1962,7 @@ function respuestaComoEntrada(ej){
     case 'num':   return String(ej.respuesta);
     case 'frac':  return { n:String(ej.respuesta.n), d:String(ej.respuesta.d) };
     case 'mixto': return { e:String(ej.respuesta.e), n:String(ej.respuesta.n), d:String(ej.respuesta.d) };
+    case 'angulo2': return { a:String(ej.respuesta.a), b:String(ej.respuesta.b) };
     case 'texto': return fmtFactoresPlano(ej.respuesta);
   }
 }
@@ -1929,6 +1973,7 @@ function fmtRespuesta(ej){
     case 'num':   return String(ej.respuesta);
     case 'frac':  return `${ej.respuesta.n}/${ej.respuesta.d}`;
     case 'mixto': return `${ej.respuesta.e} ${ej.respuesta.n}/${ej.respuesta.d}`;
+    case 'angulo2': return `∠2 = ${ej.respuesta.a}°, ∠3 = ${ej.respuesta.b}°`;
     case 'texto': return fmtFactores(ej.respuesta);
     case 'orden': return ej.respuesta.map(i=>`${ej.opciones[i].n}/${ej.opciones[i].d}`).join(' , ');
     case 'opciones': return ej.respuesta;
@@ -1948,7 +1993,7 @@ const SECMAP = {
   '2.3': ['terminos-semejantes'],
   '2.4': ['ecuaciones-lineales','problemas-verbales-alg'],
   '2.5': ['promedio'],
-  '2.6': ['angulos','triangulos'],
+  '2.6': ['angulos','angulos-figura','triangulos'],
   '2.7': ['perimetro-area'],
   '3.1': ['divisibilidad'],
   '3.2': ['primos','factorizacion'],
@@ -1979,6 +2024,7 @@ const CLAVES = {
   'problemas-verbales-alg': ['problema verbal','word problem','word problems'],
   'promedio':          ['promedio','media aritmética','average','arithmetic mean'],
   'angulos':           ['ángulo','ángulos','angle','angles','agudo','obtuso','complementario','suplementario','acute angle','obtuse angle','complementary angles','supplementary angles','vertical angles'],
+  'angulos-figura':    ['rectas que se cruzan','opuesto por el vértice','vertical angles','intersecting lines','crossing lines'],
   'triangulos':        ['triángulo','triángulos','triangle','triangles','equilátero','isósceles','escaleno','equilateral','isosceles','scalene'],
   'perimetro-area':    ['perímetro','área','perimeter','area','círculo','circunferencia','trapecio','rombo','romboide','circle','circumference','trapezoid','rhombus','parallelogram'],
   'divisibilidad':    ['divisibilidad','divisible','divisibility','divisibility rule','regla de divisibilidad','múltiplo','multiple of'],
@@ -2849,6 +2895,12 @@ function entradaHTML(ej){
           <button class="btn sec chico" onclick="ordenSel=[];pintarOrden()">Borrar</button>
           <button class="btn amar chico" onclick="responder()">Comprobar</button>
         </div>`;
+    case 'angulo2': return `
+        <div class="mixIn">
+          <input class="campo" id="inA2" inputmode="numeric" autocomplete="off" placeholder="∠2 (°)">
+          <input class="campo" id="inA3" inputmode="numeric" autocomplete="off" placeholder="∠3 (°)">
+        </div>
+        <button class="btn amar" style="margin-top:12px" onclick="responder()">Comprobar</button>`;
   }
   return '';
 }
@@ -2931,6 +2983,7 @@ function leerEntrada(ej){
     case 'frac':  return { n:$('inN').value, d:$('inD').value };
     case 'mixto': return { e:$('inE').value, n:$('inN').value, d:$('inD').value };
     case 'orden': return ordenSel.slice();
+    case 'angulo2': return { a:$('inA2').value, b:$('inA3').value };
   }
 }
 
