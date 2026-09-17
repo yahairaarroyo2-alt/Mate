@@ -2567,16 +2567,22 @@ function _cerrarMenuGruposFuera(e){
 
 // calculadora — botón flotante, disponible en toda la app (incluso practicando) para
 // comprobar una cuenta a mano; no toca ninguna variable de la práctica.
-// calcTokens guarda el historial visual (números y signos ya confirmados, tal como se
-// escribieron) para que la pantalla muestre la expresión completa ("5 × 5 + 5") mientras
-// se escribe, en vez de solo el último número — el cálculo interno (calcAnterior/calcOperador)
-// sigue evaluando de una vez cada operador, como antes; son dos cosas separadas a propósito.
-let calcVal = '0', calcAnterior = null, calcOperador = null, calcNuevo = false, calcTokens = [];
+// calcTokens guarda la expresión tal como se escribe (números y signos alternados) y
+// calcVal el número que se está escribiendo ahora mismo — nada se calcula hasta "=":
+// antes calcVal se sobreescribía con el resultado parcial apenas se tocaba un segundo
+// signo, y ese resultado se colaba en pantalla aunque el usuario no hubiera pedido "=".
+let calcVal = '0', calcNuevo = false, calcTokens = [];
 function _calcRender(){
-  $('calcPantalla').textContent = calcTokens.length ? calcTokens.join(' ') + ' ' + calcVal : calcVal;
+  // justo después de tocar un signo (calcNuevo true) calcVal todavía guarda el operando
+  // anterior, que ya está en calcTokens — mostrarlo de nuevo lo duplicaba en pantalla
+  // ("5 × 5 + 5" antes de escribir el segundo 5). Se oculta hasta que se escriba uno nuevo.
+  const ocultarVal = calcNuevo && calcTokens.length;
+  $('calcPantalla').textContent = calcTokens.length
+    ? calcTokens.join(' ') + (ocultarVal ? '' : ' ' + calcVal)
+    : calcVal;
 }
 function abrirCalc(){
-  calcVal = '0'; calcAnterior = null; calcOperador = null; calcNuevo = false; calcTokens = [];
+  calcVal = '0'; calcNuevo = false; calcTokens = [];
   _calcRender();
   $('calcOv').style.display = 'flex';
 }
@@ -2600,7 +2606,7 @@ function calcPorcentaje(){
   _calcRender();
 }
 function calcClear(){
-  calcVal = '0'; calcAnterior = null; calcOperador = null; calcNuevo = false; calcTokens = [];
+  calcVal = '0'; calcNuevo = false; calcTokens = [];
   _calcRender();
 }
 function _calcOperar(a, b, op){
@@ -2614,22 +2620,21 @@ function _calcFormato(n){
   return String(Math.round(n * 1e8) / 1e8);   // recorta el ruido de coma flotante
 }
 function calcOp(op){
-  const actual = parseFloat(calcVal);
-  // registro visual: si ya había un signo pendiente y no se escribió número nuevo,
-  // el usuario solo está cambiando de opinión sobre el signo — se reemplaza, no se apila
-  if(calcOperador && calcNuevo) calcTokens[calcTokens.length-1] = op;
+  // si ya había un signo pendiente y no se escribió número nuevo, el usuario solo está
+  // cambiando de opinión sobre el signo — se reemplaza, no se apila
+  if(calcTokens.length && calcNuevo) calcTokens[calcTokens.length-1] = op;
   else calcTokens.push(calcVal, op);
-  if(calcOperador && !calcNuevo){
-    calcVal = _calcFormato(_calcOperar(calcAnterior, actual, calcOperador));
-    calcAnterior = parseFloat(calcVal);
-  } else calcAnterior = actual;
-  calcOperador = op; calcNuevo = true;
+  calcNuevo = true;
   _calcRender();
 }
 function calcIgual(){
-  if(calcOperador == null) return;
-  calcVal = _calcFormato(_calcOperar(calcAnterior, parseFloat(calcVal), calcOperador));
-  calcAnterior = null; calcOperador = null; calcNuevo = true; calcTokens = [];
+  if(!calcTokens.length) return;
+  const nums = calcTokens.filter((_,i)=>i%2===0).map(parseFloat).concat(parseFloat(calcVal));
+  const ops = calcTokens.filter((_,i)=>i%2===1);
+  let total = nums[0];
+  for(let i=0; i<ops.length; i++) total = _calcOperar(total, nums[i+1], ops[i]);
+  calcVal = _calcFormato(total);
+  calcNuevo = true; calcTokens = [];
   _calcRender();
 }
 // teclado físico para la calculadora — antes solo funcionaba a clics, incómodo en la compu.
