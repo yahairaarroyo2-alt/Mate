@@ -93,8 +93,9 @@
      Sin backdrop-filter propio: viven siempre dentro de una .card/.ajCard ya esmerilada,
      así que el blur no aportaba nada visible y sí un costo real de batería/GPU — cada
      capa con backdrop-filter es una recomposición aparte, y llegaban a coexistir 30+ a
-     la vez en pantallas como "Temas". Confirmar visualmente antes de quitarlo también de
-     .chip/.calcGrid button (mismo motivo, no aplicado todavía). */
+     la vez en pantallas como "Temas". Ya aplicado también a .calcGrid button (2026-09-18,
+     se sentía como lag al usar la calculadora). Confirmar visualmente antes de quitarlo
+     también de .chip (mismo motivo, no aplicado todavía). */
   .btn{display:block;width:100%;border:1.5px solid rgba(255,255,255,.45);border-radius:22px;
     cursor:pointer;padding:15px;font-size:1.02rem;font-weight:700;margin-bottom:10px;
     font-family:inherit;transition:transform .15s,box-shadow .2s;
@@ -290,9 +291,12 @@
     padding:18px 16px;text-align:right;font-size:1.9rem;font-weight:700;margin-bottom:14px;
     overflow-x:auto;white-space:nowrap}
   .calcGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  /* sin backdrop-filter propio (mismo motivo que .btn, ver comentario junto a .btn arriba):
+     estos botones viven siempre dentro de .calcCard, que ya está esmerilada — un blur por
+     cada uno de los 16 botones era puro costo de GPU repetido, y se sentía como lag al tocar */
   .calcGrid button{border:1.5px solid rgba(255,255,255,.45);border-radius:14px;padding:16px 0;
     font-size:1.15rem;font-weight:700;cursor:pointer;font-family:inherit;color:var(--texto);
-    background:rgba(255,255,255,.35);backdrop-filter:var(--lg-blur);-webkit-backdrop-filter:var(--lg-blur)}
+    background:rgba(255,255,255,.42)}
   .calcGrid button:active{transform:scale(.95)}
   .calcGrid .calcOp{background:rgba(255,255,255,.6);border-color:rgba(255,255,255,.75)}
   .calcGrid .calcCero{grid-column:span 2}
