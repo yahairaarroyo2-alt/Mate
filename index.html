@@ -2590,17 +2590,22 @@ function _calcRender(){
 function abrirCalc(){
   calcVal = '0'; calcNuevo = false; calcTokens = [];
   _calcRender();
-  // "Usar" solo tiene sentido si hay un campo de respuesta numérico simple donde ponerlo
-  // (tipo num, o frac como entero con denominador 1) — en mixto/ángulos/opciones no aplica
-  $('calcUsarBtn').style.display = ($('inNum') || ($('inN') && !$('inE'))) ? '' : 'none';
+  // "Usar" aparece si hay al menos un campo de respuesta donde ponerlo (num, frac, mixto,
+  // ángulos con figura...); el textarea de "Tu proceso" también es .campo pero es <textarea>,
+  // no <input>, así que el selector de abajo ya lo deja afuera solo.
+  $('calcUsarBtn').style.display = $('zonaEntrada').querySelector('input.campo') ? '' : 'none';
   $('calcOv').style.display = 'flex';
 }
 function cerrarCalc(){ $('calcOv').style.display = 'none'; }
+// Llena el primer campo VACÍO (arriba antes que abajo, entero antes que la fracción...,
+// según el orden en que aparecen en pantalla); si ya están todos llenos, empieza de nuevo
+// por el primero — así una sola cuenta sirve para ir llenando numerador y denominador,
+// las dos partes de un mixto, o los dos ángulos, con dos o tres toques de "Usar".
 function calcUsar(){
   if(calcVal === 'Error') return;
-  if($('inNum')) $('inNum').value = calcVal;
-  else if($('inN') && !$('inE')){ $('inN').value = calcVal; $('inD').value = '1'; }
-  else return;
+  const campos = [...$('zonaEntrada').querySelectorAll('input.campo')];
+  if(!campos.length) return;
+  (campos.find(c => c.value === '') || campos[0]).value = calcVal;
   cerrarCalc();
 }
 function calcDigito(d){
