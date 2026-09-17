@@ -2566,35 +2566,42 @@ function _cerrarMenuGruposFuera(e){
 }
 
 // calculadora — botón flotante, disponible en toda la app (incluso practicando) para
-// comprobar una cuenta a mano; no toca ninguna variable de la práctica
-let calcVal = '0', calcAnterior = null, calcOperador = null, calcNuevo = false;
+// comprobar una cuenta a mano; no toca ninguna variable de la práctica.
+// calcTokens guarda el historial visual (números y signos ya confirmados, tal como se
+// escribieron) para que la pantalla muestre la expresión completa ("5 × 5 + 5") mientras
+// se escribe, en vez de solo el último número — el cálculo interno (calcAnterior/calcOperador)
+// sigue evaluando de una vez cada operador, como antes; son dos cosas separadas a propósito.
+let calcVal = '0', calcAnterior = null, calcOperador = null, calcNuevo = false, calcTokens = [];
+function _calcRender(){
+  $('calcPantalla').textContent = calcTokens.length ? calcTokens.join(' ') + ' ' + calcVal : calcVal;
+}
 function abrirCalc(){
-  calcVal = '0'; calcAnterior = null; calcOperador = null; calcNuevo = false;
-  $('calcPantalla').textContent = calcVal;
+  calcVal = '0'; calcAnterior = null; calcOperador = null; calcNuevo = false; calcTokens = [];
+  _calcRender();
   $('calcOv').style.display = 'flex';
 }
 function cerrarCalc(){ $('calcOv').style.display = 'none'; }
 function calcDigito(d){
   if(calcNuevo || calcVal === '0'){ calcVal = d; calcNuevo = false; }
   else if(calcVal.length < 12) calcVal += d;
-  $('calcPantalla').textContent = calcVal;
+  _calcRender();
 }
 function calcPunto(){
   if(calcNuevo){ calcVal = '0.'; calcNuevo = false; }
   else if(calcVal.indexOf('.') === -1) calcVal += '.';
-  $('calcPantalla').textContent = calcVal;
+  _calcRender();
 }
 function calcSigno(){
   calcVal = calcVal.startsWith('-') ? calcVal.slice(1) : (calcVal === '0' ? '0' : '-'+calcVal);
-  $('calcPantalla').textContent = calcVal;
+  _calcRender();
 }
 function calcPorcentaje(){
   calcVal = _calcFormato(parseFloat(calcVal) / 100);
-  $('calcPantalla').textContent = calcVal;
+  _calcRender();
 }
 function calcClear(){
-  calcVal = '0'; calcAnterior = null; calcOperador = null; calcNuevo = false;
-  $('calcPantalla').textContent = calcVal;
+  calcVal = '0'; calcAnterior = null; calcOperador = null; calcNuevo = false; calcTokens = [];
+  _calcRender();
 }
 function _calcOperar(a, b, op){
   if(op === '+') return a + b;
@@ -2608,18 +2615,22 @@ function _calcFormato(n){
 }
 function calcOp(op){
   const actual = parseFloat(calcVal);
+  // registro visual: si ya había un signo pendiente y no se escribió número nuevo,
+  // el usuario solo está cambiando de opinión sobre el signo — se reemplaza, no se apila
+  if(calcOperador && calcNuevo) calcTokens[calcTokens.length-1] = op;
+  else calcTokens.push(calcVal, op);
   if(calcOperador && !calcNuevo){
     calcVal = _calcFormato(_calcOperar(calcAnterior, actual, calcOperador));
     calcAnterior = parseFloat(calcVal);
   } else calcAnterior = actual;
   calcOperador = op; calcNuevo = true;
-  $('calcPantalla').textContent = calcVal;
+  _calcRender();
 }
 function calcIgual(){
   if(calcOperador == null) return;
   calcVal = _calcFormato(_calcOperar(calcAnterior, parseFloat(calcVal), calcOperador));
-  calcAnterior = null; calcOperador = null; calcNuevo = true;
-  $('calcPantalla').textContent = calcVal;
+  calcAnterior = null; calcOperador = null; calcNuevo = true; calcTokens = [];
+  _calcRender();
 }
 // teclado físico para la calculadora — antes solo funcionaba a clics, incómodo en la compu.
 // Solo actúa mientras el overlay está abierto, así que no interfiere con Enter en los
@@ -2635,7 +2646,7 @@ document.addEventListener('keydown', e => {
   else if(e.key === '%') calcPorcentaje();
   else if(e.key === 'Enter' || e.key === '=') calcIgual();
   else if(e.key === 'Escape') cerrarCalc();
-  else if(e.key === 'Backspace'){ calcVal = calcVal.length>1 ? calcVal.slice(0,-1) : '0'; $('calcPantalla').textContent = calcVal; }
+  else if(e.key === 'Backspace'){ calcVal = calcVal.length>1 ? calcVal.slice(0,-1) : '0'; _calcRender(); }
   else return;
   e.preventDefault();
 });
