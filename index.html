@@ -2623,6 +2623,7 @@ function menuGrupos(e){
       <button class="ajRow" onclick="cerrarMenuGrupos();practicarGrupo('${g.id}')">
         <div style="flex:1"><div class="ajTitulo">${escHtml(g.nombre)}</div>
           <div class="ajSub">${g.mods.length} temas · ${tamanoMezcla(g.mods)} preguntas</div></div>
+        <span class="ajCheck" style="opacity:${clase && clase.grupoId===g.id ? 1 : 0}">✓</span>
       </button>`).join('') +
       `<button class="ajRow" onclick="cerrarMenuGrupos();ir('grupos')"><div class="ajTitulo">Ver todos los grupos</div></button>`
     : `<div style="padding:10px">
@@ -3496,7 +3497,7 @@ function pantallaGrupos(){
     </div>
     ${grupos.map(g => `
       <div class="card">
-        <h3 style="margin-top:0">${escHtml(g.nombre)}</h3>
+        <h3 style="margin-top:0">${escHtml(g.nombre)}${clase && clase.grupoId===g.id ? ` <span class="ajCheck">✓</span> <span class="ajSub" style="font-weight:400">seleccionado</span>` : ''}</h3>
         <div class="nota">${g.mods.length} temas · ${tamanoMezcla(g.mods)} preguntas</div>
         <div class="row">
           <button class="btn amar chico" onclick="practicarGrupo('${g.id}')">Practicar</button>
@@ -3553,7 +3554,7 @@ function guardarGrupo(){
 }
 function practicarGrupo(id){
   const g = grupos.find(x=>x.id===id); if(!g) return;
-  clase = { etiqueta: g.nombre, mods: g.mods.slice() };
+  clase = { etiqueta: g.nombre, mods: g.mods.slice(), grupoId: g.id };
   guardar('mate_clase_v1', clase);
   if(syncDoc) syncDoc.set({clase},{merge:true}).catch(()=>{});
   ir('inicio');
