@@ -1,7 +1,7 @@
 // Service Worker — caché offline. App de un solo archivo, sin timers/notificaciones
 // que cachear (a diferencia de Fit-F/Fit-M), así que esto es mucho más simple que
 // esos sw.js: solo cachear los assets propios y servir la app sin conexión.
-const CACHE = 'mate-v52';
+const CACHE = 'mate-v53';
 const ASSETS = [
   './',
   './index.html',

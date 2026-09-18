@@ -3556,7 +3556,7 @@ function practicarGrupo(id){
   clase = { etiqueta: g.nombre, mods: g.mods.slice() };
   guardar('mate_clase_v1', clase);
   if(syncDoc) syncDoc.set({clase},{merge:true}).catch(()=>{});
-  ir('practica');
+  ir('inicio');
 }
 function borrarGrupo(id){
   confirmarAccion('¿Borrar este grupo? Los temas no se borran, solo el grupo.', () => {
