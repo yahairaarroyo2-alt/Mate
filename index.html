@@ -454,6 +454,57 @@ const addF = (a,b) => { const r = sumarF([a,b]); return { n:r.n, d:r.d }; };
 const opS = f => f.d===1 ? mm(f.n) : frS(f.n,f.d);
 const opP = f => f.n<0 ? `(${opS(f)})` : opS(f);
 const opT = f => f.d===1 ? mm(f.n) : tf(f.n,f.d);
+// ── pasos desglosados, para quien no sabe nada: cada operación con fracciones explicada
+//    renglón por renglón (los módulos de cap. 4 los usan dentro de "Por qué") ──
+// suma de dos enteros con signo, explicada con la regla de signos (como en reglas-signos)
+function explSumaEnteros(a, b){
+  const r = a + b;
+  if(a === 0 || b === 0) return `${mm(a)} + ${b<0?`(${mm(b)})`:b} = ${mm(r)} (sumar 0 no cambia nada).`;
+  if((a<0) === (b<0)) return `${mm(a)} + ${b<0?`(${mm(b)})`:b}: mismo signo, se suman los valores (${Math.abs(a)} + ${Math.abs(b)} = ${Math.abs(r)}) y se conserva ese signo → ${mm(r)}.`;
+  const g = Math.abs(a) >= Math.abs(b) ? a : b;
+  return `${mm(a)} + ${b<0?`(${mm(b)})`:b}: signos distintos, se restan los valores (${Math.max(Math.abs(a),Math.abs(b))} − ${Math.min(Math.abs(a),Math.abs(b))} = ${Math.abs(r)}) y gana el signo del más grande, ${mm(g)} → ${mm(r)}.`;
+}
+// linea de simplificación (o aviso de que ya está simple)
+function explSimplif(n, d){
+  const g = mcd(n, d), [sn, sd] = simplificar(n, d);
+  if(n === 0) return `Arriba quedó 0, y 0 sobre cualquier número es 0.`;
+  if(g === 1) return `${tf(n,d)} ya está en su forma más simple (nada divide exacto a ${Math.abs(n)} y a ${d} a la vez).`;
+  return `Se simplifica ${tf(n,d)} dividiendo arriba y abajo entre ${g} (el número más grande que divide a los dos): ${Math.abs(n)} ÷ ${g} = ${Math.abs(sn)}, ${d} ÷ ${g} = ${sd} → ${tf(sn,sd)}.`;
+}
+// a + b (b puede venir negativo = resta). Devuelve { res, lineas }
+function pasosSumaF(a, b){
+  const lineas = [];
+  if(a.d === b.d){
+    lineas.push(`${tfP(a.n,a.d)} + ${tfP(b.n,b.d)}: ya tienen el mismo denominador (${a.d}), así que solo se suman los de arriba y el ${a.d} se queda.`);
+  } else {
+    const m = mcm(a.d, b.d);
+    lineas.push(`${tfP(a.n,a.d)} + ${tfP(b.n,b.d)}: tienen denominadores distintos, y solo se pueden sumar pedazos del mismo tamaño. El denominador común más chico es el MCM de ${a.d} y ${b.d} = ${m}.`);
+    if(m !== a.d) lineas.push(`${tf(a.n,a.d)} → arriba y abajo por ${m/a.d} → ${tf(a.n*(m/a.d), m)}`);
+    else lineas.push(`${tf(a.n,a.d)} ya tiene denominador ${m}, se queda igual.`);
+    if(m !== b.d) lineas.push(`${tf(b.n,b.d)} → arriba y abajo por ${m/b.d} → ${tf(b.n*(m/b.d), m)}`);
+    else lineas.push(`${tf(b.n,b.d)} ya tiene denominador ${m}, se queda igual.`);
+  }
+  const r = sumarF([a, b]);
+  lineas.push(`Arriba: ${explSumaEnteros(r.nums[0], r.nums[1])} Abajo se queda ${r.m} → ${tf(r.tot, r.m)}`);
+  if(r.d !== r.m || r.n !== r.tot) lineas.push(explSimplif(r.tot, r.m));
+  return { res:{n:r.n, d:r.d}, lineas };
+}
+// a × b
+function pasosMultF(a, b){
+  const r = multF([a, b]);
+  const negs = (a.n<0?1:0) + (b.n<0?1:0);
+  const lineas = [`${tfP(a.n,a.d)} × ${tfP(b.n,b.d)}: arriba con arriba y abajo con abajo. Arriba: ${Math.abs(a.n)} × ${Math.abs(b.n)} = ${Math.abs(r.rawN)}; abajo: ${a.d} × ${b.d} = ${r.rawD}` +
+    (negs === 1 ? ` — hay un solo signo negativo, así que el resultado es negativo` : negs === 2 ? ` — dos negativos se cancelan, el resultado es positivo` : '') + ` → ${tf(r.rawN, r.rawD)}`];
+  if(r.d !== r.rawD || r.n !== r.rawN) lineas.push(explSimplif(r.rawN, r.rawD));
+  return { res:{n:r.n, d:r.d}, lineas };
+}
+// a ÷ b
+function pasosDivF(a, b){
+  const rec = recipF(b);
+  const lineas = [`${tfP(a.n,a.d)} ÷ ${tfP(b.n,b.d)}: dividir entre una fracción es multiplicar por la fracción volteada (su recíproco). Se voltea SOLO la segunda: ${tfP(b.n,b.d)} → ${tfP(rec.n,rec.d)}.`];
+  const m = pasosMultF(a, rec);
+  return { res:m.res, lineas: lineas.concat(m.lineas) };
+}
 const opTP = f => f.n<0 ? `(${opT(f)})` : opT(f);
 // teclado numérico del teléfono a veces no trae signo "-" (iOS, sobre todo) — botón ± como atajo
 function toggleSigno(id){
@@ -808,38 +859,43 @@ const MODULOS = [
   id:'problemas-enteros', nombre:'Problemas con enteros (aplicaciones)', secciones:['1.3'],
   gen(nv){
     const alto = porNivel(nv, 15, 30, 60);
+    const yardas = n => n === 1 ? '1 yarda' : `${n} yardas`;
     const plantillas = [
       () => { const a = R(-alto,alto), b = R(1,alto);
         return { enunciado:`La temperatura era de <b>${mm(a)}°</b> y bajó <b>${b}°</b>. ¿Cuál es la temperatura ahora?`,
-          resp: a-b,
+          resp: a-b, claves:`"bajó" es restar`,
           expl:[`"Bajar" una temperatura es restar. La operación es: ${mm(a)} − ${b}.`,
-            `Restar es sumar el opuesto: ${mm(a)} + (${mm(-b)}) = ${mm(a-b)}`,
+            `Restar es sumar el opuesto (se le cambia el signo al que se resta): ${mm(a)} − ${b} = ${mm(a)} + (${mm(-b)}).`,
+            explSumaEnteros(a, -b),
             `→ ${mm(a-b)}°`] }; },
       () => { const a = R(-alto,-1), b = R(a+1,alto);
         return { enunciado:`La temperatura subió de <b>${mm(a)}°</b> a <b>${mm(b)}°</b>. ¿Cuántos grados subió?`,
-          resp: b-a,
-          expl:[`El cambio se calcula restando la temperatura FINAL menos la INICIAL: ${mm(b)} − (${mm(a)}).`,
-            `Restar un negativo es sumar su opuesto: ${mm(b)} + ${-a} = ${b-a}`,
+          resp: b-a, claves:`"subió de… a…" es final menos inicial`,
+          expl:[`Cuánto cambió algo se calcula restando: FINAL menos INICIAL. Aquí: ${mm(b)} − (${mm(a)}).`,
+            `Restar un negativo es sumar su opuesto (las dos rayitas de menos seguidas se vuelven un +): ${mm(b)} − (${mm(a)}) = ${mm(b)} + ${-a}.`,
+            explSumaEnteros(b, -a),
             `→ subió ${b-a}°`] }; },
       () => { const a = R(20,alto*2), b = R(1,a-5);
         return { enunciado:`Tenías <b>$${a}</b> en tu cuenta y retiraste <b>$${b}</b>. ¿Cuál es tu nuevo balance?`,
-          resp: a-b,
-          expl:[`Retirar dinero es restar: ${a} − ${b}.`, `= ${a-b}`, `→ $${a-b}`] }; },
+          resp: a-b, claves:`"retiraste" es restar`,
+          expl:[`Retirar dinero es sacarlo de la cuenta, o sea restar: ${a} − ${b}.`, `${a} − ${b} = ${a-b}`, `→ $${a-b}`] }; },
       () => { const a = R(5,alto), b = R(5,alto);
         return { enunciado:`Un buzo está a <b>${a} pies</b> bajo el nivel del mar y desciende <b>${b} pies</b> más. ¿A qué profundidad está ahora? <small style="opacity:.75">(el nivel del mar es 0; usa negativo para "bajo el nivel del mar")</small>`,
-          resp: -(a+b),
-          expl:[`El nivel del mar es 0. "Bajo el nivel del mar" se representa con números negativos, así que empieza en ${mm(-a)}.`,
-            `Descender más es restar (o sumar otro negativo): ${mm(-a)} − ${b} = ${mm(-(a+b))}`,
-            `→ ${mm(-(a+b))} pies`] }; },
+          resp: -(a+b), claves:`"bajo el nivel del mar" es negativo y "desciende" es restar`,
+          expl:[`El nivel del mar es el 0. Todo lo que está por debajo se escribe con signo negativo, así que el buzo empieza en ${mm(-a)}.`,
+            `Descender más es restar: ${mm(-a)} − ${b}. Restar es sumar el opuesto: ${mm(-a)} + (${mm(-b)}).`,
+            explSumaEnteros(-a, -b),
+            `→ ${mm(-(a+b))} pies (el signo negativo dice que está debajo del nivel del mar)`] }; },
       () => { const a = R(1,alto), b = R(1,alto);
         return { enunciado:`Un equipo de fútbol ganó <b>${a} yardas</b> en una jugada y perdió <b>${b} yardas</b> en la siguiente. ¿Cuál fue el cambio total?`,
-          resp: a-b,
-          expl:[`"Ganar" yardas es positivo y "perder" yardas es negativo: ${a} + (${mm(-b)}).`,
-            `= ${a-b}`, `→ ${a-b>=0?`ganó ${a-b} yardas en total`:`perdió ${Math.abs(a-b)} yardas en total`} (${mm(a-b)})`] }; }
+          resp: a-b, claves:`"ganó" es positivo y "perdió" es negativo`,
+          expl:[`"Ganar" yardas es positivo y "perder" yardas es negativo. El total es juntar las dos: ${a} + (${mm(-b)}).`,
+            explSumaEnteros(a, -b),
+            `→ ${a-b>0?`ganó ${yardas(a-b)} en total`:a-b<0?`perdió ${yardas(Math.abs(a-b))} en total`:'quedó igual, sin ganar ni perder'} (${mm(a-b)})`] }; }
     ];
     const t = pick(plantillas)();
     return { enunciado: t.enunciado, tipo:'num', respuesta: t.resp, explicacion: t.expl.concat(
-      `TRUCO: en estos problemas, primero decide el signo de cada cantidad ANTES de operar — "bajar", "perder", "retirar", "bajo el nivel de" son negativos; "subir", "ganar", "depositar", "sobre el nivel de" son positivos. Una vez que tienes los signos correctos, es la suma/resta de enteros de siempre.`) };
+      `TRUCO: en estos problemas, primero decide el signo de cada cantidad ANTES de operar — "bajar", "perder", "retirar", "bajo el nivel de" son negativos; "subir", "ganar", "depositar", "sobre el nivel de" son positivos. Una vez que tienes los signos correctos, es la suma/resta de enteros de siempre. Ejemplo con este mismo: ${t.claves}, así que la cuenta queda armada con los signos correctos y el resultado es ${mm(t.resp)}.`) };
   }
 },
 {
@@ -901,8 +957,8 @@ const MODULOS = [
           `TRUCO: cuenta los ceros — esa cantidad ES el exponente. ${N} tiene ${k} ceros → 10${sup(k)}. No hace falta multiplicar nada, solo contar.`] };
     }
     return { enunciado:`Halla el valor: <b>${d} × 10<sup>${k}</sup></b>`, tipo:'num', respuesta:N,
-      explicacion:[`10 elevado a un exponente positivo da siempre un 1 seguido de esa cantidad de ceros.`,
-        `10${sup(k)} = ${Math.pow(10,k)} (un 1 con ${k} ceros)`,
+      explicacion:[`Un exponente dice cuántas veces se multiplica el número por sí mismo: 10${sup(k)} = ${Array(k).fill('10').join(' × ')}.`,
+        `Cada vez que multiplicas por 10 se agrega un cero, así que 10${sup(k)} es un 1 seguido de ${k} ceros: ${Math.pow(10,k)}.`,
         `${d} × ${Math.pow(10,k)} = ${N}`,
         `→ ${N}`,
         `TRUCO: multiplicar por 10${sup(k)} es "pegarle" ${k} ceros al número, sin multiplicar nada de verdad. ${d} con ${k} ceros detrás es directamente ${N}.`] };
@@ -1598,23 +1654,26 @@ const MODULOS = [
     const r = sumarF(oper);
     const expl = [];
     if(fs.some(f=>f.mixto)){
-      expl.push(`Primero se pasan los números mixtos a fracciones impropias (entero × denominador + numerador, y el signo se queda delante):`);
-      fs.filter(f=>f.mixto).forEach(f => expl.push(`${mm(f.e)} ${f.pn}/${f.d} → ${Math.abs(f.e)} × ${f.d} + ${f.pn} = ${Math.abs(f.n)} → ${tf(f.n,f.d)}`));
+      expl.push(`Primero se pasan los números mixtos a fracciones impropias, porque con mixtos no se puede operar directo. Regla: entero × denominador + numerador, y el denominador se queda; si el mixto es negativo, el signo se pone delante al final:`);
+      fs.filter(f=>f.mixto).forEach(f => expl.push(`${mm(f.e)} ${f.pn}/${f.d} → ${Math.abs(f.e)} × ${f.d} = ${Math.abs(f.e)*f.d}, más ${f.pn} = ${Math.abs(f.n)} → ${tf(f.n,f.d)}`));
     }
-    if(fs.some(f=>f.entero)) expl.push(`Un número entero se escribe como fracción con denominador 1: ${fs.filter(f=>f.entero).map(f=>`${mm(f.n)} = ${tf(f.n,1)}`).join(', ')}.`);
-    if(resta) expl.push(`Restar es sumar el opuesto: ${tf(oper[0].n,oper[0].d)} − ${tfP(fs[1].n,fs[1].d)} = ${tf(oper[0].n,oper[0].d)} + ${tfP(oper[1].n,oper[1].d)}.`);
+    if(fs.some(f=>f.entero)) expl.push(`Un número entero también es una fracción: se le pone 1 abajo (${fs.filter(f=>f.entero).map(f=>`${mm(f.n)} = ${tf(f.n,1)}`).join(', ')}), porque cualquier número dividido entre 1 es él mismo.`);
+    if(resta) expl.push(`Restar es sumar el opuesto: se le cambia el signo a lo que se resta y se convierte en suma. ${tf(oper[0].n,oper[0].d)} − ${tfP(fs[1].n,fs[1].d)} = ${tf(oper[0].n,oper[0].d)} + ${tfP(oper[1].n,oper[1].d)}.`);
     if(tipo==='mismo'){
-      expl.push(`Las dos fracciones tienen el MISMO denominador (${fs[0].d}), así que se suman los numeradores y el denominador se deja igual:`);
-      expl.push(`${oper.map(f=>`(${mm(f.n)})`).join(' + ')} = ${mm(r.tot)} → ${tf(r.tot, r.m)}`);
+      expl.push(`Las dos fracciones tienen el MISMO denominador (${fs[0].d}): son pedazos del mismo tamaño, así que se pueden juntar directo. Se suman solo los de arriba y el ${fs[0].d} se queda igual.`);
+      expl.push(`Arriba: ${explSumaEnteros(oper[0].n, oper[1].n)} → ${tf(r.tot, r.m)}`);
     } else {
-      expl.push(`Solo se pueden sumar fracciones con el mismo denominador. El denominador común más chico es el MCM de ${oper.map(f=>f.d).join(', ')}: MCD = ${r.m}.`);
-      oper.forEach((f,i) => expl.push(`${tf(f.n,f.d)} → se multiplica arriba y abajo por ${r.m/f.d} → ${tf(r.nums[i], r.m)}`));
-      expl.push(`Ahora sí, se suman los numeradores: ${r.nums.map(n=>`(${mm(n)})`).join(' + ')} = ${mm(r.tot)} → ${tf(r.tot, r.m)}`);
+      expl.push(`Tienen denominadores distintos (${oper.map(f=>f.d).join(' y ')}): son pedazos de distinto tamaño y no se pueden juntar así. Hay que convertirlas a un mismo denominador — el más chico que sirve es el MCM (mínimo común múltiplo) de ${oper.map(f=>f.d).join(' y ')}, que es ${r.m}.`);
+      oper.forEach((f,i) => expl.push(r.m === f.d
+        ? `${tf(f.n,f.d)} ya tiene denominador ${r.m}, se queda igual.`
+        : `${tf(f.n,f.d)} → para que abajo quede ${r.m} hay que multiplicar por ${r.m/f.d} (${f.d} × ${r.m/f.d} = ${r.m}); lo mismo se le hace arriba: ${mm(f.n)} × ${r.m/f.d} = ${mm(r.nums[i])} → ${tf(r.nums[i], r.m)}`));
+      expl.push(oper.length === 2
+        ? `Ya con el mismo denominador se suman los de arriba. ${explSumaEnteros(r.nums[0], r.nums[1])} Abajo se queda ${r.m} → ${tf(r.tot, r.m)}`
+        : `Ya con el mismo denominador se suman los de arriba: ${r.nums.map(n=>n<0?`(${mm(n)})`:n).join(' + ')} = ${mm(r.tot)}. Abajo se queda ${r.m} → ${tf(r.tot, r.m)}`);
     }
-    if(r.d !== r.m || r.n !== r.tot) expl.push(`Se simplifica dividiendo arriba y abajo entre MCD(${Math.abs(r.tot)}, ${r.m}) = ${mcd(r.tot, r.m)}: → ${tf(r.n, r.d)}`);
-    else expl.push(`La fracción ya está en su forma más simple.`);
+    expl.push(explSimplif(r.tot, r.m));
     expl.push(`→ ${tf(r.n, r.d)}`);
-    expl.push(`TRUCO: el signo de la fracción vive en el NUMERADOR. Antes de buscar denominador común, pon cada signo arriba (${oper.map(f=>tf(f.n,f.d)).join(', ')}) y convierte una resta en "más el opuesto"; a partir de ahí es una sola suma de enteros arriba y no te pierdes con los signos. Y el denominador común no es "multiplicar los de abajo": si uno es múltiplo del otro (o comparten factores) el MCM es más chico y los números salen manejables.`);
+    expl.push(`TRUCO: el signo de la fracción vive en el NUMERADOR. Antes de buscar denominador común, pon cada signo arriba (${oper.map(f=>tf(f.n,f.d)).join(', ')}) y convierte una resta en "más el opuesto"; a partir de ahí es una sola suma de enteros arriba y no te pierdes con los signos. Y el denominador común no es "multiplicar los de abajo": si uno es múltiplo del otro (o comparten factores) el MCM es más chico y los números salen manejables. Ejemplo con este mismo: ${tipo==='mismo' ? `los dos ya tenían ${fs[0].d} abajo, así que ni hubo que buscar nada — solo sumar arriba, ${r.nums.map(n=>mm(n)).join(' y ')}, y dejar el ${r.m}` : `de ${oper.map(f=>f.d).join(' y ')} el denominador común fue ${r.m}${r.m === Math.max(...oper.map(f=>f.d)) ? ' (el más grande ya servía, porque los otros lo dividen exacto)' : r.m === oper.reduce((a,f)=>a*f.d,1) ? ' (aquí sí tocó multiplicarlos, porque no comparten factores)' : ', más chico que multiplicarlos'}, y arriba quedó ${r.nums.map((n,i)=> i>0 && n<0 ? `(${mm(n)})` : mm(n)).join(' + ')} = ${mm(r.tot)}`}.`);
     return { enunciado:`${resta && !fs.some(f=>f.mixto||f.entero) ? 'Halla la diferencia' : 'Efectúa la operación'} y escribe la respuesta en su forma más simple:<br><b>${signos}</b>`,
       tipo:'frac', respuesta:{n:r.n, d:r.d}, pedirSimple:true, signo:true,
       ayuda: fs.some(f=>f.mixto) ? 'Puedes dejar el resultado como fracción impropia.' : (r.d===1 ? 'Si sale un entero, escríbelo con denominador 1.' : ''),
@@ -1631,7 +1690,7 @@ const MODULOS = [
         explicacion:[`Para restar una fracción de 1, imagina el 1 partido en ${d} pedazos iguales: 1 = ${d}/${d}.`,
           `${d}/${d} − ${n}/${d} = ${d-n}/${d} (mismo denominador, se restan los numeradores).`,
           `→ ${d-n}/${d}`,
-          `TRUCO: el denominador se queda y arriba haces "denominador menos numerador": ${d} − ${n} = ${d-n}. Si gastas ${n}/${d} de algo, te queda ${d-n}/${d}; la suma de las dos partes siempre da ${d}/${d} = 1.`] };
+          `TRUCO: el denominador se queda y arriba haces "denominador menos numerador", sin escribir nada. Piensa en una pizza cortada en ${d} pedazos: si te comes ${n}, quedan ${d} − ${n} = ${d-n} pedazos, o sea ${d-n}/${d}. Comprobación: lo que comiste más lo que queda tiene que dar la pizza entera, ${n}/${d} + ${d-n}/${d} = ${d}/${d} = 1. Ejemplo con este mismo: 1 − ${n}/${d} → ${d} − ${n} = ${d-n} → ${d-n}/${d}.`] };
     }
     if(tipo==='entero'){                                               // E − m n/d
       const d = R(3, porNivel(nv,8,12,16)); let n; do { n = R(1,d-1); } while(mcd(n,d)!==1);
@@ -1649,12 +1708,11 @@ const MODULOS = [
     const r = sumarF([c, {n:-a.n, d:a.d}]);
     return { enunciado:`Resta ${fr(a.n,a.d)} de ${fr(c.n,c.d)}. Escribe la respuesta en su forma más simple.`,
       tipo:'frac', respuesta:{n:r.n, d:r.d}, pedirSimple:true, signo:true,
-      explicacion:[`"Restar A de B" significa B − A: lo que se resta va DESPUÉS del signo menos. Aquí: ${tf(c.n,c.d)} − ${tf(a.n,a.d)}.`,
-        `Restar es sumar el opuesto: ${tf(c.n,c.d)} + ${tf(-a.n,a.d)}.`,
-        `Denominador común: MCM(${c.d}, ${a.d}) = ${r.m}. Entonces ${tf(c.n,c.d)} → ${tf(r.nums[0],r.m)} y ${tf(-a.n,a.d)} → ${tf(r.nums[1],r.m)}.`,
-        `Se suman los numeradores: ${mm(r.nums[0])} + (${mm(r.nums[1])}) = ${mm(r.tot)} → ${tf(r.tot,r.m)}${(r.d!==r.m)?`, que simplificado es ${tf(r.n,r.d)}`:''}.`,
+      explicacion:[`"Restar A de B" significa B − A: lo que se resta va DESPUÉS del signo menos, aunque en la frase se mencione primero. Aquí: ${tf(c.n,c.d)} − ${tf(a.n,a.d)}.`,
+        `Restar es sumar el opuesto (se le cambia el signo al que se resta): ${tf(c.n,c.d)} + ${tfP(-a.n,a.d)}.`,
+        ...pasosSumaF(c, {n:-a.n, d:a.d}).lineas,
         `→ ${tf(r.n,r.d)}`,
-        `TRUCO: la resta NO es conmutativa, así que lee dos veces quién se resta a quién. "Resta X de Y" = Y − X; "X menos Y" = X − Y. Si te sale un signo distinto al esperado, casi siempre es que invertiste el orden.`] };
+        `TRUCO: la resta NO es conmutativa, así que lee dos veces quién se resta a quién. "Resta X de Y" = Y − X; "X menos Y" = X − Y. Si te sale un signo distinto al esperado, casi seguro invertiste el orden. Ejemplo con este mismo: "resta ${tf(a.n,a.d)} de ${tf(c.n,c.d)}" → ${tf(c.n,c.d)} va primero y ${tf(a.n,a.d)} es lo que se le quita → ${tf(c.n,c.d)} − ${tf(a.n,a.d)} = ${tf(r.n,r.d)}; al revés daría ${tf(-r.n,r.d)}, que es otra respuesta.`] };
   }
 },
 {
@@ -1688,7 +1746,7 @@ const MODULOS = [
       return { enunciado:`¿Qué propiedad de la multiplicación se ilustra?<br><b>${cs.enun}</b>`,
         tipo:'opciones', opciones: shuffle(['Conmutativa','Asociativa','Identidad','Inverso','Cero como factor']),
         respuesta: cs.cat, explicacion: cs.expl.concat(
-          `TRUCO: mira qué fue lo ÚNICO que cambió entre los dos lados. ¿Cambió el orden? Conmutativa. ¿Solo se movieron los paréntesis? Asociativa. ¿Hay un 1 que no hace nada? Identidad. ¿Una fracción por su volteada da 1? Inverso. ¿Hay un 0 y el resultado es 0? Cero como factor. Ojo: "identidad" es el 1 en multiplicación pero el 0 en suma; "inverso" es la fracción volteada en multiplicación pero el signo contrario en suma.`) };
+          `TRUCO: mira qué fue lo ÚNICO que cambió entre los dos lados. ¿Cambió el orden? Conmutativa. ¿Solo se movieron los paréntesis? Asociativa. ¿Hay un 1 que no hace nada? Identidad. ¿Una fracción por su volteada da 1? Inverso. ¿Hay un 0 y el resultado es 0? Cero como factor. Ojo: "identidad" es el 1 en multiplicación pero el 0 en suma; "inverso" es la fracción volteada en multiplicación pero el signo contrario en suma. Ejemplo con este mismo: lo único que cambió fue ${({Conmutativa:'el orden de los factores',Asociativa:'dónde están los paréntesis (los números siguen en el mismo orden)',Identidad:'que aparece un 1 multiplicando, que no cambia nada','Inverso':'que la fracción se multiplica por su volteada y da 1','Cero como factor':'que hay un 0 multiplicando y todo da 0'})[cs.cat]} → ${cs.cat}.`) };
     }
     const p = pick(['conmutativa','asociativa','identidad','inverso']);
     const casos = {
@@ -1709,7 +1767,7 @@ const MODULOS = [
     return { enunciado:`¿Qué propiedad de la suma se ilustra?<br><b>${cs.enun}</b>`,
       tipo:'opciones', opciones: shuffle(['Conmutativa','Asociativa','Identidad','Inverso']),
       respuesta: cs.cat, explicacion: cs.expl.concat(
-        `TRUCO: mira qué fue lo ÚNICO que cambió entre los dos lados. ¿Se cambió el orden? Conmutativa. ¿Solo se movieron los paréntesis? Asociativa. ¿Hay un 0 que no hace nada? Identidad. ¿Dos fracciones iguales con signo contrario que dan 0? Inverso. Con fracciones es exactamente igual que con enteros — el denominador no cambia nada.`) };
+        `TRUCO: mira qué fue lo ÚNICO que cambió entre los dos lados. ¿Se cambió el orden? Conmutativa. ¿Solo se movieron los paréntesis? Asociativa. ¿Hay un 0 que no hace nada? Identidad. ¿Dos fracciones iguales con signo contrario que dan 0? Inverso. Con fracciones es exactamente igual que con enteros — el denominador no cambia nada. Ejemplo con este mismo: lo único que cambió fue ${({Conmutativa:'el orden de los sumandos',Asociativa:'dónde están los paréntesis (los números siguen en el mismo orden)',Identidad:'que aparece un 0 sumando, que no cambia nada',Inverso:'que se suma la misma fracción con el signo contrario y da 0'})[cs.cat]} → ${cs.cat}.`) };
   }
 },
 {
@@ -1743,13 +1801,16 @@ const MODULOS = [
     } else factores = fs;
     r = multF(factores);
     const negs = factores.filter(f=>f.n<0).length;
-    expl.push(`Se multiplican los numeradores entre sí y los denominadores entre sí: (${factores.map(f=>mm(f.n)).join(' × ')}) / (${factores.map(f=>f.d).join(' × ')}) = ${tf(r.rawN, r.rawD)}.`);
-    if(negs) expl.push(`Signo: hay ${negs} factor${negs>1?'es':''} negativo${negs>1?'s':''} → ${negs%2 ? 'cantidad impar, el resultado es NEGATIVO' : 'cantidad par, el resultado es POSITIVO'}.`);
-    if(r.rawN===0) expl.push(`Como un factor es 0, el producto es 0.`);
-    else if(r.d !== r.rawD) expl.push(`Se simplifica dividiendo arriba y abajo entre MCD(${Math.abs(r.rawN)}, ${r.rawD}) = ${mcd(r.rawN,r.rawD)}: → ${tf(r.n,r.d)}`);
-    else expl.push(`La fracción ya está en su forma más simple.`);
+    const absN = factores.map(f=>Math.abs(f.n)), absD = factores.map(f=>f.d);
+    expl.push(`Para multiplicar fracciones NO hace falta denominador común: se multiplica arriba con arriba y abajo con abajo, sin más.`);
+    expl.push(`Arriba: ${absN.join(' × ')} = ${Math.abs(r.rawN)}. Abajo: ${absD.join(' × ')} = ${r.rawD}.`);
+    if(negs) expl.push(`Signo: hay ${negs} número${negs>1?'s':''} negativo${negs>1?'s':''} entre los factores → cantidad ${negs%2 ? 'impar, así que el resultado es NEGATIVO' : 'par, así que los negativos se cancelan y el resultado es POSITIVO'}: ${tf(r.rawN, r.rawD)}`);
+    else expl.push(`Todos son positivos, así que el resultado también: ${tf(r.rawN, r.rawD)}`);
+    expl.push(explSimplif(r.rawN, r.rawD));
     expl.push(`→ ${tf(r.n,r.d)}`);
-    expl.push(`TRUCO: cancela ANTES de multiplicar. Cualquier número de arriba se puede simplificar con cualquier número de abajo (aunque sean de fracciones distintas) porque al final todo termina en el mismo numerador y el mismo denominador; así trabajas con números chiquitos y el resultado ya sale simplificado. En la división, lo único que se voltea es la SEGUNDA fracción (el divisor), nunca la primera. Y no busques denominador común: eso es solo para sumar y restar.`);
+    // atajo con estos mismos números: qué se podía tachar antes de multiplicar
+    const cruz = (() => { for(let i=0;i<absN.length;i++) for(let j=0;j<absD.length;j++){ const g = mcd(absN[i], absD[j]); if(g > 1) return `el ${absN[i]} de arriba y el ${absD[j]} de abajo se dividen los dos entre ${g} (quedan ${absN[i]/g} y ${absD[j]/g}) antes de multiplicar`; } return 'aquí no había nada que tachar, así que se multiplica directo'; })();
+    expl.push(`TRUCO: cancela ANTES de multiplicar. Cualquier número de arriba se puede simplificar con cualquier número de abajo (aunque sean de fracciones distintas) porque al final todo termina en el mismo numerador y el mismo denominador; así trabajas con números chiquitos y el resultado ya sale simplificado. En la división, lo único que se voltea es la SEGUNDA fracción (el divisor), nunca la primera. Y no busques denominador común: eso es solo para sumar y restar. Ejemplo con este mismo: ${cruz}; el resultado final es el mismo, ${tf(r.n,r.d)}, pero con cuentas más chicas.`);
     return { enunciado:`${div ? 'Divide' : 'Multiplica'} y escribe el resultado en su forma más simple:<br><b>${enun}</b>`,
       tipo:'frac', respuesta:{n:r.n, d:r.d}, pedirSimple:true, signo:true,
       ayuda: r.d===1 ? 'Si sale un entero, escríbelo con denominador 1.' : (fs.some(f=>f.mixto) ? 'Puedes dejar el resultado como fracción impropia.' : ''),
@@ -1774,7 +1835,7 @@ const MODULOS = [
       return { enunciado:`Escribe el recíproco de <b>${mm(k)}</b>.`, tipo:'frac', respuesta:{n: k<0?-1:1, d:Math.abs(k)}, pedirSimple:true, signo:k<0,
         explicacion:[`Un entero se escribe como fracción con denominador 1: ${mm(k)} = ${tf(k,1)}.`,
           `Se voltea: ${tf(k,1)} → ${tf(k<0?-1:1, Math.abs(k))}${k<0 ? ' (el signo se conserva)' : ''}.`,
-          `Comprobación: ${mm(k)} × ${tf(k<0?-1:1,Math.abs(k))} = ${Math.abs(k)}/${Math.abs(k)} = 1.`, `→ ${tf(k<0?-1:1, Math.abs(k))}`, TR] };
+          `Comprobación: ${k<0?`(${mm(k)})`:k} × ${tfP(k<0?-1:1,Math.abs(k))} = ${Math.abs(k)}/${Math.abs(k)} = 1 ✓ (un número por su recíproco siempre da 1).`, `→ ${tf(k<0?-1:1, Math.abs(k))}`, TR + ` Ejemplo con este mismo: ${mm(k)} es ${tf(k,1)}, volteado queda ${tf(k<0?-1:1,Math.abs(k))}.`] };
     }
     const d = R(2, porNivel(nv,9,15,30)); let n = R(1, porNivel(nv,9,15,30)); if(n===d) n++;
     const [sn,sd] = simplificar(n,d); n = sn; const dd = sd;
@@ -1787,14 +1848,14 @@ const MODULOS = [
         tipo:'frac', respuesta:rec, pedirSimple:true, signo:s<0, ayuda: rec.d===1 ? 'Si sale un entero, escríbelo con denominador 1.' : '',
         explicacion:[`${izq ? `1 ÷ (número)` : `1 sobre (número)`} es, por definición, el recíproco de ese número.`,
           `El recíproco de ${tf(rn,dd)} se obtiene volteando la fracción: ${tf(rec.n,rec.d)}${s<0?' (el signo se queda)':''}.`,
-          `Comprobación: ${tf(rn,dd)} × ${tfP(rec.n,rec.d)} = ${n*dd}/${n*dd} = 1.`, `→ ${tf(rec.n,rec.d)}`, TR] };
+          `Comprobación: ${tfP(rn,dd)} × ${tfP(rec.n,rec.d)} = ${n*dd}/${n*dd} = 1 ✓.`, `→ ${tf(rec.n,rec.d)}`, TR + ` Ejemplo con este mismo: ${tf(rn,dd)} volteado es ${tf(rec.n,rec.d)}.`] };
     }
     const rn = s*n;
     return { enunciado:`Escribe el recíproco de <b>${frS(rn,dd)}</b>.`, tipo:'frac', respuesta:rec, pedirSimple:true, signo:s<0,
       ayuda: rec.d===1 ? 'Si sale un entero, escríbelo con denominador 1.' : '',
       explicacion:[`El recíproco (inverso multiplicativo) de una fracción se obtiene intercambiando numerador y denominador.`,
         `${tf(rn,dd)} → ${tf(rec.n,rec.d)}${s<0 ? ' — el signo negativo se conserva, un número y su recíproco tienen el mismo signo' : ''}.`,
-        `Comprobación: ${tf(rn,dd)} × ${tfP(rec.n,rec.d)} = ${n*dd}/${n*dd} = 1.`, `→ ${tf(rec.n,rec.d)}`, TR] };
+        `Comprobación: ${tfP(rn,dd)} × ${tfP(rec.n,rec.d)} = ${n*dd}/${n*dd} = 1 ✓.`, `→ ${tf(rec.n,rec.d)}`, TR + ` Ejemplo con este mismo: ${tf(rn,dd)} volteado es ${tf(rec.n,rec.d)} — el ${Math.abs(rn)} bajó y el ${dd} subió${s<0?', y el menos se quedó':''}.`] };
   }
 },
 {
@@ -1805,54 +1866,63 @@ const MODULOS = [
     const F = () => { const d = pick(dens); let n = R(1,d-1); if(Math.random()<neg) n=-n; return {n,d}; };
     const A = F(), B = F(), C = F(), D = F();
     const pat = pick(nv==='facil' ? ['sumaMult','restaDiv','multDiv'] : nv==='medio' ? ['sumaMult','restaDiv','multDiv','parDiv','divSuma'] : ['restaDiv','parDiv','divSuma','cuadrado','restaMultPar']);
-    const pasos = [], mul = (x,y) => { const r = multF([x,y]); return {n:r.n,d:r.d}; }, dv = (x,y) => { const r = divF(x,y); return {n:r.n,d:r.d}; };
-    const sub = (x,y) => addF(x, {n:-y.n, d:y.d});
-    const paso = (txt, res) => { pasos.push(`${txt} = ${tf(res.n,res.d)}`); return res; };
-    let enun, res;
+    // cada paso: un título que dice QUÉ va primero y POR QUÉ, y debajo la operación desglosada
+    const pasos = [];
+    const paso = (titulo, r) => { pasos.push(titulo, ...r.lineas); return r.res; };
+    const suma = (x,y) => pasosSumaF(x,y);
+    const resta = (x,y) => { const r = pasosSumaF(x, {n:-y.n, d:y.d}); return { res:r.res, lineas:[`Restar es sumar el opuesto (se le cambia el signo al segundo): ${opT(x)} − ${opTP(y)} = ${opT(x)} + ${tfP(-y.n,y.d)}.`, ...r.lineas] }; };
+    let enun, enunT, res, primero;
     switch(pat){
       case 'sumaMult':                                                // A + B × C
-        enun = `${opS(A)} + ${opP(B)} × ${opP(C)}`;
-        { const p = paso(`Primero la multiplicación: ${opT(B)} × ${opTP(C)}`, mul(B,C));
-          res = paso(`Luego la suma: ${opT(A)} + ${opTP(p)}`, addF(A,p)); }
+        enun = `${opS(A)} + ${opP(B)} × ${opP(C)}`; enunT = `${opT(A)} + ${opTP(B)} × ${opTP(C)}`;
+        primero = `la multiplicación ${opT(B)} × ${opTP(C)} va antes que la suma, aunque la suma esté escrita primero`;
+        { const p = paso(`Paso 1 — la multiplicación va ANTES que la suma, aunque aparezca después:`, pasosMultF(B,C));
+          res = paso(`Paso 2 — ahora sí la suma, con el resultado ya puesto: ${opT(A)} + ${opTP(p)}`, suma(A,p)); }
         break;
       case 'restaDiv':                                                // A ÷ B − C
-        enun = `${opS(A)} ÷ ${opP(B)} − ${opP(C)}`;
-        { const p = paso(`Primero la división (multiplicar por el recíproco): ${opT(A)} ÷ ${opTP(B)} = ${opT(A)} × ${tfP(recipF(B).n,recipF(B).d)}`, dv(A,B));
-          res = paso(`Luego la resta: ${opT(p)} − ${opTP(C)}`, sub(p,C)); }
+        enun = `${opS(A)} ÷ ${opP(B)} − ${opP(C)}`; enunT = `${opT(A)} ÷ ${opTP(B)} − ${opTP(C)}`;
+        primero = `la división ${opT(A)} ÷ ${opTP(B)} va antes que la resta`;
+        { const p = paso(`Paso 1 — la división va ANTES que la resta:`, pasosDivF(A,B));
+          res = paso(`Paso 2 — ahora la resta, con el resultado ya puesto: ${opT(p)} − ${opTP(C)}`, resta(p,C)); }
         break;
       case 'multDiv':                                                 // A × B ÷ C  (izquierda a derecha)
-        enun = `${opS(A)} × ${opP(B)} ÷ ${opP(C)}`;
-        { const p = paso(`Multiplicación y división tienen el mismo rango: se hacen de IZQUIERDA a derecha. Primero ${opT(A)} × ${opTP(B)}`, mul(A,B));
-          res = paso(`Luego ${opT(p)} ÷ ${opTP(C)} = ${opT(p)} × ${tfP(recipF(C).n,recipF(C).d)}`, dv(p,C)); }
+        enun = `${opS(A)} × ${opP(B)} ÷ ${opP(C)}`; enunT = `${opT(A)} × ${opTP(B)} ÷ ${opTP(C)}`;
+        primero = `multiplicar y dividir empatan, así que se hace lo que esté más a la izquierda: ${opT(A)} × ${opTP(B)}`;
+        { const p = paso(`Paso 1 — multiplicación y división tienen el MISMO rango, se resuelven de izquierda a derecha. Primero la de la izquierda:`, pasosMultF(A,B));
+          res = paso(`Paso 2 — luego la división, con el resultado ya puesto: ${opT(p)} ÷ ${opTP(C)}`, pasosDivF(p,C)); }
         break;
       case 'parDiv':                                                  // (A + B) ÷ C
-        enun = `(${opS(A)} + ${opP(B)}) ÷ ${opP(C)}`;
-        { const p = paso(`Primero lo de adentro del paréntesis: ${opT(A)} + ${opTP(B)}`, addF(A,B));
-          res = paso(`Luego la división: ${opT(p)} ÷ ${opTP(C)} = ${opT(p)} × ${tfP(recipF(C).n,recipF(C).d)}`, dv(p,C)); }
+        enun = `(${opS(A)} + ${opP(B)}) ÷ ${opP(C)}`; enunT = `(${opT(A)} + ${opTP(B)}) ÷ ${opTP(C)}`;
+        primero = `el paréntesis (${opT(A)} + ${opTP(B)}) va antes que todo lo demás`;
+        { const p = paso(`Paso 1 — lo que está dentro del paréntesis va siempre primero:`, suma(A,B));
+          res = paso(`Paso 2 — el paréntesis ya es un solo número; ahora la división: ${opT(p)} ÷ ${opTP(C)}`, pasosDivF(p,C)); }
         break;
       case 'divSuma':                                                 // A ÷ B + C × D
-        enun = `${opS(A)} ÷ ${opP(B)} + ${opP(C)} × ${opP(D)}`;
-        { const p1 = paso(`División y multiplicación van antes que la suma. División: ${opT(A)} ÷ ${opTP(B)}`, dv(A,B));
-          const p2 = paso(`Multiplicación: ${opT(C)} × ${opTP(D)}`, mul(C,D));
-          res = paso(`Por último la suma: ${opT(p1)} + ${opTP(p2)}`, addF(p1,p2)); }
+        enun = `${opS(A)} ÷ ${opP(B)} + ${opP(C)} × ${opP(D)}`; enunT = `${opT(A)} ÷ ${opTP(B)} + ${opTP(C)} × ${opTP(D)}`;
+        primero = `la división y la multiplicación van las dos antes que la suma del medio`;
+        { const p1 = paso(`Paso 1 — la división y la multiplicación van antes que la suma. Primero la división (está más a la izquierda):`, pasosDivF(A,B));
+          const p2 = paso(`Paso 2 — luego la multiplicación:`, pasosMultF(C,D));
+          res = paso(`Paso 3 — por último la suma de los dos resultados: ${opT(p1)} + ${opTP(p2)}`, suma(p1,p2)); }
         break;
       case 'cuadrado':                                                // A + (B)² × C
-        enun = `${opS(A)} + (${frS(B.n,B.d)})<sup>2</sup> × ${opP(C)}`;
-        { const p1 = paso(`Primero el exponente: (${opT(B)})² = ${opT(B)} × ${opT(B)}`, mul(B,B));
-          const p2 = paso(`Luego la multiplicación: ${opT(p1)} × ${opTP(C)}`, mul(p1,C));
-          res = paso(`Por último la suma: ${opT(A)} + ${opTP(p2)}`, addF(A,p2)); }
+        enun = `${opS(A)} + (${frS(B.n,B.d)})<sup>2</sup> × ${opP(C)}`; enunT = `${opT(A)} + (${opT(B)})² × ${opTP(C)}`;
+        primero = `el exponente (${opT(B)})² va antes que la multiplicación y que la suma`;
+        { const p1 = paso(`Paso 1 — el exponente va primero. Elevar al cuadrado es multiplicar la fracción por sí misma:`, pasosMultF(B,B));
+          const p2 = paso(`Paso 2 — luego la multiplicación: ${opT(p1)} × ${opTP(C)}`, pasosMultF(p1,C));
+          res = paso(`Paso 3 — por último la suma: ${opT(A)} + ${opTP(p2)}`, suma(A,p2)); }
         break;
       default:                                                        // A − B × (C + D)
-        enun = `${opS(A)} − ${opP(B)} × (${opS(C)} + ${opP(D)})`;
-        { const p1 = paso(`Primero el paréntesis: ${opT(C)} + ${opTP(D)}`, addF(C,D));
-          const p2 = paso(`Luego la multiplicación: ${opT(B)} × ${opTP(p1)}`, mul(B,p1));
-          res = paso(`Por último la resta: ${opT(A)} − ${opTP(p2)}`, sub(A,p2)); }
+        enun = `${opS(A)} − ${opP(B)} × (${opS(C)} + ${opP(D)})`; enunT = `${opT(A)} − ${opTP(B)} × (${opT(C)} + ${opTP(D)})`;
+        primero = `el paréntesis (${opT(C)} + ${opTP(D)}) va primero, después la multiplicación y al final la resta`;
+        { const p1 = paso(`Paso 1 — lo de adentro del paréntesis va siempre primero:`, suma(C,D));
+          const p2 = paso(`Paso 2 — luego la multiplicación (va antes que la resta): ${opT(B)} × ${opTP(p1)}`, pasosMultF(B,p1));
+          res = paso(`Paso 3 — por último la resta: ${opT(A)} − ${opTP(p2)}`, resta(A,p2)); }
     }
     return { enunciado:`Simplifica usando el orden de operaciones:<br><b>${enun}</b>`,
       tipo:'frac', respuesta:res, pedirSimple:true, signo:true, ayuda:'Escribe la respuesta como fracción simplificada (puede ser impropia).',
-      explicacion:[`Con fracciones se usa el MISMO orden de siempre: paréntesis → exponentes → multiplicaciones y divisiones (de izquierda a derecha) → sumas y restas (de izquierda a derecha).`,
+      explicacion:[`Con fracciones se usa el MISMO orden de siempre: 1) paréntesis, 2) exponentes, 3) multiplicaciones y divisiones de izquierda a derecha, 4) sumas y restas de izquierda a derecha. No importa en qué orden estén escritas.`,
         ...pasos, `→ ${tf(res.n,res.d)}`,
-        `TRUCO: antes de calcular nada, marca con un círculo la operación que va PRIMERO y resuélvela sola en un renglón aparte; después reescribe la expresión completa con ese resultado ya puesto. Un renglón por operación evita el error más común, que es sumar antes de multiplicar. Para dividir, voltea solo la fracción que está DESPUÉS del ÷ y cambia a ×; para sumar o restar, ahí sí busca denominador común.`] };
+        `TRUCO: antes de calcular nada, marca con un círculo la operación que va PRIMERO y resuélvela sola en un renglón aparte; después reescribe la expresión completa con ese resultado ya puesto, y repite. Un renglón por operación evita el error más común, que es sumar antes de multiplicar. Para dividir, voltea solo la fracción que está DESPUÉS del ÷ y cambia a ×; para sumar o restar, ahí sí busca denominador común. Ejemplo con este mismo: en ${enunT} ${primero}; se resuelve eso, se reescribe la línea con ese número, y se sigue.`] };
   }
 },
 {
@@ -1865,33 +1935,36 @@ const MODULOS = [
     const pat = pick(nv==='facil' ? ['simple','simple','arriba'] : nv==='medio' ? ['arriba','abajo','ambas'] : ['ambas','ambas','verbal']);
     let A = F(), B = F(), C = F(), D = F();
     const pasos = [];
-    let num, den, enun;
+    let num, den, enun, arribaT, abajoT;
+    const pasoArriba = () => { const p = pasosSumaF(A,B); pasos.push(`Paso 1 — lo de ARRIBA, como si estuviera entre paréntesis:`, ...p.lineas); return p.res; };
+    const pasoAbajo = n => { const p = pasosSumaF(C, {n:-D.n, d:D.d}); pasos.push(`Paso ${n} — lo de ABAJO, también entre paréntesis. Restar es sumar el opuesto: ${opT(C)} − ${opTP(D)} = ${opT(C)} + ${tfP(-D.n,D.d)}.`, ...p.lineas); return p.res; };
     if(pat==='simple'){
-      num = A; den = C; enun = fr(frS(A.n,A.d), frS(C.n,C.d));
+      num = A; den = C; enun = fr(frS(A.n,A.d), frS(C.n,C.d)); arribaT = opT(A); abajoT = opT(C);
     } else if(pat==='arriba'){
-      num = addF(A,B); den = C; enun = fr(`${frS(A.n,A.d)} + ${frP(B.n,B.d)}`, frS(C.n,C.d));
-      pasos.push(`Arriba: ${opT(A)} + ${opTP(B)} = ${tf(num.n,num.d)}`);
+      enun = fr(`${frS(A.n,A.d)} + ${frP(B.n,B.d)}`, frS(C.n,C.d)); arribaT = `(${opT(A)} + ${opTP(B)})`; abajoT = opT(C);
+      num = pasoArriba(); den = C;
     } else if(pat==='abajo'){
-      num = A; den = sub(C,D); while(den.n===0){ D = F(); den = sub(C,D); }
-      enun = fr(frS(A.n,A.d), `${frS(C.n,C.d)} − ${frP(D.n,D.d)}`);
-      pasos.push(`Abajo: ${opT(C)} − ${opTP(D)} = ${tf(den.n,den.d)}`);
+      den = sub(C,D); while(den.n===0){ D = F(); den = sub(C,D); }
+      enun = fr(frS(A.n,A.d), `${frS(C.n,C.d)} − ${frP(D.n,D.d)}`); arribaT = opT(A); abajoT = `(${opT(C)} − ${opTP(D)})`;
+      num = A; den = pasoAbajo(1);
     } else {
-      num = addF(A,B); den = sub(C,D); while(den.n===0){ D = F(); den = sub(C,D); }
-      enun = fr(`${frS(A.n,A.d)} + ${frP(B.n,B.d)}`, `${frS(C.n,C.d)} − ${frP(D.n,D.d)}`);
-      pasos.push(`Arriba: ${opT(A)} + ${opTP(B)} = ${tf(num.n,num.d)}`, `Abajo: ${opT(C)} − ${opTP(D)} = ${tf(den.n,den.d)}`);
+      den = sub(C,D); while(den.n===0){ D = F(); den = sub(C,D); }
+      enun = fr(`${frS(A.n,A.d)} + ${frP(B.n,B.d)}`, `${frS(C.n,C.d)} − ${frP(D.n,D.d)}`); arribaT = `(${opT(A)} + ${opTP(B)})`; abajoT = `(${opT(C)} − ${opTP(D)})`;
+      num = pasoArriba(); den = pasoAbajo(2);
     }
-    const r = divF(num, den);
-    const rec = recipF(den);
-    pasos.push(`Ahora es una división: ${tfP(num.n,num.d)} ÷ ${tfP(den.n,den.d)} = ${tfP(num.n,num.d)} × ${tfP(rec.n,rec.d)} = ${tf(r.n,r.d)}`);
+    const nPaso = pasos.filter(l => /^Paso \d/.test(l)).length + 1;
+    const dv = pasosDivF(num, den);
+    pasos.push(`Paso ${nPaso} — ya hay UNA sola fracción arriba y UNA abajo; la raya larga es una división:`, ...dv.lineas);
+    const r = dv.res;
     const enunciado = pat==='verbal'
       ? `La suma de ${frS(A.n,A.d)} y ${frP(B.n,B.d)} se va a dividir por la diferencia entre ${frS(C.n,C.d)} y ${frP(D.n,D.d)}. Escribe la expresión como fracción compleja y simplifícala.`
       : `Simplifica la fracción compleja:<br><b style="font-size:1.15em">${enun}</b>`;
     return { enunciado, tipo:'frac', respuesta:{n:r.n, d:r.d}, pedirSimple:true, signo:true, ayuda:'Escribe la respuesta como fracción simplificada (puede ser impropia).',
       explicacion:[pat==='verbal'
-          ? `Se traduce: (suma) ÷ (diferencia) → (${opT(A)} + ${opTP(B)}) / (${opT(C)} − ${opTP(D)}). Los paréntesis son obligatorios porque arriba y abajo hay operaciones.`
-          : `Una fracción compleja es una división: la raya grande significa "(lo de arriba) ÷ (lo de abajo)". Primero se simplifica cada parte por separado, con paréntesis.`,
+          ? `Primero se traduce a símbolos: "la suma de A y B" es (A + B), "la diferencia entre C y D" es (C − D), y "se divide por" pone la primera arriba y la segunda abajo: ${arribaT} / ${abajoT}. Los paréntesis son obligatorios porque arriba y abajo hay operaciones.`
+          : `Una fracción compleja es una fracción que tiene fracciones adentro. La raya grande del medio no es más que una división: ${arribaT} ÷ ${abajoT}. Se resuelve lo de arriba, se resuelve lo de abajo, y al final se dividen.`,
         ...pasos, `→ ${tf(r.n,r.d)}`,
-        `TRUCO: la raya larga es un ÷ disfrazado. Escribe (arriba) ÷ (abajo) con paréntesis, resuelve cada paréntesis hasta dejar UNA fracción en cada uno, y al final voltea la de abajo y multiplica. Nunca "canceles" un número de arriba con uno de abajo mientras todavía haya sumas o restas sin hacer.`] };
+        `TRUCO: la raya larga es un ÷ disfrazado. Escribe (arriba) ÷ (abajo) con paréntesis, resuelve cada paréntesis hasta dejar UNA fracción en cada uno, y al final voltea la de abajo y multiplica. Nunca "canceles" un número de arriba con uno de abajo mientras todavía haya sumas o restas sin hacer. Ejemplo con este mismo: ${arribaT} ÷ ${abajoT} → arriba queda ${opT(num)}, abajo queda ${opT(den)}, y ${opT(num)} ÷ ${opTP(den)} se convierte en ${opT(num)} × ${tfP(recipF(den).n,recipF(den).d)} = ${tf(r.n,r.d)}.`] };
   }
 }
 ];
