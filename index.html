@@ -1256,8 +1256,10 @@ const MODULOS = [
     const tipo = pick(['equilatero','isosceles','escaleno']);
     let a,b,c;
     if(tipo==='equilatero'){ a=b=c=R(3,alto); }
-    else if(tipo==='isosceles'){ a=b=R(3,alto); do{ c=R(3,alto); }while(c===a); }
-    else { a=R(3,alto); do{ b=R(3,alto); }while(b===a); do{ c=R(3,alto); }while(c===a||c===b); }
+    // los tres lados tienen que poder cerrar un triángulo (cada lado menor que la suma de los
+    // otros dos) — antes salían cosas como 15, 9 y 4, que no existen como triángulo
+    else if(tipo==='isosceles'){ a=b=R(3,alto); do{ c=R(3,alto); }while(c===a || c>=a+b); }
+    else { do{ a=R(3,alto); do{ b=R(3,alto); }while(b===a); do{ c=R(3,alto); }while(c===a||c===b); }while(a>=b+c || b>=a+c || c>=a+b); }
     const nombre = {equilatero:'Equilátero',isosceles:'Isósceles',escaleno:'Escaleno'}[tipo];
     return { enunciado:`Un triángulo tiene lados de <b>${a}, ${b} y ${c}</b>. ¿Cómo se clasifica según sus lados?`,
       tipo:'opciones', opciones: shuffle(['Equilátero','Isósceles','Escaleno']), respuesta: nombre,
@@ -1647,7 +1649,10 @@ const MODULOS = [
       fs = [mk(), mk()];
     }
     // b se resta: el operando que se ve es b, la fracción que se suma es −b
-    const oper = fs.map((f,i) => (i>0 && resta) ? {...f, n:-f.n} : f);
+    // solo el 2º operando se resta — es el único que lleva "−" en pantalla; antes se negaban
+    // TODOS los que seguían al primero, y en la variante de 3 fracciones el tercero salía con
+    // el signo cambiado (la respuesta guardada no coincidía con lo que se veía)
+    const oper = fs.map((f,i) => (i===1 && resta) ? {...f, n:-f.n} : f);
     const ver = f => f.entero ? mm(f.n) : f.mixto ? mixS(f.e, f.pn, f.d) : frS(f.n, f.d);
     const verP = f => f.entero ? (f.n<0?`(${mm(f.n)})`:f.n) : f.mixto ? (f.e<0?`(${mixS(f.e,f.pn,f.d)})`:mixS(f.e,f.pn,f.d)) : frP(f.n, f.d);
     const signos = fs.map((f,i)=> i===0 ? ver(f) : (resta && i===1 ? ' − ' : ' + ') + verP(f)).join('');
@@ -3803,6 +3808,29 @@ function autotest(){
       }
     }
     chk('triángulos generados siempre cumplen la desigualdad triangular', malTri===0);
+    // el módulo "Triángulos según sus lados" también: salían lados como 15, 9 y 4 (3ª auditoría)
+    let malTriClas = 0;
+    for(let i=0;i<300;i++){ for(const nv of ['facil','medio','dificil']){
+      const m = MOD_POR_ID['triangulos'].gen(nv).enunciado.match(/lados de <b>(\d+), (\d+) y (\d+)/);
+      const [a,b,c] = m.slice(1).map(Number);
+      if(a+b<=c || a+c<=b || b+c<=a) malTriClas++;
+    } }
+    chk('"Triángulos según sus lados" nunca pide clasificar un triángulo imposible', malTriClas===0);
+    // suma/resta de 3 fracciones con resta: la respuesta guardada tiene que ser la de la
+    // expresión que se VE (antes el 3er término se restaba por dentro y se mostraba con "+")
+    let malSigno = 0;
+    for(let i=0;i<300;i++){
+      const e = MOD_POR_ID['suma-resta-frac'].gen('dificil');
+      const fs_ = [...e.enunciado.matchAll(/(\(?−?)<span class="fr"><b>(\d+)<\/b><i>(\d+)<\/i><\/span>/g)];
+      if(fs_.length !== 3 || /\d <span/.test(e.enunciado)) continue;          // solo el caso de 3 fracciones sin mixtos
+      const ops = [...e.enunciado.matchAll(/<\/span>\)? ([+−]) /g)].map(x=>x[1]);
+      let tot = null;
+      fs_.forEach((f,k)=>{ let v = { n:(f[1].includes('−')?-1:1)*+f[2], d:+f[3] };
+        if(k>0 && ops[k-1]==='−') v = { n:-v.n, d:v.d };
+        tot = tot ? { n: tot.n*v.d + v.n*tot.d, d: tot.d*v.d } : v; });
+      if(tot.n*e.respuesta.d !== e.respuesta.n*tot.d) malSigno++;
+    }
+    chk('suma/resta de 3 fracciones: la respuesta coincide con los signos que se ven', malSigno===0);
     chk('trapecio (área) nunca genera las dos bases iguales',             malTrapArea===0);
     chk('trapecio (perímetro) los lados no paralelos alcanzan a cerrarlo', malTrapPerim===0);
   }
