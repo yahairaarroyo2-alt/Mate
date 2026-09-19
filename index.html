@@ -2528,12 +2528,18 @@ let _pantallaActual = null;   // qué pantalla-función se repinta sola si llega
 let esTemaFijo = false;   // true = practicando un tema concreto, no la mezcla
 let capFijo = null;       // 1/2/3 = mezclando solo los temas de ese capítulo
 let modoErrores = false;  // true = repasando la lista de "errores" en vez de practicar normal
+let modoRepasoRonda = false; // true = repitiendo sesionFallos al terminar una ronda (ver _repasarFallosRonda)
 let examen = null;        // { preguntas:[{ej,ok,completado}], idx, finLimite } o null si no hay examen activo
 let sesionHechos = 0;     // cuántos ejercicios van en esta ronda
 let sesionCorrectos = 0;  // cuántos de esos aciertos, para el resumen al terminar la ronda
 let sesionCola = [];      // mezcla: ids de módulo ya sorteados para esta ronda (2 de cada uno), se van sacando
 let sesionPendientes = [];// preguntas falladas en espera de volver a salir: [{modId, ej, esperar}]
 let sesionTotal = 0;      // tamaño de la ronda actual; al llegar acá se para de verdad (pantallaRondaCompleta)
+// fallos DE ESTA RONDA (se reinicia con cada ronda nueva) — separado de `errores`, que es la
+// lista permanente de "Repasar mis errores"; esto es solo para el botón "Repetir las que fallé"
+// que aparece en pantallaRondaCompleta, y se descarta al salir de esa pantalla
+let sesionFallos = [];     // [{modId, nombre, ej}]
+let colaRepasoRonda = [];  // copia de trabajo de sesionFallos que se va vaciando durante modoRepasoRonda
 const SESION_TEMA = 20;   // tamaño de ronda cuando el tema está fijo (no hay de dónde sacar "2 de cada")
 const VECES_POR_TEMA = 2; // mezcla: mínimo garantizado de repeticiones de cada tema activo en la ronda
 const tamanoMezcla = ms => ms.length * VECES_POR_TEMA;   // para mostrarlo en los botones sin arrancar la ronda
@@ -2567,7 +2573,7 @@ let ultimoProceso = '';   // lo que el usuario escribió en "Tu proceso" antes d
 /* ---------- retomar donde quedó (mate_sesion_v1) ---------- */
 function guardarSesion(){
   guardar('mate_sesion_v1', { modId: modActual.id, esTemaFijo, capFijo, sesionHechos, sesionCorrectos,
-    sesionCola, sesionPendientes, sesionTotal, ejActual, respondido, vioExpl, ordenSel, ultimoFeedback, ultimoProceso });
+    sesionCola, sesionPendientes, sesionFallos, sesionTotal, ejActual, respondido, vioExpl, ordenSel, ultimoFeedback, ultimoProceso });
 }
 const borrarSesion = () => { try{ localStorage.removeItem('mate_sesion_v1'); }catch(e){} };
 function restaurarSesion(){
@@ -2576,7 +2582,7 @@ function restaurarSesion(){
   modActual = MOD_POR_ID[s.modId];
   esTemaFijo = s.esTemaFijo; capFijo = s.capFijo; sesionHechos = s.sesionHechos || 1;
   sesionCorrectos = s.sesionCorrectos || 0; sesionCola = s.sesionCola || [];
-  sesionPendientes = s.sesionPendientes || [];
+  sesionPendientes = s.sesionPendientes || []; sesionFallos = s.sesionFallos || [];
   sesionTotal = s.sesionTotal || sesionCola.length || SESION_TEMA;
   ejActual = s.ejActual; respondido = s.respondido; vioExpl = s.vioExpl;
   ordenSel = s.ordenSel || []; ultimoFeedback = s.ultimoFeedback || null;
@@ -2770,6 +2776,7 @@ function ir(pantalla, arg, continuar){
   // práctica normal queda contaminado (responder() y el botón "Siguiente" siguen esas reglas)
   if(pantalla !== 'examen'){ examen = null; clearInterval(_examenTimerIv); }
   if(pantalla !== 'errores') modoErrores = false;
+  modoRepasoRonda = false;   // no hay pantalla dedicada — cualquier ir() cancela el repaso de la ronda
   // _pantallaActual solo debe apuntar a Inicio/Progreso mientras de verdad estás ahí — si no,
   // queda "pegado" ahí y un cambio remoto de sync te saca de la práctica solo, a media ronda
   // (bug real: pasaba en cualquier pantalla a la que entraras después de haber visto Inicio).
@@ -2944,7 +2951,7 @@ function nuevoEjercicio(arg, continuar){
   // límite real: al llegar al final de la ronda, no se sigue solo — hay que elegir "seguir" o "terminar"
   if(continuar && sesionHechos >= sesionTotal) return pantallaRondaCompleta();
   if(!continuar){                       // ronda nueva: arma la cola y fija el tamaño
-    sesionHechos = 0; sesionCorrectos = 0; sesionPendientes = [];
+    sesionHechos = 0; sesionCorrectos = 0; sesionPendientes = []; sesionFallos = [];
     esTemaFijo = typeof arg !== 'number' && !!arg;
     capFijo = typeof arg === 'number' ? arg : null;
     sesionCola = esTemaFijo ? [] : construirCola(capFijo);
@@ -3072,14 +3079,54 @@ function pantallaRondaCompleta(){
   borrarSesion();
   const total = sesionHechos, ok = sesionCorrectos, pct_ = total ? Math.round(ok/total*100) : 0;
   const seguirArg = esTemaFijo ? `'${modActual.id}'` : capFijo ? capFijo : 'undefined';
+  // agrupa los fallos por tema para el resumen, ej. "Reglas de signos (2), Fracciones (1)"
+  const porTema = {};
+  sesionFallos.forEach(f => { porTema[f.nombre] = (porTema[f.nombre]||0) + 1; });
+  const listaFallos = Object.entries(porTema).map(([nom,n]) => n>1 ? `${nom} (${n})` : nom).join(', ');
   main.innerHTML = `
     <button class="back" onclick="ir('inicio')">← Inicio</button>
     <div class="card" style="text-align:center">
       <h2>¡Ronda completa!</h2>
       <div class="nota">Acertaste ${ok} de ${total} (${pct_}%)</div>
-      <button class="btn amar" onclick="ir('practica',${seguirArg})">Seguir practicando</button>
+      ${sesionFallos.length ? `
+        <div class="nota" style="margin-top:8px">Fallaste en: ${listaFallos}</div>
+        <button class="btn amar" style="margin-top:14px" onclick="_repasarFallosRonda()">Repetir las que fallé (${sesionFallos.length})</button>
+      ` : ''}
+      <button class="btn ${sesionFallos.length?'sec':'amar'}" style="margin-top:10px" onclick="ir('practica',${seguirArg})">Seguir practicando</button>
       <button class="btn sec" onclick="ir('inicio')">Volver a inicio</button>
     </div>`;
+}
+// "Repetir las que fallé" — repasa sesionFallos una por una (acierto la saca de la cola, fallo
+// la manda al final, igual que "Repasar mis errores") sin tocar `errores` ni las estadísticas:
+// esto es solo para cerrar la ronda que se acaba de terminar, no un historial permanente.
+function _repasarFallosRonda(){
+  modoRepasoRonda = true;
+  colaRepasoRonda = sesionFallos.slice();
+  _pintarSiguienteRepasoRonda();
+}
+function _pintarSiguienteRepasoRonda(){
+  if(!colaRepasoRonda.length){ modoRepasoRonda = false; return pantallaRondaCompleta(); }
+  const item = colaRepasoRonda[0];
+  modActual = MOD_POR_ID[item.modId] || { id:item.modId, nombre:'Repaso' };
+  ejActual = item.ej;
+  respondido = false; vioExpl = false; ordenSel = []; ultimoProceso = '';
+  _barra(null);
+  main.innerHTML = `
+    <button class="back" onclick="ir('inicio')">← Inicio</button>
+    <div class="card">
+      <span class="pill">Repitiendo lo que fallaste · quedan ${colaRepasoRonda.length}</span>
+      <div class="enunciado">${ejActual.enunciado}</div>
+      <div id="zonaEntrada">${entradaHTML(ejActual)}</div>
+      <div id="zonaFb"></div>
+      <div class="row" id="accionesPre"></div>
+    </div>`;
+  const primero = $('inNum') || $('inTexto') || $('inE') || $('inN') || $('inA2');
+  if(primero){
+    if(window.innerWidth > 640) primero.focus();
+    ['inNum','inTexto','inE','inN','inD','inA2','inA3'].forEach(id=>{
+      const el = $(id); if(el) el.addEventListener('keydown', e => { if(e.key==='Enter') responder(); });
+    });
+  }
 }
 
 function tocarOrden(i){
@@ -3130,11 +3177,16 @@ function responder(valor){
     // o "Siguiente ejercicio" volvía a mostrar EXACTAMENTE la misma pregunta que acabas de fallar
     if(res.ok){ errores.shift(); } else { errores.push(errores.shift()); }
     guardar('mate_errores_v1', errores);
+  } else if(modoRepasoRonda){
+    // mismo vaivén que modoErrores pero sobre la copia de trabajo de sesionFallos —
+    // no toca `errores` ni las estadísticas, es solo repetir lo que ya se falló en esta ronda
+    if(res.ok){ colaRepasoRonda.shift(); } else { colaRepasoRonda.push(colaRepasoRonda.shift()); }
   } else {
     if(!vioExpl) anotar(ejActual.__mod, res.ok);
     if(!vioExpl && res.ok) sesionCorrectos++;
     if(!vioExpl && !res.ok){
       _registrarError(ejActual);
+      sesionFallos.push({ modId: ejActual.__mod, nombre: modActual.nombre, ej: ejActual });
       if(repetirFallo) _programarRepeticion();
     }
     guardarSesion();
@@ -3152,6 +3204,7 @@ function mostrarFb(res, soloAviso){
   const clase_ = res.ok ? 'ok' : res.incompleto ? 'medio' : 'mal';
   const titulo = res.ok ? '¡Correcto!' : res.incompleto ? 'Casi' : 'No es esa';
   const sigOnclick = modoErrores ? '_pintarSiguienteError()'
+    : modoRepasoRonda ? '_pintarSiguienteRepasoRonda()'
     : `ir('practica',${esTemaFijo ? `'${modActual.id}'` : capFijo ? capFijo : 'undefined'},true)`;
   zona.innerHTML = `
     <div class="fb ${clase_}">${titulo}
@@ -3161,7 +3214,7 @@ function mostrarFb(res, soloAviso){
     </div>
     ${explHTML()}
     <button class="btn amar" onclick="${sigOnclick}">Siguiente ejercicio</button>
-    ${!modoErrores ? `<button class="btn sec chico" style="margin-top:8px" onclick="otroDelMismoTema()">Otro de este tema<small>no gasta tu ronda</small></button>` : ''}`;
+    ${(!modoErrores && !modoRepasoRonda) ? `<button class="btn sec chico" style="margin-top:8px" onclick="otroDelMismoTema()">Otro de este tema<small>no gasta tu ronda</small></button>` : ''}`;
   $('zonaEntrada').style.opacity = '.5';
   $('zonaEntrada').style.pointerEvents = 'none';
   $('accionesPre').style.display = 'none';
