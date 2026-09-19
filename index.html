@@ -2752,6 +2752,7 @@ document.addEventListener('keydown', e => {
   else if(e.key === '/'){ e.preventDefault(); calcOp('÷'); }   // '/' abre la búsqueda rápida en Firefox
   else if(e.key === '%') calcPorcentaje();
   else if(e.key === 'Enter' || e.key === '=') calcIgual();
+  else if(e.key === 'u' || e.key === 'U') calcUsar();
   else if(e.key === 'Escape') cerrarCalc();
   else if(e.key === 'Backspace'){ calcVal = calcVal.length>1 ? calcVal.slice(0,-1) : '0'; _calcRender(); }
   else return;
@@ -3057,10 +3058,10 @@ function pintarEjercicio(){
         <button class="${repetirFallo?'on':''}" onclick="toggleRepetir()"><b>${repetirFallo?'Sí':'No'}</b><span>repetir</span></button>
       </div>
     </div>`;
-  const primero = $('inNum') || $('inTexto') || $('inE') || $('inN');
+  const primero = $('inNum') || $('inTexto') || $('inE') || $('inN') || $('inA2');
   if(primero){
     if(window.innerWidth > 640) primero.focus();  // en móvil no abrimos el teclado solo: tapa el enunciado
-    ['inNum','inTexto','inE','inN','inD'].forEach(id=>{
+    ['inNum','inTexto','inE','inN','inD','inA2','inA3'].forEach(id=>{
       const el = $(id); if(el) el.addEventListener('keydown', e => { if(e.key==='Enter') responder(); });
     });
   }
