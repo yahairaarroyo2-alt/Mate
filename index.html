@@ -292,6 +292,15 @@
   .calcPantalla{background:var(--contraste);color:var(--contraste-texto);border-radius:16px;
     padding:18px 16px;text-align:right;font-size:1.9rem;font-weight:700;margin-bottom:14px;
     overflow-x:auto;white-space:nowrap}
+  /* historial de cuentas del ejercicio actual — oculto (display:none inline) cuando está vacío,
+     así no roba espacio en la mayoría de las aperturas */
+  .calcHist{max-height:98px;overflow-y:auto;margin:-6px 0 14px}
+  .calcHistFila{display:flex;justify-content:space-between;align-items:baseline;gap:10px;
+    width:100%;background:none;border:none;border-bottom:1px solid rgba(255,255,255,.14);
+    padding:6px 2px;font-family:inherit;cursor:pointer;color:var(--muted);font-size:.82rem;text-align:left}
+  .calcHistFila:last-child{border-bottom:none}
+  .calcHistFila b{color:var(--texto);font-weight:800;flex:none}
+  body.night .calcHistFila{border-bottom-color:rgba(255,255,255,.1)}
   .calcGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
   /* sin backdrop-filter propio (mismo motivo que .btn, ver comentario junto a .btn arriba):
      estos botones viven siempre dentro de .calcCard, que ya está esmerilada — un blur por
@@ -337,6 +346,7 @@
       </div>
     </div>
     <div class="calcPantalla" id="calcPantalla">0</div>
+    <div class="calcHist" id="calcHist" style="display:none"></div>
     <div class="calcGrid">
       <button onclick="calcClear()">C</button>
       <button onclick="calcSigno()">±</button>
@@ -2665,6 +2675,18 @@ function _cerrarMenuGruposFuera(e){
 // antes calcVal se sobreescribía con el resultado parcial apenas se tocaba un segundo
 // signo, y ese resultado se colaba en pantalla aunque el usuario no hubiera pedido "=".
 let calcVal = '0', calcNuevo = false, calcTokens = [];
+// cuentas ya resueltas (con "=") en el ejercicio actual — se reinicia con cada ejercicio nuevo
+// (ver los 4 sitios que hacen "ultimoProceso = ''"), no al abrir/cerrar la calculadora, así que
+// si la cierras y la vuelves a abrir en el MISMO ejercicio sigues viendo lo que ya hiciste.
+let calcHist = [];   // [{expr, res}]
+function _calcRenderHist(){
+  const el = $('calcHist'); if(!el) return;
+  el.style.display = calcHist.length ? 'block' : 'none';
+  el.innerHTML = calcHist.slice().reverse().map(h =>
+    `<button class="calcHistFila" onclick="calcVal='${h.res}';calcNuevo=false;_calcRender()">
+      <span>${h.expr} =</span><b>${h.res}</b>
+    </button>`).join('');
+}
 function _calcRender(){
   // justo después de tocar un signo (calcNuevo true) calcVal todavía guarda el operando
   // anterior, que ya está en calcTokens — mostrarlo de nuevo lo duplicaba en pantalla
@@ -2677,6 +2699,7 @@ function _calcRender(){
 function abrirCalc(){
   calcVal = '0'; calcNuevo = false; calcTokens = [];
   _calcRender();
+  _calcRenderHist();
   // "Usar" aparece si hay al menos un campo de respuesta donde ponerlo (num, frac, mixto,
   // ángulos con figura...); el textarea de "Tu proceso" también es .campo pero es <textarea>,
   // no <input>, así que el selector de abajo ya lo deja afuera solo.
@@ -2741,9 +2764,12 @@ function calcIgual(){
   const ops = calcTokens.filter((_,i)=>i%2===1);
   let total = nums[0];
   for(let i=0; i<ops.length; i++) total = _calcOperar(total, nums[i+1], ops[i]);
+  const expr = calcTokens.concat(calcVal).join(' ');
   calcVal = _calcFormato(total);
+  calcHist.push({ expr, res: calcVal });
   calcNuevo = true; calcTokens = [];
   _calcRender();
+  _calcRenderHist();
 }
 // teclado físico para la calculadora — antes solo funcionaba a clics, incómodo en la compu.
 // Solo actúa mientras el overlay está abierto, así que no interfiere con Enter en los
@@ -2973,7 +2999,7 @@ function nuevoEjercicio(arg, continuar){
     ejActual = modActual.gen(nivel);
   }
   ejActual.__mod = modActual.id;
-  respondido = false; vioExpl = false; ordenSel = []; ultimoFeedback = null; ultimoProceso = '';
+  respondido = false; vioExpl = false; ordenSel = []; ultimoFeedback = null; ultimoProceso = ''; calcHist = [];
   pintarEjercicio();
   guardarSesion();
 }
@@ -3109,7 +3135,7 @@ function _pintarSiguienteRepasoRonda(){
   const item = colaRepasoRonda[0];
   modActual = MOD_POR_ID[item.modId] || { id:item.modId, nombre:'Repaso' };
   ejActual = item.ej;
-  respondido = false; vioExpl = false; ordenSel = []; ultimoProceso = '';
+  respondido = false; vioExpl = false; ordenSel = []; ultimoProceso = ''; calcHist = [];
   _barra(null);
   main.innerHTML = `
     <button class="back" onclick="ir('inicio')">← Inicio</button>
@@ -3248,7 +3274,7 @@ function saltarEjercicio(){
 function otroDelMismoTema(){
   ejActual = modActual.gen(nivel);
   ejActual.__mod = modActual.id;
-  respondido = false; vioExpl = false; ordenSel = []; ultimoFeedback = null; ultimoProceso = '';
+  respondido = false; vioExpl = false; ordenSel = []; ultimoFeedback = null; ultimoProceso = ''; calcHist = [];
   pintarEjercicio();
   guardarSesion();
 }
@@ -3286,7 +3312,7 @@ function _pintarSiguienteError(){
   const item = errores[0];
   modActual = MOD_POR_ID[item.modId] || { id:item.modId, nombre:'Repaso' };
   ejActual = item.ej;
-  respondido = false; vioExpl = false; ordenSel = []; ultimoProceso = '';
+  respondido = false; vioExpl = false; ordenSel = []; ultimoProceso = ''; calcHist = [];
   main.innerHTML = `
     <button class="back" onclick="ir('inicio')">← Inicio</button>
     <div class="card">
