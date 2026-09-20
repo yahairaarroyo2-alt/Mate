@@ -2790,6 +2790,20 @@ document.addEventListener('keydown', e => {
   else return;
   e.preventDefault();
 });
+// Enter para "Siguiente ejercicio" una vez que ya se contestó — se busca el botón en vez de
+// mirar la variable `respondido` (que queda pegada en true al navegar a otra pantalla) para
+// no disparar esto por accidente, por ejemplo al escribir el nombre de un grupo nuevo. Cubre
+// también los ejercicios de botones (sí/no, opciones, comparar) que no tienen ningún input
+// donde colgar un listener propio.
+document.addEventListener('keydown', e => {
+  if(e.key !== 'Enter') return;
+  if($('calcOv').style.display === 'flex') return;   // la calculadora ya maneja su propio Enter
+  if(e.target && e.target.id === 'inProceso') return; // ahí Enter es salto de línea, no avanzar
+  const btnSig = $('zonaFb') && $('zonaFb').querySelector('button.btn.amar');
+  if(!btnSig) return;
+  e.preventDefault();
+  _siguienteEjercicio();
+});
 
 let _swReloadPendiente = false;   // ver el listener 'controllerchange' en ARRANQUE
 function ir(pantalla, arg, continuar){
@@ -3095,7 +3109,10 @@ function pintarEjercicio(){
   if(primero){
     if(window.innerWidth > 640) primero.focus();  // en móvil no abrimos el teclado solo: tapa el enunciado
     ['inNum','inTexto','inE','inN','inD','inA2','inA3'].forEach(id=>{
-      const el = $(id); if(el) el.addEventListener('keydown', e => { if(e.key==='Enter') responder(); });
+      const el = $(id); if(el) el.addEventListener('keydown', e => {
+        if(e.key !== 'Enter' || respondido) return;   // ya contestado: que avance el listener global de más abajo
+        responder(); e.stopPropagation();              // evita que el mismo Enter, ya con el botón pintado, también dispare "avanzar"
+      });
     });
   }
 }
@@ -3150,7 +3167,10 @@ function _pintarSiguienteRepasoRonda(){
   if(primero){
     if(window.innerWidth > 640) primero.focus();
     ['inNum','inTexto','inE','inN','inD','inA2','inA3'].forEach(id=>{
-      const el = $(id); if(el) el.addEventListener('keydown', e => { if(e.key==='Enter') responder(); });
+      const el = $(id); if(el) el.addEventListener('keydown', e => {
+        if(e.key !== 'Enter' || respondido) return;   // ya contestado: que avance el listener global de más abajo
+        responder(); e.stopPropagation();              // evita que el mismo Enter, ya con el botón pintado, también dispare "avanzar"
+      });
     });
   }
 }
@@ -3222,6 +3242,13 @@ function responder(valor){
 
 const _feedbackHaptico = ok => { if(navigator.vibrate) navigator.vibrate(ok ? 30 : [30,50,30]); };
 
+// qué hace "Siguiente ejercicio" según el modo — factorizado para poder llamarlo también
+// desde el atajo de teclado Enter, no solo desde el onclick del botón
+function _siguienteEjercicio(){
+  if(modoErrores) return _pintarSiguienteError();
+  if(modoRepasoRonda) return _pintarSiguienteRepasoRonda();
+  return ir('practica', esTemaFijo ? modActual.id : (capFijo || undefined), true);
+}
 function mostrarFb(res, soloAviso){
   const zona = $('zonaFb');
   if(soloAviso){ zona.innerHTML = `<div class="fb medio">${res.msg}</div>`; return; }
@@ -3229,9 +3256,6 @@ function mostrarFb(res, soloAviso){
   _feedbackHaptico(res.ok);
   const clase_ = res.ok ? 'ok' : res.incompleto ? 'medio' : 'mal';
   const titulo = res.ok ? '¡Correcto!' : res.incompleto ? 'Casi' : 'No es esa';
-  const sigOnclick = modoErrores ? '_pintarSiguienteError()'
-    : modoRepasoRonda ? '_pintarSiguienteRepasoRonda()'
-    : `ir('practica',${esTemaFijo ? `'${modActual.id}'` : capFijo ? capFijo : 'undefined'},true)`;
   zona.innerHTML = `
     <div class="fb ${clase_}">${titulo}
       ${res.msg ? `<small>${res.msg}</small>` : ''}
@@ -3239,7 +3263,7 @@ function mostrarFb(res, soloAviso){
       ${vioExpl ? `<small>Este no cuenta para las estadísticas (viste la explicación antes).</small>` : ''}
     </div>
     ${explHTML()}
-    <button class="btn amar" onclick="${sigOnclick}">Siguiente ejercicio</button>
+    <button class="btn amar" onclick="_siguienteEjercicio()">Siguiente ejercicio</button>
     ${(!modoErrores && !modoRepasoRonda) ? `<button class="btn sec chico" style="margin-top:8px" onclick="otroDelMismoTema()">Otro de este tema<small>no gasta tu ronda</small></button>` : ''}`;
   $('zonaEntrada').style.opacity = '.5';
   $('zonaEntrada').style.pointerEvents = 'none';
@@ -3324,8 +3348,16 @@ function _pintarSiguienteError(){
         <button class="btn sec chico" onclick="errores.shift(); guardar('mate_errores_v1',errores); _pintarSiguienteError();">Quitar de la lista</button>
       </div>
     </div>`;
-  const primero = $('inNum') || $('inTexto') || $('inE') || $('inN');
-  if(primero && window.innerWidth > 640) primero.focus();
+  const primero = $('inNum') || $('inTexto') || $('inE') || $('inN') || $('inA2');
+  if(primero){
+    if(window.innerWidth > 640) primero.focus();
+    ['inNum','inTexto','inE','inN','inD','inA2','inA3'].forEach(id=>{
+      const el = $(id); if(el) el.addEventListener('keydown', e => {
+        if(e.key !== 'Enter' || respondido) return;   // ya contestado: que avance el listener global de más abajo
+        responder(); e.stopPropagation();              // evita que el mismo Enter, ya con el botón pintado, también dispare "avanzar"
+      });
+    });
+  }
 }
 
 /* ---------- modo examen ---------- */
