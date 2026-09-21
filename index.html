@@ -1581,7 +1581,8 @@ const MODULOS = [
       ayuda:'El orden importa: el primer número va arriba.',
       explicacion:[`Una "razón" compara dos cantidades mediante una división, y se puede escribir como fracción — el ORDEN en que se mencionan importa: lo primero va arriba (numerador), lo segundo va abajo (denominador).`,
         `"La razón de ${a} a ${b}" se escribe ${a}/${b}.`,
-        `Igual que cualquier fracción, se simplifica dividiendo arriba y abajo entre su MCD: MCD(${a}, ${b}) = ${mcd(a,b)}`,
+        `Igual que cualquier fracción, se simplifica dividiendo arriba y abajo entre el MCD de los dos números:`,
+        ...explMcd([a,b]).slice(0,-1),
         `${a} ÷ ${mcd(a,b)} = ${sn}, y ${b} ÷ ${mcd(a,b)} = ${sd}`,
         `→ la razón simplificada es ${sn} : ${sd}`,
         `TRUCO: subraya en el enunciado las dos cosas que se comparan ANTES de calcular nada, en el orden en que aparecen: la primera va arriba y la segunda abajo. Cambiar el orden da otra respuesta distinta. Ejemplo con este mismo: ${a} a ${b} se escribe ${a}/${b}, que simplificado es ${sn} : ${sd}; al revés sería ${sd} : ${sn}, que ya no responde lo que preguntaban. Simplificar no cambia la razón: ${a} a ${b} y ${sn} a ${sd} significan lo mismo.`] };
@@ -1617,7 +1618,9 @@ const MODULOS = [
       return { enunciado:c.e, tipo:'frac', respuesta:{n:sn, d:sd}, pedirSimple:true,
         ayuda:'El primero va arriba, el segundo abajo.',
         explicacion:[`Una tasa se escribe como fracción igual que una razón: lo primero arriba (${c.x}) y lo segundo abajo (${c.y}): ${a}/${b}.`,
-          `Se simplifica dividiendo arriba y abajo entre MCD(${a}, ${b}) = ${mcd(a,b)}: ${a} ÷ ${mcd(a,b)} = ${sn}, ${b} ÷ ${mcd(a,b)} = ${sd}.`,
+          `Se simplifica dividiendo arriba y abajo entre el MCD de los dos números:`,
+          ...explMcd([a,b]).slice(0,-1),
+          `${a} ÷ ${mcd(a,b)} = ${sn}, ${b} ÷ ${mcd(a,b)} = ${sd}`,
           `→ ${sn}/${sd}, es decir, ${sn} ${c.x} por cada ${sd} ${c.y}`,
           `TRUCO: la diferencia entre razón y tasa es solo que la tasa lleva UNIDADES distintas (${c.x} y ${c.y}), y esas unidades se quedan escritas en la respuesta; la aritmética es la misma: primero arriba, segundo abajo, y simplifica.`] };
     }
@@ -1626,7 +1629,9 @@ const MODULOS = [
       const [sn,sd] = simplificar(p,100);
       return { enunciado:`Escribe <b>${p}%</b> como fracción en su forma más simple.`, tipo:'frac', respuesta:{n:sn, d:sd}, pedirSimple:true,
         explicacion:[`"Por ciento" significa "por cada 100": ${p}% = ${p}/100.`,
-          `Se simplifica dividiendo arriba y abajo entre MCD(${p}, 100) = ${mcd(p,100)}: ${p} ÷ ${mcd(p,100)} = ${sn}, 100 ÷ ${mcd(p,100)} = ${sd}.`,
+          `Se simplifica dividiendo arriba y abajo entre el MCD de los dos números:`,
+          ...explMcd([p,100]).slice(0,-1),
+          `${p} ÷ ${mcd(p,100)} = ${sn}, 100 ÷ ${mcd(p,100)} = ${sd}`,
           `→ ${p}% = ${sn}/${sd}`,
           `TRUCO: el símbolo % es una fracción con 100 abajo, sin excepción. Escribe el número sobre 100 y simplifica como cualquier fracción: si termina en 0 divide entre 10 primero; si termina en 5, entre 5; y recuerda los fijos: 25% = 1/4, 50% = 1/2, 75% = 3/4, 20% = 1/5, 10% = 1/10.`] };
     }
