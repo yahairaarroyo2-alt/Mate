@@ -2560,6 +2560,9 @@ let sesionTotal = 0;      // tamaño de la ronda actual; al llegar acá se para 
 // que aparece en pantallaRondaCompleta, y se descarta al salir de esa pantalla
 let sesionFallos = [];     // [{modId, nombre, ej}]
 let colaRepasoRonda = [];  // copia de trabajo de sesionFallos que se va vaciando durante modoRepasoRonda
+// temas cuyo ejemplo YA se mostró en esta ronda — se reinicia con cada ronda nueva; la primera
+// vez que un tema aparece (tema fijo o dentro de una mezcla) se ve su ejemplo antes del ejercicio
+let temasEjemploVisto = {};
 const SESION_TEMA = 20;   // tamaño de ronda cuando el tema está fijo (no hay de dónde sacar "2 de cada")
 const VECES_POR_TEMA = 2; // mezcla: mínimo garantizado de repeticiones de cada tema activo en la ronda
 const tamanoMezcla = ms => ms.length * VECES_POR_TEMA;   // para mostrarlo en los botones sin arrancar la ronda
@@ -2593,7 +2596,7 @@ let ultimoProceso = '';   // lo que el usuario escribió en "Tu proceso" antes d
 /* ---------- retomar donde quedó (mate_sesion_v1) ---------- */
 function guardarSesion(){
   guardar('mate_sesion_v1', { modId: modActual.id, esTemaFijo, capFijo, sesionHechos, sesionCorrectos,
-    sesionCola, sesionPendientes, sesionFallos, sesionTotal, ejActual, respondido, vioExpl, ordenSel, ultimoFeedback, ultimoProceso });
+    sesionCola, sesionPendientes, sesionFallos, temasEjemploVisto, sesionTotal, ejActual, respondido, vioExpl, ordenSel, ultimoFeedback, ultimoProceso });
 }
 const borrarSesion = () => { try{ localStorage.removeItem('mate_sesion_v1'); }catch(e){} };
 function restaurarSesion(){
@@ -2603,6 +2606,7 @@ function restaurarSesion(){
   esTemaFijo = s.esTemaFijo; capFijo = s.capFijo; sesionHechos = s.sesionHechos || 1;
   sesionCorrectos = s.sesionCorrectos || 0; sesionCola = s.sesionCola || [];
   sesionPendientes = s.sesionPendientes || []; sesionFallos = s.sesionFallos || [];
+  temasEjemploVisto = s.temasEjemploVisto || {};
   sesionTotal = s.sesionTotal || sesionCola.length || SESION_TEMA;
   ejActual = s.ejActual; respondido = s.respondido; vioExpl = s.vioExpl;
   ordenSel = s.ordenSel || []; ultimoFeedback = s.ultimoFeedback || null;
@@ -2833,16 +2837,7 @@ function ir(pantalla, arg, continuar){
   if(pantalla !== 'inicio' && pantalla !== 'stats') _pantallaActual = null;
   if(pantalla === 'inicio')   return pantallaInicio();
   if(pantalla === 'temas')    return pantallaTemas();
-  if(pantalla === 'practica'){
-    // al arrancar una ronda (!continuar) primero se ve un ejemplo resuelto — de ese tema si es
-    // uno puntual, o uno por cada tema si es una mezcla (grupo, capítulo, o todos los temas).
-    // Nunca al pasar al siguiente ejercicio o al saltar, que llaman a nuevoEjercicio() directo.
-    if(!continuar){
-      if(typeof arg !== 'number' && arg) return _pintarEjemploTema(arg);
-      return _pintarEjemploMezcla(arg);
-    }
-    return nuevoEjercicio(arg, continuar);
-  }
+  if(pantalla === 'practica') return nuevoEjercicio(arg, continuar);
   if(pantalla === 'stats')    return pantallaStats();
   if(pantalla === 'ajustes')  return pantallaAjustes();
   if(pantalla === 'tema')     return pantallaTema();
@@ -3006,56 +3001,30 @@ function setNivel(nv){
 function quitarClase(){ clase = null; guardar('mate_clase_v1', null); if(syncDoc) syncDoc.set({clase:null},{merge:true}).catch(()=>{}); pantallaInicio(); }
 
 /* ---------- práctica ---------- */
-// ejemplo resuelto de un tema, antes de empezar a practicarlo — usa ejActual/modActual
-// "prestados" (explHTML/fmtRespuesta ya leen esas globales) sin tocar sesionHechos/sesionCola,
-// así que "Empezar a practicar" arranca la ronda de cero como si nada hubiera pasado
-function _pintarEjemploTema(modId){
+// ejemplo resuelto de un tema — se intercala justo antes del primer ejercicio DE ESE TEMA en la
+// ronda (ver temasEjemploVisto en nuevoEjercicio), tanto si la ronda es de un tema puntual como
+// si es una mezcla (ahí, cada tema nuevo que aparece trae su propio ejemplo antes de empezar).
+// Genera su propio ejemplo aparte — no toca modActual/ejActual, que ya están listos con el
+// ejercicio real esperando a que se toque "Continuar".
+function _pintarEjemploTema(m){
   _barra(null);
-  modActual = MOD_POR_ID[modId];
-  ejActual = modActual.gen(nivel);
-  ejActual.__mod = modActual.id;
+  const ej = m.gen(nivel);
   main.innerHTML = `
     <button class="back" onclick="ir('inicio')">← Inicio</button>
     <div class="card">
-      <span class="pill">Ejemplo · ${modActual.nombre}</span>
-      <div class="enunciado">${ejActual.enunciado}</div>
-      <div class="nota" style="margin-top:10px">Respuesta: <b>${fmtRespuesta(ejActual)}</b></div>
+      <span class="pill">Ejemplo · ${m.nombre}</span>
+      <div class="enunciado">${ej.enunciado}</div>
+      <div class="nota" style="margin-top:10px">Respuesta: <b>${fmtRespuesta(ej)}</b></div>
     </div>
-    ${explHTML()}
-    <button class="btn amar" onclick="nuevoEjercicio('${modId}', false)">Empezar a practicar</button>`;
+    <div class="expl"><h3>Por qué</h3>${explPasos(ej.explicacion)}</div>
+    <button class="btn amar" onclick="_seguirTrasEjemplo()">Continuar</button>`;
 }
-// mismo concepto, pero para una ronda mezclada (grupo de examen, capítulo entero, o "todos los
-// temas") — un ejemplo por cada tema que va a salir. El "por qué" de cada uno va colapsado
-// (<details>) para que la lista no sea kilométrica cuando son muchos temas; usa la MISMA lista
-// de módulos que construirCola(), para que lo que se muestra acá sea justo lo que va a salir.
-function _pintarEjemploMezcla(arg){
-  _barra(null);
-  const ms = typeof arg === 'number' ? MODULOS.filter(m=>m.secciones[0][0]===String(arg)) : modulosActivos();
-  main.innerHTML = `
-    <button class="back" onclick="ir('inicio')">← Inicio</button>
-    <div class="card">
-      <h2>Ejemplos de estos temas</h2>
-      <div class="nota">Un ejercicio resuelto de cada uno de los ${ms.length} temas que te pueden salir — repásalos si quieres, o empieza directo.</div>
-    </div>
-    ${ms.map(m => {
-      const ej = m.gen(nivel);
-      return `<div class="card">
-        <h3 style="margin-top:0">${m.nombre}</h3>
-        <div class="enunciado">${ej.enunciado}</div>
-        <div class="nota" style="margin-top:10px">Respuesta: <b>${fmtRespuesta(ej)}</b></div>
-        <details style="margin-top:10px">
-          <summary>Ver el porqué</summary>
-          <div class="expl">${explPasos(ej.explicacion)}</div>
-        </details>
-      </div>`;
-    }).join('')}
-    <button class="btn amar" onclick="nuevoEjercicio(${typeof arg==='number'?arg:'undefined'}, false)">Empezar a practicar</button>`;
-}
+function _seguirTrasEjemplo(){ pintarEjercicio(); guardarSesion(); }
 function nuevoEjercicio(arg, continuar){
   // límite real: al llegar al final de la ronda, no se sigue solo — hay que elegir "seguir" o "terminar"
   if(continuar && sesionHechos >= sesionTotal) return pantallaRondaCompleta();
   if(!continuar){                       // ronda nueva: arma la cola y fija el tamaño
-    sesionHechos = 0; sesionCorrectos = 0; sesionPendientes = []; sesionFallos = [];
+    sesionHechos = 0; sesionCorrectos = 0; sesionPendientes = []; sesionFallos = []; temasEjemploVisto = {};
     esTemaFijo = typeof arg !== 'number' && !!arg;
     capFijo = typeof arg === 'number' ? arg : null;
     sesionCola = esTemaFijo ? [] : construirCola(capFijo);
@@ -3078,6 +3047,11 @@ function nuevoEjercicio(arg, continuar){
   }
   ejActual.__mod = modActual.id;
   respondido = false; vioExpl = false; ordenSel = []; ultimoFeedback = null; ultimoProceso = ''; calcHist = [];
+  if(!temasEjemploVisto[modActual.id]){
+    temasEjemploVisto[modActual.id] = true;
+    guardarSesion();
+    return _pintarEjemploTema(modActual);
+  }
   pintarEjercicio();
   guardarSesion();
 }
