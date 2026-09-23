@@ -2834,10 +2834,13 @@ function ir(pantalla, arg, continuar){
   if(pantalla === 'inicio')   return pantallaInicio();
   if(pantalla === 'temas')    return pantallaTemas();
   if(pantalla === 'practica'){
-    // al entrar a practicar UN tema puntual (no una mezcla de varios), primero se ve un
-    // ejemplo resuelto de ese tema — solo al arrancar la ronda (!continuar), nunca al pasar
-    // al siguiente ejercicio o al saltar, que llaman a nuevoEjercicio() directo, no por acá
-    if(!continuar && typeof arg !== 'number' && arg) return _pintarEjemploTema(arg);
+    // al arrancar una ronda (!continuar) primero se ve un ejemplo resuelto — de ese tema si es
+    // uno puntual, o uno por cada tema si es una mezcla (grupo, capítulo, o todos los temas).
+    // Nunca al pasar al siguiente ejercicio o al saltar, que llaman a nuevoEjercicio() directo.
+    if(!continuar){
+      if(typeof arg !== 'number' && arg) return _pintarEjemploTema(arg);
+      return _pintarEjemploMezcla(arg);
+    }
     return nuevoEjercicio(arg, continuar);
   }
   if(pantalla === 'stats')    return pantallaStats();
@@ -3020,6 +3023,33 @@ function _pintarEjemploTema(modId){
     </div>
     ${explHTML()}
     <button class="btn amar" onclick="nuevoEjercicio('${modId}', false)">Empezar a practicar</button>`;
+}
+// mismo concepto, pero para una ronda mezclada (grupo de examen, capítulo entero, o "todos los
+// temas") — un ejemplo por cada tema que va a salir. El "por qué" de cada uno va colapsado
+// (<details>) para que la lista no sea kilométrica cuando son muchos temas; usa la MISMA lista
+// de módulos que construirCola(), para que lo que se muestra acá sea justo lo que va a salir.
+function _pintarEjemploMezcla(arg){
+  _barra(null);
+  const ms = typeof arg === 'number' ? MODULOS.filter(m=>m.secciones[0][0]===String(arg)) : modulosActivos();
+  main.innerHTML = `
+    <button class="back" onclick="ir('inicio')">← Inicio</button>
+    <div class="card">
+      <h2>Ejemplos de estos temas</h2>
+      <div class="nota">Un ejercicio resuelto de cada uno de los ${ms.length} temas que te pueden salir — repásalos si quieres, o empieza directo.</div>
+    </div>
+    ${ms.map(m => {
+      const ej = m.gen(nivel);
+      return `<div class="card">
+        <h3 style="margin-top:0">${m.nombre}</h3>
+        <div class="enunciado">${ej.enunciado}</div>
+        <div class="nota" style="margin-top:10px">Respuesta: <b>${fmtRespuesta(ej)}</b></div>
+        <details style="margin-top:10px">
+          <summary>Ver el porqué</summary>
+          <div class="expl">${explPasos(ej.explicacion)}</div>
+        </details>
+      </div>`;
+    }).join('')}
+    <button class="btn amar" onclick="nuevoEjercicio(${typeof arg==='number'?arg:'undefined'}, false)">Empezar a practicar</button>`;
 }
 function nuevoEjercicio(arg, continuar){
   // límite real: al llegar al final de la ronda, no se sigue solo — hay que elegir "seguir" o "terminar"
