@@ -2833,7 +2833,13 @@ function ir(pantalla, arg, continuar){
   if(pantalla !== 'inicio' && pantalla !== 'stats') _pantallaActual = null;
   if(pantalla === 'inicio')   return pantallaInicio();
   if(pantalla === 'temas')    return pantallaTemas();
-  if(pantalla === 'practica') return nuevoEjercicio(arg, continuar);
+  if(pantalla === 'practica'){
+    // al entrar a practicar UN tema puntual (no una mezcla de varios), primero se ve un
+    // ejemplo resuelto de ese tema — solo al arrancar la ronda (!continuar), nunca al pasar
+    // al siguiente ejercicio o al saltar, que llaman a nuevoEjercicio() directo, no por acá
+    if(!continuar && typeof arg !== 'number' && arg) return _pintarEjemploTema(arg);
+    return nuevoEjercicio(arg, continuar);
+  }
   if(pantalla === 'stats')    return pantallaStats();
   if(pantalla === 'ajustes')  return pantallaAjustes();
   if(pantalla === 'tema')     return pantallaTema();
@@ -2997,6 +3003,24 @@ function setNivel(nv){
 function quitarClase(){ clase = null; guardar('mate_clase_v1', null); if(syncDoc) syncDoc.set({clase:null},{merge:true}).catch(()=>{}); pantallaInicio(); }
 
 /* ---------- práctica ---------- */
+// ejemplo resuelto de un tema, antes de empezar a practicarlo — usa ejActual/modActual
+// "prestados" (explHTML/fmtRespuesta ya leen esas globales) sin tocar sesionHechos/sesionCola,
+// así que "Empezar a practicar" arranca la ronda de cero como si nada hubiera pasado
+function _pintarEjemploTema(modId){
+  _barra(null);
+  modActual = MOD_POR_ID[modId];
+  ejActual = modActual.gen(nivel);
+  ejActual.__mod = modActual.id;
+  main.innerHTML = `
+    <button class="back" onclick="ir('inicio')">← Inicio</button>
+    <div class="card">
+      <span class="pill">Ejemplo · ${modActual.nombre}</span>
+      <div class="enunciado">${ejActual.enunciado}</div>
+      <div class="nota" style="margin-top:10px">Respuesta: <b>${fmtRespuesta(ejActual)}</b></div>
+    </div>
+    ${explHTML()}
+    <button class="btn amar" onclick="nuevoEjercicio('${modId}', false)">Empezar a practicar</button>`;
+}
 function nuevoEjercicio(arg, continuar){
   // límite real: al llegar al final de la ronda, no se sigue solo — hay que elegir "seguir" o "terminar"
   if(continuar && sesionHechos >= sesionTotal) return pantallaRondaCompleta();
