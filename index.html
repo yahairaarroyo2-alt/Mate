@@ -442,6 +442,10 @@ const porNivel = (nv,f,m,d) => nv==='facil' ? f : nv==='medio' ? m : d;
 const mm = n => String(n).replace('-','−');
 // fracción apilada para el enunciado
 const fr = (n,d) => `<span class="fr"><b>${n}</b><i>${d}</i></span>`;
+// tipo 'orden' venía solo con fracciones {n,d} — otras materias ordenan texto plano (ej. épocas
+// históricas), así que se acepta cualquiera de las dos formas al mostrar una opción
+const _ordenLabel = f => typeof f === 'string' ? f : fr(f.n,f.d);
+const _ordenTexto = f => typeof f === 'string' ? f : `${f.n}/${f.d}`;
 const cmpSigno = (a,b) => a<b ? '<' : a>b ? '>' : '=';
 const escHtml = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 // ── fracciones con signo (capítulo 4) ──
@@ -1993,9 +1997,243 @@ const MODULOS = [
         ...pasos, `→ ${tf(r.n,r.d)}`,
         `TRUCO: la raya larga es un ÷ disfrazado. Escribe (arriba) ÷ (abajo) con paréntesis, resuelve cada paréntesis hasta dejar UNA fracción en cada uno, y al final voltea la de abajo y multiplica. Nunca "canceles" un número de arriba con uno de abajo mientras todavía haya sumas o restas sin hacer. Ejemplo con este mismo: ${arribaT} ÷ ${abajoT} → arriba queda ${opT(num)}, abajo queda ${opT(den)}, y ${opT(num)} ÷ ${opTP(den)} se convierte en ${opT(num)} × ${tfP(recipF(den).n,recipF(den).d)} = ${tf(r.n,r.d)}.`] };
   }
+},
+/* ══════════════════════════════════════════════════════════
+   WORLD CULTURE I (HUGS 101) — clase:'wc'. Contenido sacado de las 3 presentaciones de
+   Blackboard: "Conceptos Básicos" (secciones ['1.x']), "Orígenes del ser humano" (['2.x']),
+   "La Prehistoria" (['3.x']). Los módulos SIN clase explícita (todos los de arriba) se marcan
+   'mate' automáticamente más abajo — ver el forEach justo antes de MOD_POR_ID.
+   ══════════════════════════════════════════════════════════ */
+{
+  id:'wc-humanidades', nombre:'Humanidades, cultura e historia', clase:'wc', secciones:['1.1'],
+  gen(nv){
+    const casos = [
+      { termino:'Humanidades', correcta:'Las disciplinas que estudian el comportamiento y la producción cultural de los seres humanos a través del tiempo (arte, música, creencias religiosas, historia, cultura).',
+        malas:['El estudio de los fenómenos naturales y las leyes de la física.', 'La ciencia que estudia los seres vivos y sus procesos biológicos.', 'El estudio de los números y las relaciones matemáticas.'],
+        pista:'Fíjate en la palabra "humano" — humanidades es todo lo que el ser humano PRODUCE Y HACE (arte, música, creencias, historia), no las leyes de la naturaleza ni los números.' },
+      { termino:'Cultura', correcta:'El conjunto amplio de costumbres, ideas, creencias, y conocimientos científicos y técnicos que caracterizan a un gran grupo de seres humanos en un momento específico de su historia.',
+        malas:['Únicamente las bellas artes de una sociedad (pintura, música, literatura).', 'Las leyes escritas que rigen un país.', 'La religión oficial que practica un pueblo.'],
+        pista:'"Cultura" es un paraguas mucho más ancho que solo "arte" o solo "religión" — junta costumbres, ideas, creencias Y conocimientos científicos/técnicos, todo a la vez.' },
+      { termino:'Historia', correcta:'La recopilación y el estudio de los sucesos del pasado que constituyen el desarrollo de la Humanidad.',
+        malas:['El estudio de las leyes que gobiernan el universo físico.', 'La predicción de sucesos que todavía no han pasado.', 'El estudio exclusivo de las guerras entre países.'],
+        pista:'"Historia" mira hacia ATRÁS (sucesos del pasado) y hacia el desarrollo de TODA la Humanidad, no solo un tipo de suceso como las guerras.' }
+    ];
+    const c = pick(casos);
+    const opciones = shuffle([c.correcta, ...c.malas]);
+    return { enunciado:`¿Cuál de estas es la definición de <b>"${c.termino}"</b> que da el curso?`,
+      tipo:'opciones', opciones, respuesta: c.correcta,
+      explicacion:[`Cada uno de estos términos tiene una definición precisa en el curso — hay que reconocer la que de verdad corresponde a "${c.termino}", no una que suene parecida.`,
+        `La definición correcta es: "${c.correcta}"`,
+        `→ Esa es la opción correcta.`,
+        `TRUCO: ${c.pista} Ejemplo con este mismo: para "${c.termino}", la trampa más común es confundirla con un término vecino (ciencia natural, matemática, o un aspecto muy específico como solo el arte o solo la religión) — la definición real siempre es más amplia o apunta directo al ser humano y su desarrollo.`] };
+  }
+},
+{
+  id:'wc-civilizaciones', nombre:'Civilizaciones de Occidente y de Oriente', clase:'wc', secciones:['1.2'],
+  gen(nv){
+    const casos = [
+      { enun:'Mesopotamia y Egipto pertenecen a las Civilizaciones de <b>Occidente</b>.', ok:true, exp:'Mesopotamia y Egipto están agrupadas junto con Grecia y Roma dentro de las Civilizaciones de Occidente.' },
+      { enun:'Grecia y Roma pertenecen a las Civilizaciones de <b>Oriente</b>.', ok:false, exp:'Grecia y Roma son parte de las Civilizaciones de Occidente, no de Oriente.' },
+      { enun:'India y China pertenecen a las Civilizaciones de <b>Oriente</b>.', ok:true, exp:'India y China están del lado de las Civilizaciones de Oriente.' },
+      { enun:'El curso divide a las civilizaciones en solo <b>dos</b> grandes grupos: Occidente y Oriente.', ok:true, exp:'El curso presenta exactamente dos grandes divisiones: Civilizaciones de Occidente y Civilizaciones de Oriente.' },
+      { enun:'Mesopotamia y Egipto pertenecen a las Civilizaciones de <b>Oriente</b>.', ok:false, exp:'Mesopotamia y Egipto son de las Civilizaciones de Occidente, junto con Grecia y Roma.' }
+    ];
+    const c = pick(casos);
+    return { enunciado:c.enun, tipo:'sino', respuesta:c.ok,
+      explicacion:[`El curso divide toda la historia de las civilizaciones en dos grandes grupos: Civilizaciones de Occidente (Mesopotamia, Egipto, Grecia, Roma) y Civilizaciones de Oriente (India, China).`,
+        c.exp,
+        `→ ${c.ok ? 'Sí' : 'No'}.`,
+        `TRUCO: Occidente agrupa a Mesopotamia-Egipto-Grecia-Roma (el "camino" que llevó a la civilización europea); Oriente agrupa a India y China. Si la afirmación mezcla un país de un grupo con la etiqueta del otro grupo, es falsa. Ejemplo con este mismo: "${c.enun.replace(/<\/?b>/g,'')}" es ${c.ok?'verdadero porque coinciden grupo y país':'falso porque el país mencionado es del OTRO grupo'}.`] };
+  }
+},
+{
+  id:'wc-paleontologia', nombre:'Paleontología y el origen del ser humano', clase:'wc', secciones:['2.1'],
+  gen(nv){
+    const malas = shuffle(['Filosofía','Astronomía','Sociología','Lingüística']).slice(0,3);
+    return { enunciado:`¿Qué ciencia estudia los restos humanos y animales <b>más antiguos</b>?`,
+      tipo:'opciones', opciones: shuffle(['Paleontología', ...malas]), respuesta:'Paleontología',
+      explicacion:[`El curso define la Paleontología como "la ciencia que estudia los restos humanos y animales más antiguos".`,
+        `Ninguna de las otras opciones estudia restos antiguos: son otras disciplinas (filosofía = ideas, astronomía = astros, sociología = sociedades, lingüística = lenguas).`,
+        `→ Paleontología.`,
+        `TRUCO: fíjate en la raíz "paleo-" (antiguo) + "-ontología" (estudio del ser) — paleontología es literalmente "el estudio de los seres antiguos", que es justo lo que dice la definición. Ejemplo con este mismo: los restos humanos y animales más antiguos son huesos y fósiles, y quien los estudia es el paleontólogo.`] };
+  }
+},
+{
+  id:'wc-darwin', nombre:'La teoría de Darwin', clase:'wc', secciones:['2.2'],
+  gen(nv){
+    const casos = [
+      { enun:'Según Darwin, <b>todos los seres vivos evolucionan</b>.', ok:true, exp:'Es uno de los puntos centrales de "El Origen de las Especies": todos los seres vivos evolucionan, el mundo natural no es estático.' },
+      { enun:'Según Darwin, <b>los individuos de una misma especie son idénticos</b> entre sí.', ok:false, exp:'Darwin plantea justo lo contrario: los individuos de una especie NO son idénticos — esas diferencias son las que permiten que unos sobrevivan mejor que otros.' },
+      { enun:'Según Darwin, <b>las especies descienden de un ancestro en común</b>.', ok:true, exp:'Sí — las especies descienden de un ancestro común, según la teoría de Darwin.' },
+      { enun:'Según Darwin, <b>la evolución ocurre de golpe, de un día para otro</b>.', ok:false, exp:'Darwin sostiene que la evolución ocurre GRADUALMENTE, poco a poco a lo largo de mucho tiempo, no de golpe.' },
+      { enun:'Según Darwin, <b>sobreviven los más aptos</b>, y eso puede crear nuevas especies con el tiempo.', ok:true, exp:'Esa es la idea de "selección natural": sobreviven los más aptos, que alteran las especies y con el tiempo pueden crear una nueva.' }
+    ];
+    const c = pick(casos);
+    return { enunciado:c.enun, tipo:'sino', respuesta:c.ok,
+      explicacion:[`Charles Darwin, en "El Origen de las Especies", plantea varias ideas centrales sobre la evolución: el mundo natural cambia siempre, todos los seres vivos evolucionan, los individuos de una especie NO son idénticos, las especies descienden de un ancestro común, la evolución es gradual, y sobreviven los más aptos.`,
+        c.exp,
+        `→ ${c.ok ? 'Sí' : 'No'}.`,
+        `TRUCO: si la afirmación dice que algo es "fijo", "idéntico" o "de golpe", casi siempre es FALSA para Darwin — su teoría es toda sobre cambio gradual y variación entre individuos. Ejemplo con este mismo: "${c.enun.replace(/<\/?b>/g,'')}" ${c.ok?'coincide con la idea de cambio/variación de Darwin':'contradice la idea de cambio/variación de Darwin'}.`] };
+  }
+},
+{
+  id:'wc-evolucion-humana', nombre:'Características de la evolución humana', clase:'wc', secciones:['2.3'],
+  gen(nv){
+    const buenas = ['Posición erecta (bipedismo)','Estructura única de la mano para fabricar herramientas','Control y dominio del fuego','Visión estereoscópica (integrar en una imagen lo que ven los dos ojos)','Un cerebro más grande'];
+    const malas = ['Fotosíntesis para producir su propio alimento','Hibernación durante el invierno','Respiración exclusivamente branquial (por branquias)','Capacidad de regenerar extremidades perdidas'];
+    const buena = pick(buenas), mala = pick(malas);
+    const otras2 = shuffle(buenas.filter(b=>b!==buena)).slice(0,2);
+    return { enunciado:`¿Cuál de estas opciones <b>NO</b> es una característica de la evolución humana mencionada en el curso?`,
+      tipo:'opciones', opciones: shuffle([mala, buena, ...otras2]), respuesta: mala,
+      explicacion:[`El curso menciona varias características de la evolución humana: posición erecta, estructura de la mano para fabricar herramientas, control del fuego, visión estereoscópica, y un cerebro más grande, entre otras.`,
+        `"${mala}" no aparece en esa lista — es algo que no aplica a los seres humanos (es de otro tipo de ser vivo, o directamente no ocurre).`,
+        `→ "${mala}" es la que NO pertenece.`,
+        `TRUCO: las características reales del curso son todas sobre el CUERPO y el COMPORTAMIENTO humano (postura, manos, cerebro, fuego, visión) — si una opción suena a otro tipo de ser vivo (plantas, peces, animales que hibernan), es la intrusa. Ejemplo con este mismo: "${mala}" no es algo que hagan o tengan los humanos, así que es la respuesta.`] };
+  }
+},
+{
+  id:'wc-escalas-tiempo', nombre:'Escalas de tiempo del origen humano', clase:'wc', secciones:['2.4'],
+  gen(nv){
+    const casos = [
+      { preg:'¿Cuál es la edad aproximada del <b>Universo</b>, según el curso?', correcta:'13,700 millones de años',
+        malas:['4,600 millones de años','500 millones de años','1 millón de años'] },
+      { preg:'¿Hace aproximadamente cuánto aparecieron los <b>antepasados más antiguos</b> del ser humano, según el curso?', correcta:'5 millones de años',
+        malas:['500 mil años','13,700 millones de años','50,000 años'] }
+    ];
+    const c = pick(casos);
+    return { enunciado:c.preg, tipo:'opciones', opciones: shuffle([c.correcta, ...c.malas]), respuesta:c.correcta,
+      explicacion:[`El curso da cifras aproximadas para ubicar estos sucesos en el tiempo.`,
+        `La cifra que da el curso es: ${c.correcta}.`,
+        `→ ${c.correcta}.`,
+        `TRUCO: el Universo (13,700 millones de años) es muchísimo más viejo que los primeros antepasados humanos (unos 5 millones de años) — si ves una cifra en miles de millones, es del Universo; si ves una cifra de unos pocos millones, es de los antepasados humanos. Ejemplo con este mismo: la pregunta es sobre "${c.preg.replace(/<\/?b>/g,'')}", y la escala correcta es ${c.correcta}.`] };
+  }
+},
+{
+  id:'wc-prehistoria-definicion', nombre:'Qué es la Prehistoria', clase:'wc', secciones:['3.1'],
+  gen(nv){
+    const casos = [
+      { enun:'La Prehistoria termina con la <b>invención de la escritura</b>.', ok:true, exp:'La Prehistoria abarca desde los primeros homínidos hasta la invención de la escritura (hace unos 5 mil años) — ahí empieza la Historia.' },
+      { enun:'La Prehistoria es el período <b>más corto</b> de la historia de la humanidad.', ok:false, exp:'Al revés: la Prehistoria es el período MÁS LARGO de toda la historia de la humanidad.' },
+      { enun:'Todos los pueblos del mundo coinciden exactamente en los <b>límites</b> del período prehistórico.', ok:false, exp:'El curso aclara que NO todos los pueblos coinciden en los límites de este período — varía según la región.' },
+      { enun:'La Prehistoria se divide en tres grandes etapas: Paleolítico, Neolítico y Edad de los Metales.', ok:true, exp:'Esas son exactamente las tres grandes divisiones de la Prehistoria que da el curso.' }
+    ];
+    const c = pick(casos);
+    return { enunciado:c.enun, tipo:'sino', respuesta:c.ok,
+      explicacion:[`La Prehistoria es el período de la vida humana que va desde la aparición de los primeros homínidos hasta la invención de la escritura (hace unos 5 mil años) — es el período MÁS LARGO de toda la historia de la humanidad, y se divide en Paleolítico, Neolítico y Edad de los Metales.`,
+        c.exp,
+        `→ ${c.ok ? 'Sí' : 'No'}.`,
+        `TRUCO: la Prehistoria SIEMPRE termina en el mismo evento — la invención de la escritura — sin importar la región; lo que varía de una región a otra es CUÁNDO llega ese momento, no el marcador en sí. Ejemplo con este mismo: "${c.enun.replace(/<\/?b>/g,'')}" ${c.ok?'coincide con estos hechos':'contradice estos hechos'}.`] };
+  }
+},
+{
+  id:'wc-tres-etapas', nombre:'Las tres etapas de la Prehistoria', clase:'wc', secciones:['3.2'],
+  gen(nv){
+    const correcta = 'Paleolítico, Neolítico y Edad de los Metales';
+    const malas = ['Edad Antigua, Edad Media y Edad Moderna', 'Paleolítico, Edad Media y Edad de los Metales', 'Neolítico, Edad de los Metales y Edad Contemporánea'];
+    return { enunciado:`¿Cuáles son las <b>tres grandes divisiones</b> de la Prehistoria, según el curso?`,
+      tipo:'opciones', opciones: shuffle([correcta, ...malas]), respuesta:correcta,
+      explicacion:[`El curso presenta tres grandes divisiones de la Prehistoria, en este orden cronológico: Paleolítico, Neolítico, y Edad de los Metales.`,
+        `Las otras opciones mezclan nombres de otras épocas (Edad Antigua, Edad Media, Edad Moderna, Edad Contemporánea) que NO son parte de la Prehistoria — esas son ya etapas de la Historia.`,
+        `→ Paleolítico, Neolítico y Edad de los Metales.`,
+        `TRUCO: "Edad Media/Antigua/Moderna/Contemporánea" son divisiones de la HISTORIA (después de la escritura); las de la PREHISTORIA son solo estas tres: Paleolítico, Neolítico, Edad de los Metales. Si una opción mete una "Edad" con esos otros nombres, está mal. Ejemplo con este mismo: la respuesta correcta no usa ninguno de esos nombres de "Edad" históricos.`] };
+  }
+},
+{
+  id:'wc-caracteristicas-etapas', nombre:'Características del Paleolítico, Neolítico y Edad de los Metales', clase:'wc', secciones:['3.3'],
+  gen(nv){
+    const casos = [
+      { enun:'En el <b>Paleolítico</b>, los seres humanos eran nómadas y vivían de la caza, la pesca y la recolección.', ok:true, tema:'Paleolítico' },
+      { enun:'En el <b>Neolítico</b>, el ser humano se volvió sedentario y comenzó la agricultura y la domesticación de animales.', ok:true, tema:'Neolítico' },
+      { enun:'En la <b>Edad de los Metales</b>, ya existían poblados más grandes defendidos por murallas.', ok:true, tema:'Edad de los Metales' },
+      { enun:'En el <b>Paleolítico</b> ya existían poblados grandes defendidos por murallas.', ok:false, tema:'Paleolítico (eso es de la Edad de los Metales)' },
+      { enun:'En el <b>Neolítico</b> el ser humano todavía era nómada, igual que en el Paleolítico.', ok:false, tema:'Neolítico (ahí se vuelve sedentario)' },
+      { enun:'La pintura rupestre (arte en cuevas) aparece en el <b>Paleolítico</b>.', ok:true, tema:'Paleolítico' },
+      { enun:'La rueda y la división del trabajo aparecen en el <b>Neolítico</b>.', ok:true, tema:'Neolítico' }
+    ];
+    const c = pick(casos);
+    return { enunciado:c.enun, tipo:'sino', respuesta:c.ok,
+      explicacion:[`Cada etapa de la Prehistoria tiene rasgos propios: el Paleolítico es nómada (caza, pesca, recolección, cuevas, fuego, pintura rupestre); el Neolítico trae la agricultura, la ganadería, la vida sedentaria, la rueda y la división del trabajo; la Edad de los Metales trae herramientas de metal, poblados grandes con murallas, y la sociedad empieza a jerarquizarse.`,
+        `Esta afirmación habla de: ${c.tema}.`,
+        `→ ${c.ok ? 'Sí' : 'No'}.`,
+        `TRUCO: nómada + cuevas + caza = Paleolítico. Sedentario + agricultura + rueda = Neolítico. Murallas + metal + jerarquía = Edad de los Metales. Si el rasgo mencionado no corresponde a la etapa nombrada, es falso. Ejemplo con este mismo: "${c.enun.replace(/<\/?b>/g,'')}" — ese rasgo pertenece de verdad a ${c.tema}.`] };
+  }
+},
+{
+  id:'wc-subetapas-paleolitico', nombre:'Sub-etapas del Paleolítico', clase:'wc', secciones:['3.4'],
+  gen(nv){
+    const casos = [
+      { preg:'¿Qué homínidos se asocian con las <b>primeras herramientas</b> y el <b>dominio del fuego</b>?', correcta:'Homo Habilis y Homo Erectus',
+        malas:['Homo Neanderthal','Homo Sapiens (Cromagnon)','Ninguno de los anteriores'] },
+      { preg:'¿Qué homínido se asocia con los <b>primeros entierros humanos</b> y las <b>primeras creencias religiosas</b>?', correcta:'Homo Neanderthal',
+        malas:['Homo Habilis','Homo Erectus','Homo Sapiens (Cromagnon)'] },
+      { preg:'¿Qué homínido se asocia con el <b>arco y flecha</b> y el <b>arte rupestre</b>?', correcta:'Homo Sapiens (Cromagnon)',
+        malas:['Homo Habilis','Homo Erectus','Homo Neanderthal'] }
+    ];
+    const c = pick(casos);
+    return { enunciado:c.preg, tipo:'opciones', opciones: shuffle([c.correcta, ...c.malas]), respuesta:c.correcta,
+      explicacion:[`El Paleolítico se divide en tres momentos, cada uno con su propio homínido y sus propios aportes culturales: Paleolítico Inferior (Homo Habilis y Homo Erectus — primeras herramientas, dominio del fuego), Paleolítico Medio (Homo Neanderthal — primeros entierros humanos, primeras creencias religiosas), y Paleolítico Superior (Homo Sapiens/Cromagnon — arco y flecha, arte rupestre).`,
+        `Lo que pregunta el enunciado corresponde a: ${c.correcta}.`,
+        `→ ${c.correcta}.`,
+        `TRUCO: ordénalos así — Habilis/Erectus = LO BÁSICO (herramientas, fuego); Neanderthal = LO ESPIRITUAL (entierros, creencias); Sapiens = LO ARTÍSTICO Y TÉCNICO AVANZADO (arco y flecha, arte). Ejemplo con este mismo: "${c.preg.replace(/<\/?b>/g,'')}" corresponde a ${c.correcta}.`] };
+  }
+},
+{
+  id:'wc-edad-metales-orden', nombre:'Orden de la Edad de los Metales', clase:'wc', secciones:['3.5'],
+  gen(nv){
+    const etapas = ['Edad del Cobre','Edad del Bronce','Edad del Hierro'];   // ya en orden cronológico
+    const idx = shuffle([0,1,2]);
+    const opciones = idx.map(i => etapas[i]);
+    const respuesta = idx.map((v,pos)=>pos).sort((a,b)=> idx[a]-idx[b]);    // índices, en el orden que hay que tocarlos
+    return { enunciado:`Ordena estas edades de <b>más antigua a más reciente</b>.<br><small style="opacity:.75">Tócalas en orden.</small>`,
+      tipo:'orden', opciones, respuesta,
+      explicacion:[`Dentro de la Edad de los Metales, el orden cronológico es: primero el Cobre (el primer metal que usó el ser humano), luego el Bronce (aleación de cobre y estaño), y por último el Hierro.`,
+        `El cobre se trabajó primero porque es más fácil de fundir; después se descubrió que mezclarlo con estaño (bronce) daba herramientas más duras; el hierro, el más difícil de trabajar, llegó al final.`,
+        `→ Edad del Cobre, Edad del Bronce, Edad del Hierro (en ese orden).`,
+        `TRUCO: piensa en qué tan difícil es trabajar cada metal — el cobre es blando y fácil de fundir (primero), el bronce es una mejora del cobre (segundo), y el hierro necesita más calor y técnica para trabajarse (último, el más "moderno" de los tres). Ejemplo con este mismo: Cobre → Bronce → Hierro, de lo más fácil de trabajar a lo más difícil.`] };
+  }
+},
+{
+  id:'wc-revolucion-neolitica', nombre:'La Revolución Neolítica', clase:'wc', secciones:['3.6'],
+  gen(nv){
+    const casos = [
+      { enun:'La Revolución Neolítica trajo la <b>agricultura y la ganadería</b>, y el ser humano se volvió sedentario.', ok:true, exp:'Exactamente: agricultura y ganadería llevaron a la vida sedentaria y a los primeros poblados.' },
+      { enun:'Con la Revolución Neolítica <b>aparecieron</b> la propiedad privada, las clases sociales y la jerarquización.', ok:true, exp:'Sí — esos son efectos directos de la Revolución Neolítica, según el curso.' },
+      { enun:'Con la Revolución Neolítica <b>desapareció</b> la propiedad privada.', ok:false, exp:'Al revés: la propiedad privada APARECE con la Revolución Neolítica, no desaparece.' },
+      { enun:'La Revolución Neolítica hizo que la población <b>creciera</b>, lo que exigió nuevas técnicas.', ok:true, exp:'Correcto: la población crece, y eso obliga a desarrollar nuevas técnicas (como la cerámica y el tejido).' },
+      { enun:'Con la Revolución Neolítica <b>desaparecieron</b> los primeros poblados.', ok:false, exp:'Al revés: los primeros poblados APARECEN con la Revolución Neolítica, gracias a la vida sedentaria.' }
+    ];
+    const c = pick(casos);
+    return { enunciado:c.enun, tipo:'sino', respuesta:c.ok,
+      explicacion:[`La Revolución Neolítica es la cadena de cambios que trae la agricultura y la ganadería: el ser humano se vuelve sedentario, la población crece, se necesitan nuevas técnicas (cerámica, tejido), aparecen los primeros poblados, y con ellos la propiedad privada, las clases sociales y la división del trabajo.`,
+        c.exp,
+        `→ ${c.ok ? 'Sí' : 'No'}.`,
+        `TRUCO: la Revolución Neolítica siempre suma cosas nuevas (agricultura, poblados, propiedad privada, clases sociales) — nunca las quita. Si una afirmación dice que algo "desaparece" con la Revolución Neolítica, sospecha: probablemente es al revés. Ejemplo con este mismo: "${c.enun.replace(/<\/?b>/g,'')}" ${c.ok?'es justo uno de esos cambios que SÍ trae la Revolución Neolítica':'dice lo contrario de lo que realmente pasó'}.`] };
+  }
 }
 ];
+// todo módulo sin "clase" explícita es de matemáticas — así los 37 módulos de arriba no
+// necesitan tocarse uno por uno al agregar otras materias
+MODULOS.forEach(m => { if(!m.clase) m.clase = 'mate'; });
 const MOD_POR_ID = {}; MODULOS.forEach(m => MOD_POR_ID[m.id] = m);
+// registro de materias — cada una con su nombre, sus "capítulos" (mismo mecanismo de
+// secciones[0][0]===cap que ya usan construirCola/pantallaTemas/elegirModulo) y el nombre de
+// cada capítulo para el encabezado (si falta, se usa "Capítulo N")
+const MATERIAS = {
+  mate: { nombre:'Álgebra', caps:[1,2,3,4] },
+  wc:   { nombre:'World Culture I', caps:[1,2,3],
+          capNombre:{1:'Conceptos básicos', 2:'Orígenes del ser humano', 3:'La Prehistoria'} }
+};
+function nombreCapitulo(cap){
+  const m = MATERIAS[materia];
+  return (m.capNombre && m.capNombre[cap]) || `Capítulo ${cap}`;
+}
+// grupos guardados que pertenecen a la materia actual (un grupo es "de" la materia de su primer
+// módulo — todos sus módulos son siempre de la misma materia, se arman desde _bloquesCapitulos
+// que ya filtra por materia)
+const gruposMateria = () => grupos.filter(g => g.mods.length && MOD_POR_ID[g.mods[0]] && MOD_POR_ID[g.mods[0]].clase === materia);
+// mismo filtro para `errores` — "Repasar mis errores" solo debe mostrar (y consumir) los de la
+// materia activa, aunque `errores` guarda las de TODAS las materias juntas en una sola lista
+const erroresMateria = () => errores.filter(e => MOD_POR_ID[e.modId] && MOD_POR_ID[e.modId].clase === materia);
 
 /* ══════════════════════════════════════════════════════════
    4. VERIFICACIÓN  — una función para los 8 tipos de entrada
@@ -2089,7 +2327,7 @@ function fmtRespuesta(ej){
     case 'mixto': return `${ej.respuesta.e} ${ej.respuesta.n}/${ej.respuesta.d}`;
     case 'angulo2': return `∠2 = ${ej.respuesta.a}°, ∠3 = ${ej.respuesta.b}°`;
     case 'texto': return fmtFactores(ej.respuesta);
-    case 'orden': return ej.respuesta.map(i=>`${ej.opciones[i].n}/${ej.opciones[i].d}`).join(' , ');
+    case 'orden': return ej.respuesta.map(i=>_ordenTexto(ej.opciones[i])).join(' , ');
     case 'opciones': return ej.respuesta;
   }
 }
@@ -2165,7 +2403,10 @@ const CLAVES = {
 function analizarTexto(txt){
   const t = ' ' + String(txt).toLowerCase().replace(/\s+/g,' ') + ' ';
   const puntos = {}, secs = new Set();
-  MODULOS.forEach(m => puntos[m.id] = 0);
+  // SECMAP/CLAVES son propios de Álgebra — al pegar texto de otra materia, esto solo compara
+  // contra SUS módulos (y CLAVES puede faltar para ellos, de ahí el ||[] más abajo)
+  const msMateria = MODULOS.filter(m => m.clase === materia);
+  msMateria.forEach(m => puntos[m.id] = 0);
 
   // (a) rangos "3.1 - 3.8" y "3.1 a 3.8"
   const rangos = t.match(/(\d+)\s*\.\s*(\d+)\s*(?:-|–|—|a|to)\s*(\d+)\s*\.\s*(\d+)/g) || [];
@@ -2187,9 +2428,9 @@ function analizarTexto(txt){
   // (como antes: " k" O "k "), una clave corta como "rate" hacía match dentro de "corporate ",
   // o "order" dentro de "disorder" — bastaba con que un solo extremo tuviera espacio.
   const encontradas = {};
-  MODULOS.forEach(m=>{
+  msMateria.forEach(m=>{
     encontradas[m.id] = [];
-    CLAVES[m.id].forEach(k=>{
+    (CLAVES[m.id] || []).forEach(k=>{
       const re = new RegExp('(?:^|[^a-záéíóúñ0-9])' + k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '(?:$|[^a-záéíóúñ0-9])');
       if(re.test(t)){
         puntos[m.id] += 1; encontradas[m.id].push(k);
@@ -2197,7 +2438,7 @@ function analizarTexto(txt){
     });
   });
 
-  const detectados = MODULOS.filter(m => puntos[m.id] > 0)
+  const detectados = msMateria.filter(m => puntos[m.id] > 0)
     .sort((a,b) => puntos[b.id] - puntos[a.id]);
   return { puntos, secciones: secsValidas, detectados, claves: encontradas };
 }
@@ -2265,6 +2506,7 @@ const fechaLocal = d => { d = d || new Date(); return `${d.getFullYear()}-${Stri
 const fechaHaceDias = n => { const d = new Date(); d.setDate(d.getDate()-n); return fechaLocal(d); };
 
 let nivel  = leer('mate_nivel_v1', 'medio');
+let materia = leer('mate_materia_v1', 'mate');   // qué materia se está estudiando ahora mismo
 let clase  = leer('mate_clase_v1', null);      // { etiqueta, mods:[] } — la mezcla activa ahora mismo
 let grupos = leer('mate_grupos_v1', []);       // [{id, nombre, mods:[]}] — grupos guardados (ej. "Examen 1"),
                                                 // no sincronizan entre aparatos (solo locales, a propósito)
@@ -2485,11 +2727,13 @@ const pct = s => { const t = s.ok + s.fallo; return t ? Math.round(s.ok*100/t) :
 
 /* módulos disponibles ahora mismo (según el modo clase) */
 function modulosActivos(){
+  // clase.mods es de UNA materia — si cambiaste de materia y quedó un grupo/mezcla de la otra
+  // sin quitar, se ignora en vez de mezclar módulos de las dos materias en una misma ronda
   if(clase && clase.mods && clase.mods.length){
-    const ms = clase.mods.map(id => MOD_POR_ID[id]).filter(Boolean);
+    const ms = clase.mods.map(id => MOD_POR_ID[id]).filter(m => m && m.clase === materia);
     if(ms.length) return ms;
   }
-  return MODULOS;
+  return MODULOS.filter(m => m.clase === materia);
 }
 /* sortea uno de "ms" dando más peso a los que van peor — la usan elegirModulo() e iniciarExamen() */
 function elegirDe(ms){
@@ -2506,7 +2750,7 @@ function elegirModulo(cap){
   // "Mezcla del capítulo N" siempre usa TODOS los temas del capítulo, sin importar si hay una
   // mezcla personalizada activa — si no, pedir el capítulo 3 con una mezcla de solo cap.1 se
   // quedaba sin candidatos y tronaba.
-  return elegirDe(cap ? MODULOS.filter(m=>m.secciones[0][0]===String(cap)) : modulosActivos());
+  return elegirDe(cap ? MODULOS.filter(m=>m.clase===materia && m.secciones[0][0]===String(cap)) : modulosActivos());
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -2548,6 +2792,9 @@ let _pantallaActual = null;   // qué pantalla-función se repinta sola si llega
 let esTemaFijo = false;   // true = practicando un tema concreto, no la mezcla
 let capFijo = null;       // 1/2/3 = mezclando solo los temas de ese capítulo
 let modoErrores = false;  // true = repasando la lista de "errores" en vez de practicar normal
+let _errorActual = null; // el objeto de `errores` que se está mostrando ahora en modoErrores —
+                          // se necesita la referencia porque `errores` mezcla todas las materias,
+                          // así que ya no alcanza con asumir que siempre es errores[0]
 let modoRepasoRonda = false; // true = repitiendo sesionFallos al terminar una ronda (ver _repasarFallosRonda)
 let examen = null;        // { preguntas:[{ej,ok,completado}], idx, finLimite } o null si no hay examen activo
 let sesionHechos = 0;     // cuántos ejercicios van en esta ronda
@@ -2567,7 +2814,7 @@ const SESION_TEMA = 20;   // tamaño de ronda cuando el tema está fijo (no hay 
 const VECES_POR_TEMA = 2; // mezcla: mínimo garantizado de repeticiones de cada tema activo en la ronda
 const tamanoMezcla = ms => ms.length * VECES_POR_TEMA;   // para mostrarlo en los botones sin arrancar la ronda
 function construirCola(cap){
-  const ms = typeof cap === 'number' ? MODULOS.filter(m=>m.secciones[0][0]===String(cap)) : modulosActivos();
+  const ms = typeof cap === 'number' ? MODULOS.filter(m=>m.clase===materia && m.secciones[0][0]===String(cap)) : modulosActivos();
   // agrupada: se mezcla el ORDEN de los temas, pero las repeticiones de cada uno quedan juntas.
   // no agrupada (por defecto): se mezclan las repeticiones sueltas, así que pueden salir intercaladas.
   if(agruparTema) return shuffle(ms.map(m=>m.id)).flatMap(id => Array(VECES_POR_TEMA).fill(id));
@@ -2651,7 +2898,8 @@ function menuGrupos(e){
   const menu = document.createElement('div');
   menu.id = 'menuGrupos';
   menu.className = 'card menuFlot';
-  menu.innerHTML = grupos.length ? grupos.map(g => `
+  const gs = gruposMateria();
+  menu.innerHTML = gs.length ? gs.map(g => `
       <button class="ajRow" onclick="cerrarMenuGrupos();practicarGrupo('${g.id}')">
         <div style="flex:1"><div class="ajTitulo">${escHtml(g.nombre)}</div>
           <div class="ajSub">${g.mods.length} temas · ${tamanoMezcla(g.mods)} preguntas</div></div>
@@ -2860,6 +3108,12 @@ function pantallaInicio(){
     </div>` : '';
   const _rachaViva = _rachaDiasVigente();
   main.innerHTML = `
+    ${Object.keys(MATERIAS).length > 1 ? `
+    <div class="card" style="padding:12px 16px;margin-bottom:10px">
+      <div class="chips">
+        ${Object.keys(MATERIAS).map(k => `<button class="chip ${materia===k?'on':''}" onclick="cambiarMateria('${k}')">${MATERIAS[k].nombre}</button>`).join('')}
+      </div>
+    </div>` : ''}
     <div class="card">
       ${bannerClase}
       <button class="btn amar" onclick="ir('practica')">Empezar a practicar
@@ -2867,7 +3121,7 @@ function pantallaInicio(){
       ${_rachaViva > 0 ? `<div class="nota">🔥 ${_rachaViva} ${_rachaViva===1?'día seguido':'días seguidos'} practicando (mejor: ${rachaDias.mejor})</div>` : ''}
       <div class="row">
         <button class="btn sec chico" onclick="menuGrupos(event)">Grupos de examen<span class="flechita">▾</span></button>
-        <button class="btn sec chico" onclick="ir('errores')">Repasar mis errores${errores.length?` (${errores.length})`:''}</button>
+        <button class="btn sec chico" onclick="ir('errores')">Repasar mis errores${erroresMateria().length?` (${erroresMateria().length})`:''}</button>
       </div>
     </div>`;
 }
@@ -2878,10 +3132,10 @@ function pantallaTemas(){
   main.innerHTML = `
     <div class="card">
       <h2>Practicar un tema suelto</h2>
-      ${[1,2,3,4].map(cap => { const ms = MODULOS.filter(m=>m.secciones[0][0]===String(cap)); return `
+      ${MATERIAS[materia].caps.map(cap => { const ms = MODULOS.filter(m=>m.clase===materia && m.secciones[0][0]===String(cap)); return `
         <details class="temaCap">
-          <summary>Capítulo ${cap}</summary>
-          <button class="btn amar chico" onclick="ir('practica',${cap})">Mezcla del capítulo ${cap}
+          <summary>${nombreCapitulo(cap)}</summary>
+          <button class="btn amar chico" onclick="ir('practica',${cap})">Mezcla de ${nombreCapitulo(cap).replace(/^Capítulo /,'capítulo ')}
             <small>${tamanoMezcla(ms)} preguntas</small></button>
           ${ms.map(m=>{
             const s = stats[m.id], p = s ? pct(s) : null;
@@ -2893,9 +3147,9 @@ function pantallaTemas(){
 
     <div class="card">
       <button class="btn" onclick="ir('elegir')">Elegir temas para mezclar
-        <small>combina los que quieras, por ejemplo capítulo 1 con capítulo 2</small></button>
+        <small>combina los que quieras, por ejemplo ${nombreCapitulo(MATERIAS[materia].caps[0]).toLowerCase()} con ${nombreCapitulo(MATERIAS[materia].caps[1]||MATERIAS[materia].caps[0]).toLowerCase()}</small></button>
       <button class="btn" onclick="ir('grupos')">Grupos de examen
-        <small>${grupos.length ? `${grupos.length} guardado${grupos.length===1?'':'s'} — junta capítulos y ponles nombre` : 'junta capítulos o temas y ponles nombre, ej. "Examen 1"'}</small></button>
+        <small>${gruposMateria().length ? `${gruposMateria().length} guardado${gruposMateria().length===1?'':'s'} — junta capítulos y ponles nombre` : 'junta capítulos o temas y ponles nombre, ej. "Examen 1"'}</small></button>
     </div>`;
 }
 
@@ -2999,6 +3253,13 @@ function setNivel(nv){
     onclick="setNivel('${x}')">${x==='facil'?'Fácil':x==='medio'?'Medio':'Difícil'}</button>`).join('');
 }
 function quitarClase(){ clase = null; guardar('mate_clase_v1', null); if(syncDoc) syncDoc.set({clase:null},{merge:true}).catch(()=>{}); pantallaInicio(); }
+// cambia de materia (Álgebra ↔ World Culture I, etc.) — limpia cualquier grupo/mezcla activo
+// de la materia anterior (sus módulos no existen en la nueva) y vuelve a pintar Inicio
+function cambiarMateria(m){
+  if(m === materia || !MATERIAS[m]) return;
+  materia = m; guardar('mate_materia_v1', materia);
+  quitarClase();
+}
 
 /* ---------- práctica ---------- */
 // ejemplo resuelto de un tema — se intercala justo antes del primer ejercicio DE ESE TEMA en la
@@ -3101,7 +3362,7 @@ function entradaHTML(ej){
         <button class="btn amar" style="margin-top:12px" onclick="responder()">Comprobar</button>`;
     case 'orden': return `
         <div class="ordenCaja" id="cajaOrden">
-          ${ej.opciones.map((f,i)=>`<button class="ordenChip" id="oc${i}" onclick="tocarOrden(${i})">${fr(f.n,f.d)}</button>`).join('')}
+          ${ej.opciones.map((f,i)=>`<button class="ordenChip" id="oc${i}" onclick="tocarOrden(${i})">${_ordenLabel(f)}</button>`).join('')}
         </div>
         <div class="row">
           <button class="btn sec chico" onclick="ordenSel=[];pintarOrden()">Borrar</button>
@@ -3122,7 +3383,7 @@ function pintarEjercicio(){
   main.innerHTML = `
     <button class="back" onclick="ir('inicio')">← Inicio</button>
     <div class="card">
-      <span class="pill">${esTemaFijo ? '' : capFijo ? `Capítulo ${capFijo} · ` : (clase && clase.mods && clase.mods.length) ? `${clase.etiqueta.length>20?'Mi mezcla':clase.etiqueta} · ` : 'Mezcla · '}${modActual.nombre}</span>
+      <span class="pill">${esTemaFijo ? '' : capFijo ? `${nombreCapitulo(capFijo)} · ` : (clase && clase.mods && clase.mods.length) ? `${clase.etiqueta.length>20?'Mi mezcla':clase.etiqueta} · ` : 'Mezcla · '}${modActual.nombre}</span>
       <div class="enunciado">${ejActual.enunciado}</div>
       <div id="zonaEntrada">
         <textarea class="campo" id="inProceso" style="min-height:70px;margin-bottom:12px"
@@ -3258,8 +3519,11 @@ function responder(valor){
   ultimoProceso = ($('inProceso') || {}).value || '';
   if(modoErrores){
     // acierto → sale de la lista. Fallo → se manda al final en vez de quedarse en el frente,
-    // o "Siguiente ejercicio" volvía a mostrar EXACTAMENTE la misma pregunta que acabas de fallar
-    if(res.ok){ errores.shift(); } else { errores.push(errores.shift()); }
+    // o "Siguiente ejercicio" volvía a mostrar EXACTAMENTE la misma pregunta que acabas de fallar.
+    // Por índice de _errorActual, no errores[0] — errores mezcla TODAS las materias, así que la
+    // que se está repasando no siempre está al frente del array completo.
+    const i = errores.indexOf(_errorActual);
+    if(i >= 0){ if(res.ok){ errores.splice(i,1); } else { errores.push(errores.splice(i,1)[0]); } }
     guardar('mate_errores_v1', errores);
   } else if(modoRepasoRonda){
     // mismo vaivén que modoErrores pero sobre la copia de trabajo de sesionFallos —
@@ -3361,7 +3625,7 @@ function _pintarVistaExplicacion(){
 function pantallaErrores(){
   _barra(null);
   modoErrores = true;
-  if(!errores.length){
+  if(!erroresMateria().length){
     main.innerHTML = `<button class="back" onclick="ir('inicio')">← Inicio</button>
       <div class="card"><h2>Repasar mis errores</h2>
         <div class="nota">No tienes errores guardados — ¡vas muy bien, o ya los repasaste todos!</div></div>`;
@@ -3370,20 +3634,22 @@ function pantallaErrores(){
   _pintarSiguienteError();
 }
 function _pintarSiguienteError(){
-  if(!errores.length){ modoErrores = false; return ir('inicio'); }
-  const item = errores[0];
+  const cola = erroresMateria();
+  if(!cola.length){ modoErrores = false; _errorActual = null; return ir('inicio'); }
+  const item = cola[0];
+  _errorActual = item;
   modActual = MOD_POR_ID[item.modId] || { id:item.modId, nombre:'Repaso' };
   ejActual = item.ej;
   respondido = false; vioExpl = false; ordenSel = []; ultimoProceso = ''; calcHist = [];
   main.innerHTML = `
     <button class="back" onclick="ir('inicio')">← Inicio</button>
     <div class="card">
-      <span class="pill">Repaso de errores · quedan ${errores.length}</span>
+      <span class="pill">Repaso de errores · quedan ${cola.length}</span>
       <div class="enunciado">${ejActual.enunciado}</div>
       <div id="zonaEntrada">${entradaHTML(ejActual)}</div>
       <div id="zonaFb"></div>
       <div class="row" id="accionesPre">
-        <button class="btn sec chico" onclick="errores.shift(); guardar('mate_errores_v1',errores); _pintarSiguienteError();">Quitar de la lista</button>
+        <button class="btn sec chico" onclick="_quitarErrorActual()">Quitar de la lista</button>
       </div>
     </div>`;
   const primero = $('inNum') || $('inTexto') || $('inE') || $('inN') || $('inA2');
@@ -3397,6 +3663,12 @@ function _pintarSiguienteError(){
     });
   }
 }
+function _quitarErrorActual(){
+  const i = errores.indexOf(_errorActual);
+  if(i >= 0) errores.splice(i,1);
+  guardar('mate_errores_v1', errores);
+  _pintarSiguienteError();
+}
 
 /* ---------- modo examen ---------- */
 const EXAMEN_TOTAL = 10, EXAMEN_SEGUNDOS = 60 * EXAMEN_TOTAL;   // 1 minuto por pregunta
@@ -3405,7 +3677,7 @@ function iniciarExamen(){
   _barra(null);
   examen = { preguntas: [], idx: 0, finLimite: Date.now() + EXAMEN_SEGUNDOS*1000 };
   for(let i=0; i<EXAMEN_TOTAL; i++){
-    const m = elegirDe(MODULOS);   // siempre de TODOS los temas — no se limita a la mezcla/grupo activo
+    const m = elegirDe(MODULOS.filter(x=>x.clase===materia));   // todos los temas DE LA MATERIA actual — no se limita a la mezcla/grupo activo
     const ej = m.gen(nivel); ej.__mod = m.id; ej.__modNombre = m.nombre;
     examen.preguntas.push({ ej, ok:null, completado:false });
   }
@@ -3492,7 +3764,7 @@ function finalizarExamen(){
 function pantallaStats(){
   _pantallaActual = pantallaStats;
   _barra('stats');
-  const conDatos = MODULOS.filter(m => stats[m.id] && (stats[m.id].ok + stats[m.id].fallo) > 0);
+  const conDatos = MODULOS.filter(m => m.clase===materia && stats[m.id] && (stats[m.id].ok + stats[m.id].fallo) > 0);
   const total = conDatos.reduce((a,m)=>a + stats[m.id].ok + stats[m.id].fallo, 0);
   const aciertos = conDatos.reduce((a,m)=>a + stats[m.id].ok, 0);
 
@@ -3596,10 +3868,10 @@ let analisis = null, seleccion = [];
 
 // bloque de checkboxes por capítulo, compartido entre "Elegir temas" y el editor de grupos —
 // "repintar" es el nombre (sin comillas) de la función que hay que llamar tras marcar/desmarcar
-const _bloquesCapitulos = repintar => [1,2,3,4].map(cap => { const ms = MODULOS.filter(m=>m.secciones[0][0]===String(cap));
+const _bloquesCapitulos = repintar => MATERIAS[materia].caps.map(cap => { const ms = MODULOS.filter(m=>m.clase===materia && m.secciones[0][0]===String(cap));
   const n = ms.filter(m=>seleccion.indexOf(m.id)>=0).length; return `
   <h3 style="display:flex;justify-content:space-between;align-items:center">
-    <span>Capítulo ${cap}</span>
+    <span>${nombreCapitulo(cap)}</span>
     <button class="btn sec chico" style="width:auto;margin:0;padding:5px 11px;font-size:.78rem"
       onclick="_marcarCapitulo(${cap}, ${repintar})">Marcar/quitar todo</button>
   </h3>
@@ -3609,7 +3881,7 @@ const _bloquesCapitulos = repintar => [1,2,3,4].map(cap => { const ms = MODULOS.
   </details>
 `; }).join('');
 function _marcarCapitulo(cap, repintar){
-  const ms = MODULOS.filter(m=>m.secciones[0][0]===String(cap));
+  const ms = MODULOS.filter(m=>m.clase===materia && m.secciones[0][0]===String(cap));
   const todosMarcados = ms.every(m=>seleccion.indexOf(m.id)>=0);
   ms.forEach(m=>toggleMod(m.id, !todosMarcados));
   (repintar || _pintarElegirTemas)();
@@ -3647,7 +3919,7 @@ function pantallaGrupos(){
         nombre, y practica ese grupo cuando quieras.</div>
       <button class="btn amar" onclick="crearGrupo()">+ Crear grupo nuevo</button>
     </div>
-    ${grupos.map(g => `
+    ${gruposMateria().map(g => `
       <div class="card">
         <h3 style="margin-top:0">${escHtml(g.nombre)}${clase && clase.grupoId===g.id ? ` <span class="ajCheck">✓</span> <span class="ajSub" style="font-weight:400">seleccionado</span>` : ''}</h3>
         <div class="nota">${g.mods.length} temas · ${tamanoMezcla(g.mods)} preguntas</div>
@@ -3662,7 +3934,7 @@ function pantallaGrupos(){
 // sobreviva al repintado que dispara "Marcar/quitar todo" (si no, se perdía lo ya escrito)
 let nombreGrupoTmp = '';
 function crearGrupo(){
-  grupoEditando = null; seleccion = []; nombreGrupoTmp = `Examen ${grupos.length+1}`;
+  grupoEditando = null; seleccion = []; nombreGrupoTmp = `Examen ${gruposMateria().length+1}`;
   _pintarEditorGrupo();
 }
 function editarGrupo(id){
@@ -3824,7 +4096,7 @@ function mostrarAnalisis(a, fuente){
     $('zonaClase').innerHTML = `
       <div class="fb medio">No reconocí ningún tema en ${fuente}.
         <small>Puedes elegirlos a mano abajo.</small></div>
-      ${listaCheckHTML(MODULOS)}
+      ${listaCheckHTML(MODULOS.filter(m=>m.clase===materia))}
       <div id="zonaClaseMsg"></div>
       <button class="btn amar" onclick="guardarClase()">Usar estos temas</button>`;
     seleccion = [];
@@ -3838,7 +4110,7 @@ function mostrarAnalisis(a, fuente){
     ${listaCheckHTML(a.detectados, a)}
     <details style="margin:8px 0 12px">
       <summary style="cursor:pointer;font-size:.88rem;color:var(--muted)">Ver los demás temas</summary>
-      <div style="margin-top:8px">${listaCheckHTML(MODULOS.filter(m => a.detectados.indexOf(m) < 0), a)}</div>
+      <div style="margin-top:8px">${listaCheckHTML(MODULOS.filter(m => m.clase===materia && a.detectados.indexOf(m) < 0), a)}</div>
     </details>
     <div id="zonaClaseMsg"></div>
     <button class="btn amar" onclick="guardarClase()">Practicar solo estos temas</button>`;
@@ -3881,6 +4153,8 @@ function guardarClase(){
    8. AUTOTEST  — abrir index.html?test
    ══════════════════════════════════════════════════════════ */
 function autotest(){
+  materia = 'mate';   // las pruebas de "modo clase" (SECMAP/CLAVES) son de Álgebra — fuerza la
+                       // materia sin importar qué haya quedado guardada de una sesión anterior
   const fallos = [], lineas = [];
   const eq = (a,b) => JSON.stringify(a) === JSON.stringify(b);
   const chk = (nombre, cond) => { lineas.push(`${cond?'  ok  ':'FALLA'}  ${nombre}`); if(!cond) fallos.push(nombre); };
