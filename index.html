@@ -2005,15 +2005,15 @@ const MODULOS = [
    'mate' automáticamente más abajo — ver el forEach justo antes de MOD_POR_ID.
    ══════════════════════════════════════════════════════════ */
 {
-  id:'wc-humanidades', nombre:'Humanidades, cultura e historia', clase:'wc', secciones:['1.1'],
+  id:'wc-humanidades', nombre:'Humanidad, Humanidades e Historia', clase:'wc', secciones:['1.1'],
   gen(nv){
     const casos = [
+      { termino:'Humanidad', correcta:'El conjunto de seres que pertenecemos a la misma raza humana y compartimos las características de la especie humana que habita el planeta Tierra.',
+        malas:['Las disciplinas que estudian el comportamiento y la producción cultural de los seres humanos.', 'El conjunto de costumbres, comidas y tradiciones de una región en particular.', 'El estudio de los sucesos del pasado.'],
+        pista:'"Humanidad" (sin ese) es la palabra para TODOS los seres humanos juntos, como especie — no confundirla con "Humanidades" (el campo de estudio) ni con "Historia".' },
       { termino:'Humanidades', correcta:'Las disciplinas que estudian el comportamiento y la producción cultural de los seres humanos a través del tiempo (arte, música, creencias religiosas, historia, cultura).',
         malas:['El estudio de los fenómenos naturales y las leyes de la física.', 'La ciencia que estudia los seres vivos y sus procesos biológicos.', 'El estudio de los números y las relaciones matemáticas.'],
         pista:'Fíjate en la palabra "humano" — humanidades es todo lo que el ser humano PRODUCE Y HACE (arte, música, creencias, historia), no las leyes de la naturaleza ni los números.' },
-      { termino:'Cultura', correcta:'El conjunto amplio de costumbres, ideas, creencias, y conocimientos científicos y técnicos que caracterizan a un gran grupo de seres humanos en un momento específico de su historia.',
-        malas:['Únicamente las bellas artes de una sociedad (pintura, música, literatura).', 'Las leyes escritas que rigen un país.', 'La religión oficial que practica un pueblo.'],
-        pista:'"Cultura" es un paraguas mucho más ancho que solo "arte" o solo "religión" — junta costumbres, ideas, creencias Y conocimientos científicos/técnicos, todo a la vez.' },
       { termino:'Historia', correcta:'La recopilación y el estudio de los sucesos del pasado que constituyen el desarrollo de la Humanidad.',
         malas:['El estudio de las leyes que gobiernan el universo físico.', 'La predicción de sucesos que todavía no han pasado.', 'El estudio exclusivo de las guerras entre países.'],
         pista:'"Historia" mira hacia ATRÁS (sucesos del pasado) y hacia el desarrollo de TODA la Humanidad, no solo un tipo de suceso como las guerras.' }
@@ -2022,28 +2022,124 @@ const MODULOS = [
     const opciones = shuffle([c.correcta, ...c.malas]);
     return { enunciado:`¿Cuál de estas es la definición de <b>"${c.termino}"</b> que da el curso?`,
       tipo:'opciones', opciones, respuesta: c.correcta,
-      explicacion:[`Cada uno de estos términos tiene una definición precisa en el curso — hay que reconocer la que de verdad corresponde a "${c.termino}", no una que suene parecida.`,
+      explicacion:[`Cada uno de estos términos tiene una definición precisa en el curso — hay que reconocer la que de verdad corresponde a "${c.termino}", no una que suene parecida (ojo, en especial, con no confundir "Humanidad" con "Humanidades": la primera es TODOS los seres humanos, la segunda es el campo de estudio).`,
         `La definición correcta es: "${c.correcta}"`,
         `→ Esa es la opción correcta.`,
-        `TRUCO: ${c.pista} Ejemplo con este mismo: para "${c.termino}", la trampa más común es confundirla con un término vecino (ciencia natural, matemática, o un aspecto muy específico como solo el arte o solo la religión) — la definición real siempre es más amplia o apunta directo al ser humano y su desarrollo.`] };
+        `TRUCO: ${c.pista} Ejemplo con este mismo: para "${c.termino}", la trampa más común es confundirla con un término vecino — la definición real siempre apunta a lo que realmente pregunta esa palabra puntual.`] };
+  }
+},
+{
+  id:'wc-civilizacion-cultura', nombre:'Civilización vs. Cultura', clase:'wc', secciones:['1.3'],
+  gen(nv){
+    // "Cultura" es MÁS ESPECÍFICA que "Civilización" — el curso trata como "civilización" a
+    // los grandes grupos históricos/antiguos (Mesopotamia, Egipto, Grecia, Roma, India, China,
+    // Mayas, Aztecas, Incas) y como "cultura" a un pueblo o región particular, ej. "la cultura
+    // puertorriqueña" (slide explícita del curso) — de ahí la lista de "civilización" (todas
+    // confirmadas como tal en el curso) contra la lista de "cultura" (regiones/países que el
+    // curso NO presenta como una de esas civilizaciones antiguas).
+    const civilizacion = ['Grecia','Roma','Egipto','China','India','Mesopotamia'];
+    const cultura = ['Puerto Rico','Colombia','República Dominicana','Australia','México'];
+    const esCiv = Math.random() < 0.5;
+    const lugar = esCiv ? pick(civilizacion) : pick(cultura);
+    if(Math.random() < 0.4){
+      // pregunta conceptual: cuál definición es más específica
+      return { enunciado:`Según el curso, ¿cuál de los dos conceptos es <b>más específico</b>: "Civilización" o "Cultura"?`,
+        tipo:'opciones', opciones: shuffle(['Cultura','Civilización','Los dos son igual de específicos']), respuesta:'Cultura',
+        explicacion:[`"Civilización" es el conjunto amplio de costumbres, ideas, creencias y conocimientos que caracterizan a un GRAN grupo de seres humanos, con un alto grado de organización (ej. Egipto, Grecia, Roma).`,
+          `"Cultura" es el conjunto de conocimientos, ideas, tradiciones, comidas, vestimentas y obras que un grupo humano de UNA REGIÓN EN PARTICULAR crea con sus manos y su mente — el curso lo define literalmente como "un concepto MÁS ESPECÍFICO que el de civilización".`,
+          `→ Cultura es el más específico de los dos.`,
+          `TRUCO: piensa en "civilización" como el paraguas grande (una época, una gran organización social) y "cultura" como algo más puntual y concreto de una región (su comida, su música, su ropa, sus tradiciones) — por eso el curso da como ejemplo "la cultura puertorriqueña", no "la civilización puertorriqueña". Ejemplo con este mismo: Cultura es el concepto más específico.`] };
+    }
+    return { enunciado:`Según el curso, ¿<b>${lugar}</b> es una civilización o una cultura?`,
+      tipo:'opciones', opciones: shuffle(['Civilización','Cultura']), respuesta: esCiv ? 'Civilización' : 'Cultura',
+      explicacion:[`El curso llama "civilizaciones" a los grandes grupos históricos con alto grado de organización (Mesopotamia, Egipto, Grecia, Roma, India, China, y las de América Latina como Mayas/Aztecas/Incas), y "culturas" a pueblos o regiones particulares — el curso da explícitamente como ejemplo "la cultura puertorriqueña".`,
+        esCiv ? `${lugar} es una de las civilizaciones antiguas que menciona el curso.` : `${lugar} no es una de esas civilizaciones antiguas del curso — se habla de su cultura (como la cultura puertorriqueña).`,
+        `→ ${esCiv ? 'Civilización' : 'Cultura'}.`,
+        `TRUCO: si el lugar es una de las grandes civilizaciones antiguas que ya viste (Mesopotamia, Egipto, Grecia, Roma, India, China, Mayas, Aztecas, Incas), es "civilización"; si es un país o pueblo actual/particular del que se habla por sus costumbres, comida o tradiciones, es "cultura". Ejemplo con este mismo: ${lugar} es ${esCiv ? 'una civilización' : 'una cultura'}.`] };
   }
 },
 {
   id:'wc-civilizaciones', nombre:'Civilizaciones de Occidente y de Oriente', clase:'wc', secciones:['1.2'],
   gen(nv){
     const casos = [
-      { enun:'Mesopotamia y Egipto pertenecen a las Civilizaciones de <b>Occidente</b>.', ok:true, exp:'Mesopotamia y Egipto están agrupadas junto con Grecia y Roma dentro de las Civilizaciones de Occidente.' },
+      { enun:'Mesopotamia y Egipto pertenecen a las Civilizaciones de <b>Occidente</b>.', ok:true, exp:'Mesopotamia y Egipto están agrupadas junto con Grecia y Roma (y el resto de Europa) dentro de las Civilizaciones de Occidente.' },
       { enun:'Grecia y Roma pertenecen a las Civilizaciones de <b>Oriente</b>.', ok:false, exp:'Grecia y Roma son parte de las Civilizaciones de Occidente, no de Oriente.' },
       { enun:'India y China pertenecen a las Civilizaciones de <b>Oriente</b>.', ok:true, exp:'India y China están del lado de las Civilizaciones de Oriente.' },
       { enun:'El curso divide a las civilizaciones en solo <b>dos</b> grandes grupos: Occidente y Oriente.', ok:true, exp:'El curso presenta exactamente dos grandes divisiones: Civilizaciones de Occidente y Civilizaciones de Oriente.' },
-      { enun:'Mesopotamia y Egipto pertenecen a las Civilizaciones de <b>Oriente</b>.', ok:false, exp:'Mesopotamia y Egipto son de las Civilizaciones de Occidente, junto con Grecia y Roma.' }
+      { enun:'Mesopotamia y Egipto pertenecen a las Civilizaciones de <b>Oriente</b>.', ok:false, exp:'Mesopotamia y Egipto son de las Civilizaciones de Occidente, junto con Grecia y Roma.' },
+      { enun:'Los Mayas, Aztecas e Incas pertenecen a las Civilizaciones de <b>Oriente</b>.', ok:true, exp:'El curso agrupa a las antiguas civilizaciones de América Latina (Mayas, Aztecas, Incas) dentro de las Civilizaciones de Oriente, junto con India y China.' },
+      { enun:'Los Mayas, Aztecas e Incas pertenecen a las Civilizaciones de <b>Occidente</b>.', ok:false, exp:'El curso los agrupa dentro de las Civilizaciones de ORIENTE, no de Occidente.' }
     ];
     const c = pick(casos);
     return { enunciado:c.enun, tipo:'sino', respuesta:c.ok,
-      explicacion:[`El curso divide toda la historia de las civilizaciones en dos grandes grupos: Civilizaciones de Occidente (Mesopotamia, Egipto, Grecia, Roma) y Civilizaciones de Oriente (India, China).`,
+      explicacion:[`El curso divide toda la historia de las civilizaciones en dos grandes grupos: Civilizaciones de Occidente (Mesopotamia, Egipto, Grecia, Roma y el resto de Europa) y Civilizaciones de Oriente (India, China, y las antiguas civilizaciones de América Latina como Mayas, Aztecas e Incas).`,
         c.exp,
         `→ ${c.ok ? 'Sí' : 'No'}.`,
-        `TRUCO: Occidente agrupa a Mesopotamia-Egipto-Grecia-Roma (el "camino" que llevó a la civilización europea); Oriente agrupa a India y China. Si la afirmación mezcla un país de un grupo con la etiqueta del otro grupo, es falsa. Ejemplo con este mismo: "${c.enun.replace(/<\/?b>/g,'')}" es ${c.ok?'verdadero porque coinciden grupo y país':'falso porque el país mencionado es del OTRO grupo'}.`] };
+        `TRUCO: Occidente agrupa a Mesopotamia-Egipto-Grecia-Roma-Europa (el "camino" que llevó a la civilización europea); Oriente agrupa a India, China Y las civilizaciones antiguas de América Latina (Mayas, Aztecas, Incas) — esa última parte sorprende a muchos, así que vale la pena memorizarla aparte. Si la afirmación mezcla un grupo con la etiqueta del otro, es falsa. Ejemplo con este mismo: "${c.enun.replace(/<\/?b>/g,'')}" es ${c.ok?'verdadero porque coinciden grupo y lugar':'falso porque el lugar mencionado es del OTRO grupo'}.`] };
+  }
+},
+{
+  id:'wc-homo-sapiens', nombre:'El nombre científico de la especie humana', clase:'wc', secciones:['1.4'],
+  gen(nv){
+    const casos = [
+      { preg:'¿Cuál es el nombre científico de la especie humana?', correcta:'Homo sapiens',
+        malas:['Australopithecus sapiens','Homo erectus','Hominidae sapiens'] },
+      { preg:'¿En qué idioma se escriben los nombres científicos de las especies de plantas y animales?', correcta:'Latín',
+        malas:['Griego','Inglés','Alemán'] },
+      { preg:'"Homo sapiens" significa, del latín...', correcta:'Hombre sabio (homo = hombre, sapiens = sabio)',
+        malas:['Hombre erguido','Primer hombre','Hombre de las cavernas'] }
+    ];
+    const c = pick(casos);
+    return { enunciado:c.preg, tipo:'opciones', opciones: shuffle([c.correcta, ...c.malas]), respuesta:c.correcta,
+      explicacion:[`El nombre científico de la especie humana es "Homo sapiens" (del latín Homo = hombre, sapiens = sabio) — es la especie animal, de la familia de los Homínidos, constituida por los seres humanos.`,
+        `Los nombres científicos de todas las especies (plantas y animales) se escriben en LATÍN, siempre en cursiva (o subrayado si es a mano): primero el Género (con mayúscula) y luego la especie (con minúscula) — así "Homo sapiens" = humanos. Se usa latín porque es un idioma fijo que ya nadie habla como lengua materna, así el nombre científico no cambia con el tiempo ni depende del idioma de quien lo lea, en cualquier país del mundo.`,
+        `→ ${c.correcta}.`,
+        `TRUCO: Género (primera palabra, Mayúscula) + especie (segunda palabra, minúscula), siempre en cursiva y siempre en latín — Homo (género) sapiens (especie) = "hombre sabio". Ejemplo con este mismo: la pregunta era "${c.preg}", y la respuesta es ${c.correcta}.`] };
+  }
+},
+{
+  id:'wc-poblacion-mundial', nombre:'Población mundial y de Puerto Rico', clase:'wc', secciones:['1.5'],
+  gen(nv){
+    const casos = [
+      { preg:'¿Cuál es el país más poblado del mundo en estos momentos, según el curso?', correcta:'India',
+        malas:['China','Estados Unidos','Indonesia'],
+        exp:'India (1,441 millones) ya superó a China (1,410 millones) como el país más poblado del mundo, según los datos del curso.' },
+      { preg:'¿Cuál es la población aproximada de Puerto Rico, según el curso?', correcta:'3.2 millones',
+        malas:['9 millones','800 mil','20 millones'],
+        exp:'El curso da la cifra de 3.2 millones — con eso, Puerto Rico sería el país número 134 del mundo por población.' },
+      { preg:'¿La población de Puerto Rico está aumentando o disminuyendo, según el curso?', correcta:'Disminuyendo',
+        malas:['Aumentando','Se mantiene exactamente igual'],
+        exp:'La proyección de población de Puerto Rico que muestra el curso (2017-2025) va en descenso, por razones como la migración de puertorriqueños hacia Estados Unidos.' }
+    ];
+    const c = pick(casos);
+    return { enunciado:c.preg, tipo:'opciones', opciones: shuffle([c.correcta, ...c.malas]), respuesta:c.correcta,
+      explicacion:[`Datos de población que da el curso: en el mundo hay unos 7,700 millones de personas; India (1,441 millones) es hoy el país más poblado, por encima de China (1,410 millones); y Puerto Rico tiene una población aproximada de 3.2 millones, que va en descenso según la proyección del curso (2017-2025), principalmente por la migración hacia Estados Unidos.`,
+        c.exp,
+        `→ ${c.correcta}.`,
+        `TRUCO: India superó a China — ya no es "China es el país más poblado" (dato viejo), sino India. Y Puerto Rico: población chica (3.2 millones) que además va BAJANDO, no subiendo. Ejemplo con este mismo: la pregunta era "${c.preg}", y la respuesta es ${c.correcta}.`] };
+  }
+},
+{
+  id:'wc-arte-filosofia', nombre:'El Arte y la Filosofía', clase:'wc', secciones:['1.6'],
+  gen(nv){
+    if(Math.random() < 0.5){
+      const buenas = ['arquitectura','danza','escultura','música','pintura','literatura','cine','fotografía'];
+      const malas = ['la física nuclear','las matemáticas puras','la programación de computadoras','la ingeniería civil'];
+      const buena = pick(buenas), mala = pick(malas);
+      const otras2 = shuffle(buenas.filter(b=>b!==buena)).slice(0,2);
+      return { enunciado:`¿Cuál de estas opciones <b>NO</b> es una variante o expresión del concepto ARTE, según el curso?`,
+        tipo:'opciones', opciones: shuffle([mala, buena, ...otras2]), respuesta: mala,
+        explicacion:[`El curso define el Arte como todo lo que el ser humano crea para expresar una visión del mundo (real o imaginaria), usando recursos plásticos, lingüísticos o sonoros. Algunas expresiones artísticas que menciona: arquitectura, danza, escultura, música, pintura, literatura, cine, fotografía, la moda, la publicidad, los videojuegos y el arte corporal.`,
+          `"${mala}" no es una expresión artística — es un campo distinto (ciencia, técnica), no una forma de expresar una visión del mundo con recursos plásticos, lingüísticos o sonoros.`,
+          `→ "${mala}" es la que NO pertenece.`,
+          `TRUCO: el arte siempre expresa una visión del mundo con recursos plásticos (se ve/toca), lingüísticos (se escribe) o sonoros (se oye) — si la opción es una ciencia exacta o una técnica sin esa intención expresiva, es la intrusa. Ejemplo con este mismo: "${mala}" no busca expresar una visión del mundo, así que no es una variante del Arte.`] };
+    }
+    return { enunciado:`"La filosofía es algo muy elevado que solo pueden practicarla algunos seres escogidos de la historia." ¿Es esto cierto o falso?`,
+      tipo:'sino', respuesta:false,
+      explicacion:[`El curso define la Filosofía como "el estudio del conocimiento en todas sus formas": los filósofos y filósofas piensan sobre los problemas más fundamentales relacionados con la mente, los valores, la razón, el conocimiento y la existencia humana. La palabra viene de la Antigua Grecia y significa "amor por el conocimiento".`,
+        `Nada en esa definición dice que sea exclusiva de "algunos seres escogidos" — al contrario, cualquier persona que se haga preguntas fundamentales (¿por qué existo? ¿qué es correcto?) está filosofando, sin necesitar ningún permiso especial.`,
+        `→ Falso.`,
+        `TRUCO: "amor por el conocimiento" no tiene requisito de entrada — cualquiera que se haga preguntas profundas practica filosofía, no hace falta ser un "elegido". Ejemplo con este mismo: la afirmación dice que solo "seres escogidos" pueden filosofar, y eso contradice la propia definición del curso — por eso es Falso.`] };
   }
 },
 {
@@ -2109,6 +2205,42 @@ const MODULOS = [
   }
 },
 {
+  id:'wc-creacionismo-evolucionismo', nombre:'Creacionismo y Evolucionismo', clase:'wc', secciones:['2.5'],
+  gen(nv){
+    const casos = [
+      { enun:'La <b>teoría creacionista</b> explica el origen del ser humano a partir de la ciencia, sin ninguna divinidad de por medio.', ok:false, exp:'Al revés: el creacionismo dice que la tierra y cada ser vivo proviene de un acto de creación por uno o varios seres DIVINOS — está ligado a la religión, no a la ciencia.' },
+      { enun:'La <b>teoría evolucionista</b> (la que promovía Charles Darwin) explica el origen del ser humano desde la ciencia, no desde la religión.', ok:true, exp:'Correcto: la teoría evolucionista es la explicación científica (la que defendía Darwin); la creacionista es la explicación religiosa.' },
+      { enun:'El creacionismo y el evolucionismo son <b>la misma</b> teoría explicada con otras palabras.', ok:false, exp:'Son dos teorías DISTINTAS y contrarias sobre el origen del hombre: una religiosa (creacionismo) y otra científica (evolucionismo).' },
+      { enun:'Charles Darwin promovía la teoría <b>evolucionista</b>, no la creacionista.', ok:true, exp:'Correcto — Darwin, en "El Origen de las Especies", promovía la teoría evolucionista (la científica).' }
+    ];
+    const c = pick(casos);
+    return { enunciado:c.enun, tipo:'sino', respuesta:c.ok,
+      explicacion:[`El origen del ser humano se explica con dos grandes teorías contrarias: la CREACIONISTA (de origen religioso — un ser divino crea a los seres vivos) y la EVOLUCIONISTA (de origen científico — las especies cambian y evolucionan con el tiempo, la que promovía Charles Darwin).`,
+        c.exp,
+        `→ ${c.ok ? 'Sí' : 'No'}.`,
+        `TRUCO: "Creacionista" suena a "creación" (un creador, religión); "Evolucionista" suena a "evolución" (cambio gradual, ciencia, Darwin). Ejemplo con este mismo: "${c.enun.replace(/<\/?b>/g,'')}" ${c.ok?'coincide con esta relación':'mezcla o invierte esta relación'}.`] };
+  }
+},
+{
+  id:'wc-lucy-australopitecus', nombre:'Los Australopitecus y "Lucy"', clase:'wc', secciones:['2.6'],
+  gen(nv){
+    const casos = [
+      { preg:'¿Qué son los <b>Australopitecus</b>?', correcta:'El homínido más antiguo que se conoce, cuyo nombre significa "simio sudafricano"',
+        malas:['La primera civilización antigua de Europa','El nombre científico de los seres humanos modernos','Un tipo de herramienta de piedra del Neolítico'] },
+      { preg:'¿En qué continente surgieron los antepasados más antiguos de los seres humanos, según el curso?', correcta:'África',
+        malas:['Asia','Europa','América'] },
+      { preg:'¿Quién fue "Lucy"?', correcta:'Un fósil de Australopithecus afarensis hallado en Hadar, Etiopía, en 1974',
+        malas:['La primera Homo sapiens conocida','Una diosa de la mitología egipcia','Una civilización antigua de Sudamérica'] }
+    ];
+    const c = pick(casos);
+    return { enunciado:c.preg, tipo:'opciones', opciones: shuffle([c.correcta, ...c.malas]), respuesta:c.correcta,
+      explicacion:[`Los Australopitecus son el homínido más antiguo que se conoce (hasta 4 millones de años), y su nombre significa "simio sudafricano"; varias especies (afarensis, africanus, robustus, boisei) confirmaron que el origen del hombre está en ÁFRICA — por eso a África se le llama la "Cuna de la Humanidad".`,
+        `"Lucy" es el fósil más famoso de Australopithecus afarensis: lo encontraron Donald Johanson y Tom Gray el 24 de noviembre de 1974, en el sitio de Hadar, Etiopía (territorio de la tribu Afar — de ahí "afarensis"). Hoy está resguardada en Addis Abeba, capital de Etiopía. (Dato curioso, fuera del curso: le pusieron "Lucy" por la canción de los Beatles que sonaba esa noche en el campamento cuando celebraron el hallazgo.)`,
+        `→ ${c.correcta}.`,
+        `TRUCO: Australopitecus = el homínido MÁS ANTIGUO, de ÁFRICA; Lucy = el fósil más famoso de esa familia, encontrado en Etiopía en 1974. Ejemplo con este mismo: la pregunta era "${c.preg.replace(/<\/?b>/g,'')}", y la respuesta es ${c.correcta}.`] };
+  }
+},
+{
   id:'wc-prehistoria-definicion', nombre:'Qué es la Prehistoria', clase:'wc', secciones:['3.1'],
   gen(nv){
     const casos = [
@@ -2159,6 +2291,27 @@ const MODULOS = [
   }
 },
 {
+  id:'wc-nomadismo-sedentarismo', nombre:'Nomadismo, sedentarismo y omnívoros', clase:'wc', secciones:['3.35'],
+  gen(nv){
+    const casos = [
+      { preg:'¿Qué quiere decir el concepto de <b>Nomadismo</b>?', correcta:'Vivir moviéndose de un lugar a otro, sin un lugar fijo donde quedarse',
+        malas:['Vivir siempre en el mismo lugar, sin moverse','Alimentarse solo de carne','Vivir en grandes ciudades amuralladas'] },
+      { preg:'¿Qué quiere decir el concepto de <b>Sedentarismo</b>?', correcta:'Establecerse de forma fija en un lugar, sin moverse constantemente',
+        malas:['Moverse constantemente de un lugar a otro','Cazar animales para alimentarse','Fabricar herramientas de metal'] },
+      { preg:'¿De qué se alimentaban principalmente las personas del Paleolítico?', correcta:'De la caza, la pesca y la recolección de frutos',
+        malas:['Solo de lo que cultivaban en sus propios campos','Solo de animales que domesticaban','Solo de pan y cereales'] },
+      { preg:'¿Qué quiere decir el concepto de <b>omnívoro</b>?', correcta:'Que se alimenta tanto de plantas como de animales',
+        malas:['Que se alimenta solo de plantas','Que se alimenta solo de carne','Que no necesita alimentarse'] }
+    ];
+    const c = pick(casos);
+    return { enunciado:c.preg, tipo:'opciones', opciones: shuffle([c.correcta, ...c.malas]), respuesta:c.correcta,
+      explicacion:[`Nomadismo (Paleolítico) es vivir moviéndose constantemente, sin lugar fijo — la gente se desplazaba siguiendo la caza y los frutos disponibles. Sedentarismo (a partir del Neolítico) es justo lo contrario: establecerse de forma fija en un lugar, algo que la agricultura hizo posible. Las personas del Paleolítico eran, además, omnívoras: se alimentaban de caza, pesca y recolección — es decir, tanto de animales como de plantas.`,
+        `La pregunta específica es sobre: "${c.preg.replace(/<\/?b>/g,'')}"`,
+        `→ ${c.correcta}.`,
+        `TRUCO: "Nómada" suena a "no hay mapa fijo" (se mueve); "Sedentario" suena a "se sienta" (se queda quieto en un lugar). Y "omnívoro" viene de "omni" (todo) + "voro" (comer) = come de todo, animales y plantas. Ejemplo con este mismo: la respuesta a "${c.preg.replace(/<\/?b>/g,'')}" es ${c.correcta}.`] };
+  }
+},
+{
   id:'wc-subetapas-paleolitico', nombre:'Sub-etapas del Paleolítico', clase:'wc', secciones:['3.4'],
   gen(nv){
     const casos = [
@@ -2180,16 +2333,41 @@ const MODULOS = [
 {
   id:'wc-edad-metales-orden', nombre:'Orden de la Edad de los Metales', clase:'wc', secciones:['3.5'],
   gen(nv){
-    const etapas = ['Edad del Cobre','Edad del Bronce','Edad del Hierro'];   // ya en orden cronológico
-    const idx = shuffle([0,1,2]);
-    const opciones = idx.map(i => etapas[i]);
-    const respuesta = idx.map((v,pos)=>pos).sort((a,b)=> idx[a]-idx[b]);    // índices, en el orden que hay que tocarlos
-    return { enunciado:`Ordena estas edades de <b>más antigua a más reciente</b>.<br><small style="opacity:.75">Tócalas en orden.</small>`,
-      tipo:'orden', opciones, respuesta,
-      explicacion:[`Dentro de la Edad de los Metales, el orden cronológico es: primero el Cobre (el primer metal que usó el ser humano), luego el Bronce (aleación de cobre y estaño), y por último el Hierro.`,
-        `El cobre se trabajó primero porque es más fácil de fundir; después se descubrió que mezclarlo con estaño (bronce) daba herramientas más duras; el hierro, el más difícil de trabajar, llegó al final.`,
-        `→ Edad del Cobre, Edad del Bronce, Edad del Hierro (en ese orden).`,
-        `TRUCO: piensa en qué tan difícil es trabajar cada metal — el cobre es blando y fácil de fundir (primero), el bronce es una mejora del cobre (segundo), y el hierro necesita más calor y técnica para trabajarse (último, el más "moderno" de los tres). Ejemplo con este mismo: Cobre → Bronce → Hierro, de lo más fácil de trabajar a lo más difícil.`] };
+    const r = Math.random();
+    if(r < 0.5){
+      const etapas = ['Edad del Cobre','Edad del Bronce','Edad del Hierro'];   // ya en orden cronológico
+      const idx = shuffle([0,1,2]);
+      const opciones = idx.map(i => etapas[i]);
+      const respuesta = idx.map((v,pos)=>pos).sort((a,b)=> idx[a]-idx[b]);    // índices, en el orden que hay que tocarlos
+      return { enunciado:`Ordena estas edades de <b>más antigua a más reciente</b>.<br><small style="opacity:.75">Tócalas en orden.</small>`,
+        tipo:'orden', opciones, respuesta,
+        explicacion:[`Dentro de la Edad de los Metales, el orden cronológico es: primero el Cobre (el primer metal que usó el ser humano), luego el Bronce (aleación de cobre y estaño), y por último el Hierro.`,
+          `El cobre se trabajó primero porque es más fácil de fundir; después se descubrió que mezclarlo con estaño (bronce) daba herramientas más duras; el hierro, el más difícil de trabajar, llegó al final.`,
+          `→ Edad del Cobre, Edad del Bronce, Edad del Hierro (en ese orden).`,
+          `TRUCO: piensa en qué tan difícil es trabajar cada metal — el cobre es blando y fácil de fundir (primero), el bronce es una mejora del cobre (segundo), y el hierro necesita más calor y técnica para trabajarse (último, el más "moderno" de los tres). Ejemplo con este mismo: Cobre → Bronce → Hierro, de lo más fácil de trabajar a lo más difícil.`] };
+    }
+    if(r < 0.75){
+      return { enunciado:`De los primeros tres metales que usó el ser humano (cobre, bronce y hierro), ¿cuál era el <b>más fuerte y resistente</b>?`,
+        tipo:'opciones', opciones: shuffle(['Hierro','Cobre','Bronce']), respuesta:'Hierro',
+        explicacion:[`De los tres metales de la Edad de los Metales, el Cobre es el más blando (por eso fue el primero que se pudo trabajar), el Bronce (aleación de cobre y estaño) ya es más duro que el cobre solo, y el Hierro es el más fuerte y resistente de los tres — por eso fue el último en dominarse: hace falta más calor y mejor técnica para trabajarlo.`,
+          `El orden de resistencia coincide con el orden en que se fueron descubriendo: cada metal nuevo era más fuerte que el anterior.`,
+          `→ Hierro.`,
+          `TRUCO: a más difícil de trabajar, más fuerte el resultado — por eso el Hierro, el último y más difícil de los tres, es también el más resistente. Ejemplo con este mismo: Cobre (blando) < Bronce (más duro) < Hierro (el más fuerte).`] };
+    }
+    const casos = [
+      { preg:'¿Cuál fue el primer metal descubierto y utilizado por los seres humanos?', correcta:'Cobre',
+        malas:['Bronce','Hierro','Oro'] },
+      { preg:'¿El Bronce es una aleación de cuáles dos metales?', correcta:'Cobre y estaño',
+        malas:['Hierro y carbono','Oro y plata','Cobre y hierro'] },
+      { preg:'¿Qué tipo de objetos se fabricaban con los metales de la Edad de los Metales?', correcta:'Armas (cuchillos, espadas, puñales), herramientas y objetos decorativos',
+        malas:['Solo joyas y adornos personales','Solo instrumentos musicales','Solo objetos religiosos'] }
+    ];
+    const c = pick(casos);
+    return { enunciado:c.preg, tipo:'opciones', opciones: shuffle([c.correcta, ...c.malas]), respuesta:c.correcta,
+      explicacion:[`El Cobre fue el primer metal que el ser humano usó, sobre todo para fabricar cuchillos, espadas, puñales y objetos decorativos. El Bronce se originó de la aleación (mezcla) de cobre y estaño, y mejoró las herramientas para cultivar y las armas para la guerra.`,
+        `La pregunta es sobre: "${c.preg}"`,
+        `→ ${c.correcta}.`,
+        `TRUCO: Cobre = el primero y más blando; Bronce = Cobre + Estaño (una mezcla, por eso es más duro que cada uno solo); ambos se usaron para armas, herramientas y decoración. Ejemplo con este mismo: la respuesta a "${c.preg}" es ${c.correcta}.`] };
   }
 },
 {
