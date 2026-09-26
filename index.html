@@ -480,6 +480,111 @@ function svgRayos(angulos, uid){
     <circle cx="${ox}" cy="${oy}" r="3.5" fill="var(--acento)"/>${lines}
   </svg>`;
 }
+// símbolo de resistor (zigzag de 3 picos) entre dos puntos — horizontal o vertical según el eje
+function zigzagV(x, y1, y2){
+  const amp=9, lead=(y2-y1)*0.15, y0=y1+lead, y5=y2-lead, step=(y5-y0)/4;
+  return `M ${x} ${y1} L ${x} ${y0.toFixed(1)} `+
+    `L ${(x+amp).toFixed(1)} ${(y0+step).toFixed(1)} `+
+    `L ${(x-amp).toFixed(1)} ${(y0+2*step).toFixed(1)} `+
+    `L ${(x+amp).toFixed(1)} ${(y0+3*step).toFixed(1)} `+
+    `L ${x} ${y5.toFixed(1)} L ${x} ${y2}`;
+}
+function zigzagH(x1, x2, y){
+  const amp=9, lead=(x2-x1)*0.15, x0=x1+lead, x5=x2-lead, step=(x5-x0)/4;
+  return `M ${x1} ${y} L ${x0.toFixed(1)} ${y} `+
+    `L ${(x0+step).toFixed(1)} ${(y+amp).toFixed(1)} `+
+    `L ${(x0+2*step).toFixed(1)} ${(y-amp).toFixed(1)} `+
+    `L ${(x0+3*step).toFixed(1)} ${(y+amp).toFixed(1)} `+
+    `L ${x5.toFixed(1)} ${y} L ${x2} ${y}`;
+}
+// símbolo de batería (pila): barra larga y delgada (+) arriba, barra corta y gruesa (−) abajo,
+// insertada en el punto medio de un tramo vertical de alambre entre y1 y y2
+function bateriaV(x, y1, y2){
+  const midY=(y1+y2)/2;
+  return `<line x1="${x}" y1="${y1}" x2="${x}" y2="${midY-8}" stroke="currentColor" stroke-width="2"/>
+    <line x1="${x-12}" y1="${midY-8}" x2="${x+12}" y2="${midY-8}" stroke="currentColor" stroke-width="2"/>
+    <line x1="${x-7}" y1="${midY+8}" x2="${x+7}" y2="${midY+8}" stroke="currentColor" stroke-width="5"/>
+    <line x1="${x}" y1="${midY+8}" x2="${x}" y2="${y2}" stroke="currentColor" stroke-width="2"/>`;
+}
+// circuito de una sola malla (fuente + un resistor) — para Ley de Ohm y Ley de Watt. Cada
+// etiqueta (V/R/I/P) es el texto a mostrar, o null para no dibujarla (cuando ese dato no
+// aplica a la pregunta); "?" se usa para la incógnita que hay que hallar.
+function svgCircuitoSimple(V, R, I, P, uid){
+  const L=80, Rd=220, T=50, B=150;
+  return `<svg viewBox="0 0 300 200" style="width:100%;max-width:300px;height:auto;color:var(--texto);display:block;margin:10px auto 0" xmlns="http://www.w3.org/2000/svg">
+    <defs><marker id="fa${uid}" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="var(--acento)"/></marker></defs>
+    <line x1="${L}" y1="${T}" x2="${Rd}" y2="${T}" stroke="currentColor" stroke-width="2"/>
+    <line x1="${L}" y1="${B}" x2="${Rd}" y2="${B}" stroke="currentColor" stroke-width="2"/>
+    ${bateriaV(L,T,B)}
+    <path d="${zigzagV(Rd,T,B)}" fill="none" stroke="currentColor" stroke-width="2"/>
+    <line x1="${L+25}" y1="${T}" x2="${L+70}" y2="${T}" stroke="var(--acento)" stroke-width="2.5" marker-end="url(#fa${uid})"/>
+    ${I!=null?`<text x="${(L+Rd)/2}" y="${T-12}" fill="var(--acento)" font-size="14" font-weight="800" text-anchor="middle">I = ${I}</text>`:''}
+    ${V!=null?`<text x="${L}" y="${B+26}" fill="currentColor" font-size="14" font-weight="700" text-anchor="middle">V = ${V}</text>`:''}
+    ${R!=null?`<text x="${Rd}" y="${B+26}" fill="currentColor" font-size="14" font-weight="700" text-anchor="middle">R = ${R}</text>`:''}
+    ${P!=null?`<text x="${(L+Rd)/2}" y="${B+26}" fill="currentColor" font-size="14" font-weight="700" text-anchor="middle">P = ${P}</text>`:''}
+  </svg>`;
+}
+// circuito en serie: fuente + n resistores en línea sobre el alambre de arriba. opts:
+// {E, It, marca} — It es el texto de la flecha de corriente (null = no mostrarla todavía,
+// como cuando aún no se sabe It); marca:{idx,tipo:'V'|'P'} anota V(Ri)=? o P(Ri)=? bajo un
+// resistor puntual, o marca:{tipo:'Rt'|'Pt'} anota esa incógnita cerca de la fuente.
+function svgCircuitoSerie(Rs, opts, uid){
+  const {E, It, marca} = opts;
+  const n = Rs.length, L=45, Rd=335, T=55, B=170, midY=(T+B)/2;
+  const topL=125, topR=325, segW=(topR-topL)/n;
+  let zz='', rlabels='', extra='';
+  for(let i=0;i<n;i++){
+    const x1=topL+segW*i+10, x2=topL+segW*(i+1)-10, cx=(x1+x2)/2;
+    zz += `<path d="${zigzagH(x1,x2,T)}" fill="none" stroke="currentColor" stroke-width="2"/>`;
+    rlabels += `<text x="${cx}" y="${T-10}" fill="currentColor" font-size="11" font-weight="700" text-anchor="middle">R${i+1}=${Rs[i]}Ω</text>`;
+    if(marca && marca.idx===i) extra += `<text x="${cx}" y="${T+24}" fill="var(--acento)" font-size="12" font-weight="800" text-anchor="middle">${marca.tipo}(R${i+1})=?</text>`;
+  }
+  if(marca && (marca.tipo==='Rt'||marca.tipo==='Pt')) extra += `<text x="${(L+Rd)/2}" y="${B+40}" fill="var(--acento)" font-size="13" font-weight="800" text-anchor="middle">${marca.tipo} = ?</text>`;
+  const flechaI = It!=null ? `<line x1="${L+15}" y1="${T}" x2="${topL-15}" y2="${T}" stroke="var(--acento)" stroke-width="2.5" marker-end="url(#fa${uid})"/>
+    <text x="${(L+topL)/2}" y="${T-10}" fill="var(--acento)" font-size="12" font-weight="800" text-anchor="middle">It=${It}</text>` : '';
+  return `<svg viewBox="0 0 360 220" style="width:100%;max-width:340px;height:auto;color:var(--texto);display:block;margin:10px auto 0" xmlns="http://www.w3.org/2000/svg">
+    <defs><marker id="fa${uid}" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="var(--acento)"/></marker></defs>
+    <line x1="${L}" y1="${T}" x2="${topL}" y2="${T}" stroke="currentColor" stroke-width="2"/>
+    <line x1="${topR}" y1="${T}" x2="${Rd}" y2="${T}" stroke="currentColor" stroke-width="2"/>
+    <line x1="${L}" y1="${B}" x2="${Rd}" y2="${B}" stroke="currentColor" stroke-width="2"/>
+    <line x1="${Rd}" y1="${T}" x2="${Rd}" y2="${B}" stroke="currentColor" stroke-width="2"/>
+    ${bateriaV(L,T,B)}
+    ${zz}
+    ${flechaI}
+    ${rlabels}
+    ${extra}
+    <text x="${L}" y="${B+26}" fill="currentColor" font-size="12" font-weight="700" text-anchor="middle">E=${E}</text>
+  </svg>`;
+}
+// circuito en paralelo: fuente + n resistores como ramas verticales entre dos rieles
+// horizontales. opts: {V, It, marca} — mismo esquema que svgCircuitoSerie; marca:{idx,tipo:'I'}
+// anota I(Ri)=? bajo una rama puntual, marca:{tipo:'Rt'} lo anota al centro.
+function svgCircuitoParalelo(Rs, opts, uid){
+  const {V, It, marca} = opts;
+  const n = Rs.length, L=45, Rd=335, T=55, B=175, midY=(T+B)/2;
+  const branchL=130, branchR=325, segW = n>1 ? (branchR-branchL)/(n-1) : 0;
+  let branches='', labels='', extra='';
+  for(let i=0;i<n;i++){
+    const x = n>1 ? branchL+segW*i : (branchL+branchR)/2;
+    branches += `<path d="${zigzagV(x,T,B)}" fill="none" stroke="currentColor" stroke-width="2"/>`;
+    labels += `<text x="${x}" y="${B+22}" fill="currentColor" font-size="11" font-weight="700" text-anchor="middle">R${i+1}=${Rs[i]}Ω</text>`;
+    if(marca && marca.idx===i) extra += `<text x="${x}" y="${B+38}" fill="var(--acento)" font-size="12" font-weight="800" text-anchor="middle">I(R${i+1})=?</text>`;
+  }
+  if(marca && marca.tipo==='Rt') extra += `<text x="${(branchL+branchR)/2}" y="${B+38}" fill="var(--acento)" font-size="13" font-weight="800" text-anchor="middle">Rt = ?</text>`;
+  const flechaI = It!=null ? `<line x1="${L+15}" y1="${T}" x2="${branchL-15}" y2="${T}" stroke="var(--acento)" stroke-width="2.5" marker-end="url(#fa${uid})"/>
+    <text x="${(L+branchL)/2}" y="${T-10}" fill="var(--acento)" font-size="12" font-weight="800" text-anchor="middle">It=${It}</text>` : '';
+  return `<svg viewBox="0 0 360 235" style="width:100%;max-width:340px;height:auto;color:var(--texto);display:block;margin:10px auto 0" xmlns="http://www.w3.org/2000/svg">
+    <defs><marker id="fa${uid}" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="var(--acento)"/></marker></defs>
+    <line x1="${L}" y1="${T}" x2="${Rd}" y2="${T}" stroke="currentColor" stroke-width="2"/>
+    <line x1="${L}" y1="${B}" x2="${Rd}" y2="${B}" stroke="currentColor" stroke-width="2"/>
+    ${bateriaV(L,T,B)}
+    ${branches}
+    ${flechaI}
+    ${labels}
+    ${extra}
+    <text x="${L}" y="${T-14}" fill="currentColor" font-size="12" font-weight="700" text-anchor="middle">V=${V}</text>
+  </svg>`;
+}
 function fmtFactoresPlano(f){
   const ps = Object.keys(f).map(Number).sort((a,b)=>a-b);
   if(!ps.length) return '1';
@@ -3068,19 +3173,20 @@ const MODULOS = [
     const Iv = pick(iBanco);
     const Vv = red2(Rv*Iv);
     const incog = pick(['V','I','R']);
+    const uid = Math.random().toString(36).slice(2,8);
     let enunciado, respuesta, formula, sustitucion, calculo;
     if(incog==='V'){
-      enunciado = `En un circuito, la corriente es <b>I = ${Iv} A</b> y la resistencia es <b>R = ${Rv} Ω</b>. Halla el voltaje.`;
+      enunciado = `En un circuito, la corriente es <b>I = ${Iv} A</b> y la resistencia es <b>R = ${Rv} Ω</b>. Halla el voltaje.${svgCircuitoSimple('?',`${Rv} Ω`,`${Iv} A`,null,uid)}`;
       respuesta = Vv; formula = 'V = I × R';
       sustitucion = `V = ${Iv} A × ${Rv} Ω`; calculo = `V = ${Vv} V`;
     } else if(incog==='I'){
       const Iresp = red2(Vv/Rv);
-      enunciado = `En un circuito, el voltaje es <b>V = ${Vv} V</b> y la resistencia es <b>R = ${Rv} Ω</b>. Halla la corriente.`;
+      enunciado = `En un circuito, el voltaje es <b>V = ${Vv} V</b> y la resistencia es <b>R = ${Rv} Ω</b>. Halla la corriente.${svgCircuitoSimple(`${Vv} V`,`${Rv} Ω`,'?',null,uid)}`;
       respuesta = Iresp; formula = 'I = V / R';
       sustitucion = `I = ${Vv} V / ${Rv} Ω`; calculo = `I = ${Iresp} A`;
     } else {
       const Rresp = red2(Vv/Iv);
-      enunciado = `En un circuito, el voltaje es <b>V = ${Vv} V</b> y la corriente es <b>I = ${Iv} A</b>. Halla la resistencia.`;
+      enunciado = `En un circuito, el voltaje es <b>V = ${Vv} V</b> y la corriente es <b>I = ${Iv} A</b>. Halla la resistencia.${svgCircuitoSimple(`${Vv} V`,'?',`${Iv} A`,null,uid)}`;
       respuesta = Rresp; formula = 'R = V / I';
       sustitucion = `R = ${Vv} V / ${Iv} A`; calculo = `R = ${Rresp} Ω`;
     }
@@ -3103,34 +3209,35 @@ const MODULOS = [
     const Vv = red2(Rv*Iv);
     const Pv = red2(Vv*Iv);
     const modo = pick(['VI','I2R','V2R','despejaI','despejaR']);
+    const uid = Math.random().toString(36).slice(2,8);
     let enunciado, respuesta, pasos, conocidos;
     if(modo==='VI'){
       conocidos = 'V e I';
-      enunciado = `Determina la potencia cuando el voltaje es <b>${Vv} V</b> y la corriente es <b>${Iv} A</b>.`;
+      enunciado = `Determina la potencia cuando el voltaje es <b>${Vv} V</b> y la corriente es <b>${Iv} A</b>.${svgCircuitoSimple(`${Vv} V`,null,`${Iv} A`,'?',uid)}`;
       respuesta = Pv;
       pasos = [`Como conocemos V e I, usamos: <b>P = V × I</b>.`,
         `P = ${Vv} V × ${Iv} A`, `P = ${Pv} W`];
     } else if(modo==='I2R'){
       conocidos = 'I y R';
-      enunciado = `Determina la potencia cuando una corriente de <b>${Iv} A</b> pasa a través de un resistor de <b>${Rv} Ω</b>.`;
+      enunciado = `Determina la potencia cuando una corriente de <b>${Iv} A</b> pasa a través de un resistor de <b>${Rv} Ω</b>.${svgCircuitoSimple(null,`${Rv} Ω`,`${Iv} A`,'?',uid)}`;
       respuesta = Pv;
       pasos = [`Como conocemos I y R, usamos: <b>P = I² × R</b>.`,
         `P = (${Iv} A)² × ${Rv} Ω`, `P = ${red2(Iv*Iv)} × ${Rv}`, `P = ${Pv} W`];
     } else if(modo==='V2R'){
       conocidos = 'V y R';
-      enunciado = `Determina la potencia cuando el voltaje es <b>${Vv} V</b> y la resistencia es <b>${Rv} Ω</b>.`;
+      enunciado = `Determina la potencia cuando el voltaje es <b>${Vv} V</b> y la resistencia es <b>${Rv} Ω</b>.${svgCircuitoSimple(`${Vv} V`,`${Rv} Ω`,null,'?',uid)}`;
       respuesta = Pv;
       pasos = [`Como conocemos V y R, usamos: <b>P = V² / R</b>.`,
         `P = (${Vv} V)² / ${Rv} Ω`, `P = ${red2(Vv*Vv)} / ${Rv}`, `P = ${Pv} W`];
     } else if(modo==='despejaI'){
       conocidos = 'P y R';
-      enunciado = `¿Cuál es la corriente cuando tenemos una potencia de <b>${Pv} W</b> y una resistencia de <b>${Rv} Ω</b>?`;
+      enunciado = `¿Cuál es la corriente cuando tenemos una potencia de <b>${Pv} W</b> y una resistencia de <b>${Rv} Ω</b>?${svgCircuitoSimple(null,`${Rv} Ω`,'?',`${Pv} W`,uid)}`;
       respuesta = Iv;
       pasos = [`Despejamos I de <b>P = I² × R</b>: I = √(P / R).`,
         `I = √(${Pv} W / ${Rv} Ω)`, `I = √${red2(Pv/Rv)}`, `I = ${Iv} A`];
     } else {
       conocidos = 'P e I';
-      enunciado = `¿Cuál es la resistencia cuando tenemos una potencia de <b>${Pv} W</b> y una corriente de <b>${Iv} A</b>?`;
+      enunciado = `¿Cuál es la resistencia cuando tenemos una potencia de <b>${Pv} W</b> y una corriente de <b>${Iv} A</b>?${svgCircuitoSimple(null,'?',`${Iv} A`,`${Pv} W`,uid)}`;
       respuesta = Rv;
       pasos = [`Despejamos R de <b>P = I² × R</b>: R = P / I².`,
         `R = ${Pv} W / (${Iv} A)²`, `R = ${Pv} / ${red2(Iv*Iv)}`, `R = ${Rv} Ω`];
@@ -3155,36 +3262,37 @@ const MODULOS = [
     const Ps = Vs.map(Vi => red2(Vi*It));
     const Pt = red2(E*It);
     const objetivo = pick(['Rt','It', ...Rs.map((_,i)=>'VR'+(i+1)), ...Rs.map((_,i)=>'PR'+(i+1)), 'Pt']);
+    const uid = Math.random().toString(36).slice(2,8);
     const listaR = Rs.map((r,i)=>`R${i+1} = ${r} Ω`).join(', ');
     const base = `Un circuito en serie tiene una fuente de <b>E = ${E} V</b> y las resistencias <b>${listaR}</b>.`;
     let enunciado, respuesta, pasos;
     if(objetivo==='Rt'){
-      enunciado = `${base} Calcula la resistencia total (R<sub>t</sub>).`;
+      enunciado = `${base} Calcula la resistencia total (R<sub>t</sub>).${svgCircuitoSerie(Rs,{E:`${E}V`,It:null,marca:{tipo:'Rt'}},uid)}`;
       respuesta = Rt;
       pasos = [`En serie, la resistencia total es la suma de todas: R<sub>t</sub> = ${Rs.join(' + ')}`,
         `R<sub>t</sub> = ${Rt} Ω`];
     } else if(objetivo==='It'){
-      enunciado = `${base} Calcula la corriente total (I<sub>t</sub>).`;
+      enunciado = `${base} Calcula la corriente total (I<sub>t</sub>).${svgCircuitoSerie(Rs,{E:`${E}V`,It:'?',marca:null},uid)}`;
       respuesta = It;
       pasos = [`Primero R<sub>t</sub> = ${Rs.join(' + ')} = ${Rt} Ω.`,
         `Luego, por la Ley de Ohm: I<sub>t</sub> = E / R<sub>t</sub> = ${E} V / ${Rt} Ω`,
         `I<sub>t</sub> = ${It} A`];
     } else if(objetivo[0]==='V'){
       const i = +objetivo.slice(2)-1;
-      enunciado = `${base} La corriente total es <b>I<sub>t</sub> = ${It} A</b>. Calcula el voltaje en R${i+1} (V<sub>R${i+1}</sub>).`;
+      enunciado = `${base} La corriente total es <b>I<sub>t</sub> = ${It} A</b>. Calcula el voltaje en R${i+1} (V<sub>R${i+1}</sub>).${svgCircuitoSerie(Rs,{E:`${E}V`,It:`${It}A`,marca:{idx:i,tipo:'V'}},uid)}`;
       respuesta = Vs[i];
       pasos = [`En serie la corriente es la misma en todo el circuito, así que I<sub>R${i+1}</sub> = I<sub>t</sub> = ${It} A.`,
         `Por la Ley de Ohm: V<sub>R${i+1}</sub> = I<sub>t</sub> × R${i+1} = ${It} A × ${Rs[i]} Ω`,
         `V<sub>R${i+1}</sub> = ${Vs[i]} V`];
     } else if(objetivo!=='Pt'){
       const i = +objetivo.slice(2)-1;
-      enunciado = `${base} La corriente total es <b>I<sub>t</sub> = ${It} A</b>. Calcula la potencia en R${i+1} (P<sub>R${i+1}</sub>).`;
+      enunciado = `${base} La corriente total es <b>I<sub>t</sub> = ${It} A</b>. Calcula la potencia en R${i+1} (P<sub>R${i+1}</sub>).${svgCircuitoSerie(Rs,{E:`${E}V`,It:`${It}A`,marca:{idx:i,tipo:'P'}},uid)}`;
       respuesta = Ps[i];
       pasos = [`Primero el voltaje en R${i+1}: V<sub>R${i+1}</sub> = I<sub>t</sub> × R${i+1} = ${It} × ${Rs[i]} = ${Vs[i]} V.`,
         `Luego la potencia: P<sub>R${i+1}</sub> = V<sub>R${i+1}</sub> × I<sub>t</sub> = ${Vs[i]} V × ${It} A`,
         `P<sub>R${i+1}</sub> = ${Ps[i]} W`];
     } else {
-      enunciado = `${base} La corriente total es <b>I<sub>t</sub> = ${It} A</b>. Calcula la potencia total (P<sub>t</sub>).`;
+      enunciado = `${base} La corriente total es <b>I<sub>t</sub> = ${It} A</b>. Calcula la potencia total (P<sub>t</sub>).${svgCircuitoSerie(Rs,{E:`${E}V`,It:`${It}A`,marca:{tipo:'Pt'}},uid)}`;
       respuesta = Pt;
       pasos = [`La potencia total es la suma de las potencias de cada resistor, o directamente: P<sub>t</sub> = E × I<sub>t</sub> = ${E} V × ${It} A`,
         `P<sub>t</sub> = ${Pt} W`];
@@ -3209,26 +3317,27 @@ const MODULOS = [
     const It = red2(E/Rt);
     const Is = Rs.map(Ri => red2(E/Ri));
     const objetivo = pick(['Rt','It', ...Rs.map((_,i)=>'IR'+(i+1))]);
+    const uid = Math.random().toString(36).slice(2,8);
     const listaR = Rs.map((r,i)=>`R${i+1} = ${r} Ω`).join(', ');
     const terminos = Rs.map(r=>`1/${r}`).join(' + ');
     const base = `Un circuito en paralelo tiene una fuente de <b>V = ${E} V</b> y las resistencias <b>${listaR}</b>.`;
     let enunciado, respuesta, pasos;
     if(objetivo==='Rt'){
-      enunciado = `${base} Calcula la resistencia total (R<sub>t</sub>).`;
+      enunciado = `${base} Calcula la resistencia total (R<sub>t</sub>).${svgCircuitoParalelo(Rs,{V:`${E}V`,It:null,marca:{tipo:'Rt'}},uid)}`;
       respuesta = Rt;
       pasos = [`En paralelo: R<sub>t</sub> = 1 / (${terminos})`,
         `R<sub>t</sub> = 1 / (${Rs.map(r=>red4(1/r)).join(' + ')})`,
         `R<sub>t</sub> = 1 / ${red4(invSum)}`,
         `R<sub>t</sub> = ${Rt} Ω`];
     } else if(objetivo==='It'){
-      enunciado = `${base} Calcula la corriente total (I<sub>t</sub>).`;
+      enunciado = `${base} Calcula la corriente total (I<sub>t</sub>).${svgCircuitoParalelo(Rs,{V:`${E}V`,It:'?',marca:null},uid)}`;
       respuesta = It;
       pasos = [`Primero R<sub>t</sub> = 1 / (${terminos}) = ${Rt} Ω.`,
         `Por la Ley de Ohm: I<sub>t</sub> = V / R<sub>t</sub> = ${E} V / ${Rt} Ω`,
         `I<sub>t</sub> = ${It} A`];
     } else {
       const i = +objetivo.slice(2)-1;
-      enunciado = `${base} Calcula la corriente en R${i+1} (I<sub>R${i+1}</sub>).`;
+      enunciado = `${base} Calcula la corriente en R${i+1} (I<sub>R${i+1}</sub>).${svgCircuitoParalelo(Rs,{V:`${E}V`,It:null,marca:{idx:i}},uid)}`;
       respuesta = Is[i];
       pasos = [`En paralelo, el voltaje es el mismo en cada resistor: V<sub>R${i+1}</sub> = V = ${E} V.`,
         `Por la Ley de Ohm: I<sub>R${i+1}</sub> = V / R${i+1} = ${E} V / ${Rs[i]} Ω`,
