@@ -2911,6 +2911,333 @@ const MODULOS = [
         `→ ${c.ok ? 'Sí' : 'No'}.`,
         `TRUCO: la Revolución Neolítica siempre suma cosas nuevas (agricultura, poblados, propiedad privada, clases sociales) — nunca las quita. Si una afirmación dice que algo "desaparece" con la Revolución Neolítica, sospecha: probablemente es al revés. Ejemplo con este mismo: "${c.enun.replace(/<\/?b>/g,'')}" ${c.ok?'es justo uno de esos cambios que SÍ trae la Revolución Neolítica':'dice lo contrario de lo que realmente pasó'}.`] };
   }
+},
+/* ══════════════════════════════════════════════════════════
+   CIRCUITOS ELÉCTRICOS (ETRE 160, "Prin Elect Circuits Power") — clase:'circ'. Contenido
+   sacado de "Presentacion I Fund. Elect. DC I 202701.pdf" (Blackboard, curso _297379_1, texto
+   base Floyd/Buchla "Principles of Electric Circuits" 10ed) — el profesor confirmó que el
+   examen sale de esta presentación (2026-09-26): seguridad eléctrica, carga/voltaje/corriente,
+   resistencia y resistividad de cable, Ley de Ohm, Ley de Watt (potencia), circuitos en serie y
+   en paralelo. El resto del temario del curso (Kirchhoff/Thevenin/Norton, AC, capacitores,
+   inductores, RLC, trifásico, transformadores) todavía no tiene material real en Blackboard —
+   se agrega cuando el profesor publique esas presentaciones.
+   ══════════════════════════════════════════════════════════ */
+{
+  id:'circ-seguridad', nombre:'Seguridad eléctrica', clase:'circ', secciones:['1.1'],
+  gen(nv){
+    const banco = [
+      { tipo:'opciones', enun:'¿Cuál es la <b>primera</b> de las "5 reglas de oro" para trabajar sin tensión en un circuito eléctrico?',
+        ops:['Desconectar','Poner a tierra y en cortocircuito','Verificar la ausencia de tensión','Proteger y señalizar la zona de trabajo'], r:'Desconectar',
+        exp:'Las 5 reglas de oro van en este orden: 1) Desconectar, 2) Prevenir cualquier posible realimentación, 3) Verificar la ausencia de tensión, 4) Poner a tierra y en cortocircuito, 5) Proteger frente a elementos en tensión y señalizar la zona.' },
+      { tipo:'opciones', enun:'Después de <b>desconectar</b> un circuito, ¿cuál es el siguiente paso de las "5 reglas de oro"?',
+        ops:['Prevenir cualquier posible realimentación','Proteger y señalizar la zona de trabajo','Poner a tierra y en cortocircuito','Verificar la ausencia de tensión'], r:'Prevenir cualquier posible realimentación',
+        exp:'El orden completo es: 1) Desconectar, 2) Prevenir cualquier posible realimentación, 3) Verificar la ausencia de tensión, 4) Poner a tierra y en cortocircuito, 5) Proteger y señalizar.' },
+      { tipo:'opciones', enun:'¿Cuál es la <b>última</b> de las "5 reglas de oro" para trabajar sin tensión?',
+        ops:['Desconectar','Verificar la ausencia de tensión','Proteger frente a elementos en tensión y señalizar la zona','Poner a tierra y en cortocircuito'], r:'Proteger frente a elementos en tensión y señalizar la zona',
+        exp:'El orden completo es: 1) Desconectar, 2) Prevenir realimentación, 3) Verificar ausencia de tensión, 4) Poner a tierra y en cortocircuito, 5) Proteger y señalizar la zona — esta última es la quinta y última regla.' },
+      { tipo:'opciones', enun:'¿Qué equipo de protección personal (EPP) protege específicamente los <b>ojos</b> al trabajar con electricidad?',
+        ops:['Lentes de seguridad','Guantes de goma','Casco duro','Botas de trabajo'], r:'Lentes de seguridad',
+        exp:'El equipo de seguridad de un electricista incluye lentes de seguridad (ojos), casco duro, protección auditiva, guantes de goma aislantes y botas — cada uno protege una parte distinta.' },
+      { tipo:'opciones', enun:'¿Qué parte del cuerpo protegen los <b>guantes de goma aislantes</b> en el equipo de seguridad del electricista?',
+        ops:['Las manos','Los ojos','Los oídos','Los pies'], r:'Las manos',
+        exp:'Los guantes de goma aislantes (rubber gloves) protegen las manos del contacto directo con partes energizadas.' },
+      { tipo:'opciones', enun:'Según la tabla de "intensidad de corriente y sus efectos" en el cuerpo humano, ¿qué le pasa a una persona con apenas <b>2 mA</b>?',
+        ops:['Un ligero cosquilleo','Paro cardíaco y muerte','Fibrilación ventricular','Rotura de huesos'], r:'Un ligero cosquilleo',
+        exp:'La tabla muestra rangos crecientes: 2 mA = ligero cosquilleo (el más leve); subiendo, entumecimiento, aumento de presión sanguínea, calambres, y en niveles de miles de mA (varios amperios), paro cardíaco y muerte.' },
+      { tipo:'opciones', enun:'Según esa misma tabla, ¿qué corriente es más peligrosa para el cuerpo humano?',
+        ops:['5,000 mA o más','2 mA','10 mA','25 mA'], r:'5,000 mA o más',
+        exp:'Entre más alta la corriente, más grave el efecto: 2 mA apenas se siente, pero 5,000 mA (5 amperios) o más puede causar quemaduras graves y paro cardíaco.' }
+    ];
+    const c = pick(banco);
+    return { enunciado:c.enun, tipo:'opciones', opciones:shuffle([...c.ops]), respuesta:c.r,
+      explicacion:[c.exp, `→ ${c.r}.`,
+        `TRUCO: para las 5 reglas de oro, el orden siempre es el mismo — Desconectar → Prevenir realimentación → Verificar ausencia de tensión → Poner a tierra y en cortocircuito → Proteger y señalizar. Ejemplo con este mismo: la respuesta correcta es "${c.r}".`] };
+  }
+},
+{
+  id:'circ-conceptos-electricos', nombre:'Carga, voltaje, corriente y resistencia (conceptos)', clase:'circ', secciones:['1.2'],
+  gen(nv){
+    const banco = [
+      { tipo:'sino', enun:'Según Charles Coulomb, <b>cargas iguales se repelen</b> y cargas diferentes se atraen.', r:true,
+        exp:'Correcto — es el postulado de Coulomb: cargas del mismo signo se repelen, cargas de signo distinto se atraen.' },
+      { tipo:'sino', enun:'El electrón, la partícula que representa el flujo de carga en conductores sólidos, tiene carga <b>positiva</b>.', r:false,
+        exp:'Falso — J.J. Thomson descubrió que la carga del electrón es NEGATIVA, no positiva.' },
+      { tipo:'opciones', enun:'¿Qué letra representa el <b>voltaje</b> en las fórmulas eléctricas?', ops:['V','I','R','P'], r:'V',
+        exp:'El voltaje se representa con la letra V (su unidad, el voltio, también se abrevia V).' },
+      { tipo:'opciones', enun:'¿Cuál es la fórmula del voltaje en términos de energía y carga?', ops:['V = E / Q','V = Q / E','V = I × R','V = P / I'], r:'V = E / Q',
+        exp:'El voltaje es una medida de energía por unidad de carga: V = E / Q, donde E es energía (julios) y Q es carga (Coulomb).' },
+      { tipo:'opciones', enun:'¿Cuál es la definición del <b>voltio</b>?',
+        ops:['Diferencia en potencial entre dos puntos cuando 1 julio de energía es requerido para mover 1 Coulomb de carga',
+             'La cantidad de carga que pasa por un punto en 1 segundo',
+             'La oposición al flujo de corriente eléctrica',
+             'El grado en el cual se realiza un trabajo'],
+        r:'Diferencia en potencial entre dos puntos cuando 1 julio de energía es requerido para mover 1 Coulomb de carga',
+        exp:'Esa es exactamente la definición del voltio dada en la presentación del curso.' },
+      { tipo:'opciones', enun:'¿Cuál es la fórmula de la <b>corriente eléctrica</b> en términos de carga y tiempo?', ops:['I = Q / T','I = T / Q','I = V / R','I = V × R'], r:'I = Q / T',
+        exp:'La corriente es el flujo de carga por unidad de tiempo: I = Q / T, donde Q es carga (Coulomb) y T es tiempo (segundos).' },
+      { tipo:'opciones', enun:'¿Cuál es la unidad de la corriente eléctrica?', ops:['Amperio (A)','Voltio (V)','Ohm (Ω)','Watt (W)'], r:'Amperio (A)',
+        exp:'La corriente se mide en amperios (A); la letra de la variable es I.' },
+      { tipo:'opciones', enun:'La <b>corriente convencional</b> (la que se usa para analizar circuitos) se mueve...', ops:['De positivo a negativo','De negativo a positivo','No tiene dirección definida','Solo en circuitos de AC'], r:'De positivo a negativo',
+        exp:'La corriente convencional se define como el movimiento de positivo a negativo. Físicamente, lo que en realidad se mueve son los electrones, de negativo a positivo — pero para analizar circuitos se usa la convención de positivo a negativo.' },
+      { tipo:'sino', enun:'Físicamente, los electrones (flujo real) se mueven del terminal <b>negativo</b> hacia el terminal <b>positivo</b>.', r:true,
+        exp:'Correcto — el flujo de electrones va de negativo a positivo; es la corriente CONVENCIONAL la que, por definición, se toma en sentido contrario (de positivo a negativo).' },
+      { tipo:'opciones', enun:'¿Qué letra representa la <b>resistencia</b> y cuál es su unidad?', ops:['R, en ohms (Ω)','R, en voltios (V)','I, en amperios (A)','R, en watts (W)'], r:'R, en ohms (Ω)',
+        exp:'La resistencia se representa con la letra R y su unidad es el ohm, representado con la letra griega Ω.' },
+      { tipo:'sino', enun:'Los materiales <b>metálicos</b> tienen baja resistencia, mientras que los <b>insuladores</b> (como los plásticos) tienen alta resistencia.', r:true,
+        exp:'Correcto — por eso los metales se usan como conductores, y los plásticos/insuladores para aislar (evitar el paso de corriente).' },
+      { tipo:'opciones', enun:'Un resistor <b>fijo</b> es aquel...', ops:['Al que no se le puede cambiar el valor de su resistencia','Al que sí se le puede cambiar el valor de su resistencia','Que solo funciona en circuitos DC','Que genera voltaje en vez de consumirlo'], r:'Al que no se le puede cambiar el valor de su resistencia',
+        exp:'Resistor fijo = no se puede cambiar su valor. Resistor variable = sí se puede cambiar (por ejemplo, un potenciómetro).' },
+      { tipo:'opciones', enun:'¿Cuál de estas <b>NO</b> es una característica real de los resistores?', ops:['Generan voltaje propio, sin necesitar una fuente','Limitan la corriente','Dividen el voltaje','Generan calor'], r:'Generan voltaje propio, sin necesitar una fuente',
+        exp:'Los resistores NO generan voltaje — al contrario, consumen (disipan) energía. Sus características reales son: limitar corriente, dividir voltaje y generar calor.' }
+    ];
+    const c = pick(banco);
+    if(c.tipo==='sino'){
+      return { enunciado:c.enun, tipo:'sino', respuesta:c.r,
+        explicacion:[c.exp, `→ ${c.r?'Sí':'No'}.`,
+          `TRUCO: repasa siempre las definiciones básicas (carga, voltaje V=E/Q, corriente I=Q/T, resistencia) antes del examen — son la base de todas las fórmulas que siguen. Ejemplo con este mismo: "${c.enun.replace(/<\/?b>/g,'')}" es ${c.r?'cierto':'falso'}.`] };
+    }
+    return { enunciado:c.enun, tipo:'opciones', opciones:shuffle([...c.ops]), respuesta:c.r,
+      explicacion:[c.exp, `→ ${c.r}.`,
+        `TRUCO: repasa siempre las definiciones básicas (carga, voltaje V=E/Q, corriente I=Q/T, resistencia) antes del examen — son la base de todas las fórmulas que siguen. Ejemplo con este mismo: la respuesta correcta es "${c.r}".`] };
+  }
+},
+{
+  id:'circ-carga-corriente', nombre:'Carga y corriente (I = Q / T)', clase:'circ', secciones:['1.2'],
+  gen(nv){
+    const red2 = x => Math.round(x*100)/100;
+    const tAlto = porNivel(nv, 10, 30, 60);
+    const iBanco = porNivel(nv, [1,2,4,5,10], [0.5,1.5,2.5,3,6,8], [0.2,0.4,1.2,2.4,3.6]);
+    const T_ = R(1, tAlto);
+    const I_ = pick(iBanco);
+    const Q_ = red2(T_*I_);
+    const incog = pick(['I','Q','T']);
+    let enunciado, respuesta, formula, sustitucion, calculo;
+    if(incog==='I'){
+      enunciado = `Por un punto de un circuito pasa una carga de <b>Q = ${Q_} Coulomb</b> en un tiempo de <b>T = ${T_} segundos</b>. Halla la corriente.`;
+      respuesta = red2(Q_/T_); formula = 'I = Q / T';
+      sustitucion = `I = ${Q_} C / ${T_} s`; calculo = `I = ${respuesta} A`;
+    } else if(incog==='Q'){
+      enunciado = `Por un punto de un circuito pasa una corriente de <b>I = ${I_} A</b> durante <b>T = ${T_} segundos</b>. Halla la carga.`;
+      respuesta = Q_; formula = 'Q = I × T';
+      sustitucion = `Q = ${I_} A × ${T_} s`; calculo = `Q = ${Q_} C`;
+    } else {
+      enunciado = `Una carga de <b>Q = ${Q_} Coulomb</b> pasa por un punto con una corriente de <b>I = ${I_} A</b>. Halla el tiempo.`;
+      respuesta = red2(Q_/I_); formula = 'T = Q / I';
+      sustitucion = `T = ${Q_} C / ${I_} A`; calculo = `T = ${respuesta} s`;
+    }
+    return { enunciado, tipo:'num', respuesta,
+      explicacion:[
+        `La corriente es el flujo de carga por unidad de tiempo. Aquí piden ${incog==='I'?'la corriente':incog==='Q'?'la carga':'el tiempo'}, así que usamos: <b>${formula}</b>.`,
+        `Sustituimos: ${sustitucion}.`,
+        `Calculamos: ${calculo}.`,
+        `TRUCO: I=Q/T usa el mismo triángulo que la Ley de Ohm — arriba Q, abajo I y T lado a lado. Ejemplo con este mismo: para hallar ${incog}, tapas la ${incog} del triángulo y te queda ${formula}.`] };
+  }
+},
+{
+  id:'circ-resistividad-cable', nombre:'Resistencia de un cable (tabla NEC)', clase:'circ', secciones:['1.3'],
+  gen(nv){
+    const red2 = x => Math.round(x*100)/100;
+    // cobre sin recubrir (uncoated), resistencia DC a 75°C en Ω por cada 1000 pies — NEC cap. 9, tabla 8
+    const banco = [
+      {awg:'14', ohmsK:3.07}, {awg:'12', ohmsK:1.93}, {awg:'10', ohmsK:1.21},
+      {awg:'8', ohmsK:0.764}, {awg:'6', ohmsK:0.491}, {awg:'4', ohmsK:0.308},
+      {awg:'3', ohmsK:0.245}, {awg:'2', ohmsK:0.194}, {awg:'1', ohmsK:0.154}
+    ];
+    const c = pick(banco);
+    const pies = pick(porNivel(nv, [500,1000,1500,2000], [1200,1800,2500,3000,3500], [750,2200,2800,4000,4500]));
+    const resp = red2(c.ohmsK * pies / 1000);
+    return { enunciado:`Encuentra la resistencia de <b>${pies} pies</b> de cable de cobre (uncoated) AWG #${c.awg} a 75°C.<br><span style="opacity:.75">Dato de tabla (Cap. 9, Tabla 8 del NEC): ${c.ohmsK} Ω por cada 1000 pies.</span>`,
+      tipo:'num', respuesta:resp,
+      explicacion:[
+        `Planteamos una proporción entre lo que dice la tabla y lo que nos piden: X Ω / ${pies} pies = ${c.ohmsK} Ω / 1000 pies.`,
+        `Despejamos X: X = (${c.ohmsK} Ω × ${pies} pies) / 1000 pies`,
+        `X = ${resp} Ω`,
+        `TRUCO: la tabla del NEC siempre da el dato "por cada 1000 pies" — para cualquier otra longitud, multiplica ese valor por la longitud real y divide entre 1000 (regla de tres). Ejemplo con este mismo: ${c.ohmsK} × ${pies} ÷ 1000 = ${resp} Ω.`] };
+  }
+},
+{
+  id:'circ-ley-ohm', nombre:'Ley de Ohm (V = I × R)', clase:'circ', secciones:['1.4'],
+  gen(nv){
+    const red2 = x => Math.round(x*100)/100;
+    const rAlto = porNivel(nv, 20, 60, 150);
+    const iBanco = porNivel(nv,
+      [1,2,3,4,5],
+      [0.5,1,1.5,2,2.5,3,4,5,6,8],
+      [0.2,0.4,0.5,0.6,0.8,1.2,1.5,2.5,3.5,7.5]);
+    const Rv = R(1, rAlto);
+    const Iv = pick(iBanco);
+    const Vv = red2(Rv*Iv);
+    const incog = pick(['V','I','R']);
+    let enunciado, respuesta, formula, sustitucion, calculo;
+    if(incog==='V'){
+      enunciado = `En un circuito, la corriente es <b>I = ${Iv} A</b> y la resistencia es <b>R = ${Rv} Ω</b>. Halla el voltaje.`;
+      respuesta = Vv; formula = 'V = I × R';
+      sustitucion = `V = ${Iv} A × ${Rv} Ω`; calculo = `V = ${Vv} V`;
+    } else if(incog==='I'){
+      const Iresp = red2(Vv/Rv);
+      enunciado = `En un circuito, el voltaje es <b>V = ${Vv} V</b> y la resistencia es <b>R = ${Rv} Ω</b>. Halla la corriente.`;
+      respuesta = Iresp; formula = 'I = V / R';
+      sustitucion = `I = ${Vv} V / ${Rv} Ω`; calculo = `I = ${Iresp} A`;
+    } else {
+      const Rresp = red2(Vv/Iv);
+      enunciado = `En un circuito, el voltaje es <b>V = ${Vv} V</b> y la corriente es <b>I = ${Iv} A</b>. Halla la resistencia.`;
+      respuesta = Rresp; formula = 'R = V / I';
+      sustitucion = `R = ${Vv} V / ${Iv} A`; calculo = `R = ${Rresp} Ω`;
+    }
+    return { enunciado, tipo:'num', respuesta,
+      explicacion:[
+        `La Ley de Ohm relaciona voltaje (V), corriente (I) y resistencia (R). Aquí piden ${incog==='V'?'el voltaje':incog==='I'?'la corriente':'la resistencia'}, así que usamos: <b>${formula}</b>.`,
+        `Sustituimos los datos: ${sustitucion}.`,
+        `Calculamos: ${calculo}.`,
+        `TRUCO: para recordar las 3 formas, imagina un triángulo con la V arriba y, abajo, la I y la R lado a lado — tapas la letra que buscas y las otras dos te dicen qué hacer (si tapas la de arriba, se multiplican las de abajo; si tapas una de abajo, la de arriba se divide entre la otra de abajo). Ejemplo con este mismo: para hallar ${incog}, tapas la ${incog} del triángulo y te queda ${formula}.`] };
+  }
+},
+{
+  id:'circ-ley-watt', nombre:'Potencia eléctrica y Ley de Watt', clase:'circ', secciones:['1.5'],
+  gen(nv){
+    const red2 = x => Math.round(x*100)/100;
+    const rAlto = porNivel(nv, 20, 60, 150);
+    const iBanco = porNivel(nv, [1,2,3,4,5], [0.5,1,1.5,2,2.5,3,4,5], [0.2,0.4,0.5,0.6,0.8,1.2,1.5,2.5]);
+    const Rv = R(1, rAlto);
+    const Iv = pick(iBanco);
+    const Vv = red2(Rv*Iv);
+    const Pv = red2(Vv*Iv);
+    const modo = pick(['VI','I2R','V2R','despejaI','despejaR']);
+    let enunciado, respuesta, pasos, conocidos;
+    if(modo==='VI'){
+      conocidos = 'V e I';
+      enunciado = `Determina la potencia cuando el voltaje es <b>${Vv} V</b> y la corriente es <b>${Iv} A</b>.`;
+      respuesta = Pv;
+      pasos = [`Como conocemos V e I, usamos: <b>P = V × I</b>.`,
+        `P = ${Vv} V × ${Iv} A`, `P = ${Pv} W`];
+    } else if(modo==='I2R'){
+      conocidos = 'I y R';
+      enunciado = `Determina la potencia cuando una corriente de <b>${Iv} A</b> pasa a través de un resistor de <b>${Rv} Ω</b>.`;
+      respuesta = Pv;
+      pasos = [`Como conocemos I y R, usamos: <b>P = I² × R</b>.`,
+        `P = (${Iv} A)² × ${Rv} Ω`, `P = ${red2(Iv*Iv)} × ${Rv}`, `P = ${Pv} W`];
+    } else if(modo==='V2R'){
+      conocidos = 'V y R';
+      enunciado = `Determina la potencia cuando el voltaje es <b>${Vv} V</b> y la resistencia es <b>${Rv} Ω</b>.`;
+      respuesta = Pv;
+      pasos = [`Como conocemos V y R, usamos: <b>P = V² / R</b>.`,
+        `P = (${Vv} V)² / ${Rv} Ω`, `P = ${red2(Vv*Vv)} / ${Rv}`, `P = ${Pv} W`];
+    } else if(modo==='despejaI'){
+      conocidos = 'P y R';
+      enunciado = `¿Cuál es la corriente cuando tenemos una potencia de <b>${Pv} W</b> y una resistencia de <b>${Rv} Ω</b>?`;
+      respuesta = Iv;
+      pasos = [`Despejamos I de <b>P = I² × R</b>: I = √(P / R).`,
+        `I = √(${Pv} W / ${Rv} Ω)`, `I = √${red2(Pv/Rv)}`, `I = ${Iv} A`];
+    } else {
+      conocidos = 'P e I';
+      enunciado = `¿Cuál es la resistencia cuando tenemos una potencia de <b>${Pv} W</b> y una corriente de <b>${Iv} A</b>?`;
+      respuesta = Rv;
+      pasos = [`Despejamos R de <b>P = I² × R</b>: R = P / I².`,
+        `R = ${Pv} W / (${Iv} A)²`, `R = ${Pv} / ${red2(Iv*Iv)}`, `R = ${Rv} Ω`];
+    }
+    return { enunciado, tipo:'num', respuesta,
+      explicacion:[...pasos,
+        `TRUCO: la Ley de Watt tiene 3 formas — P = V×I, P = I²×R, P = V²/R — usa la que tenga las dos cantidades que ya conoces (y si conoces P y solo una más, despeja la que falta). Ejemplo con este mismo: aquí conocíamos ${conocidos}, por eso se usó esa versión de la fórmula.`] };
+  }
+},
+{
+  id:'circ-serie', nombre:'Circuitos en serie', clase:'circ', secciones:['2.1'],
+  gen(nv){
+    const red2 = x => Math.round(x*100)/100;
+    const rAlto = porNivel(nv, 15, 40, 100);
+    const n = porNivel(nv, 3, 3, 4);
+    const Rs = Array.from({length:n}, () => R(2, rAlto));
+    const Rt = Rs.reduce((a,b)=>a+b, 0);
+    const iBanco = porNivel(nv, [1,2,4,5], [0.5,1,1.5,2,2.5,4,5], [0.2,0.4,0.5,0.8,1.2,2.5]);
+    const It = pick(iBanco);
+    const E = red2(It*Rt);
+    const Vs = Rs.map(Ri => red2(It*Ri));
+    const Ps = Vs.map(Vi => red2(Vi*It));
+    const Pt = red2(E*It);
+    const objetivo = pick(['Rt','It', ...Rs.map((_,i)=>'VR'+(i+1)), ...Rs.map((_,i)=>'PR'+(i+1)), 'Pt']);
+    const listaR = Rs.map((r,i)=>`R${i+1} = ${r} Ω`).join(', ');
+    const base = `Un circuito en serie tiene una fuente de <b>E = ${E} V</b> y las resistencias <b>${listaR}</b>.`;
+    let enunciado, respuesta, pasos;
+    if(objetivo==='Rt'){
+      enunciado = `${base} Calcula la resistencia total (R<sub>t</sub>).`;
+      respuesta = Rt;
+      pasos = [`En serie, la resistencia total es la suma de todas: R<sub>t</sub> = ${Rs.join(' + ')}`,
+        `R<sub>t</sub> = ${Rt} Ω`];
+    } else if(objetivo==='It'){
+      enunciado = `${base} Calcula la corriente total (I<sub>t</sub>).`;
+      respuesta = It;
+      pasos = [`Primero R<sub>t</sub> = ${Rs.join(' + ')} = ${Rt} Ω.`,
+        `Luego, por la Ley de Ohm: I<sub>t</sub> = E / R<sub>t</sub> = ${E} V / ${Rt} Ω`,
+        `I<sub>t</sub> = ${It} A`];
+    } else if(objetivo[0]==='V'){
+      const i = +objetivo.slice(2)-1;
+      enunciado = `${base} La corriente total es <b>I<sub>t</sub> = ${It} A</b>. Calcula el voltaje en R${i+1} (V<sub>R${i+1}</sub>).`;
+      respuesta = Vs[i];
+      pasos = [`En serie la corriente es la misma en todo el circuito, así que I<sub>R${i+1}</sub> = I<sub>t</sub> = ${It} A.`,
+        `Por la Ley de Ohm: V<sub>R${i+1}</sub> = I<sub>t</sub> × R${i+1} = ${It} A × ${Rs[i]} Ω`,
+        `V<sub>R${i+1}</sub> = ${Vs[i]} V`];
+    } else if(objetivo!=='Pt'){
+      const i = +objetivo.slice(2)-1;
+      enunciado = `${base} La corriente total es <b>I<sub>t</sub> = ${It} A</b>. Calcula la potencia en R${i+1} (P<sub>R${i+1}</sub>).`;
+      respuesta = Ps[i];
+      pasos = [`Primero el voltaje en R${i+1}: V<sub>R${i+1}</sub> = I<sub>t</sub> × R${i+1} = ${It} × ${Rs[i]} = ${Vs[i]} V.`,
+        `Luego la potencia: P<sub>R${i+1}</sub> = V<sub>R${i+1}</sub> × I<sub>t</sub> = ${Vs[i]} V × ${It} A`,
+        `P<sub>R${i+1}</sub> = ${Ps[i]} W`];
+    } else {
+      enunciado = `${base} La corriente total es <b>I<sub>t</sub> = ${It} A</b>. Calcula la potencia total (P<sub>t</sub>).`;
+      respuesta = Pt;
+      pasos = [`La potencia total es la suma de las potencias de cada resistor, o directamente: P<sub>t</sub> = E × I<sub>t</sub> = ${E} V × ${It} A`,
+        `P<sub>t</sub> = ${Pt} W`];
+    }
+    return { enunciado, tipo:'num', respuesta,
+      explicacion:[...pasos,
+        `TRUCO: en un circuito en serie hay un solo camino para la corriente, así que I es igual en todos los resistores; en cambio el voltaje SÍ se reparte entre ellos (V<sub>t</sub> = suma de cada V<sub>R</sub>). Ejemplo con este mismo: I<sub>t</sub> = ${It} A pasa completa por cada resistor, pero cada uno "gasta" un voltaje distinto según su tamaño (${Rs.map((r,i)=>`R${i+1}=${r}Ω→${Vs[i]}V`).join(', ')}).`] };
+  }
+},
+{
+  id:'circ-paralelo', nombre:'Circuitos en paralelo', clase:'circ', secciones:['2.2'],
+  gen(nv){
+    const red2 = x => Math.round(x*100)/100;
+    const red4 = x => Math.round(x*10000)/10000;
+    const rAlto = porNivel(nv, 10, 40, 100);
+    const n = porNivel(nv, 3, 3, 4);
+    const Rs = Array.from({length:n}, () => R(2, rAlto));
+    const invSum = Rs.reduce((a,r)=>a + 1/r, 0);
+    const Rt = red2(1/invSum);
+    const eBanco = porNivel(nv, [6,9,12,24], [12,18,24,36,48], [24,36,48,60,90]);
+    const E = pick(eBanco);
+    const It = red2(E/Rt);
+    const Is = Rs.map(Ri => red2(E/Ri));
+    const objetivo = pick(['Rt','It', ...Rs.map((_,i)=>'IR'+(i+1))]);
+    const listaR = Rs.map((r,i)=>`R${i+1} = ${r} Ω`).join(', ');
+    const terminos = Rs.map(r=>`1/${r}`).join(' + ');
+    const base = `Un circuito en paralelo tiene una fuente de <b>V = ${E} V</b> y las resistencias <b>${listaR}</b>.`;
+    let enunciado, respuesta, pasos;
+    if(objetivo==='Rt'){
+      enunciado = `${base} Calcula la resistencia total (R<sub>t</sub>).`;
+      respuesta = Rt;
+      pasos = [`En paralelo: R<sub>t</sub> = 1 / (${terminos})`,
+        `R<sub>t</sub> = 1 / (${Rs.map(r=>red4(1/r)).join(' + ')})`,
+        `R<sub>t</sub> = 1 / ${red4(invSum)}`,
+        `R<sub>t</sub> = ${Rt} Ω`];
+    } else if(objetivo==='It'){
+      enunciado = `${base} Calcula la corriente total (I<sub>t</sub>).`;
+      respuesta = It;
+      pasos = [`Primero R<sub>t</sub> = 1 / (${terminos}) = ${Rt} Ω.`,
+        `Por la Ley de Ohm: I<sub>t</sub> = V / R<sub>t</sub> = ${E} V / ${Rt} Ω`,
+        `I<sub>t</sub> = ${It} A`];
+    } else {
+      const i = +objetivo.slice(2)-1;
+      enunciado = `${base} Calcula la corriente en R${i+1} (I<sub>R${i+1}</sub>).`;
+      respuesta = Is[i];
+      pasos = [`En paralelo, el voltaje es el mismo en cada resistor: V<sub>R${i+1}</sub> = V = ${E} V.`,
+        `Por la Ley de Ohm: I<sub>R${i+1}</sub> = V / R${i+1} = ${E} V / ${Rs[i]} Ω`,
+        `I<sub>R${i+1}</sub> = ${Is[i]} A`];
+    }
+    return { enunciado, tipo:'num', respuesta,
+      explicacion:[...pasos,
+        `TRUCO: en paralelo todos los resistores comparten el mismo voltaje, pero la corriente SÍ se reparte — el resistor más pequeño deja pasar más corriente. Ejemplo con este mismo: con ${listaR} y V=${E}V, ${Rs.map((r,i)=>`R${i+1}=${r}Ω→${Is[i]}A`).join(', ')} (el resistor más chico tiene la corriente más grande).`] };
+  }
 }
 ];
 // todo módulo sin "clase" explícita es de matemáticas — así los 37 módulos de arriba no
@@ -2923,7 +3250,9 @@ const MOD_POR_ID = {}; MODULOS.forEach(m => MOD_POR_ID[m.id] = m);
 const MATERIAS = {
   mate: { nombre:'Álgebra', caps:[1,2,3,4] },
   wc:   { nombre:'World Culture I', caps:[1,2,3],
-          capNombre:{1:'Conceptos básicos', 2:'Orígenes del ser humano', 3:'La Prehistoria'} }
+          capNombre:{1:'Conceptos básicos', 2:'Orígenes del ser humano', 3:'La Prehistoria'} },
+  circ: { nombre:'Circuitos Eléctricos', caps:[1,2],
+          capNombre:{1:'Fundamentos Eléctricos', 2:'Circuitos en Serie y Paralelo'} }
 };
 function nombreCapitulo(cap){
   const m = MATERIAS[materia];
