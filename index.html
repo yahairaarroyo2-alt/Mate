@@ -172,6 +172,13 @@
   .fracIn .barra{width:110px;height:3px;background:var(--titulo);border-radius:2px}
   .mixIn{display:flex;align-items:center;justify-content:center;gap:12px}
   .mixIn .campo{width:80px}
+  .multiIn{display:grid;gap:8px}
+  .multiFila{display:flex;align-items:center;gap:10px}
+  .multiFila > span{min-width:96px;font-weight:700}
+  .multiFila .campo{flex:1;min-width:0;margin:0}
+  .multiBloque{display:grid;gap:6px;padding:10px 0;border-top:1px solid var(--borde,rgba(128,128,128,.25))}
+  .multiBloque:first-child{border-top:0;padding-top:0}
+  .multiEt{font-weight:700}
   .opt{display:flex;gap:10px}
   .opt .btn{flex:1;font-size:1.25rem;padding:18px}
   .ordenCaja{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:12px}
@@ -192,6 +199,9 @@
   .expl ol{margin:0;padding-left:20px}
   .expl li{margin-bottom:6px;font-size:.95rem}
   .expl li:last-child{margin-bottom:0;font-weight:600;color:var(--titulo)}
+  .pasosLibres .pasoTit{font-weight:700;color:var(--titulo);margin-top:12px;font-size:.95rem}
+  .pasosLibres .pasoTit:first-child{margin-top:0}
+  .pasosLibres .pasoLin{padding-left:18px;margin-top:4px;font-size:.95rem}
   /* atajo para resolverlo más rápido — sale del <ol> y se pinta aparte (ver explPasos) */
   .truco{background:var(--superficie);border-left:4px solid var(--acento);border-radius:8px;
     padding:9px 12px;margin-top:11px;font-size:.9rem;line-height:1.5}
@@ -529,19 +539,23 @@ function svgCircuitoSimple(V, R, I, P, uid){
 // como cuando aún no se sabe It); marca:{idx,tipo:'V'|'P'} anota V(Ri)=? o P(Ri)=? bajo un
 // resistor puntual, o marca:{tipo:'Rt'|'Pt'} anota esa incógnita cerca de la fuente.
 function svgCircuitoSerie(Rs, opts, uid){
-  const {E, It, marca} = opts;
+  const {E, It, marca, rIncognita} = opts;
+  const nm = i => (opts.nombres||[])[i] || 'R'+(i+1);
   const n = Rs.length, L=45, Rd=335, T=55, B=170, midY=(T+B)/2;
   const topL=125, topR=325, segW=(topR-topL)/n;
   let zz='', rlabels='', extra='';
   for(let i=0;i<n;i++){
     const x1=topL+segW*i+10, x2=topL+segW*(i+1)-10, cx=(x1+x2)/2;
     zz += `<path d="${zigzagH(x1,x2,T)}" fill="none" stroke="currentColor" stroke-width="2"/>`;
-    rlabels += `<text x="${cx}" y="${T-10}" fill="currentColor" font-size="11" font-weight="700" text-anchor="middle">R${i+1}=${Rs[i]}Ω</text>`;
-    if(marca && marca.idx===i) extra += `<text x="${cx}" y="${T+24}" fill="var(--acento)" font-size="12" font-weight="800" text-anchor="middle">${marca.tipo}(R${i+1})=?</text>`;
+    const rTxt = rIncognita===i ? `${nm(i)}=?` : `${nm(i)}=${Rs[i]}Ω`;
+    // alturas alternadas: con 4-5 resistores las etiquetas vecinas ("R1=15KΩ") no caben en una sola fila
+    rlabels += `<text x="${cx}" y="${T-12-(i%2)*15}" fill="${rIncognita===i?'var(--acento)':'currentColor'}" font-size="11" font-weight="700" text-anchor="middle">${rTxt}</text>`;
+    if(marca && marca.idx===i) extra += `<text x="${cx}" y="${T+24}" fill="var(--acento)" font-size="12" font-weight="800" text-anchor="middle">${marca.tipo}(${nm(i)})=?</text>`;
   }
-  if(marca && (marca.tipo==='Rt'||marca.tipo==='Pt')) extra += `<text x="${(L+Rd)/2}" y="${B+40}" fill="var(--acento)" font-size="13" font-weight="800" text-anchor="middle">${marca.tipo} = ?</text>`;
+  if(marca && (marca.tipo==='Rt'||marca.tipo==='Pt'||marca.tipo==='Vt')) extra += `<text x="${(L+Rd)/2}" y="${B+40}" fill="var(--acento)" font-size="13" font-weight="800" text-anchor="middle">${marca.tipo} = ?</text>`;
   const flechaI = It!=null ? `<line x1="${L+15}" y1="${T}" x2="${topL-15}" y2="${T}" stroke="var(--acento)" stroke-width="2.5" marker-end="url(#fa${uid})"/>
     <text x="${(L+topL)/2}" y="${T-10}" fill="var(--acento)" font-size="12" font-weight="800" text-anchor="middle">It=${It}</text>` : '';
+  const eLabel = E!=null ? `E=${E}` : '';
   return `<svg viewBox="0 0 360 220" style="width:100%;max-width:340px;height:auto;color:var(--texto);display:block;margin:10px auto 0" xmlns="http://www.w3.org/2000/svg">
     <defs><marker id="fa${uid}" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="var(--acento)"/></marker></defs>
     <line x1="${L}" y1="${T}" x2="${topL}" y2="${T}" stroke="currentColor" stroke-width="2"/>
@@ -553,7 +567,7 @@ function svgCircuitoSerie(Rs, opts, uid){
     ${flechaI}
     ${rlabels}
     ${extra}
-    <text x="${L}" y="${B+26}" fill="currentColor" font-size="12" font-weight="700" text-anchor="middle">E=${E}</text>
+    <text x="${L}" y="${B+26}" fill="currentColor" font-size="12" font-weight="700" text-anchor="middle">${eLabel}</text>
   </svg>`;
 }
 // circuito en paralelo: fuente + n resistores como ramas verticales entre dos rieles
@@ -561,18 +575,20 @@ function svgCircuitoSerie(Rs, opts, uid){
 // anota I(Ri)=? bajo una rama puntual, marca:{tipo:'Rt'} lo anota al centro.
 function svgCircuitoParalelo(Rs, opts, uid){
   const {V, It, marca} = opts;
+  const nm = i => (opts.nombres||[])[i] || 'R'+(i+1);
   const n = Rs.length, L=45, Rd=335, T=55, B=175, midY=(T+B)/2;
   const branchL=130, branchR=325, segW = n>1 ? (branchR-branchL)/(n-1) : 0;
   let branches='', labels='', extra='';
   for(let i=0;i<n;i++){
     const x = n>1 ? branchL+segW*i : (branchL+branchR)/2;
     branches += `<path d="${zigzagV(x,T,B)}" fill="none" stroke="currentColor" stroke-width="2"/>`;
-    labels += `<text x="${x}" y="${B+22}" fill="currentColor" font-size="11" font-weight="700" text-anchor="middle">R${i+1}=${Rs[i]}Ω</text>`;
-    if(marca && marca.idx===i) extra += `<text x="${x}" y="${B+38}" fill="var(--acento)" font-size="12" font-weight="800" text-anchor="middle">I(R${i+1})=?</text>`;
+    labels += `<text x="${x}" y="${B+22}" fill="currentColor" font-size="11" font-weight="700" text-anchor="middle">${nm(i)}=${Rs[i]}Ω</text>`;
+    if(marca && marca.idx===i) extra += `<text x="${x}" y="${B+38}" fill="var(--acento)" font-size="12" font-weight="800" text-anchor="middle">${marca.tipo||'I'}(${nm(i)})=?</text>`;
   }
-  if(marca && marca.tipo==='Rt') extra += `<text x="${(branchL+branchR)/2}" y="${B+38}" fill="var(--acento)" font-size="13" font-weight="800" text-anchor="middle">Rt = ?</text>`;
+  if(marca && (marca.tipo==='Rt'||marca.tipo==='Pt')) extra += `<text x="${(branchL+branchR)/2}" y="${B+38}" fill="var(--acento)" font-size="13" font-weight="800" text-anchor="middle">${marca.tipo} = ?</text>`;
   const flechaI = It!=null ? `<line x1="${L+15}" y1="${T}" x2="${branchL-15}" y2="${T}" stroke="var(--acento)" stroke-width="2.5" marker-end="url(#fa${uid})"/>
     <text x="${(L+branchL)/2}" y="${T-10}" fill="var(--acento)" font-size="12" font-weight="800" text-anchor="middle">It=${It}</text>` : '';
+  const vLabel = V!=null ? `V=${V}` : (marca && marca.tipo==='Vt' ? 'Vt=?' : '');
   return `<svg viewBox="0 0 360 235" style="width:100%;max-width:340px;height:auto;color:var(--texto);display:block;margin:10px auto 0" xmlns="http://www.w3.org/2000/svg">
     <defs><marker id="fa${uid}" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="var(--acento)"/></marker></defs>
     <line x1="${L}" y1="${T}" x2="${Rd}" y2="${T}" stroke="currentColor" stroke-width="2"/>
@@ -582,8 +598,25 @@ function svgCircuitoParalelo(Rs, opts, uid){
     ${flechaI}
     ${labels}
     ${extra}
-    <text x="${L}" y="${T-14}" fill="currentColor" font-size="12" font-weight="700" text-anchor="middle">V=${V}</text>
+    <text x="${L}" y="${T-14}" fill="currentColor" font-size="12" font-weight="700" text-anchor="middle">${vLabel}</text>
   </svg>`;
+}
+// ejercicio de circuitos tal cual lo pide la presentación: uno o varios valores en un solo
+// ejercicio (tipo 'multi'), cada campo con 1% de tolerancia (el PDF redondea: 0.000470 A, 10.88 A)
+// compara solo el lado derecho de la fórmula, sin fijarse en mayúsculas, espacios, ×/x/*, Ω/ft,
+// "(Ley de Ohm)" ni en el subíndice t/total (Vt/Rt = V/R) — lo que importa es que sepa la fórmula
+function normFormula(s){
+  let t = String(s).replace(/<[^>]+>/g,'').toLowerCase()
+    .replace(/\(\s*ley de (ohm|watt)\s*\)/g,'').replace(/sqrt/g,'√').replace(/\^2/g,'²')
+    .replace(/÷/g,'/').replace(/[−–]/g,'-').replace(/total/g,'t').replace(/[Ωω]|ft/g,'');
+  const i = t.indexOf('='); if(i >= 0) t = t.slice(i+1);
+  return t.replace(/[\s×·x*]/g,'').replace(/([virp])t/g,'$1');
+}
+const formulaOk = (s, c) => [c.fs, ...(c.f || [])].some(x => normFormula(x) === normFormula(s));
+function ejCirc(c, truco){
+  const campos = c.campos.map(k => ({ et:k.et, u:k.u, ops:k.ops, fs:k.fs, sub:k.sub, f:k.f, tol: k.ops ? undefined : Math.abs(k.r)*0.01 }));
+  return { enunciado: c.enun + (c.svg || ''), tipo:'multi', campos, respuesta: c.campos.map(k => k.r), sinNumeros:true,
+    explicacion:[...c.pasos, `→ ${c.campos.map(k => `${k.et} = ${k.r}${k.u ? ' '+k.u : ''}`).join(', ')}`, truco] };
 }
 function fmtFactoresPlano(f){
   const ps = Object.keys(f).map(Number).sort((a,b)=>a-b);
@@ -3106,248 +3139,239 @@ const MODULOS = [
         `TRUCO: repasa siempre las definiciones básicas (carga, voltaje V=E/Q, corriente I=Q/T, resistencia) antes del examen — son la base de todas las fórmulas que siguen. Ejemplo con este mismo: la respuesta correcta es "${c.r}".`] };
   }
 },
+/* Ejercicios de cálculo de la Presentación I (ETRE 160): SOLO los Ejemplos y Bonos del PDF,
+   con sus números exactos y los pasos escritos como en las diapositivas — no se generan al azar,
+   porque el examen sale de esos mismos ejercicios. */
 {
-  id:'circ-carga-corriente', nombre:'Carga y corriente (I = Q / T)', clase:'circ', secciones:['1.2'],
+  id:'circ-resistividad', nombre:'Resistividad (Cap 9, tabla 8 NEC)', clase:'circ', secciones:['1.3'],
   gen(nv){
-    const red2 = x => Math.round(x*100)/100;
-    const tAlto = porNivel(nv, 10, 30, 60);
-    const iBanco = porNivel(nv, [1,2,4,5,10], [0.5,1.5,2.5,3,6,8], [0.2,0.4,1.2,2.4,3.6]);
-    const T_ = R(1, tAlto);
-    const I_ = pick(iBanco);
-    const Q_ = red2(T_*I_);
-    const incog = pick(['I','Q','T']);
-    let enunciado, respuesta, formula, sustitucion, calculo;
-    if(incog==='I'){
-      enunciado = `Por un punto de un circuito pasa una carga de <b>Q = ${Q_} Coulomb</b> en un tiempo de <b>T = ${T_} segundos</b>. Halla la corriente.`;
-      respuesta = red2(Q_/T_); formula = 'I = Q / T';
-      sustitucion = `I = ${Q_} C / ${T_} s`; calculo = `I = ${respuesta} A`;
-    } else if(incog==='Q'){
-      enunciado = `Por un punto de un circuito pasa una corriente de <b>I = ${I_} A</b> durante <b>T = ${T_} segundos</b>. Halla la carga.`;
-      respuesta = Q_; formula = 'Q = I × T';
-      sustitucion = `Q = ${I_} A × ${T_} s`; calculo = `Q = ${Q_} C`;
-    } else {
-      enunciado = `Una carga de <b>Q = ${Q_} Coulomb</b> pasa por un punto con una corriente de <b>I = ${I_} A</b>. Halla el tiempo.`;
-      respuesta = red2(Q_/I_); formula = 'T = Q / I';
-      sustitucion = `T = ${Q_} C / ${I_} A`; calculo = `T = ${respuesta} s`;
-    }
-    return { enunciado, tipo:'num', respuesta,
-      explicacion:[
-        `La corriente es el flujo de carga por unidad de tiempo. Aquí piden ${incog==='I'?'la corriente':incog==='Q'?'la carga':'el tiempo'}, así que usamos: <b>${formula}</b>.`,
-        `Sustituimos: ${sustitucion}.`,
-        `Calculamos: ${calculo}.`,
-        `TRUCO: I=Q/T usa el mismo triángulo que la Ley de Ohm — arriba Q, abajo I y T lado a lado. Ejemplo con este mismo: para hallar ${incog}, tapas la ${incog} del triángulo y te queda ${formula}.`] };
-  }
-},
-{
-  id:'circ-resistividad-cable', nombre:'Resistencia de un cable (tabla NEC)', clase:'circ', secciones:['1.3'],
-  gen(nv){
-    const red2 = x => Math.round(x*100)/100;
-    // cobre sin recubrir (uncoated), resistencia DC a 75°C en Ω por cada 1000 pies — NEC cap. 9, tabla 8
     const banco = [
-      {awg:'14', ohmsK:3.07}, {awg:'12', ohmsK:1.93}, {awg:'10', ohmsK:1.21},
-      {awg:'8', ohmsK:0.764}, {awg:'6', ohmsK:0.491}, {awg:'4', ohmsK:0.308},
-      {awg:'3', ohmsK:0.245}, {awg:'2', ohmsK:0.194}, {awg:'1', ohmsK:0.154}
+      { tit:'Ejemplo I', pies:'2500', awg:'12', tabla:'1.93', r:4.83 },
+      { tit:'Ejemplo II', pies:'1500', awg:'14', tabla:'3.07', r:4.61 },
+      { tit:'Bono I #1', pies:'3500', awg:'10', tabla:'1.21', r:4.24 },
+      { tit:'Bono I #2', pies:'100', awg:'2', tabla:'0.194', r:0.0194 }
     ];
     const c = pick(banco);
-    const pies = pick(porNivel(nv, [500,1000,1500,2000], [1200,1800,2500,3000,3500], [750,2200,2800,4000,4500]));
-    const resp = red2(c.ohmsK * pies / 1000);
-    return { enunciado:`Encuentra la resistencia de <b>${pies} pies</b> de cable de cobre (uncoated) AWG #${c.awg} a 75°C.<br><span style="opacity:.75">Dato de tabla (Cap. 9, Tabla 8 del NEC): ${c.ohmsK} Ω por cada 1000 pies.</span>`,
-      tipo:'num', respuesta:resp,
-      explicacion:[
-        `Planteamos una proporción entre lo que dice la tabla y lo que nos piden: X Ω / ${pies} pies = ${c.ohmsK} Ω / 1000 pies.`,
-        `Despejamos X: X = (${c.ohmsK} Ω × ${pies} pies) / 1000 pies`,
-        `X = ${resp} Ω`,
-        `TRUCO: la tabla del NEC siempre da el dato "por cada 1000 pies" — para cualquier otra longitud, multiplica ese valor por la longitud real y divide entre 1000 (regla de tres). Ejemplo con este mismo: ${c.ohmsK} × ${pies} ÷ 1000 = ${resp} Ω.`] };
+    const prod = +(c.tabla*c.pies).toFixed(3);
+    return ejCirc({ enun:`<b>${c.tit}:</b> Encuentre la resistencia de ${c.pies} pies de cable de cobre (uncoated) AWG #${c.awg} (75 °C o 167 °F) (Utilizar Cap 9, tabla 8 NEC 2020).<br><small>Dato de la tabla 8: AWG #${c.awg} = ${c.tabla} Ω por cada 1000 ft (resistencia a 75 °C).</small>`,
+      campos:[{ et:'X', u:'Ω', r:c.r, fs:`X = (${c.tabla} Ω × ${c.pies} ft) / 1000 ft`, sub:`X = ${prod} / 1000`,
+        f:[`X = ${c.tabla} × ${c.pies} / 1000`, `X = (${c.pies} × ${c.tabla}) / 1000`, `X = ${c.pies} × ${c.tabla} / 1000`] }],
+      pasos:[
+        `${fr('X', c.pies+' ft')} = ${fr(c.tabla+' Ω', '1000 ft')}   (Resistencia a 75 °C)`,
+        `X = ${fr(c.tabla+' Ω × '+c.pies+' ft', '1000 ft')}`,
+        `X = ${fr(prod, '1000')}`,
+        `X = ${c.r} Ω`] },
+      `TRUCO: es una regla de tres — la tabla da los Ω de 1000 pies, así que multiplicas por los pies que te piden y divides entre 1000. Ejemplo con este mismo: ${c.tabla} × ${c.pies} ÷ 1000 = ${c.r} Ω.`);
   }
 },
 {
-  id:'circ-ley-ohm', nombre:'Ley de Ohm (V = I × R)', clase:'circ', secciones:['1.4'],
+  id:'circ-ley-ohm', nombre:'Ley de Ohm (Ejemplos I–III y Bono II)', clase:'circ', secciones:['1.4'],
   gen(nv){
-    const red2 = x => Math.round(x*100)/100;
-    const rAlto = porNivel(nv, 20, 60, 150);
-    const iBanco = porNivel(nv,
-      [1,2,3,4,5],
-      [0.5,1,1.5,2,2.5,3,4,5,6,8],
-      [0.2,0.4,0.5,0.6,0.8,1.2,1.5,2.5,3.5,7.5]);
-    const Rv = R(1, rAlto);
-    const Iv = pick(iBanco);
-    const Vv = red2(Rv*Iv);
-    const incog = pick(['V','I','R']);
     const uid = Math.random().toString(36).slice(2,8);
-    let enunciado, respuesta, formula, sustitucion, calculo;
-    if(incog==='V'){
-      enunciado = `En un circuito, la corriente es <b>I = ${Iv} A</b> y la resistencia es <b>R = ${Rv} Ω</b>. Halla el voltaje.${svgCircuitoSimple('?',`${Rv} Ω`,`${Iv} A`,null,uid)}`;
-      respuesta = Vv; formula = 'V = I × R';
-      sustitucion = `V = ${Iv} A × ${Rv} Ω`; calculo = `V = ${Vv} V`;
-    } else if(incog==='I'){
-      const Iresp = red2(Vv/Rv);
-      enunciado = `En un circuito, el voltaje es <b>V = ${Vv} V</b> y la resistencia es <b>R = ${Rv} Ω</b>. Halla la corriente.${svgCircuitoSimple(`${Vv} V`,`${Rv} Ω`,'?',null,uid)}`;
-      respuesta = Iresp; formula = 'I = V / R';
-      sustitucion = `I = ${Vv} V / ${Rv} Ω`; calculo = `I = ${Iresp} A`;
-    } else {
-      const Rresp = red2(Vv/Iv);
-      enunciado = `En un circuito, el voltaje es <b>V = ${Vv} V</b> y la corriente es <b>I = ${Iv} A</b>. Halla la resistencia.${svgCircuitoSimple(`${Vv} V`,'?',`${Iv} A`,null,uid)}`;
-      respuesta = Rresp; formula = 'R = V / I';
-      sustitucion = `R = ${Vv} V / ${Iv} A`; calculo = `R = ${Rresp} Ω`;
-    }
-    return { enunciado, tipo:'num', respuesta,
-      explicacion:[
-        `La Ley de Ohm relaciona voltaje (V), corriente (I) y resistencia (R). Aquí piden ${incog==='V'?'el voltaje':incog==='I'?'la corriente':'la resistencia'}, así que usamos: <b>${formula}</b>.`,
-        `Sustituimos los datos: ${sustitucion}.`,
-        `Calculamos: ${calculo}.`,
-        `TRUCO: para recordar las 3 formas, imagina un triángulo con la V arriba y, abajo, la I y la R lado a lado — tapas la letra que buscas y las otras dos te dicen qué hacer (si tapas la de arriba, se multiplican las de abajo; si tapas una de abajo, la de arriba se divide entre la otra de abajo). Ejemplo con este mismo: para hallar ${incog}, tapas la ${incog} del triángulo y te queda ${formula}.`] };
+    const sc = (V,R,I,k) => svgCircuitoSimple(V, R, I, null, uid+k);
+    const mili = 'Conversión de mA a A: m = mili ó 10<sup>-3</sup>';
+    const kilo = 'Conversión de KΩ a Ω: K = Kilo ó 10<sup>3</sup>';
+    const banco = [
+      { enun:'<b>Ejemplo I:</b> V = 6V, R = 1.2Ω, I = ?', svg:sc('6V','1.2Ω','?','a'), campos:[{et:'I', u:'A', r:5, fs:'I = V/R', sub:'I = 6V/1.2Ω'}],
+        pasos:['Fórmula (A)','I = V/R','I = 6V/1.2Ω','I = 5 A'] },
+      { enun:'<b>Ejemplo II:</b> 10V, 13A, R = ?', svg:sc('10V','?','13A','a'), campos:[{et:'R', u:'Ω', r:0.769, fs:'R = V/I', sub:'R = 10V/13A'}],
+        pasos:['Fórmula (B)','R = V/I','R = 10V/13A','R = 0.769 Ω'] },
+      { enun:'<b>Ejemplo III:</b> Vs = ?, R1 = 5KΩ, I = 10 mA', svg:sc('?','5KΩ','10 mA','a'), campos:[{et:'V', u:'V', r:50, fs:'V = IR', f:['V = RI'], sub:'V = 0.010 A X 5000Ω'}],
+        pasos:['Fórmula (C)','V = IR','V = 10 mA X 5KΩ',
+          `${mili} → 10 mA = 10 X 10<sup>-3</sup> A = 0.010 A (3 lugares a la izq.)`,
+          `${kilo} → 5 KΩ = 5 X 10<sup>3</sup> Ω = 5000 Ω (3 lugares a la derecha)`,
+          'V = 0.010 A X 5000Ω','V = 50 V'] },
+      { enun:'<b>Bono II #1:</b> 7 V, 5 A, R = ?', svg:sc('7V','?','5A','a'), campos:[{et:'R', u:'Ω', r:1.4, fs:'R = V/I', sub:'R = 7V/5A'}],
+        pasos:['Fórmula (B)','R = V/I','R = 7V/5A','R = 1.4 Ω'] },
+      { enun:'<b>Bono II #2:</b> Battery E = 18 V, Lamp R = 3 Ω, I = ???', svg:sc('18V','3Ω','?','a'), campos:[{et:'I', u:'A', r:6, fs:'I = V/R', f:['I = E/R'], sub:'I = 18V/3Ω'}],
+        pasos:['Fórmula (A)','I = V/R','I = 18V/3Ω','I = 6 A'] },
+      { enun:'<b>Bono II #3:</b> Calculate the voltage drop across each resistor.<br><small>R1 = 3Ω con I = 2A · R2 = 5kΩ con I = 5mA · R3 = 1MΩ con I = 3µA</small>',
+        svg:sc('? (V1)','3Ω','2A','a') + sc('? (V2)','5kΩ','5mA','b') + sc('? (V3)','1MΩ','3µA','c'),
+        campos:[{et:'V1', u:'V', r:6, fs:'V1 = I R1', f:['V = I R','V = R I','V1 = R1 I'], sub:'V1 = 2A X 3Ω'},
+          {et:'V2', u:'V', r:25, fs:'V2 = I R2', f:['V = I R','V = R I','V2 = R2 I'], sub:'V2 = 0.005 A X 5000Ω'},
+          {et:'V3', u:'V', r:3, fs:'V3 = I R3', f:['V = I R','V = R I','V3 = R3 I'], sub:'V3 = 0.000003 A X 1,000,000Ω'}],
+        pasos:['Fórmula (C): V = IR',
+          'a. V1 = I R1','V1 = 2A X 3Ω','V1 = 6 V',
+          'b. V2 = I R2','V2 = 5 mA X 5kΩ',
+          `${mili} → 5 mA = 5 X 10<sup>-3</sup> A = 0.005 A`,
+          `${kilo} → 5 kΩ = 5 X 10<sup>3</sup> Ω = 5000 Ω`,
+          'V2 = 0.005 A X 5000Ω','V2 = 25 V',
+          'c. V3 = I R3','V3 = 3 µA X 1MΩ',
+          'Conversión de µA a A: µ = micro ó 10<sup>-6</sup> → 3 µA = 3 X 10<sup>-6</sup> A = 0.000003 A (6 lugares a la izq.)',
+          'Conversión de MΩ a Ω: M = Mega ó 10<sup>6</sup> → 1 MΩ = 1 X 10<sup>6</sup> Ω = 1,000,000 Ω (6 lugares a la derecha)',
+          'V3 = 0.000003 A X 1,000,000Ω','V3 = 3 V'] }
+    ];
+    return ejCirc(pick(banco), 'TRUCO: Fórmulas Ley de Ohm con el triángulo (V arriba, I y R abajo) — tapa la letra que buscas: (A) I = V / R, (B) R = V / I, (C) V = I × R. Siempre pasa mA a A y KΩ a Ω antes de multiplicar. Ejemplo con este mismo: fíjate cuál letra falta y usa esa fórmula.');
   }
 },
 {
-  id:'circ-ley-watt', nombre:'Potencia eléctrica y Ley de Watt', clase:'circ', secciones:['1.5'],
+  id:'circ-ley-watt', nombre:'Potencia y Ley de Watt (Ejemplos y Bono III)', clase:'circ', secciones:['1.5'],
   gen(nv){
-    const red2 = x => Math.round(x*100)/100;
-    const rAlto = porNivel(nv, 20, 60, 150);
-    const iBanco = porNivel(nv, [1,2,3,4,5], [0.5,1,1.5,2,2.5,3,4,5], [0.2,0.4,0.5,0.6,0.8,1.2,1.5,2.5]);
-    const Rv = R(1, rAlto);
-    const Iv = pick(iBanco);
-    const Vv = red2(Rv*Iv);
-    const Pv = red2(Vv*Iv);
-    const modo = pick(['VI','I2R','V2R','despejaI','despejaR']);
     const uid = Math.random().toString(36).slice(2,8);
-    let enunciado, respuesta, pasos, conocidos;
-    if(modo==='VI'){
-      conocidos = 'V e I';
-      enunciado = `Determina la potencia cuando el voltaje es <b>${Vv} V</b> y la corriente es <b>${Iv} A</b>.${svgCircuitoSimple(`${Vv} V`,null,`${Iv} A`,'?',uid)}`;
-      respuesta = Pv;
-      pasos = [`Como conocemos V e I, usamos: <b>P = V × I</b>.`,
-        `P = ${Vv} V × ${Iv} A`, `P = ${Pv} W`];
-    } else if(modo==='I2R'){
-      conocidos = 'I y R';
-      enunciado = `Determina la potencia cuando una corriente de <b>${Iv} A</b> pasa a través de un resistor de <b>${Rv} Ω</b>.${svgCircuitoSimple(null,`${Rv} Ω`,`${Iv} A`,'?',uid)}`;
-      respuesta = Pv;
-      pasos = [`Como conocemos I y R, usamos: <b>P = I² × R</b>.`,
-        `P = (${Iv} A)² × ${Rv} Ω`, `P = ${red2(Iv*Iv)} × ${Rv}`, `P = ${Pv} W`];
-    } else if(modo==='V2R'){
-      conocidos = 'V y R';
-      enunciado = `Determina la potencia cuando el voltaje es <b>${Vv} V</b> y la resistencia es <b>${Rv} Ω</b>.${svgCircuitoSimple(`${Vv} V`,`${Rv} Ω`,null,'?',uid)}`;
-      respuesta = Pv;
-      pasos = [`Como conocemos V y R, usamos: <b>P = V² / R</b>.`,
-        `P = (${Vv} V)² / ${Rv} Ω`, `P = ${red2(Vv*Vv)} / ${Rv}`, `P = ${Pv} W`];
-    } else if(modo==='despejaI'){
-      conocidos = 'P y R';
-      enunciado = `¿Cuál es la corriente cuando tenemos una potencia de <b>${Pv} W</b> y una resistencia de <b>${Rv} Ω</b>?${svgCircuitoSimple(null,`${Rv} Ω`,'?',`${Pv} W`,uid)}`;
-      respuesta = Iv;
-      pasos = [`Despejamos I de <b>P = I² × R</b>: I = √(P / R).`,
-        `I = √(${Pv} W / ${Rv} Ω)`, `I = √${red2(Pv/Rv)}`, `I = ${Iv} A`];
-    } else {
-      conocidos = 'P e I';
-      enunciado = `¿Cuál es la resistencia cuando tenemos una potencia de <b>${Pv} W</b> y una corriente de <b>${Iv} A</b>?${svgCircuitoSimple(null,'?',`${Iv} A`,`${Pv} W`,uid)}`;
-      respuesta = Rv;
-      pasos = [`Despejamos R de <b>P = I² × R</b>: R = P / I².`,
-        `R = ${Pv} W / (${Iv} A)²`, `R = ${Pv} / ${red2(Iv*Iv)}`, `R = ${Rv} Ω`];
-    }
-    return { enunciado, tipo:'num', respuesta,
-      explicacion:[...pasos,
-        `TRUCO: la Ley de Watt tiene 3 formas — P = V×I, P = I²×R, P = V²/R — usa la que tenga las dos cantidades que ya conoces (y si conoces P y solo una más, despeja la que falta). Ejemplo con este mismo: aquí conocíamos ${conocidos}, por eso se usó esa versión de la fórmula.`] };
+    const desp = [
+      { et:'De P = VI → V', r:'V = P / I', malas:['V = P × I','V = I / P','V = √(P / I)'] },
+      { et:'De P = VI → I', r:'I = P / V', malas:['I = P × V','I = V / P','I = √(P / V)'] },
+      { et:'De P = I²R → I', r:'I = √(P / R)', malas:['I = P / R','I = √(P × R)','I = R / P'] },
+      { et:'De P = I²R → R', r:'R = P / I²', malas:['R = P × I²','R = I² / P','R = √(P / I)'] },
+      { et:'De P = V²/R → V', r:'V = √(P × R)', malas:['V = √(P / R)','V = P × R','V = R / P'] },
+      { et:'De P = V²/R → R', r:'R = V² / P', malas:['R = P / V²','R = V² × P','R = √(V / P)'] }
+    ];
+    const banco = [
+      { enun:'<b>Ejemplo 1:</b> Determine la potencia cuando tenemos 120V y una corriente 5 A.', svg:svgCircuitoSimple('120V',null,'5A','?',uid),
+        campos:[{et:'P', u:'W', r:600, fs:'P = VI', f:['P = IV'], sub:'P = 120V x 5A'}], pasos:['P = VI','P = 120V x 5A','P = 600W'] },
+      { enun:'<b>Ejemplo 2:</b> Determine la cantidad de potencia cuando una corriente de 2A pasa a través de un resistor de 1000 Ω.', svg:svgCircuitoSimple(null,'1000Ω','2A','?',uid),
+        campos:[{et:'P', u:'W', r:4000, fs:'P = I² x R', f:['P = R I²'], sub:'P = (2A) (2A) x 1000 Ω'}], pasos:['P = I² x R','P = (2A) (2A) x 1000 Ω','P = 4 A² x 1000 Ω','P = 4000 W'] },
+      { enun:'<b>Bono III #1:</b> Despeje todas las fórmulas de potencia para cada una de las variables.',
+        campos: desp.map(d => ({ et:d.et, r:d.r, ops:shuffle([d.r, ...d.malas]) })),
+        pasos:['a. De P = VI, despejar V','Dividimos ambos lados entre I: P / I = V','V = P / I',
+          'b. De P = VI, despejar I','Dividimos ambos lados entre V: P / V = I','I = P / V',
+          'c. De P = I²R, despejar I','Dividimos ambos lados entre R: P / R = I²','Sacamos raíz cuadrada: I = √(P / R)',
+          'd. De P = I²R, despejar R','Dividimos ambos lados entre I²: P / I² = R','R = P / I²',
+          'e. De P = V²/R, despejar V','Multiplicamos ambos lados por R: P × R = V²','Sacamos raíz cuadrada: V = √(P × R)',
+          'f. De P = V²/R, despejar R','Multiplicamos ambos lados por R: P × R = V²','Dividimos ambos lados entre P: R = V² / P'] },
+      { enun:'<b>Bono III #2:</b> Cual es la corriente cuando tenemos una potencia de 75w y una resistencia de 300Ω?', svg:svgCircuitoSimple(null,'300Ω','?','75W',uid),
+        campos:[{et:'I', u:'A', r:0.5, fs:'I = √(P / R)', sub:'I = √(75W / 300Ω)'}], pasos:['P = I² R → despejamos I:','I = √(P / R)','I = √(75W / 300Ω)','I = √0.25','I = 0.5 A'] }
+    ];
+    return ejCirc(pick(banco), 'TRUCO: la ley de Watt tiene 3 fórmulas — P = VI, P = I²R y P = V²/R. Escoge la que usa los DOS datos que te dan. Ejemplo con este mismo: mira qué dos valores te dieron y cuál de las 3 fórmulas los tiene.');
   }
 },
 {
-  id:'circ-serie', nombre:'Circuitos en serie', clase:'circ', secciones:['2.1'],
+  id:'circ-serie', nombre:'Circuitos en serie (Ejemplo, Bono IV y Bono V)', clase:'circ', secciones:['2.1'],
   gen(nv){
-    const red2 = x => Math.round(x*100)/100;
-    const rAlto = porNivel(nv, 15, 40, 100);
-    const n = porNivel(nv, 3, 3, 4);
-    const Rs = Array.from({length:n}, () => R(2, rAlto));
-    const Rt = Rs.reduce((a,b)=>a+b, 0);
-    const iBanco = porNivel(nv, [1,2,4,5], [0.5,1,1.5,2,2.5,4,5], [0.2,0.4,0.5,0.8,1.2,2.5]);
-    const It = pick(iBanco);
-    const E = red2(It*Rt);
-    const Vs = Rs.map(Ri => red2(It*Ri));
-    const Ps = Vs.map(Vi => red2(Vi*It));
-    const Pt = red2(E*It);
-    const objetivo = pick(['Rt','It', ...Rs.map((_,i)=>'VR'+(i+1)), ...Rs.map((_,i)=>'PR'+(i+1)), 'Pt']);
     const uid = Math.random().toString(36).slice(2,8);
-    const listaR = Rs.map((r,i)=>`R${i+1} = ${r} Ω`).join(', ');
-    const base = `Un circuito en serie tiene una fuente de <b>E = ${E} V</b> y las resistencias <b>${listaR}</b>.`;
-    let enunciado, respuesta, pasos;
-    if(objetivo==='Rt'){
-      enunciado = `${base} Calcula la resistencia total (R<sub>t</sub>).${svgCircuitoSerie(Rs,{E:`${E}V`,It:null,marca:{tipo:'Rt'}},uid)}`;
-      respuesta = Rt;
-      pasos = [`En serie, la resistencia total es la suma de todas: R<sub>t</sub> = ${Rs.join(' + ')}`,
-        `R<sub>t</sub> = ${Rt} Ω`];
-    } else if(objetivo==='It'){
-      enunciado = `${base} Calcula la corriente total (I<sub>t</sub>).${svgCircuitoSerie(Rs,{E:`${E}V`,It:'?',marca:null},uid)}`;
-      respuesta = It;
-      pasos = [`Primero R<sub>t</sub> = ${Rs.join(' + ')} = ${Rt} Ω.`,
-        `Luego, por la Ley de Ohm: I<sub>t</sub> = E / R<sub>t</sub> = ${E} V / ${Rt} Ω`,
-        `I<sub>t</sub> = ${It} A`];
-    } else if(objetivo[0]==='V'){
-      const i = +objetivo.slice(2)-1;
-      enunciado = `${base} La corriente total es <b>I<sub>t</sub> = ${It} A</b>. Calcula el voltaje en R${i+1} (V<sub>R${i+1}</sub>).${svgCircuitoSerie(Rs,{E:`${E}V`,It:`${It}A`,marca:{idx:i,tipo:'V'}},uid)}`;
-      respuesta = Vs[i];
-      pasos = [`En serie la corriente es la misma en todo el circuito, así que I<sub>R${i+1}</sub> = I<sub>t</sub> = ${It} A.`,
-        `Por la Ley de Ohm: V<sub>R${i+1}</sub> = I<sub>t</sub> × R${i+1} = ${It} A × ${Rs[i]} Ω`,
-        `V<sub>R${i+1}</sub> = ${Vs[i]} V`];
-    } else if(objetivo!=='Pt'){
-      const i = +objetivo.slice(2)-1;
-      enunciado = `${base} La corriente total es <b>I<sub>t</sub> = ${It} A</b>. Calcula la potencia en R${i+1} (P<sub>R${i+1}</sub>).${svgCircuitoSerie(Rs,{E:`${E}V`,It:`${It}A`,marca:{idx:i,tipo:'P'}},uid)}`;
-      respuesta = Ps[i];
-      pasos = [`Primero el voltaje en R${i+1}: V<sub>R${i+1}</sub> = I<sub>t</sub> × R${i+1} = ${It} × ${Rs[i]} = ${Vs[i]} V.`,
-        `Luego la potencia: P<sub>R${i+1}</sub> = V<sub>R${i+1}</sub> × I<sub>t</sub> = ${Vs[i]} V × ${It} A`,
-        `P<sub>R${i+1}</sub> = ${Ps[i]} W`];
-    } else {
-      enunciado = `${base} La corriente total es <b>I<sub>t</sub> = ${It} A</b>. Calcula la potencia total (P<sub>t</sub>).${svgCircuitoSerie(Rs,{E:`${E}V`,It:`${It}A`,marca:{tipo:'Pt'}},uid)}`;
-      respuesta = Pt;
-      pasos = [`La potencia total es la suma de las potencias de cada resistor, o directamente: P<sub>t</sub> = E × I<sub>t</sub> = ${E} V × ${It} A`,
-        `P<sub>t</sub> = ${Pt} W`];
-    }
-    return { enunciado, tipo:'num', respuesta,
-      explicacion:[...pasos,
-        `TRUCO: en un circuito en serie hay un solo camino para la corriente, así que I es igual en todos los resistores; en cambio el voltaje SÍ se reparte entre ellos (V<sub>t</sub> = suma de cada V<sub>R</sub>). Ejemplo con este mismo: I<sub>t</sub> = ${It} A pasa completa por cada resistor, pero cada uno "gasta" un voltaje distinto según su tamaño (${Rs.map((r,i)=>`R${i+1}=${r}Ω→${Vs[i]}V`).join(', ')}).`] };
+    const s = t => `<sub>${t}</sub>`;
+    // textos EXACTOS como los escribe la presentación (pág. 35-40) — no se recalculan
+    const EJ = { fuente:'V', Vt:'15V', Rs:['15K','2.2K','10K','4.7K'],
+      Rsum:'15 KΩ + 2.2 KΩ + 10 KΩ + 4.7 KΩ', Rohm:['15,000 Ω','2,200 Ω','10,000 Ω','4,700 Ω'],
+      Rt:'31.9 KΩ ó 31,900 Ω', RtS:'31,900 Ω', rt:31900, It:'0.000470 A ó 0.470 mA', ItS:'0.000470A', it:0.000470,
+      VR:['7.05 V','1.034 V','4.7 V','2.209 V'], vr:[7.05,1.034,4.7,2.209],
+      PR:['0.003315 Watt','0.000486 Watt','0.002209 Watt','0.001038 Watt'], pr:[0.003315,0.000486,0.002209,0.001038] };
+    const B1 = { fuente:'V', Vt:'6V', Rs:['10','5','15'], Rsum:'10Ω + 5Ω + 15Ω', Rohm:['10Ω','5Ω','15Ω'],
+      Rt:'30 Ω', RtS:'30Ω', rt:30, It:'0.2 A', ItS:'0.2A', it:0.2, VR:['2 V','1 V','3 V'], vr:[2,1,3] };
+    const B2 = { fuente:'I', Rs:['2','3','5'], Rsum:'2Ω + 3Ω + 5Ω', Rohm:['2Ω','3Ω','5Ω'],
+      Rt:'10 Ω', RtS:'10Ω', rt:10, It:'4 A', ItS:'4A', it:4, Vt:'40 V', vt:40, VR:['8 V','12 V','20 V'], vr:[8,12,20],
+      PR:['32 W','48 W','80 W'], pr:[32,48,80] };
+    const n = c => c.Rs.map((_,i)=>i);
+    const pRt = c => ['I. Calcular la R'+s('t'), `R${s('t')} = ${n(c).map(i=>'R'+(i+1)).join(' + ')}`, `R${s('t')} = ${c.Rsum}`, `R${s('t')} = ${c.Rt}`];
+    const pIt = c => ['II. Calcular I'+s('t')+' — utilizar la Ley de Ohm', `I${s('t')} = V${s('t')} / R${s('t')}`, `I${s('t')} = ${c.Vt} / ${c.RtS}`, `I${s('t')} = ${c.It}`];
+    const pVt = c => ['II. Calcular V'+s('T')+' — utilizar la Ley de Ohm', `V${s('T')} = I${s('T')} R${s('T')} (Ley de Ohm)`, `V${s('T')} = ${c.ItS} x ${c.RtS}`, `V${s('T')} = ${c.Vt}`];
+    const pMisma = c => [`III. En circuitos en serie tenemos la misma corriente en todo el circuito: I${s('T')} = ${n(c).map(i=>'I'+s('R'+(i+1))).join(' = ')} = ${c.ItS}`];
+    const pVR = (c,i) => [`${String.fromCharCode(97+i)}. V${s('R'+(i+1))} = I${s('T')} R${i+1} (Ley de Ohm)`, `V${s('R'+(i+1))} = ${c.ItS} x ${c.Rohm[i]}`, `V${s('R'+(i+1))} = ${c.VR[i]}`];
+    const pPR = (c,i) => [`${String.fromCharCode(97+i)}. P${s('R'+(i+1))} = V${s('R'+(i+1))} I${s('T')} (Ley de Watt)`, `P${s('R'+(i+1))} = ${c.VR[i]} x ${c.ItS}`, `P${s('R'+(i+1))} = ${c.PR[i]}`];
+    const vSuma = c => +c.vr.reduce((a,b)=>a+b,0).toFixed(3);
+    const pCompV = c => ['Comprobación', `V${s('T')} = ${n(c).map(i=>'V'+s('R'+(i+1))).join(' + ')}`,
+      `V${s('T')} = ${c.VR.join(' + ')}`, `V${s('T')} = ${vSuma(c)} V${vSuma(c)!==parseFloat(c.Vt) ? ' ≈ '+c.Vt : ''}`];
+    const base = c => [...pRt(c), ...(c.fuente==='V' ? pIt(c) : pVt(c)), ...pMisma(c)];
+    const pVolt = c => ['IV. Calcular todos los voltajes del circuito', ...n(c).flatMap(i=>pVR(c,i)), ...pCompV(c)];
+    const datos = c => '<br><small>' + (c.fuente==='V' ? `V${s('t')} = ${c.Vt}` : `I = ${c.It} (amperímetro)`) + ' · ' + n(c).map(i=>`R${i+1} = ${c.Rs[i]}Ω`).join(' · ') + '</small>';
+    // cada valor: fórmula (fs, la de la presentación) + sustitución (sub) — f = otras formas válidas
+    const limpia = l => l.replace(/^[a-z]\. /,'').replace(/ \(Ley de (Ohm|Watt)\)/,'');
+    const cRt = c => ({ et:'R'+s('total'), u:'Ω', r:c.rt, fs:pRt(c)[1], sub:pRt(c)[2] });
+    const cIt = c => ({ et:'I'+s('total'), u:'A', r:c.it, fs:pIt(c)[1], sub:pIt(c)[2], f:['I = E / R'] });
+    const cVt = c => ({ et:'V'+s('total'), u:'V', r:c.vt, fs:limpia(pVt(c)[1]), sub:pVt(c)[2], f:['V = R I'] });
+    const RI = c => n(c).map(i => ({ et:'V'+s('R'+(i+1)), u:'V', r:c.vr[i], fs:limpia(pVR(c,i)[0]), sub:pVR(c,i)[1], f:[`V = R${i+1} I`, 'V = I R', 'V = R I'] }));
+    const PI = c => n(c).map(i => ({ et:'P'+s('R'+(i+1)), u:'W', r:c.pr[i], fs:limpia(pPR(c,i)[0]), sub:pPR(c,i)[1],
+      f:[`P = I VR${i+1}`, `P = I² R${i+1}`, `P = R${i+1} I²`, `P = VR${i+1}² / R${i+1}`, 'P = V I', 'P = I V'] }));
+    const banco = [
+      { enun:`<b>Ejemplo:</b> Calcule R${s('total')}, I${s('total')} y V${s('R1')},V${s('R2')},V${s('R3')},V${s('R4')}${datos(EJ)}`,
+        svg:svgCircuitoSerie(EJ.Rs, {E:EJ.Vt}, uid),
+        campos:[cRt(EJ), cIt(EJ), ...RI(EJ), ...PI(EJ), {et:'P'+s('T'), u:'W', r:0.007048, fs:`P${s('T')} = P${s('R1')} + P${s('R2')} + P${s('R3')} + P${s('R4')}`,
+          sub:`P${s('T')} = ${EJ.PR.map(p=>p.replace(' Watt','')).join(' + ')}`, f:['P = V I','P = I V']}],
+        pasos:[...base(EJ), ...pVolt(EJ), 'V. Calcular las potencias', ...n(EJ).flatMap(i=>pPR(EJ,i)),
+          'Método 1', `P${s('T')} = P${s('R1')} + P${s('R2')} + P${s('R3')} + P${s('R4')}`,
+          `P${s('T')} = ${EJ.PR.map(p=>p.replace(' Watt','')).join(' + ')}`, `P${s('T')} = 0.007048 Watt`,
+          'Método II', `P${s('T')} = V${s('T')} I${s('T')} (Ley de Watt)`, `P${s('T')} = 15 V x ${EJ.ItS}`, `P${s('T')} = 0.00705 Watt`] },
+      { enun:`<b>Bono IV #1:</b> Calcule R${s('total')}, I${s('total')} y V${s('R1')},V${s('R2')},V${s('R3')}${datos(B1)}`,
+        svg:svgCircuitoSerie(B1.Rs, {E:B1.Vt}, uid),
+        campos:[cRt(B1), cIt(B1), ...RI(B1)],
+        pasos:[...base(B1), ...pVolt(B1)] },
+      { enun:`<b>Bono IV #2:</b> Calcule R${s('total')}, V${s('total')} y V${s('R1')},V${s('R2')},V${s('R3')}${datos(B2)}`,
+        svg:svgCircuitoSerie(B2.Rs, {E:null, It:B2.ItS}, uid),
+        campos:[cRt(B2), cVt(B2), ...RI(B2)],
+        pasos:[...base(B2), ...pVolt(B2)] },
+      { enun:`<b>Bono IV #3:</b> Calcule R<br><small>V = 50V · I = 2A · resistencias de 5Ω, 3Ω, 4Ω, 7Ω y R</small>`,
+        svg:svgCircuitoSerie(['5','3','4','7','?'], {E:'50V', It:'2A', rIncognita:4, nombres:['R1','R2','R3','R4','R']}, uid),
+        campos:[{et:'R'+s('t'), u:'Ω', r:25, fs:`R${s('t')} = V${s('t')} / I${s('t')}`, sub:`R${s('t')} = 50V / 2A`},
+          {et:'R', u:'Ω', r:6, fs:`R = R${s('t')} − (R1 + R2 + R3 + R4)`, sub:'R = 25Ω − (5Ω + 3Ω + 4Ω + 7Ω)',
+          f:['R = Rt - R1 - R2 - R3 - R4', 'R = V/I - (R1 + R2 + R3 + R4)', 'R = V/I - R1 - R2 - R3 - R4']}],
+        pasos:[`R${s('t')} = V${s('t')} / I${s('t')} (Ley de Ohm)`, `R${s('t')} = 50V / 2A`, `R${s('t')} = 25 Ω`,
+          `R${s('t')} = R1 + R2 + R3 + R4 + R`, '25Ω = 5Ω + 3Ω + 4Ω + 7Ω + R', '25Ω = 19Ω + R', 'R = 25Ω − 19Ω', 'R = 6 Ω'] },
+      { enun:`<b>Bono V (Ley de Watt, circuitos en serie):</b> Calcule el valor de P${s('R1')}, P${s('R2')}, P${s('R3')}${datos(B2)}`,
+        svg:svgCircuitoSerie(B2.Rs, {E:null, It:B2.ItS}, uid),
+        campos:[cRt(B2), cVt(B2), ...RI(B2), ...PI(B2)],
+        pasos:[...base(B2), ...pVolt(B2), 'V. Calcular las potencias', ...n(B2).flatMap(i=>pPR(B2,i))] }
+    ];
+    return ejCirc(pick(banco), `TRUCO: en serie la corriente es la MISMA en todo el circuito (I${s('T')} = I${s('R1')} = I${s('R2')} = …) y los voltajes se suman (V${s('T')} = V${s('R1')} + V${s('R2')} + …). Orden de la presentación: I. R${s('t')} → II. I${s('t')} = V${s('t')} / R${s('t')} → III. misma corriente → IV. V${s('R')} = I${s('T')} R → P${s('R')} = V${s('R')} I${s('T')}. Ejemplo con este mismo: sigue ese orden y cada valor sale del anterior.`);
   }
 },
 {
-  id:'circ-paralelo', nombre:'Circuitos en paralelo', clase:'circ', secciones:['2.2'],
+  id:'circ-paralelo', nombre:'Circuitos en paralelo (Ejemplo, Bono VI, Práctica y Bono VII)', clase:'circ', secciones:['2.2'],
   gen(nv){
-    const red2 = x => Math.round(x*100)/100;
-    const red4 = x => Math.round(x*10000)/10000;
-    const rAlto = porNivel(nv, 10, 40, 100);
-    const n = porNivel(nv, 3, 3, 4);
-    const Rs = Array.from({length:n}, () => R(2, rAlto));
-    const invSum = Rs.reduce((a,r)=>a + 1/r, 0);
-    const Rt = red2(1/invSum);
-    const eBanco = porNivel(nv, [6,9,12,24], [12,18,24,36,48], [24,36,48,60,90]);
-    const E = pick(eBanco);
-    const It = red2(E/Rt);
-    const Is = Rs.map(Ri => red2(E/Ri));
-    const objetivo = pick(['Rt','It', ...Rs.map((_,i)=>'IR'+(i+1))]);
     const uid = Math.random().toString(36).slice(2,8);
-    const listaR = Rs.map((r,i)=>`R${i+1} = ${r} Ω`).join(', ');
-    const terminos = Rs.map(r=>`1/${r}`).join(' + ');
-    const base = `Un circuito en paralelo tiene una fuente de <b>V = ${E} V</b> y las resistencias <b>${listaR}</b>.`;
-    let enunciado, respuesta, pasos;
-    if(objetivo==='Rt'){
-      enunciado = `${base} Calcula la resistencia total (R<sub>t</sub>).${svgCircuitoParalelo(Rs,{V:`${E}V`,It:null,marca:{tipo:'Rt'}},uid)}`;
-      respuesta = Rt;
-      pasos = [`En paralelo: R<sub>t</sub> = 1 / (${terminos})`,
-        `R<sub>t</sub> = 1 / (${Rs.map(r=>red4(1/r)).join(' + ')})`,
-        `R<sub>t</sub> = 1 / ${red4(invSum)}`,
-        `R<sub>t</sub> = ${Rt} Ω`];
-    } else if(objetivo==='It'){
-      enunciado = `${base} Calcula la corriente total (I<sub>t</sub>).${svgCircuitoParalelo(Rs,{V:`${E}V`,It:'?',marca:null},uid)}`;
-      respuesta = It;
-      pasos = [`Primero R<sub>t</sub> = 1 / (${terminos}) = ${Rt} Ω.`,
-        `Por la Ley de Ohm: I<sub>t</sub> = V / R<sub>t</sub> = ${E} V / ${Rt} Ω`,
-        `I<sub>t</sub> = ${It} A`];
-    } else {
-      const i = +objetivo.slice(2)-1;
-      enunciado = `${base} Calcula la corriente en R${i+1} (I<sub>R${i+1}</sub>).${svgCircuitoParalelo(Rs,{V:`${E}V`,It:null,marca:{idx:i}},uid)}`;
-      respuesta = Is[i];
-      pasos = [`En paralelo, el voltaje es el mismo en cada resistor: V<sub>R${i+1}</sub> = V = ${E} V.`,
-        `Por la Ley de Ohm: I<sub>R${i+1}</sub> = V / R${i+1} = ${E} V / ${Rs[i]} Ω`,
-        `I<sub>R${i+1}</sub> = ${Is[i]} A`];
-    }
-    return { enunciado, tipo:'num', respuesta,
-      explicacion:[...pasos,
-        `TRUCO: en paralelo todos los resistores comparten el mismo voltaje, pero la corriente SÍ se reparte — el resistor más pequeño deja pasar más corriente. Ejemplo con este mismo: con ${listaR} y V=${E}V, ${Rs.map((r,i)=>`R${i+1}=${r}Ω→${Is[i]}A`).join(', ')} (el resistor más chico tiene la corriente más grande).`] };
+    const s = t => `<sub>${t}</sub>`;
+    // textos EXACTOS como los escribe la presentación (pág. 45-51) — no se recalculan
+    const EJ = { fuente:'V', Vt:'50 V', Rs:['10','13','33','100'], inv:['0.1','0.077','0.0303','0.01'], suma:'0.2173',
+      Rt:'4.60 Ω', rt:4.60, It:'10.88 A', it:10.88, IR:['5 A','3.85 A','1.52 A','0.5 A'], ir:[5,3.85,1.52,0.5] };
+    const B1 = { fuente:'V', Vt:'6V', Rs:['10','5','15'], inv:['0.1','0.2','0.0667'], suma:'0.3667',
+      Rt:'2.73 Ω', rt:2.73, It:'2.20 A', it:2.2, IR:['0.6 A','1.2 A','0.4 A'], ir:[0.6,1.2,0.4] };
+    const B2 = { fuente:'I', It:'10 A', Rs:['680','330','220'], inv:['0.001471','0.003030','0.004545'], suma:'0.009046',
+      Rt:'110.55 Ω', rt:110.55, Vt:'1105.5 V', vt:1105.5, IR:['1.63 A','3.35 A','5.03 A'], ir:[1.63,3.35,5.03] };
+    const W = { fuente:'V', Vt:'120 V', Rs:['15','20','10'], inv:['0.0667','0.05','0.1'], suma:'0.2167',
+      Rt:'4.61 Ω', rt:4.61, V2:'14400', PR:['960 Watt','720 Watt','1440 Watt'], pr:[960,720,1440], PT:'3120 Watt', pt:3120, PT2:'3123 Watt' };
+    const B7 = { fuente:'I', It:'200mA', ItA:'0.200 A', nombres:['R5','R6','R7'], Rs:['68','33','22'], inv:['0.0147','0.0303','0.0455'], suma:'0.0905',
+      Rt:'11.05 Ω', rt:11.05, Vt:'2.21 V', vt:2.21, V2:'4.8841', PR:['0.0718 W','0.1480 W','0.2220 W'], pr:[0.0718,0.148,0.222], PT:'0.4418 W', pt:0.4418, PT2:'0.4420 W' };
+    const n = c => c.Rs.map((_,i)=>i);
+    const nm = (c,i) => (c.nombres||[])[i] || 'R'+(i+1);
+    const pRt = c => ['a. Calcular R'+s('total'), `R${s('total')} = 1/ (${n(c).map(i=>'1/'+nm(c,i)).join(' + ')})`,
+      `R${s('total')} = 1/ (${c.Rs.map(r=>'1/'+r+'Ω').join(' + ')})`, `R${s('total')} = 1/ ( ${c.inv.join(' + ')} )`,
+      `R${s('total')} = 1/ ( ${c.suma} )`, `R${s('total')} = ${c.Rt}`];
+    const pMismoV = c => [`b. En circuitos en paralelo tenemos el mismo voltaje en todo el circuito: V${s('T')} = ${n(c).map(i=>'V'+s(nm(c,i))).join(' = ')} = ${c.Vt}`];
+    const pIt = c => ['c. Calcular la corriente', `I${s('T')} = V${s('T')} / R${s('T')} (Ley de Ohm)`, `I${s('T')} = ${c.Vt} / ${c.Rt}`, `I${s('T')} = ${c.It}`];
+    const pVt = c => ['b. Calcular el voltaje total', `V${s('T')} = I${s('T')} R${s('T')} (Ley de Ohm)`, `V${s('T')} = ${c.ItA||c.It} x ${c.Rt}`, `V${s('T')} = ${c.Vt}`,
+      `En circuitos en paralelo tenemos el mismo voltaje en todo el circuito: V${s('T')} = ${n(c).map(i=>'V'+s(nm(c,i))).join(' = ')} = ${c.Vt}`];
+    const pIR = (c,i) => [`${String.fromCharCode(97+i)}. I${s(nm(c,i))} = V${s('T')} / ${nm(c,i)} (Ley de Ohm)`, `I${s(nm(c,i))} = ${c.Vt} / ${c.Rs[i]} Ω`, `I${s(nm(c,i))} = ${c.IR[i]}`];
+    const pPR = (c,i) => [`${String.fromCharCode(97+i)}. P${s(nm(c,i))} = V${s('T')}² / ${nm(c,i)} (Ley de Watt)`, `P${s(nm(c,i))} = (${c.Vt})² / ${c.Rs[i]} Ω`,
+      `P${s(nm(c,i))} = ${c.V2} / ${c.Rs[i]}`, `P${s(nm(c,i))} = ${c.PR[i]}`];
+    const iSuma = c => +c.ir.reduce((a,b)=>a+b,0).toFixed(2);
+    const pCompI = c => ['Comprobación', `I${s('total')} = ${n(c).map(i=>'I'+s(nm(c,i))).join(' + ')}`,
+      `I${s('total')} = ${c.IR.join(' + ')}`, `I${s('total')} = ${iSuma(c)} A${iSuma(c)!==parseFloat(c.It) ? ' ≈ '+c.It : ''}`];
+    const pCorr = c => ['Calcular las corrientes', ...n(c).flatMap(i=>pIR(c,i)), ...pCompI(c)];
+    const pPot = c => ['Calcular las potencias', ...n(c).flatMap(i=>pPR(c,i)),
+      'Método 1', `P${s('T')} = ${n(c).map(i=>'P'+s(nm(c,i))).join(' + ')}`,
+      `P${s('T')} = ${c.PR.map(p=>p.replace(/ (Watt|W)$/,'')).join(' + ')}`, `P${s('T')} = ${c.PT}`,
+      'Método II', `P${s('T')} = V${s('T')}² / R${s('T')} (Ley de Watt)`,
+      `P${s('T')} = (${c.Vt})² / ${c.Rt}`, `P${s('T')} = ${c.V2} / ${parseFloat(c.Rt)}`, `P${s('T')} = ${c.PT2}`];
+    const datos = c => '<br><small>' + (c.fuente==='V' ? `V = ${c.Vt}` : `I${s('T')} = ${c.It}`) + ' · ' + n(c).map(i=>`${nm(c,i)} = ${c.Rs[i]}Ω`).join(' · ') + '</small>';
+    const svg = c => svgCircuitoParalelo(c.Rs, {V: c.fuente==='V' ? c.Vt.replace(' ','') : null, It: c.fuente==='I' ? c.It.replace(' ','') : null, nombres:c.nombres}, uid);
+    // cada valor: fórmula (fs, la de la presentación) + sustitución (sub) — f = otras formas válidas
+    const limpia = l => l.replace(/^[a-z]\. /,'').replace(/ \(Ley de (Ohm|Watt)\)/,'');
+    const cRt = c => ({ et:'R'+s('total'), u:'Ω', r:c.rt, fs:pRt(c)[1], sub:pRt(c)[2] });
+    const cIt = c => ({ et:'I'+s('total'), u:'A', r:c.it, fs:limpia(pIt(c)[1]), sub:pIt(c)[2] });
+    const cVt = c => ({ et:'V'+s('total'), u:'V', r:c.vt, fs:limpia(pVt(c)[1]), sub:pVt(c)[2], f:['V = R I'] });
+    const IR = c => n(c).map(i => ({ et:'I'+s(nm(c,i)), u:'A', r:c.ir[i], fs:limpia(pIR(c,i)[0]), sub:pIR(c,i)[1], f:[`I = V${nm(c,i)} / ${nm(c,i)}`] }));
+    const PR = c => n(c).map(i => ({ et:'P'+s(nm(c,i)), u:'W', r:c.pr[i], fs:limpia(pPR(c,i)[0]), sub:pPR(c,i)[1], f:[`P = V${nm(c,i)}² / ${nm(c,i)}`] }));
+    const cPt = c => ({ et:'P'+s('total'), u:'W', r:c.pt, fs:`P${s('T')} = ${n(c).map(i=>'P'+s(nm(c,i))).join(' + ')}`,
+      sub:`P${s('T')} = ${c.PR.map(p=>p.replace(/ (Watt|W)$/,'')).join(' + ')}`, f:['P = V² / R'] });
+    const banco = [
+      { enun:`<b>Ejemplo:</b> Calcule los valores para el siguiente circuito paralelo: 1. R${s('total')} 2. I${s('total')} 3. I${s('R1')}, I${s('R2')}, I${s('R3')} y I${s('R4')}.${datos(EJ)}`,
+        svg:svg(EJ), campos:[cRt(EJ), cIt(EJ), ...IR(EJ)],
+        pasos:[...pRt(EJ), ...pMismoV(EJ), ...pIt(EJ), ...pCorr(EJ)] },
+      { enun:`<b>Bono VI #1:</b> Calcule R${s('total')}, I${s('total')} y I${s('R1')},I${s('R2')},I${s('R3')}${datos(B1)}`,
+        svg:svg(B1), campos:[cRt(B1), cIt(B1), ...IR(B1)],
+        pasos:[...pRt(B1), ...pMismoV(B1), ...pIt(B1), ...pCorr(B1)] },
+      { enun:`<b>Bono VI #2:</b> Calcule R${s('total')},I${s('R1')},I${s('R2')},I${s('R3')} y V${s('total')}${datos(B2)}`,
+        svg:svg(B2), campos:[cRt(B2), cVt(B2), ...IR(B2)],
+        pasos:[...pRt(B2), ...pVt(B2), ...pCorr(B2)] },
+      { enun:`<b>Práctica (Ley de Watt, circuitos en paralelo):</b> P${s('total')} = P${s('R1')} + P${s('R2')} + P${s('R3')}${datos(W)}`,
+        svg:svg(W), campos:[cRt(W), ...PR(W), cPt(W)],
+        pasos:[...pRt(W), ...pMismoV(W), ...pPot(W)] },
+      { enun:`<b>Bono VII:</b> Consiga la potencia total y la individual de cada resistor en los siguientes circuitos${datos(B7)}`,
+        svg:svg(B7), campos:[cRt(B7), cVt(B7), ...PR(B7), cPt(B7)],
+        pasos:[...pRt(B7), ...pVt(B7), ...pPot(B7)] }
+    ];
+    return ejCirc(pick(banco), `TRUCO: en paralelo el VOLTAJE es el mismo en todo el circuito (V${s('T')} = V${s('R1')} = V${s('R2')} = …) y las corrientes se suman (I${s('total')} = I${s('R1')} + I${s('R2')} + …). R${s('total')} siempre es 1/ (1/R1 + 1/R2 + …), y sale MÁS PEQUEÑA que el resistor más chico. Ejemplo con este mismo: compara tu R${s('total')} con el resistor más chico del circuito.`);
   }
-}
+},
 ];
 // todo módulo sin "clase" explícita es de matemáticas — así los 37 módulos de arriba no
 // necesitan tocarse uno por uno al agregar otras materias
@@ -3401,7 +3425,7 @@ function verificar(ej, ent){
     case 'num': {
       const v = numLimpio(ent);
       if(!isFinite(v) || ent === '') return { ok:false, vacio:true };
-      return { ok: Math.abs(v - ej.respuesta) < 0.01 };   // tolerancia: promedio/círculo redondean a 2 decimales
+      return { ok: Math.abs(v - ej.respuesta) < (ej.tol ?? 0.01) };   // tolerancia: promedio/círculo redondean a 2 decimales; circuitos traen su propia tol (valores de 0.000470 A)
     }
     case 'opciones': return { ok: ent === ej.respuesta };
     case 'orden': return { ok: ent.length===ej.respuesta.length && ent.every((v,i)=>v===ej.respuesta[i]) };
@@ -3427,6 +3451,27 @@ function verificar(ej, ent){
         msg:'El valor es correcto, pero en un número mixto el numerador tiene que ser menor que el denominador.' };
       if(mcd(n,d) !== 1) return { ok:false, incompleto:true, msg:'Falta simplificar la parte fraccionaria.' };
       return { ok:true };
+    }
+    case 'multi': {
+      // un ejercicio de la presentación que pide varios valores a la vez (ej. "Calcule Rtotal, Itotal y VR1,VR2,VR3")
+      // circuitos: la fórmula (ent.f) es OPCIONAL — si la dejó en blanco no se revisa; si la
+      // escribió, se le dice si está bien o mal escrita (y una mal escrita cuenta como error)
+      const fs = ent.f || [];
+      if(ent.some(v => String(v).trim() === '')) return { ok:false, vacio:true };
+      const mal = [], fBien = [], fMal = [];
+      ej.campos.forEach((c,i) => {
+        if(c.ops){ if(ent[i] !== ej.respuesta[i]) mal.push(c.et); return; }
+        const escrita = c.fs && String(fs[i] || '').trim() !== '';
+        const malF = escrita && !formulaOk(fs[i], c);
+        if(escrita) (malF ? fMal : fBien).push(c.et);
+        const malR = !(Math.abs(numLimpio(ent[i]) - ej.respuesta[i]) < (c.tol ?? 0.01));
+        if(malF || malR) mal.push(`${c.et} (${[malF && 'fórmula', malR && 'resultado'].filter(Boolean).join(' y ')})`);
+      });
+      const notaF = [fBien.length && `✓ Fórmulas bien escritas: ${fBien.join(', ')}.`,
+                     fMal.length && `✗ Fórmulas mal escritas: ${fMal.join(', ')}.`].filter(Boolean).join('<br>');
+      if(!mal.length) return notaF ? { ok:true, msg:notaF } : { ok:true };
+      return { ok:false, incompleto: mal.length < ej.campos.length,
+        msg:`Tienes ${ej.campos.length-mal.length} de ${ej.campos.length} bien. Revisa: ${mal.join(', ')}.${notaF ? '<br>'+notaF : ''}` };
     }
     case 'angulo2': {
       const a = numLimpio(ent.a), b = numLimpio(ent.b);
@@ -3465,6 +3510,7 @@ function respuestaComoEntrada(ej){
     case 'frac':  return { n:String(ej.respuesta.n), d:String(ej.respuesta.d) };
     case 'mixto': return { e:String(ej.respuesta.e), n:String(ej.respuesta.n), d:String(ej.respuesta.d) };
     case 'angulo2': return { a:String(ej.respuesta.a), b:String(ej.respuesta.b) };
+    case 'multi': return Object.assign(ej.respuesta.map(String), { f: ej.campos.map(c => c.fs || '') });
     case 'basexp': return { b:String(ej.respuesta.b), e:String(ej.respuesta.e), v:String(ej.respuesta.v) };
     case 'coefvar': return { coef:String(ej.respuesta.coef), variable:ej.respuesta.variable };
     case 'texto': return fmtFactoresPlano(ej.respuesta);
@@ -3480,6 +3526,9 @@ function fmtRespuesta(ej){
     case 'angulo2': return ej.etiquetas
       ? `${ej.etiquetas[0]} = ${ej.respuesta.a}, ${ej.etiquetas[1]} = ${ej.respuesta.b}`
       : `∠2 = ${ej.respuesta.a}°, ∠3 = ${ej.respuesta.b}°`;
+    case 'multi': return ej.campos.some(c => c.fs)
+      ? ej.campos.map((c,i) => c.fs ? `<br>${c.et}: ${c.fs} → ${c.sub} → ${ej.respuesta[i]}${c.u ? ' '+c.u : ''}` : `<br>${c.et}: ${ej.respuesta[i]}`).join('')
+      : ej.campos.map((c,i) => `${c.et} = ${ej.respuesta[i]}${c.u ? ' '+c.u : ''}`).join(', ');
     case 'basexp': return `Base = ${ej.respuesta.b}, Exponente = ${ej.respuesta.e}, Valor = ${ej.respuesta.v}`;
     case 'coefvar': return `Coeficiente = ${ej.respuesta.coef}, Variable = ${ej.respuesta.variable}`;
     case 'texto': return fmtFactores(ej.respuesta);
@@ -4435,7 +4484,7 @@ function _pintarEjemploTema(m){
       <div class="enunciado">${ej.enunciado}</div>
       <div class="nota" style="margin-top:10px">Respuesta: <b>${fmtRespuesta(ej)}</b></div>
     </div>
-    <div class="expl"><h3>Por qué</h3>${explPasos(ej.explicacion)}</div>
+    <div class="expl"><h3>Por qué</h3>${explPasos(ej.explicacion, ej.sinNumeros)}</div>
     <button class="btn amar" onclick="_seguirTrasEjemplo()">Continuar</button>`;
 }
 function _seguirTrasEjemplo(){ pintarEjercicio(); guardarSesion(); }
@@ -4533,6 +4582,16 @@ function entradaHTML(ej){
           <input class="campo" id="inA3" inputmode="numeric" autocomplete="off" style="${ej.etiquetas?'width:110px':''}" placeholder="${(ej.etiquetas && ej.etiquetas[1]) || '∠3 (°)'}">
         </div>
         <button class="btn amar" style="margin-top:12px" onclick="responder()">Comprobar</button>`;
+    case 'multi': return `
+        <div class="multiIn">${ej.campos.map((c,i) => c.fs
+          ? `<div class="multiBloque"><div class="multiEt">${c.et}${c.u ? ` <small>(${c.u})</small>` : ''}</div>
+              <input class="campo" id="inF${i}" autocomplete="off" autocapitalize="off" placeholder="Fórmula (opcional)">
+              <input class="campo" id="inS${i}" autocomplete="off" autocapitalize="off" placeholder="Sustitución (opcional)">
+              <input class="campo" id="inM${i}" inputmode="decimal" autocomplete="off" placeholder="Resultado"></div>`
+          : `<label class="multiFila"><span>${c.et}${c.u ? ` <small>(${c.u})</small>` : ''}</span>${c.ops
+          ? `<select class="campo" id="inM${i}"><option value="">— elige —</option>${c.ops.map(o => `<option>${escHtml(o)}</option>`).join('')}</select>`
+          : `<input class="campo" id="inM${i}" inputmode="decimal" autocomplete="off" placeholder="?">`}</label>`).join('')}</div>
+        <button class="btn amar" style="margin-top:12px" onclick="responder()">Comprobar</button>`;
     case 'basexp': return `
         <div class="mixIn" style="flex-wrap:wrap">
           <div class="numRow" style="margin:0">
@@ -4582,7 +4641,7 @@ function pintarEjercicio(){
         <button class="${repetirFallo?'on':''}" onclick="toggleRepetir()"><b>${repetirFallo?'Sí':'No'}</b><span>repetir</span></button>
       </div>
     </div>`;
-  const primero = $('inNum') || $('inTexto') || $('inE') || $('inN') || $('inA2') || $('inBase') || $('inCoef');
+  const primero = $('inNum') || $('inTexto') || $('inE') || $('inN') || $('inA2') || $('inBase') || $('inCoef') || $('inM0');
   if(primero){
     if(window.innerWidth > 640) primero.focus();  // en móvil no abrimos el teclado solo: tapa el enunciado
     ['inNum','inTexto','inE','inN','inD','inA2','inA3'].forEach(id=>{
@@ -4640,7 +4699,7 @@ function _pintarSiguienteRepasoRonda(){
       <div id="zonaFb"></div>
       <div class="row" id="accionesPre"></div>
     </div>`;
-  const primero = $('inNum') || $('inTexto') || $('inE') || $('inN') || $('inA2') || $('inBase') || $('inCoef');
+  const primero = $('inNum') || $('inTexto') || $('inE') || $('inN') || $('inA2') || $('inBase') || $('inCoef') || $('inM0');
   if(primero){
     if(window.innerWidth > 640) primero.focus();
     ['inNum','inTexto','inE','inN','inD','inA2','inA3'].forEach(id=>{
@@ -4679,6 +4738,7 @@ function leerEntrada(ej){
     case 'mixto': return { e:$('inE').value, n:$('inN').value, d:$('inD').value };
     case 'orden': return ordenSel.slice();
     case 'angulo2': return { a:$('inA2').value, b:$('inA3').value };
+    case 'multi': return Object.assign(ej.campos.map((_,i) => $('inM'+i).value), { f: ej.campos.map((_,i) => ($('inF'+i) || {}).value || '') });
     case 'basexp': return { b:$('inBase').value, e:$('inExp').value, v:$('inVal').value };
     case 'coefvar': return { coef:$('inCoef').value, variable:$('inVariable').value };
   }
@@ -4741,7 +4801,8 @@ function mostrarFb(res, soloAviso){
   zona.innerHTML = `
     <div class="fb ${clase_}">${titulo}
       ${res.msg ? `<small>${res.msg}</small>` : ''}
-      ${!res.ok ? `<small>La respuesta es <b>${fmtRespuesta(ejActual)}</b>.</small>` : ''}
+      ${!res.ok ? `<small>La respuesta es <b>${fmtRespuesta(ejActual)}</b>.</small>`
+        : (ejActual.campos && ejActual.campos.some(c => c.fs)) ? `<small>Compara tu sustitución: <b>${fmtRespuesta(ejActual)}</b></small>` : ''}
       ${vioExpl ? `<small>Este no cuenta para las estadísticas (viste la explicación antes).</small>` : ''}
     </div>
     ${explHTML()}
@@ -4755,7 +4816,7 @@ function mostrarFb(res, soloAviso){
 
 // Una línea que empieza con "TRUCO:" no es un paso más: sale de la lista numerada y se
 // pinta como recuadro aparte al final (atajo para resolverlo más rápido la próxima vez).
-function explPasos(lista){
+function explPasos(lista, sinNumeros){
   const pasos = [], trucos = [];
   lista.forEach(l => {
     if(!/^TRUCO:/.test(l)) return pasos.push(l);
@@ -4764,12 +4825,17 @@ function explPasos(lista){
     trucos.push((t.charAt(0).toUpperCase() + t.slice(1))
       .replace(/ ((?:Otro )?Ejemplos?\b[^:]{0,40}:)/g, '<br>$1'));
   });
-  return `<ol>${pasos.map(l=>`<li>${l}</li>`).join('')}</ol>` +
+  // circuitos: como en la presentación, solo se marca dónde EMPIEZA cada paso (I., II., a., b.,
+  // Método…); las líneas de fórmula van debajo, sin número
+  const cuerpo = sinNumeros
+    ? `<div class="pasosLibres">${pasos.map(l => `<div class="${/^(→|[IVX]+\. |[a-z]\. |Método|Fórmula|Calcular|Comprobación)/.test(l) ? 'pasoTit' : 'pasoLin'}">${l}</div>`).join('')}</div>`
+    : `<ol>${pasos.map(l=>`<li>${l}</li>`).join('')}</ol>`;
+  return cuerpo +
     trucos.map(t=>`<div class="truco"><b>TRUCO PARA QUE SEA MÁS FÁCIL</b>${t}</div>`).join('');
 }
 
 const explHTML = () => `
-  <div class="expl"><h3>Por qué</h3>${explPasos(ejActual.explicacion)}</div>`;
+  <div class="expl"><h3>Por qué</h3>${explPasos(ejActual.explicacion, ejActual.sinNumeros)}</div>`;
 
 function saltarEjercicio(){
   if(respondido) return;
@@ -4832,7 +4898,7 @@ function _pintarSiguienteError(){
         <button class="btn sec chico" onclick="_quitarErrorActual()">Quitar de la lista</button>
       </div>
     </div>`;
-  const primero = $('inNum') || $('inTexto') || $('inE') || $('inN') || $('inA2') || $('inBase') || $('inCoef');
+  const primero = $('inNum') || $('inTexto') || $('inE') || $('inN') || $('inA2') || $('inBase') || $('inCoef') || $('inM0');
   if(primero){
     if(window.innerWidth > 640) primero.focus();
     ['inNum','inTexto','inE','inN','inD','inA2','inA3'].forEach(id=>{
@@ -4934,7 +5000,7 @@ function finalizarExamen(){
           ${i+1}. ${p.ej.enunciado}
           <small>${!p.completado ? 'Sin responder (se acabó el tiempo)' : p.ok?'Correcto':'Incorrecto — la respuesta es '+fmtRespuesta(p.ej)}</small>
         </div>
-        <div class="expl" style="margin-bottom:14px">${explPasos(p.ej.explicacion)}</div>`).join('')}
+        <div class="expl" style="margin-bottom:14px">${explPasos(p.ej.explicacion, p.ej.sinNumeros)}</div>`).join('')}
       <button class="btn amar" onclick="examen=null; ir('inicio')">Volver a Inicio</button>
     </div>`;
   examen = null;
