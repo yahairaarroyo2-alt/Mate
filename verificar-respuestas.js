@@ -216,6 +216,151 @@ C['geometria-frac']=(ej,t)=>{ const v=mv(t); const two=Fr(2), half=Fr(1,2); let 
   else return null; return ok5(r,ej); };
 C['semejantes']=(ej,t,h)=>{ if(ej.tipo==='angulo2'){ const L=[...h.matchAll(/<text[^>]*>([^<]*)<\/text>/g)].map(m=>parseInt(m[1])); const [a,b,c,A]=L; const x=A*b/a, y=A*c/a; return {mine:{a:x,b:y}, ok:x===ej.respuesta.a&&y===ej.respuesta.b}; }
   const v=mv(t); let r; if(/fotografía/.test(t)) r=div(mul(v[0],v[2]),v[1]); else if(/En la pequeña/.test(t)) r=div(mul(v[3],v[1]),v[0]); else return null; return ok5(r,ej); };
+// Repaso (5.5) y Autoevaluación (5.6) del cap. 5: banco fijo del libro. La respuesta se recalcula
+// con el evaluador propio a partir de los DATOS DEL E-BOOK (pág. 293-295), no de lo que calcula la app.
+// "L=R" = proporción cierta/falsa por productos cruzados (en la misma unidad).
+const LIBRO5={
+ 'repaso-cap5':{1:'-10/(-5/3)',2:'(-5-3)/(4/3)',3:'(1/5+1/3)*15',4:'(-7/10-1/2)*5',5:'(10/3)/(2/3+1)',6:'(5/6)/(2/3-1/2)',7:'(3-1/5)/(2-1/4)',
+   8:'(7/3-3/2)/(5/4-1/2)',9:'(5/2+3/2)/3',10:'(17/3-16/3)*3',11:['(4+1/2)*(1+5/9)=2*(3+1/2)','(2+1/2)*36=3*25'],12:['5*104=13*40','10*4=20*16'],
+   13:['13*30/6','2*5/4','15*(6+2/5)/12'],14:['5/7*1785','3/2*500','80/100*725','40/100*(-135)','1/7*49/50','2/3*35/6','4/9*(-9/16)'],
+   15:'2/3*63',16:'(2+2/5)/120',17:'120/(20/100)',18:['10/100*1/3','1/3-10/100*1/3'],19:'14/(4/5)',20:'22/(6+22)',21:'32/12',22:'(1+1/2)*200000/100',
+   23:['240/(18+4/5)','240/(18+4/5)*(1+1/4)'],24:'40*200/35',25:'380*4/(8+1/2)',
+   26:['((2+1/4)+5/8+(1+1/2))/3','((6+1/10)+(2+1/2)+(5+3/4)+(3+2/5))/4','((4+5/12)+(3+3/8)+(10+1/3))/3'],
+   29:'1/8*7/9',30:'24/(3/4)',31:'4*1/10',32:'(115-2*(40+1/2))/2',33:['(10/3)^3','(15/2)^3'],34:'(3+1/3)*4/5*(2+2/5)',
+   35:['2*((14+1/4)*(18+2/5)+(18+2/5)*(5+1/2)+(5+1/2)*(14+1/4))','(14+1/4)*(18+2/5)*(5+1/2)'],36:['2*9/3','4*9/3']},
+ 'autoeval-cap5':{1:'(5/4)/3',2:'8/3-2/5',3:'1/2-1/4',4:'(11/2-1/2)/(6/5)',5:'23*105/15',6:'12*21/35',7:'3*12=(1+1/2)*12*2',8:'8/7+1',9:'32*150/40',
+   10:'(40+2/3)+(45+1/3)+(58+1/2)+(23+1/2)',11:'180/(90/100)',14:'(16+1/2)*(12+1/3)',15:'(4+4/5)*(3+2/5)*(6+3/5)',16:'2*(19/2*19/2)+4*(19/2*17/5)',17:'4*10/5'}};
+const qStr=s=>{ s=String(s).replace(/−/g,'-').trim(); let m;
+  if(m=/^(-?)(\d+) (\d+)\/(\d+)$/.exec(s)) return Fr((m[1]?-1:1)*(+m[2]*+m[4]+ +m[3]),+m[4]);
+  if(m=/^(-?\d+)\/(\d+)$/.exec(s)) return Fr(+m[1],+m[2]); return Fr(+s,1); };
+const libro5=id=>(ej,t)=>{ const m=/Ejercicio (\d+)/.exec(t); if(!m) return null; const e=LIBRO5[id][m[1]]; if(e==null) return {mine:'no está en el libro',ok:false};
+  const mine=(Array.isArray(e)?e:[e]).map(x=> x.includes('=') ? (eq(parse(x.split('=')[0]),parse(x.split('=')[1]))?'Cierta':'Falsa') : parse(x));
+  const app= ej.tipo==='multi' ? ej.respuesta.map((r,i)=>ej.campos[i].ops ? r : qStr(r))
+    : ej.tipo==='angulo2' ? [Fr(ej.respuesta.a),Fr(ej.respuesta.b)] : ej.tipo==='opciones' ? [ej.respuesta]
+    : ej.tipo==='frac' ? [Fr(ej.respuesta.n,ej.respuesta.d)] : ej.tipo==='mixto' ? [Fr(ej.respuesta.e*ej.respuesta.d+ej.respuesta.n,ej.respuesta.d)] : [Fr(ej.respuesta)];
+  const ok=app.length===mine.length && app.every((a,i)=> typeof a==='string' ? a===mine[i] : eq(a,mine[i]));
+  return {mine:mine.map(v=>typeof v==='string'?v:v.n+'/'+v.d), ok}; };
+C['repaso-cap5']=libro5('repaso-cap5'); C['autoeval-cap5']=libro5('autoeval-cap5');
+// Repaso (4.5) y Autoevaluación (4.6) del cap. 4: igual, desde el ENUNCIADO del libro (pág. 249-251).
+// "ALG:" = con letras, en sintaxis JS: se compara con la respuesta de la app sustituyendo valores.
+// "TXT:" = respuesta de texto (propiedades); "ND" = no definido.
+const LIBRO4={
+ 'repaso-cap4':{1:['6/35+5/7+4/5','1/3+3/5+11/15','9/16+13/24+7/16','2/14+3/4-11/28'],
+   2:['ALG:2/(3*x)+13/(4*x)+17/(6*x)','(5+2/3)+(2+1/4)+(9+5/6)','ALG:2*a/(3*b)-5/(6*b)+a/(9*b)','(1+3/5)-(2+1/2)+(3+11/15)'],
+   3:['3/4-2/3','14/3-(-15/4)','ALG:3/x-9/x','ALG:19/y-40/(7*y)'],4:['(1+3/4)+(2+1/2)','(2+1/5)-(3+4/5)','-15/7+(2+6/7)','-(3+3/4)-4'],
+   5:['3/5+7/15+5/6','21/16+7/12-5/24','15/45-9/27+1/5','1/10-(-3/10)-4/15'],
+   6:['ALG:x/15-1/3-2/15','ALG:7/(6*x)-1/(8*x)+2/(3*x)','ALG:3/(2*x)-5/(4*x)+9/(5*x)','ALG:2*x/3-5/(2*x)+x/6'],
+   7:['1/2*(-3/5)*(10/9)','3/11*7/2*44/5','(-4/25)*(5/3)*(-2/3)*5','(81/100)*(150/(-54))*5','(4+1/5)*(5+3/5)*(3+4/7)'],
+   8:['ALG:2/3*(-3*c/(4*x))*(2*x**2/c**2)','ALG:15*a**2*x/(4*b)*(6*a*b/(5*x**2))*(2/(3*a))','ALG:(-8*x*y**2/(16*m**3))*(-8*m/(3*y))*15*m**2'],
+   9:'TXT:Propiedad Asociativa',10:'TXT:Cero como factor',11:'TXT:Inverso Multiplicativo',12:'TXT:Propiedad Conmutativa',13:'TXT:Propiedad Asociativa',
+   14:'TXT:Identidad de la Multiplicación',15:'TXT:Identidad de la Multiplicación',
+   16:['1/(7/5)','1/(-14)','ALG:1/(1/(13*x**2))','ND'],17:['1/(8/5)','1/14','ND','1/(-37/25)'],
+   18:'9/64/(-27/80)',19:'(-24/36)/(-8/9)',20:'ALG:25/(-7*x)/(32*x/14)',21:'5/6*3/10/(15/(-4))',22:'7/8*15/4/(5/2)',
+   23:'ALG:8*a**2*x/(5*y**2)/(4*a/(15*x*y))*(11*y**3/(2*a*x**2))',24:'ALG:5*y*a**2/(8*a*y)*(24/(10*a))/(16*y**2/(9*a))',
+   25:['5/6/(3/4)+4/5*25/16','(2+1/2)*(3+1/5)/(3/4)+7/10','24/25/(3-(3/5+7/10*2/3)*(3/2)^2)'],
+   26:['4-4/7/(1+3/5)','(2+7/10)/(5+1/4)-4/7','2/3+8/9*(2+1/4)'],
+   27:['(3/4+1/2)/(1-1/3)','(5/9-4/3)/(16/21+6/7)','((6+1/10)-(3+1/5))/((2+1/5)+(1+1/2))'],
+   28:['ALG:(4/(3*x))/(8/(9*x))','(1/3-2)/(1/3+2)','ALG:(7*x/8-x/4)/(x+x/4)','(-(3+4/5))/(3/4+1/5)'],29:'(5/7-(2+1/3))/(-(2+1/4)+7/8)'},
+ 'autoeval-cap4':{1:'5/6+7/8',2:'(4+3/5)*(-(7+1/2))',3:'ALG:1/(-a/(2*x))',4:'ALG:3/(8*a)-4/(5*a)',5:'(7+3/8)-4',6:'ALG:5*x/y**2/(15*x**2/y**3)',
+   7:'7/6/(5/3)*5/14/(1/2)',8:'(-5/6+1/2)/(3/8-(-1/12))',9:'3/5+((1+1/2)*((4+1/4)-(3+1/2)))/(2/5)',10:'(1+1/5)+15/16/(2+1/2)-13/10',
+   11:'ALG:x/5*1/3-2/5/3',12:'((1+3/10)+(2+4/5))/((2+3/5)-(1+1/3))'}};
+const jsExpr=s=>String(s).replace(/−/g,'-').replace(/²/g,'^2').replace(/\s+/g,'').replace(/(\d|[a-z]|\))(?=[a-z(])/g,'$1*').replace(/\^/g,'**');
+const VARS4=[{a:1.3,b:2.1,c:-0.7,m:1.9,x:2.7,y:-1.4},{a:-0.6,b:1.5,c:2.2,m:-1.1,x:1.6,y:3.3}];
+const algVal=(e,v)=>Function('a','b','c','m','x','y','return ('+e+')')(v.a,v.b,v.c,v.m,v.x,v.y);
+const algEq=(appS,orig)=>VARS4.every(v=>{ const p=algVal(jsExpr(appS),v), q=algVal(orig,v); return isFinite(p)&&Math.abs(p-q)<1e-9*Math.max(1,Math.abs(q)); });
+const libro4=id=>(ej,t)=>{ const m=/Ejercicio (\d+)/.exec(t); if(!m) return null; const e=LIBRO4[id][m[1]]; if(e==null) return {mine:'no está en el libro',ok:false};
+  const es=Array.isArray(e)?e:[e];
+  const app= ej.tipo==='multi' ? ej.respuesta : ej.tipo==='opciones' ? [ej.respuesta]
+    : ej.tipo==='frac' ? [ej.respuesta.n+'/'+ej.respuesta.d] : ej.tipo==='mixto' ? [ej.respuesta.e+' '+ej.respuesta.n+'/'+ej.respuesta.d] : [String(ej.respuesta)];
+  const ok=app.length===es.length && es.every((x,i)=>{ const a=app[i];
+    if(x==='ND') return a==='No definido'; if(x.startsWith('TXT:')) return a===x.slice(4);
+    if(x.startsWith('ALG:')) return algEq(/^-?\d+ \d+\/\d+$/.test(a) ? (q=>q.n+'/'+q.d)(qStr(a)) : a, x.slice(4));   // "1 1/2" no es "11/2"
+    return eq(qStr(a),parse(x)); });
+  return {mine:es.map(x=>/^(ALG|TXT):|^ND$/.test(x)?x:(v=>v.n+'/'+v.d)(parse(x))), ok}; };
+C['repaso-cap4']=libro4('repaso-cap4'); C['autoeval-cap4']=libro4('autoeval-cap4');
+// Tarea y Quiz 5.1–5.3 (tipos de EducoSoft): cada respuesta se recalcula LEYENDO el enunciado
+const S5=s=>String(s).replace(/<svg[\s\S]*?<\/svg>/g,'').replace(/<[^>]+>/g,' ').replace(/&nbsp;/g,' ').replace(/\s+/g,' ').trim();
+const dcm=s=>{ const f=parseFloat(s); return Fr(Math.round(f*10),10); };
+const mcCheck=(ej,mine)=>{ const vals=ej.opciones.map(o=>/^Ninguno/.test(o)?null:ev(o)); const iguales=vals.filter(v=>v&&eq(v,mine)).length;
+  const i=vals.findIndex(v=>v&&eq(v,mine)); const esp=i>=0?ej.opciones[i]:ej.opciones[ej.opciones.length-1];
+  return {mine:mine.n+'/'+mine.d, ok: ej.respuesta===esp && iguales<=1}; };
+C['educo-cap5']=(ej,t,h)=>{ const s=S5(h); let m;
+  if(/Halla el valor de x para la ecuación dada/.test(t)){ m=/x \+ (\d+) (\d+) = (\d+) (\d+)$/.exec(s); if(!m) return null; return ok5(sub(Fr(+m[3],+m[4]),Fr(+m[1],+m[2])),ej); }
+  if(/^Resuelve la ecuación:/.test(t)){ m=/(\d+) [a-z] (\d+) = (\d+) (\d+)$/.exec(s)||/(\d+)[a-z] (\d+) = (\d+) (\d+)$/.exec(s); if(!m) return null; return ok5(div(mul(Fr(+m[3]),Fr(+m[2])),mul(Fr(+m[1]),Fr(+m[4]))),ej); }
+  if(/Determina si la proporción dada a continuación/.test(t)){ const q=s.replace(/^.*continuación es cierta o falsa\.\s*/,''); let es;
+    if(/pies/.test(q)){ m=/^(\d+) pies (\d+) pulgadas = (\d+) yardas (\d+) pies/.exec(q); if(!m) return null; es=12*m[1]*m[4]===3*m[3]*m[2]; }
+    else { m=/^(\d+) (\d+) = (\d+) (\d+)$/.exec(q); if(!m) return null; es=m[1]*m[4]===m[2]*m[3]; }
+    return {mine:es?'Cierta':'Falsa', ok:ej.respuesta===(es?'Cierta':'Falsa')}; }
+  if(/Halla el término que falta/.test(t)){ m=/(\d+) es a x como (\d+) es a (\d+)/.exec(s); if(!m) return null; return ok5(Fr(m[1]*m[3],+m[2]),ej); }
+  if(/^Resuelve la proporción\./.test(t)){ const q=s.replace(/^Resuelve la proporción\.\s*/,'');
+    if(m=/^(\d+) (\d+) (\d+) x = (\d+) (\d+)$/.exec(q)) return ok5(div(mul(Fr(m[1]*m[3]+ +m[2],+m[3]),Fr(+m[5])),Fr(+m[4])),ej);
+    if(m=/^x (\d+) = ([\d.]+) ([\d.]+)$/.exec(q)) return ok5(div(mul(Fr(+m[1]),dcm(m[2])),dcm(m[3])),ej);
+    if(m=/^(\d+) x = ([\d.]+) ([\d.]+)$/.exec(q)) return ok5(div(mul(Fr(+m[1]),dcm(m[3])),dcm(m[2])),ej);
+    return null; }
+  if(/La suma de los lados de un triángulo/.test(t)){ const v=mv(t); if(v.length<3) return null; return ok5(sub(sub(v[0],v[1]),v[2]),ej); }
+  if(/promedio del siguiente par de fracciones/.test(t)){ const v=mv(t.replace(/^.*fracciones\./,'')); if(v.length<2) return null; return ok5(div(add(v[0],v[1]),Fr(2)),ej); }
+  if(/Un estudiante planifica gastar|Un estacionamiento puede acomodar/.test(t)){ const v=mv(t); const f=v.find(x=>x.d!==1), W=v.find(x=>x.d===1); if(!f||!W) return null; return ok5(mul(f,W),ej); }
+  if(/La propina promedio es/.test(t)){ const v=mv(t); if(v.length<2) return null; return ok5(div(v[1],v[0]),ej); }
+  if(/Si un árbol de/.test(t)){ m=/árbol de (\d+) pies.*sombra de (\d+) pies.*sombra mide (\d+) pies/.exec(t); if(!m) return null; return ok5(Fr(m[1]*m[3],+m[2]),ej); }
+  if(/Un camión de concreto/.test(t)){ const v=mv(t.replace(/^Un camión de concreto/,'')); if(v.length<4) return null; return ok5(add(sub(sub(v[0],v[1]),v[2]),v[3]),ej); }
+  if(/Durante el año pasado/.test(t)){ const v=mv(t.replace(/^Durante el año pasado,/,'')).slice(0,2); if(v.length<2) return null; return ok5(div(v[0],v[1]),ej); }
+  if(/pies cúbicos hay en la figura dada/.test(t)){ m=/(\d+) 3 yd = (\d+) pies/.exec(s); if(!m) return null; const n=+m[2], V=n**3, Sf=6*n*n; if(+m[1]!==n) return null;
+    const ok=ej.respuesta[0]===V&&ej.respuesta[1]===Sf; return {mine:[V,Sf],ok}; }
+  if(/Dado un par de triángulos semejantes/.test(t)){ const L=[...h.matchAll(/<text[^>]*>([^<]*)<\/text>/g)].map(x=>parseInt(x[1])); const [a,b,c,A]=L; if(!(a&&b&&c&&A)) return null; const x=b*A/a, y=c*A/a; return {mine:{a:x,b:y}, ok:x===ej.respuesta.a&&y===ej.respuesta.b}; }
+  if(/cociente de/.test(t)&&/igual a 1/.test(t)){ m=/cociente de (\d+) (\d+) y (\d+) (\d+) es igual/.exec(s); if(!m) return null; return mcCheck(ej,sub(Fr(1),div(Fr(+m[1],+m[2]),Fr(+m[3],+m[4])))); }
+  if(/^Resuelve para x ?:/.test(t)){ m=/1 (\d+) x \+ (\d+) = (−?\d+)/.exec(s); if(!m) return null; return mcCheck(ej,mul(Fr(+m[1]),sub(Fr(+m[3].replace('−','-')),Fr(+m[2])))); }
+  if(/^Resuelve para y ?:/.test(t)){ m=/^Resuelve para y ?: (\d+) (\d+) = (\d+) (\d+) y/.exec(s); if(!m) return null; return mcCheck(ej,Fr(+m[1],+m[3])); }
+  if(/^Si .*entonces a = \?/.test(t)){ m=/(\d+) a = (\d+) (\d+)/.exec(s); if(!m) return null; return mcCheck(ej,Fr(m[1]*m[3],+m[2])); }
+  if(/^Identifica la solución de/.test(t)){ m=/1 (\d+) x = (\d+)/.exec(s); if(!m) return null; return mcCheck(ej,Fr(m[1]*m[2])); }
+  if(/^Resuelve: /.test(t)){ m=/(\d+) (\d+) y − (\d+) (\d+) = (\d+) (\d+)/.exec(s); if(!m) return null; return mcCheck(ej,div(add(Fr(+m[5],+m[6]),Fr(+m[3],+m[4])),Fr(+m[1],+m[2]))); }
+  return null; };
+// Práctica del Examen Departamental (tipos de EducoSoft, caps. 1–5): cada respuesta se recalcula LEYENDO el enunciado
+const NINGUNO='Ninguno de los anteriores', SUPN={'²':2,'³':3,'⁴':4,'⁵':5,'⁶':6,'⁷':7,'⁸':8,'⁹':9};
+const mcStr=(ej,esp)=>{ const i=ej.opciones.findIndex(o=>o===esp); const dup=ej.opciones.filter(o=>o===esp).length;
+  return {mine:esp, ok: dup<=1 && ej.respuesta===(i>=0?esp:NINGUNO)}; };
+const fnTxt=(s,x)=>Function('x','return ('+s.replace(/−/g,'-').replace(/(\d)\s*x/g,'$1*x').replace(/(\d|x|\))\s*\(/g,'$1*(')+')')(x);
+const W2N={un:1,dos:2,tres:3,cuatro:4,cinco:5,seis:6,siete:7,ocho:8,nueve:9};
+const angPoly=(pts)=>{ const p=pts.trim().split(/\s+/).map(q=>q.split(',').map(Number)); let ag=0,re=0;
+  for(let i=0;i<p.length;i++){ const a=p[(i+p.length-1)%p.length],b=p[i],c=p[(i+1)%p.length]; const v1=[a[0]-b[0],a[1]-b[1]],v2=[c[0]-b[0],c[1]-b[1]];
+    const g=Math.acos((v1[0]*v2[0]+v1[1]*v2[1])/(Math.hypot(...v1)*Math.hypot(...v2)))*180/Math.PI; if(Math.abs(g-90)<0.5) re++; else if(g<90) ag++; }
+  return [ag,re]; };
+const gcdArr=a=>a.reduce((x,y)=>G(x,y),0);
+C['educo-dep']=(ej,t,h)=>{ const s=S5(h); let m;
+  if(/Completa las oraciones siguientes/.test(t)){ m=/(\d+)\((\d+) [+−] (\d+)\) = /.exec(s); if(!m) return null; return {mine:[+m[2],+m[3]], ok:ej.respuesta[0]===+m[2]&&ej.respuesta[1]===+m[3]}; }
+  if(/suplemento de un ángulo es/.test(t)){ m=/es (\d+)°/.exec(s); if(!m) return null; const v=+m[1]-90; return {mine:v, ok:ej.respuesta===v}; }
+  if(/complemento de un ángulo es/.test(t)){ m=/es (\d+)°/.exec(s); if(!m) return null; const v=90+ +m[1]; return {mine:v, ok:ej.respuesta===v}; }
+  if(/en forma corta usando una potencia de 10/.test(t)){ m=/Escribe \$?([\d,]+) en forma corta/.exec(s); if(!m) return null; const d=m[1].replace(/,/g,''); const c=d.replace(/0+$/,''), k=d.length-c.length; return {mine:[+c,k], ok:ej.respuesta[0]===+c&&ej.respuesta[1]===k}; }
+  if(/aseveraciones es cierta/.test(t)){ const mp=/P: La parte variable de (−?)(\d*)([a-z])([²³⁴⁵⁶⁷⁸⁹])? es ([^.]*)\./.exec(s), mq=/Q: La expresión (.*) tiene solamente (un|dos|tres) términos?\./.exec(s); if(!mp||!mq) return null;
+    const e=SUPN[mp[4]]||1, esp=mp[3]+(mp[4]||''); const pOk=mp[5].trim()===esp;
+    const terms=mq[1].replace(/^−/,'').split(/ [+−] /).length, qOk=W2N[mq[2]]===terms;
+    const r=pOk&&qOk?'Ambos P y Q':pOk?'P solamente':qOk?'Q solamente':'Ni P ni Q'; return {mine:r, ok:ej.respuesta===r}; }
+  if(/ángulos agudos y todos los ángulos rectos/.test(t)){ const polys=[...h.matchAll(/<polygon points="([^"]+)"/g)].map(x=>angPoly(x[1])); if(!polys.length) return null;
+    const A=polys.reduce((x,y)=>x+y[0],0), Rr=polys.reduce((x,y)=>x+y[1],0); return {mine:[A,Rr], ok:ej.respuesta[0]===A&&ej.respuesta[1]===Rr}; }
+  if(/^Resta: /.test(t)){ m=/^Resta: (\d+) − (\(−)?(\d+)\)?$/.exec(s); if(!m) return null; const v=m[2]?+m[1]+ +m[3]:+m[1]-+m[3]; return mcStr(ej,String(v).replace('-','−')); }
+  if(/^Evalúa /.test(t)){ m=/^Evalúa \(−(\d+)\) (\d) ?\./.exec(s); if(!m) return null; const v=(-m[1])**+m[2]; return mcStr(ej,String(v).replace('-','−')); }
+  if(/Convierte a una expresión algebraica/.test(t)){ const fr=s.replace(/^.*desconocido:\s*/,'').replace(/\s*\.\s*$/,''); let f;
+    if(m=/^(\w+) menos que (\w+) veces un número$/.exec(fr)) f=x=>W2N[m[2]]*x-W2N[m[1]];
+    else if(m=/^(\w+) más que (\w+) veces un número$/.exec(fr)) f=x=>W2N[m[2]]*x+W2N[m[1]];
+    else if(m=/^(\w+) veces la suma de un número y (\w+)$/.exec(fr)) f=x=>W2N[m[1]]*(x+W2N[m[2]]);
+    else if(m=/^la diferencia entre (\w+) y (\w+) veces un número$/.exec(fr)) f=x=>W2N[m[1]]-W2N[m[2]]*x; else return null;
+    const hits=ej.opciones.filter(o=>o!==NINGUNO&&[3,7,-2].every(x=>fnTxt(o,x)===f(x))); const esp=hits.length===1?hits[0]:(hits.length===0?NINGUNO:'AMBIGUA');
+    return {mine:esp, ok:esp!=='AMBIGUA'&&ej.respuesta===esp}; }
+  if(/^Resuelve la ecuación: /.test(t)){ m=/(\d+)x ([+−]) (\d+) = (−?\d+)$/.exec(s); if(!m) return null; const b=m[2]==='−'?-m[3]:+m[3], x=Fr(+m[4].replace('−','-')-b,+m[1]);
+    const vals=ej.opciones.map(o=>{ if(o===NINGUNO) return null; const q=/^x = (−?\d+)(?:\/(\d+))?$/.exec(o); return q?Fr(+q[1].replace('−','-'),+(q[2]||1)):undefined; });
+    if(vals.includes(undefined)) return null; const i=vals.findIndex(v=>v&&eq(v,x)); return {mine:x.n+'/'+x.d, ok: vals.filter(v=>v&&eq(v,x)).length<=1 && ej.respuesta===(i>=0?ej.opciones[i]:NINGUNO)}; }
+  if(/^Halla el perímetro de la siguiente figura/.test(t)){ const L=[...h.matchAll(/<text[^>]*>(\d+) ([a-z]+)<\/text>/g)].map(x=>[+x[1],x[2]]); if(L.length!==3) return null; const P=L[0][0]+L[1][0]+L[2][0]; return mcStr(ej,`${P} ${L[0][1]}`); }
+  if(/^El promedio de /.test(t)){ m=/^El promedio de (\w+) números es (\d+)\. Si (\w+) de los números son ([\d, y]+), halla/.exec(s); if(!m) return null; const n=W2N[m[1]], A=+m[2], suma=(m[4].match(/\d+/g)||[]).reduce((x,y)=>x+ +y,0); return mcStr(ej,String(n*A-suma)); }
+  if(/razón unitaria/.test(t)){ const nums=(s.replace(/,/g,'').match(/\d+/g)||[]).map(Number); if(nums.length<2) return null; const k=/pagaron/.test(s)?nums[1]/nums[0]:nums[0]/nums[1]; const hit=ej.opciones.find(o=>o!==NINGUNO&&Math.abs(parseFloat(o)-k)<1e-9); return {mine:k, ok:ej.respuesta===(hit||NINGUNO)}; }
+  if(/^Factoriza completamente/.test(t)){ const ex=s.replace(/^Factoriza completamente:\s*/,''); const P=txt=>txt.split(' + ').map(z=>{ const q=/^(\d*)([a-z])?([²³⁴⁵⁶⁷⁸⁹])?([a-z])?([²³⁴⁵⁶⁷⁸⁹])?$/.exec(z); if(!q) return null; const o={c:q[1]===''?1:+q[1],e:{}}; if(q[2]) o.e[q[2]]=SUPN[q[3]]||1; if(q[4]) o.e[q[4]]=SUPN[q[5]]||1; return o; });
+    const E=P(ex); if(E.includes(null)) return null; const val=(T,env)=>T.reduce((a,o)=>a+o.c*Object.entries(o.e).reduce((p,[l,e])=>p*env[l]**e,1),0);
+    const letras=[...new Set(E.flatMap(o=>Object.keys(o.e)))]; const envs=[{[letras[0]]:2,[letras[1]]:3},{[letras[0]]:5,[letras[1]]:2}];
+    const completa=o=>{ const q=/^(\d*)([a-z])?([²³⁴⁵⁶⁷⁸⁹])?([a-z])?([²³⁴⁵⁶⁷⁸⁹])?\((.*)\)$/.exec(o); if(!q) return false; const G0={c:q[1]===''?1:+q[1],e:{}}; if(q[2]) G0.e[q[2]]=SUPN[q[3]]||1; if(q[4]) G0.e[q[4]]=SUPN[q[5]]||1;
+      const I=P(q[6]); if(I.includes(null)) return false; const prod=envs.every(env=>val(I,env)*G0.c*Object.entries(G0.e).reduce((p,[l,e])=>p*env[l]**e,1)===val(E,env)); if(!prod) return false;
+      const g=gcdArr([...I.map(z=>z.c)]); const comunes=letras.filter(l=>I.every(z=>(z.e[l]||0)>0)); return prod&&g===1&&comunes.length===0; };
+    const hits=ej.opciones.filter(o=>o!==NINGUNO&&completa(o)); const esp=hits.length===1?hits[0]:(hits.length===0?NINGUNO:'AMBIGUA'); return {mine:esp, ok:esp!=='AMBIGUA'&&ej.respuesta===esp}; }
+  if(/^Halla la suma: /.test(t)){ const v=mv(t.replace(/^Halla la suma:/,'')); if(v.length<2) return null; return mcCheck(ej,add(v[0],v[1])); }
+  if(/^Simplifica: /.test(t)){ const v=mv(t.replace(/^Simplifica:/,'')); if(v.length<3) return null; return mcCheck(ej,add(v[0],mul(v[1],v[2]))); }
+  return null; };
 // ─── corrida ───
 const out={}, POR=300;
 for(const m of MODULOS){ const r={ver:0,unv:0,fallos:[],errores:[]}; out[m.id]=r; const chk=C[m.id]; if(!chk){ r.sinCheck=true; continue; }

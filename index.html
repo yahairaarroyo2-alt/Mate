@@ -633,7 +633,7 @@ const mm = n => String(n).replace('-','−');
 // sin espacios, sin "^", con el exponente como dígito plano — para aceptar varias formas de
 // escribir lo mismo en el tipo 'coefvar'
 const normVar = s => String(s).trim().toLowerCase().replace(/\s+/g,'').replace(/\^/g,'')
-  .replace(/[²³⁴⁵]/g, c => ({'²':'2','³':'3','⁴':'4','⁵':'5'}[c]));
+  .replace(/[²³⁴⁵⁶⁷⁸⁹]/g, c => ({'²':'2','³':'3','⁴':'4','⁵':'5'}[c]));
 // fracción apilada para el enunciado
 const fr = (n,d) => `<span class="fr"><b>${n}</b><i>${d}</i></span>`;
 // tipo 'orden' venía solo con fracciones {n,d} — otras materias ordenan texto plano (ej. épocas
@@ -793,6 +793,263 @@ function svgSemejantes(ls, lg, lados, uid){
   return `<svg viewBox="0 0 340 175" style="width:100%;max-width:340px;height:auto;color:var(--texto);display:block;margin:10px auto 0" xmlns="http://www.w3.org/2000/svg">
     ${tri(40,140,85,ls)}${tri(175,152,135,lg)}</svg>`;
 }
+// ── capítulo 5, Repaso (5.5) y Autoevaluación (5.6): ejercicios EXACTOS del E-Book ──
+// las líneas de pasosSumaF/pasosMultF escriben los enteros como "n/1" — aquí se quitan
+const sin1 = ls => ls.map(l => l.replace(/(\d)\/1(?!\d)/g, '$1'));
+const opTc = a => a.d===1 ? (a.n===1 ? '' : a.n===-1 ? '−' : mm(a.n)) : `(${tf(a.n,a.d)})`;   // coeficiente delante de la letra
+// a·L + b = c, despejada paso a paso (primero lo que suma, después lo que multiplica)
+function pasosAxB(L, a, b, c){
+  const li = []; let der = c;
+  if(b.n !== 0){
+    const op = {n:-b.n, d:b.d};
+    li.push(`Primero se quita el ${b.n<0?'−':'+'} ${opT({n:Math.abs(b.n),d:b.d})}: se suma su opuesto, ${opT(op)}, en AMBOS lados (Principio de Suma de la Igualdad).`,
+      `${opTc(a)}${L} = ${opT(c)} + ${opTP(op)}`);
+    if(c.d===1 && b.d===1) li.push(`${mm(c.n)} + ${opTP(op)} = ${mm(c.n - b.n)}`);
+    else li.push(...sin1(pasosSumaF(c, op).lineas));
+    der = addF(c, op);
+    li.push(`Queda: ${opTc(a)}${L} = ${opT(der)}`);
+  }
+  if(a.n===1 && a.d===1) return { x:der, lineas:li };
+  const rec = recipF(a);
+  li.push(`Ahora se quita el coeficiente ${opT(a)}: se multiplican AMBOS lados por su recíproco, ${opT(rec)} (Principio de Multiplicación de la Igualdad), porque ${opTP(a)} × ${opTP(rec)} = 1.`,
+    `${L} = ${opT(der)} × ${opTP(rec)}`);
+  if(der.d===1 && rec.d===1) li.push(`${mm(der.n)} × ${opTP(rec)} = ${mm(der.n*rec.n)}`);
+  else li.push(...sin1(pasosMultF(der, rec).lineas));
+  return { x:Fq(der.n*rec.n, der.d*rec.d), lineas:li };
+}
+// "3 1/2", "-7/50", "12" → {n, d, fn (numerador escrito), mixto}; null si no se entiende
+function leerQ(s){
+  const t = String(s).trim().replace(/−/g,'-').replace(/\s+/g,' '); let m;
+  if(m = /^(-?)(\d+) (\d+)\/(\d+)$/.exec(t)) return { n:(m[1]?-1:1)*(+m[2]*+m[4] + +m[3]), d:+m[4], fn:+m[3], mixto:true };
+  if(m = /^(-?\d+)\/(-?\d+)$/.exec(t)) return { n:+m[1], d:+m[2], fn:Math.abs(+m[1]) };
+  if(/^-?\d+$/.test(t)) return { n:+t, d:1, fn:0 };
+  return null;
+}
+const cab5 = (rep, num) => `<small>${rep ? 'Repaso' : 'Autoevaluación'} del capítulo 5 · Ejercicio ${num} (E-Book, pág. ${rep ? (num<=22 ? 293 : 294) : 295})</small><br>`;
+// un número del libro = un ejercicio, aunque pida (a), (b), (c)… — cada casilla acepta 7/50 o 3 8/9
+const cQ = (et, q, u) => ({ et, q, u, r: tMix(q).replace('−','-') });
+const cCF = (et, r) => ({ et, ops:['Cierta','Falsa'], r });
+const ejVarios5 = (cab, enun, campos, pasos, truco) => ({
+  enunciado: cab + enun + (campos.some(c => c.q || c.ex) ? `<br><small>Escribe ${campos.some(c => c.q) ? 'los números como entero, fracción (7/50) o número mixto (3 8/9)' : ''}${campos.some(c => c.q) && campos.some(c => c.ex && c.ex !== 'No definido') ? '; ' : ''}${campos.some(c => c.ex && c.ex !== 'No definido') ? 'con letras así: (x−2)/15, 27/(4x) o 33y^2' : ''}.</small>` : ''),
+  tipo:'multi', campos: campos.map(({r, ...c}) => c), respuesta: campos.map(c => c.r), sinNumeros:true,
+  explicacion:[...pasos, `→ ${campos.map(c => `${c.et} = ${c.r}${c.u ? ' '+c.u : ''}`).join(', ')}`, truco] });
+// ecuación resuelta con pasosAxB: pre = cómo se llega a la forma a·L + b = c
+function ec5(cab, enun, L, pre, a, b, c, verif, trucoEj){
+  const s = pasosAxB(L, a, b, c);
+  return { enunciado:`${cab}Resuelve la ecuación:<br><b>${enun}</b>`, tipo:'frac', respuesta:{n:s.x.n, d:s.x.d}, pedirSimple:true, signo:true,
+    ayuda:`${L} = ___ (si sale un entero, escríbelo con denominador 1)`,
+    explicacion:[...pre, ...s.lineas, `Verificación: ${verif} ✓ Cierto`, `→ ${L} = ${opT(s.x)}`,
+      `TRUCO: si la ecuación tiene varias fracciones, multiplica TODOS los términos por el MCD de los denominadores y desaparecen; después es una ecuación con enteros. Ejemplo con este mismo: ${trucoEj}`] };
+}
+const uno5 = (cab, enun, resp, pasos, truco, ayuda) => ({ enunciado: cab + enun, ...resp, ...(ayuda ? {ayuda} : {}), explicacion:[...pasos, truco] });
+const TR_PROP5 = 'TRUCO: tabla con Caso I y Caso II (cada fila con su misma unidad), proporción directo de la tabla y productos cruzados.';
+const TR_DE5 = 'TRUCO: "de" significa MULTIPLICAR y "%" significa "de cada 100".';
+const TR_GEO5 = 'TRUCO: escribe la fórmula, sustituye, pasa los números mixtos a fracciones impropias y al final vuelve a número mixto.';
+// ── capítulo 4, Repaso (4.5) y Autoevaluación (4.6): respuestas con letras ──
+// expresión escrita por la usuaria → número con las letras sustituidas (NaN si no se entiende).
+// La multiplicación pegada pesa más que ÷: "27/4x" se lee 27/(4x), como en el libro.
+function valorExpr(s, env){
+  const t = String(s).toLowerCase().replace(/−/g,'-').replace(/[×·]/g,'*').replace(/÷/g,'/')
+    .replace(/²/g,'^2').replace(/³/g,'^3').replace(/\s+/g,'');
+  if(!t || /[^0-9a-z.+\-*/^()]/.test(t)) return NaN;
+  let i = 0;
+  const atom = () => {
+    if(t[i]==='('){ i++; const v = expr(); if(t[i++]!==')') throw 0; return v; }
+    if(/[a-z]/.test(t[i]||'')){ const L = t[i++]; if(!(L in env)) throw 0; return env[L]; }
+    const m = /^\d+(\.\d+)?/.exec(t.slice(i)); if(!m) throw 0; i += m[0].length; return +m[0];
+  };
+  const pot = () => { const b = atom(); if(t[i]==='^'){ i++; return b ** un(); } return b; };
+  const un = () => t[i]==='-' ? (i++, -un()) : t[i]==='+' ? (i++, un()) : pot();
+  const grupo = () => { let v = un(); while(i < t.length && /[0-9a-z(]/.test(t[i])) v *= pot(); return v; };
+  const term = () => { let v = grupo(); while(t[i]==='*' || t[i]==='/'){ const op = t[i++], w = grupo(); v = op==='*' ? v*w : v/w; } return v; };
+  function expr(){ let v = term(); while(t[i]==='+' || t[i]==='-'){ const op = t[i++], w = term(); v = op==='+' ? v+w : v-w; } return v; }
+  try { const v = expr(); return i===t.length ? v : NaN; } catch(e){ return NaN; }
+}
+// dos expresiones son la misma si dan igual con varios valores de las letras
+const PRUEBA_VARS = [{a:1.7,b:2.3,c:-0.8,m:1.3,x:2.9,y:-1.6},{a:-2.4,b:0.7,c:3.1,m:-0.9,x:1.2,y:2.6},{a:0.6,b:-1.9,c:1.4,m:2.2,x:-3.3,y:0.9}];
+const mismaExpr = (s, ref) => PRUEBA_VARS.every(env => { const u = valorExpr(s, env), v = valorExpr(ref, env);
+  return isFinite(u) && isFinite(v) && Math.abs(u - v) <= 1e-9 * Math.max(1, Math.abs(v)); });
+const NO_DEF = /^(no(est[aá])?definid[oa]|indefinid[oa]|noexiste)$/;
+const SUP_E = {2:'²',3:'³',4:'⁴',5:'⁵',6:'⁶',7:'⁷',8:'⁸',9:'⁹'};
+const supE = e => e===1 ? '' : (SUP_E[e] || '^'+e);
+const cE = (et, ex, u) => ({ et, ex, u, r: ex.replace(/\^(\d)/g, (m,e) => SUP_E[e] || m).replace(/-/g, '−') });   // casilla con letras (o "No definido")
+// fracción con letras: n/d con signo, a = letras de arriba {x:2}, b = letras de abajo
+const mono = (n, d, a, b) => ({ n, d, a:a||{}, b:b||{} });
+const _necesitaPar = s => /\d.*[a-z]|[a-z].*[a-z]/.test(s.replace(/[²³⁴⁵⁶⁷⁸⁹]|\^\d+/g,''));
+const _letras = m => Object.keys(m).sort().map(l => l + supE(m[l])).join('');
+function txtMono(f){
+  const an = Math.abs(f.n), la = _letras(f.a), lb = _letras(f.b);
+  const up = an===1 && la ? la : String(an) + la, dn = f.d===1 && lb ? lb : String(f.d) + lb;
+  return (f.n<0 ? '−' : '') + (dn==='1' ? up : `${up}/${_necesitaPar(dn) ? '('+dn+')' : dn}`);
+}
+const voltearMono = f => mono(f.n<0 ? -f.d : f.d, Math.abs(f.n), f.b, f.a);
+const lineaVoltear = f => `Dividir entre una fracción es multiplicar por esa fracción VOLTEADA (lo de arriba pasa abajo y lo de abajo pasa arriba). Se voltea SOLO la segunda: ${txtMono(f)} → ${txtMono(voltearMono(f))}.`;
+// multiplicación de fracciones con letras, desglosada: signo, números, letras una por una, qué se tacha
+function pasosLetras(fs){
+  const up = {}, dn = {}, upN = [], dnN = []; let P = 1, Q = 1, negs = 0;
+  fs.forEach(f => { if(f.n<0) negs++; const an = Math.abs(f.n); P *= an; Q *= f.d; if(an!==1) upN.push(an); if(f.d!==1) dnN.push(f.d);
+    Object.entries(f.a).forEach(([l,e]) => up[l] = (up[l]||0)+e); Object.entries(f.b).forEach(([l,e]) => dn[l] = (dn[l]||0)+e); });
+  const g = mcd(P,Q), n2 = P/g, d2 = Q/g, letras = [...new Set([...Object.keys(up), ...Object.keys(dn)])].sort();
+  const rep = (l,k) => Array(k).fill(l).join(' · '), todas = m => letras.filter(l => m[l]).map(l => rep(l, m[l])).join(' · ') || '(ninguna)';
+  const lin = [];
+  lin.push(negs===0 ? 'Signos: no hay ningún negativo, el resultado es positivo.'
+    : negs%2 ? `Signos: hay ${negs} negativo${negs>1?'s':''}, así que el resultado es NEGATIVO.`
+    : `Signos: hay ${negs} negativos; dos negativos se cancelan (− por − da +), así que el resultado es positivo.`);
+  lin.push(`Números: arriba ${upN.join(' × ') || 1} = ${P}; abajo ${dnN.join(' × ') || 1} = ${Q}. ` +
+    (g>1 ? `Se simplifica ${P}/${Q}: arriba y abajo se dividen entre ${g} → ${n2}${d2===1 ? '' : '/'+d2}.` : `${P}/${Q} ya no se puede simplificar.`));
+  lin.push(`Letras: un exponente solo dice cuántas veces se multiplica la letra (x² = x · x). Escritas una por una, arriba hay: ${todas(up)}. Abajo hay: ${todas(dn)}.`);
+  const ru = {}, rd = {};
+  letras.forEach(l => { const u = up[l]||0, d = dn[l]||0, m = Math.min(u,d);
+    if(u>d) ru[l] = u-d; if(d>u) rd[l] = d-u;
+    lin.push(!d ? `La ${l}: solo hay arriba (${rep(l,u)}) y abajo ninguna → todas se quedan arriba: ${l}${supE(u)}.`
+      : !u ? `La ${l}: solo hay abajo (${rep(l,d)}) y arriba ninguna → todas se quedan abajo: ${l}${supE(d)}.`
+      : `La ${l}: arriba hay ${u} (${rep(l,u)}) y abajo hay ${d} (${rep(l,d)}). Se tachan ${m} de arriba con ${m} de abajo → ${u===d ? `no sobra ninguna ${l}` : u>d ? `sobra${u-d>1?'n':''} ${u-d} arriba: ${l}${supE(u-d)}` : `sobra${d-u>1?'n':''} ${d-u} abajo: ${l}${supE(d-u)}`}.`); });
+  const lu = Object.keys(ru).sort().map(l => l + (ru[l]>1 ? '^'+ru[l] : '')).join(''), ld = Object.keys(rd).sort().map(l => l + (rd[l]>1 ? '^'+rd[l] : '')).join('');
+  const num = lu ? (n2===1 ? '' : n2) + lu : String(n2), den = ld ? (d2===1 ? '' : d2) + ld : (d2===1 ? '' : String(d2));
+  const ex = (negs%2 ? '-' : '') + num + (den ? '/' + (_necesitaPar(den) ? '('+den+')' : den) : '');
+  const vis = ex.replace(/\^(\d)/g, (m,e) => SUP_E[e] || m).replace('-','−');
+  lin.push(`Se junta lo que sobró (número, letras de arriba y letras de abajo): ${vis}`, `→ ${vis}`);
+  return { lineas:lin, ex };
+}
+// suma/resta de fracciones con letras: denominador común, cada fracción convertida, términos semejantes
+const _grado = m => Object.values(m).reduce((s,e) => s+e, 0);
+function _polyTxt(ts, ascii){
+  return ts.map((t,i) => { const l = ascii ? Object.keys(t.m).sort().map(k => k + (t.m[k]>1 ? '^'+t.m[k] : '')).join('') : _letras(t.m);
+    const ab = Math.abs(t.c), body = (ab===1 && l ? '' : String(ab)) + l, neg = t.c<0;
+    return i===0 ? (neg ? (ascii ? '-' : '−') : '') + body : (neg ? (ascii ? ' - ' : ' − ') : (ascii ? ' + ' : ' + ')) + body; }).join('');
+}
+function pasosSumaLetras(ts){
+  const L = ts.reduce((a,f) => mcm(a,f.d), 1), mb = {};
+  ts.forEach(f => Object.entries(f.b).forEach(([l,e]) => mb[l] = Math.max(mb[l]||0, e)));
+  const lb = _letras(mb), denTxt = (L===1 && lb ? '' : String(L)) + lb;
+  const igual = ts.every(f => f.d===ts[0].d && _letras(f.b)===_letras(ts[0].b)), lin = [];
+  if(igual) lin.push(`Todas tienen el MISMO denominador (${denTxt}): son pedazos del mismo tamaño, así que solo se suman y se restan los de arriba, y el denominador se queda igual.`);
+  else {
+    lin.push('Los denominadores son distintos, y solo se pueden sumar o restar pedazos del mismo tamaño. Hay que buscar un denominador común que sirva para todas.');
+    const ds = [...new Set(ts.map(f => f.d))];
+    lin.push(ds.length>1 ? `Los números de abajo: ${ds.join(', ')}. El más chico que sirve para todos es el MCM = ${L}.` : `Los números de abajo ya son iguales (${L}).`);
+    if(lb) lin.push(`Las letras de abajo: el denominador común tiene que llevar las letras de TODOS los denominadores. Aquí: ${lb}.`);
+    lin.push(`Denominador común: ${denTxt}.`);
+  }
+  const nuevos = ts.map(f => { const k = L/f.d, extra = {}, m = {...f.a};
+    Object.keys(mb).forEach(l => { const e = mb[l]-(f.b[l]||0); if(e){ extra[l] = e; m[l] = (m[l]||0)+e; } });
+    return { f, k, extra, c:f.n*k, m }; });
+  if(!igual) nuevos.forEach(n => { const el = _letras(n.extra), mult = (n.k>1 || !el ? String(n.k) : '') + el;
+    const why = [n.k>1 && `${n.f.d} × ${n.k} = ${L}`, el && `a su denominador le falta ${el}`].filter(Boolean).join('; ');
+    lin.push(mult === '1'
+      ? `${txtMono(n.f)} ya tiene el denominador común, se queda igual.`
+      : `${txtMono(n.f)} → arriba y abajo se multiplican por ${mult} (${why}) → ${txtMono(mono(n.c, L, n.m, mb))}`); });
+  const lista = nuevos.map(n => ({ c:n.c, m:n.m }));
+  lin.push(`Arriba, en el mismo orden: ${_polyTxt(lista)}`);
+  const grupos = {}; lista.forEach(t => { const k = _letras(t.m); (grupos[k] = grupos[k] || { m:t.m, items:[] }).items.push(t); });
+  Object.values(grupos).forEach(g => { if(g.items.length > 1){ const s = g.items.reduce((a,t) => a + t.c, 0);
+    lin.push(`${_letras(g.m) ? `Términos semejantes (todos llevan ${_letras(g.m)}): se juntan sumando y restando solo los números que acompañan a la letra` : 'Los números sin letra se suman y se restan entre sí'}: ${_polyTxt(g.items)} = ${_polyTxt([{ c:s, m:g.m }])}`); g.c = s; } else g.c = g.items[0].c; });
+  const res = Object.values(grupos).filter(g => g.c !== 0).map(g => ({ c:g.c, m:g.m })).sort((a,b) => _grado(b.m) - _grado(a.m));
+  if(!res.length) res.push({ c:0, m:{} });
+  if(res.length > 1) lin.push('Un número solo y uno con letra (o con otra letra) NO son semejantes: no se pueden juntar, se quedan separados.');
+  const cs = res.map(t => Math.abs(t.c)).filter(Boolean), g = mcd(cs.reduce((a,b) => mcd(a,b), 0) || 1, L);
+  if(g > 1) lin.push(`Se simplifica: todos los números de arriba (${cs.join(', ')}) y el de abajo (${L}) se dividen entre ${g}.`);
+  else lin.push(`Para simplificar, un mismo número tendría que dividir a TODOS los de arriba (${cs.join(', ')}) y al de abajo (${L}); no hay ninguno, así que ya está simplificada.`);
+  const fin = res.map(t => ({ c:t.c/g, m:t.m })), d2 = L/g;
+  const numA = _polyTxt(fin, true), denA = (d2===1 && lb ? '' : (d2===1 ? '' : String(d2))) + Object.keys(mb).sort().map(l => l + (mb[l]>1 ? '^'+mb[l] : '')).join('');
+  const ex = (fin.length>1 ? `(${numA})` : numA) + (denA ? '/' + (_necesitaPar(denA) ? `(${denA})` : denA) : '');
+  const vis = ex.replace(/\^(\d)/g, (m,e) => SUP_E[e] || m).replace(/-/g,'−');
+  lin.push(`→ ${vis}`);
+  return { lineas:lin, ex };
+}
+const pSumaL = (n, ts) => { const r = pasosSumaLetras(ts); return { campo:cE(`(${n})`, r.ex), lineas:[`${n}. Se suman y restan las fracciones.`, ...r.lineas] }; };
+const cab4 = (rep, num) => `<small>${rep ? 'Repaso' : 'Autoevaluación'} del capítulo 4 · Ejercicio ${num} (E-Book, pág. ${rep ? (num<=16 ? 249 : 250) : 251})</small><br>`;
+// negativo → fracción con ±; positivo → como lo escribe el libro (entero, fracción o número mixto)
+const respQ = f => f.n > 0 ? respPos(f) : { tipo:'frac', respuesta:{n:f.n, d:f.d}, pedirSimple:true, signo:true };
+// una parte (a), (b)… que suma o resta varias fracciones o mixtos
+function parteSuma4(L, texto, ts){
+  const s = pasosSumaVarias(ts);
+  return { res:s.res, lineas:[`${L}. ${texto}`, ...lineasImpropias(ts.map(f => ({n:Math.abs(f.n), d:f.d}))), ...sin1(s.lineas), ...lineaMixto(s.res)] };
+}
+function parteMult4(L, texto, fs){
+  const p = pasosMultVarias(fs);
+  return { res:p.res, lineas:[`${L}. ${texto}`, ...lineasImpropias(fs.map(f => ({n:Math.abs(f.n), d:f.d}))), ...sin1(p.lineas), ...lineaMixto(p.res)] };
+}
+const TR_SUMA4 = 'TRUCO: para sumar o restar hace falta el MISMO denominador (el MCM de los de abajo); para multiplicar NO, se multiplica arriba con arriba y abajo con abajo.';
+const TRUCO_L = "TRUCO: x² significa x · x. Mira cada letra por separado: se tacha una de arriba con una igual de abajo, y lo que sobra se queda donde estaba (arriba si sobró arriba, abajo si sobró abajo). Los números se simplifican aparte, como siempre.";
+const TRUCO_DIV4_L = 'TRUCO: dividir es multiplicar por la SEGUNDA fracción volteada (la primera nunca se voltea). Después, con letras: x² significa x · x; se tacha una letra de arriba con una igual de abajo y lo que sobra se queda donde estaba.';
+const TR_DIV4 = 'TRUCO: dividir es multiplicar por la SEGUNDA fracción volteada; la primera nunca se voltea.';
+// ── Tarea y Quiz 5.1–5.3 de EducoSoft: mismos TIPOS de ejercicio (EducoSoft cambia los números en cada intento) ──
+const NING = 'Ninguno de los anteriores';
+// opción múltiple a)–e): la correcta + 3 malas, y "Ninguno de los anteriores" al final (a veces ES la correcta)
+function opcionesMC(correcta, malas){
+  const uniq = [...new Set(malas.filter(s => s !== correcta))];
+  if(uniq.length >= 4 && Math.random() < 0.12) return { opciones:[...shuffle(uniq.slice(0,4)), NING], respuesta:NING };
+  return { opciones:[...shuffle([correcta, ...uniq.slice(0,3)]), NING], respuesta:correcta };
+}
+const optF = f => f.d===1 ? mm(f.n) : frS(f.n, f.d);                    // opción: entero o fracción apilada
+const dec1 = v => Number.isInteger(v) ? String(v) : v.toFixed(1);
+const r2 = v => String(Math.round(v*100)/100);
+function svgCubo(t){
+  return `<svg viewBox="0 0 320 200" style="width:100%;max-width:320px;height:auto;color:var(--texto);display:block;margin:10px auto 0" xmlns="http://www.w3.org/2000/svg">
+    <g fill="none" stroke="currentColor" stroke-width="2"><rect x="70" y="70" width="100" height="100"/><rect x="120" y="30" width="100" height="100" opacity=".55"/><path d="M70 70 L120 30 M170 70 L220 30 M70 170 L120 130 M170 170 L220 130"/></g>
+    <g fill="currentColor" font-size="13" font-weight="700"><text x="62" y="125" text-anchor="end">${t}</text><text x="120" y="192" text-anchor="middle">${t}</text><text x="204" y="162" text-anchor="start">${t}</text></g></svg>`;
+}
+// dos triángulos rectángulos semejantes (como en EducoSoft): pequeño con sus 3 lados, grande con un cateto y x, y
+function svgRectSem(a, b, c, A, u){
+  const sc = 90/b, sc2 = sc*1.7, f = v => v.toFixed(1);
+  const tri = (ox, oy, s, ls) => { const w = b*s, h = a*s, x0 = ox, y0 = oy;
+    return `<path d="M${f(x0)} ${f(y0)} L${f(x0+w)} ${f(y0)} L${f(x0)} ${f(y0-h)} Z" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="M${f(x0)} ${f(y0-8)} h8 v8" fill="none" stroke="currentColor" stroke-width="1.5"/>
+      <text x="${f(x0-6)}" y="${f(y0-h/2)}" fill="currentColor" font-size="12" font-weight="700" text-anchor="end">${ls[0]}</text>
+      <text x="${f(x0+w/2)}" y="${f(y0+16)}" fill="currentColor" font-size="12" font-weight="700" text-anchor="middle">${ls[1]}</text>
+      <text x="${f(x0+w/2+8)}" y="${f(y0-h/2-4)}" fill="currentColor" font-size="12" font-weight="700" text-anchor="start">${ls[2]}</text>`; };
+  return `<svg viewBox="0 0 360 190" style="width:100%;max-width:360px;height:auto;color:var(--texto);display:block;margin:10px auto 0" xmlns="http://www.w3.org/2000/svg">
+    ${tri(50, 150, sc, [`${a} ${u}`, `${b} ${u}`, `${c} ${u}`])}${tri(190, 150, sc2, [`${A} ${u}`, 'x', 'y'])}</svg>`;
+}
+// ── Práctica del Examen Departamental (los tipos de EducoSoft, caps. 1–5) ──
+// figuras para contar ángulos agudos y rectos: el conteo sale de las MISMAS coordenadas que se dibujan
+const FIGS_ANG = {
+  'rectángulo':          [[0,0],[1.6,0],[1.6,1],[0,1]],
+  'cuadrado':            [[0,0],[1.2,0],[1.2,1.2],[0,1.2]],
+  'triángulo rectángulo':[[0,0],[1.5,0],[0,1]],
+  'triángulo acutángulo':[[0,0],[1.7,0],[0.8,1.3]],
+  'triángulo obtusángulo':[[0,0],[1.4,0],[-0.5,0.8]],
+  'trapecio rectángulo': [[0,0],[1.7,0],[1.1,1],[0,1]],
+  'paralelogramo':       [[0.6,0],[2,0],[1.4,1],[0,1]],
+  'rombo':               [[0.8,0],[1.6,0.9],[0.8,1.8],[0,0.9]].map(([x,y]) => [x*1.1, y*0.75]),
+  'triángulo isósceles obtuso': [[0,0],[1.6,0],[0.8,0.55]]
+};
+function anguloVertice(p, i){
+  const a = p[(i+p.length-1)%p.length], b = p[i], c = p[(i+1)%p.length];
+  const v1 = [a[0]-b[0], a[1]-b[1]], v2 = [c[0]-b[0], c[1]-b[1]];
+  return Math.acos((v1[0]*v2[0] + v1[1]*v2[1]) / (Math.hypot(...v1)*Math.hypot(...v2))) * 180/Math.PI;
+}
+const claseAng = g => Math.abs(g-90) < 0.5 ? 'recto' : g < 90 ? 'agudo' : 'obtuso';
+// dibuja varias figuras separadas, con el cuadradito en cada ángulo recto
+function svgFiguras(nombres){
+  const ancho = 140, partes = [], info = [];
+  nombres.forEach((nom, k) => {
+    const flip = Math.random() < 0.5, p0 = FIGS_ANG[nom].map(([x,y]) => [flip ? -x : x, y]);
+    const minX = Math.min(...p0.map(q => q[0])), s = 62;
+    const p = p0.map(([x,y]) => [20 + k*ancho + (x-minX)*s, 100 - y*s]);   // y hacia arriba
+    const poly = p.map(q => q.map(v => v.toFixed(1)).join(',')).join(' ');
+    let marcas = '';
+    const cls = p.map((_, i) => claseAng(anguloVertice(p, i)));
+    cls.forEach((c, i) => { if(c !== 'recto') return;
+      const a = p[(i+p.length-1)%p.length], b = p[i], d = p[(i+1)%p.length], u = [a[0]-b[0], a[1]-b[1]], w = [d[0]-b[0], d[1]-b[1]];
+      const lu = Math.hypot(...u), lw = Math.hypot(...w), m = 9, q1 = [b[0]+u[0]/lu*m, b[1]+u[1]/lu*m], q2 = [q1[0]+w[0]/lw*m, q1[1]+w[1]/lw*m], q3 = [b[0]+w[0]/lw*m, b[1]+w[1]/lw*m];
+      marcas += `<path d="M${q1[0].toFixed(1)} ${q1[1].toFixed(1)} L${q2[0].toFixed(1)} ${q2[1].toFixed(1)} L${q3[0].toFixed(1)} ${q3[1].toFixed(1)}" fill="none" stroke="currentColor" stroke-width="1.5"/>`; });
+    partes.push(`<polygon points="${poly}" fill="none" stroke="currentColor" stroke-width="2"/>${marcas}`);
+    info.push({ nom, agudos:cls.filter(c => c==='agudo').length, rectos:cls.filter(c => c==='recto').length, obtusos:cls.filter(c => c==='obtuso').length });
+  });
+  const W = 20 + nombres.length*ancho;
+  return { svg:`<svg viewBox="0 0 ${W} 120" style="width:100%;max-width:${W}px;height:auto;color:var(--texto);display:block;margin:10px auto 0" xmlns="http://www.w3.org/2000/svg">${partes.join('')}</svg>`, info };
+}
+// triángulo con los tres lados rotulados (perímetro)
+const svgTrianguloLados = (a, b, c, u) => `<svg viewBox="0 0 220 120" style="width:100%;max-width:220px;height:auto;color:var(--texto);display:block;margin:10px auto 0" xmlns="http://www.w3.org/2000/svg">
+  <polygon points="30,95 190,95 95,25" fill="none" stroke="currentColor" stroke-width="2"/>
+  <g fill="currentColor" font-size="13" font-weight="700"><text x="110" y="113" text-anchor="middle">${a} ${u}</text><text x="52" y="52" text-anchor="end">${b} ${u}</text><text x="154" y="52" text-anchor="start">${c} ${u}</text></g></svg>`;
+const NUMW = ['','un','dos','tres','cuatro','cinco','seis','siete','ocho','nueve','diez'];
+const optX = f => 'x = ' + (f.d===1 ? mm(f.n) : `${mm(f.n)}/${f.d}`);
+// término de un polinomio: coeficiente, letra y exponente → texto
+const termTxt = (c, v, e, primero) => { const ab = Math.abs(c), cs = (ab===1 && e>0) ? '' : String(ab), cuerpo = cs + (e>0 ? v + supE(e) : '');
+  return primero ? (c<0 ? '−' : '') + cuerpo : (c<0 ? ' − ' : ' + ') + cuerpo; };
 // teclado numérico del teléfono a veces no trae signo "-" (iOS, sobre todo) — botón ± como atajo
 function toggleSigno(id){
   const el = $(id);
@@ -805,7 +1062,10 @@ function toggleSigno(id){
    ══════════════════════════════════════════════════════════ */
 // El ejemplo del truco se arma con el MISMO número del ejercicio, no con uno inventado.
 function trucoDiv(n, d){
-  const s = String(n), ult = +s[s.length-1], sd = sumaDig(n), dos = n%100;
+  const s = String(n), ult = +s[s.length-1], sd = sumaDig(n), dos = n%100, tres = n%1000;
+  const m8 = (() => { if(tres===0) return 'tres ceros al final, y 1,000 ya es múltiplo de 8 → sí'; let x = tres; const p = [x];
+    for(let i=0;i<3;i++){ if(x%2) return `${p.join(' → ')}, y ${x} ya no se parte exacto a la mitad → no`; x /= 2; p.push(x); }
+    return `${p.join(' → ')}, exacto las tres veces → sí`; })();
   const corta = sd > 9 ? sumaDig(sd) : sd;
   const suma = sd > 9 ? `${s.split('').join('+')} = ${sd} → ${String(sd).split('').join('+')} = ${corta}`
                       : `${s.split('').join('+')} = ${sd}`;
@@ -819,6 +1079,7 @@ function trucoDiv(n, d){
     case 10: return `La más rápida de todas: ¿termina en 0? Sí. ¿No termina en 0? No. Ejemplo con este mismo: ${n} termina en ${ult} → ${ult===0?'sí':'no'}.`;
     case 3: return `Si al sumar los dígitos te queda un número grande, vuelve a sumar SUS dígitos y repite hasta quedarte con una sola cifra; si esa cifra es 3, 6 o 9, el número es divisible entre 3. Ejemplo con este mismo: ${suma}, y ${corta} ${sd%3===0?'sí es múltiplo de 3 → sí':'no es múltiplo de 3 → no'}.`;
     case 9: return `El mismo atajo del 3: suma los dígitos y, si te queda grande, vuelve a sumarlos hasta tener una sola cifra. Solo si esa cifra final es 9 el número es divisible entre 9. Ejemplo con este mismo: ${suma}, y ${corta} ${sd%9===0?'sí es 9 (o múltiplo de 9) → sí':'no llega a 9 → no'}.`;
+    case 8: return `Toma las TRES últimas cifras y pártelas a la mitad tres veces seguidas: si las tres veces sale exacto, es divisible entre 8. Ejemplo con este mismo: las tres últimas de ${n} son ${m8}.`;
     case 4: return `Toma las dos últimas cifras y pártelas a la mitad dos veces seguidas: si las dos veces sale exacto, es divisible entre 4. Ejemplo con este mismo: las dos últimas de ${n} son ${m4}.`;
     case 6: return `Empieza siempre por lo más barato: ¿es par? Si NO es par ya puedes contestar "no" sin sumar ni un dígito. Ejemplo con este mismo: ${n} ${ult%2===0 ? `sí es par, así que toca revisar el 3: ${suma}, que ${sd%3===0?'sí es múltiplo de 3 → sí':'no es múltiplo de 3 → no'}` : 'no es par → no, y ahí terminaste sin sumar nada'}.`;
     case 12: return `Empieza por la regla del 4 (solo dos cifras que mirar). Si falla, la respuesta ya es "no" y te ahorras sumar todos los dígitos. Ejemplo con este mismo: las dos últimas de ${n} son ${dos}, que ${dos%4===0 ? `sí se divide entre 4, así que toca el 3: ${suma}, y ${corta} ${sd%3===0?'sí es múltiplo de 3 → sí':'no es múltiplo de 3 → no'}` : 'no se divide exacto entre 4 → no, sin sumar ni un dígito'}.`;
@@ -830,7 +1091,7 @@ function explDivisibilidad(n,d){
   return _pasosDivisibilidad(n,d).concat(t ? 'TRUCO: '+t : []);
 }
 function _pasosDivisibilidad(n,d){
-  const s = String(n), ult = +s[s.length-1], sd = sumaDig(n), dos = n%100;
+  const s = String(n), ult = +s[s.length-1], sd = sumaDig(n), dos = n%100, tres = n%1000;
   const ok = n%d===0, si = ok?'sí':'no';
   const intro = 'Que un número sea "divisible" entre otro significa que, al dividirlos, el resultado es exacto — no sobra nada (el residuo es 0).';
   const final = `→ Por eso, ${n} ${si} es divisible por ${d}.`;
@@ -855,6 +1116,10 @@ function _pasosDivisibilidad(n,d){
       'Para el 4 no hace falta mirar el número entero: solo importan sus dos últimos dígitos, porque cualquier "centena completa" ya es múltiplo de 4 por sí sola.',
       `Los dos últimos dígitos de ${n} forman el número ${dos}.`,
       `${dos} ÷ 4 ${dos%4===0?`= ${dos/4}, división exacta`:'no da exacta (sobra residuo)'}. ${final}`];
+    case 8: return [intro,
+      'Para el 8 solo importan las TRES últimas cifras, porque cualquier "millar completo" (1,000) ya es múltiplo de 8 por sí solo (1,000 = 8 × 125).',
+      `Las tres últimas cifras de ${n} forman el número ${tres}.`,
+      `${tres} ÷ 8 ${tres%8===0 ? `= ${tres/8}, división exacta` : `no da exacta (sobra ${tres%8})`}. ${final}`];
     case 6: return [intro,
       '6 = 2 × 3, así que un número es divisible entre 6 solo si cumple LAS DOS reglas a la vez: la del 2 y la del 3.',
       `¿Entre 2? El último dígito es ${ult}, que ${ult%2===0?'sí es par → sí':'no es par → no'}.`,
@@ -1947,7 +2212,7 @@ const MODULOS = [
 {
   id:'divisibilidad', nombre:'Divisibilidad', secciones:['3.1'],
   gen(nv){
-    const d = pick(porNivel(nv, [2,5,10,3], [2,3,4,5,6,9,10], [3,4,6,9,12]));
+    const d = pick(porNivel(nv, [2,5,10,3], [2,3,4,5,6,8,9,10], [3,4,6,8,9,12]));
     const alto = porNivel(nv, 200, 999, 9999);
     // la mitad de las veces forzamos que sí sea divisible
     const n = Math.random()<0.5 ? d*R(4, Math.floor(alto/d)) : R(20, alto);
@@ -2732,6 +2997,219 @@ const MODULOS = [
         `TRUCO: la raya larga es un ÷ disfrazado. Escribe (arriba) ÷ (abajo) con paréntesis, resuelve cada paréntesis hasta dejar UNA fracción en cada uno, y al final voltea la de abajo y multiplica. Nunca "canceles" un número de arriba con uno de abajo mientras todavía haya sumas o restas sin hacer. Ejemplo con este mismo: ${arribaT} ÷ ${abajoT} → arriba queda ${opT(num)}, abajo queda ${opT(den)}, y ${opT(num)} ÷ ${opTP(den)} se convierte en ${opT(num)} × ${tfP(recipF(den).n,recipF(den).d)} = ${tf(r.n,r.d)}.`] };
   }
 },
+/* ── CAPÍTULO 4: Repaso y Autoevaluación — ejercicios EXACTOS del E-Book (pág. 249-251) ── */
+{
+  id:'repaso-cap4', nombre:'Ejercicios de Repaso del capítulo 4 (los del libro)', secciones:['4.5'],
+  gen(){
+    const C = (n,d=1) => ({n,d});
+    const k = n => cab4(true, n);
+    const vx = (n,d) => fr(n,d);                                       // fracción apilada con letras
+    const PROPS = ['Propiedad Conmutativa','Propiedad Asociativa','Identidad de la Multiplicación','Inverso Multiplicativo','Cero como factor'];
+    const TR_PROP = 'TRUCO: mira qué fue lo ÚNICO que cambió entre los dos lados: ¿el orden? Conmutativa. ¿Solo los paréntesis? Asociativa. ¿Un 1 que no hace nada? Identidad. ¿Una fracción por su volteada da 1? Inverso. ¿Un 0 y todo da 0? Cero como factor.';
+    const prop = (n, enun, resp, expl, ej) => ({ enunciado:`${k(n)}Identifica la propiedad de la multiplicación que se ilustra:<br><b>${enun}</b>`,
+      tipo:'opciones', opciones:PROPS, respuesta:resp, explicacion:[...expl, `→ ${resp}`, `${TR_PROP} Ejemplo con este mismo: ${ej}`] });
+    // varias partes (a), (b)… cada una con su lista de pasos y su casilla
+    const partes = (n, enun, ps, truco) => ejVarios5(k(n), enun, ps.map(p => p.campo), ps.flatMap(p => p.lineas), truco);
+    const pS = (L, texto, ts) => { const r = parteSuma4(L, texto, ts); return { campo:cQ(`(${L})`, r.res), lineas:r.lineas }; };
+    const pM = (L, texto, fs) => { const r = parteMult4(L, texto, fs); return { campo:cQ(`(${L})`, r.res), lineas:r.lineas }; };
+    const pX = (L, ex, lineas) => ({ campo:cE(`(${L})`, ex), lineas:[`${L}. ${lineas[0]}`, ...lineas.slice(1)] });
+    const banco = [
+      () => partes(1, `Suma las fracciones dadas y escribe la suma en su forma más simple.<br>(a) <b>${fr(6,35)} + ${fr(5,7)} + ${fr(4,5)}</b><br>(b) <b>${fr(1,3)} + ${fr(3,5)} + ${fr(11,15)}</b><br>(c) <b>${fr(9,16)} + ${fr(13,24)} + ${fr(7,16)}</b><br>(d) <b>${fr(2,14)} + ${fr(3,4)} − ${fr(11,28)}</b>`,
+        [pS('a','6/35 + 5/7 + 4/5', [C(6,35),C(5,7),C(4,5)]), pS('b','1/3 + 3/5 + 11/15', [C(1,3),C(3,5),C(11,15)]),
+         pS('c','9/16 + 13/24 + 7/16', [C(9,16),C(13,24),C(7,16)]), pS('d','2/14 + 3/4 − 11/28', [C(2,14),C(3,4),C(-11,28)])],
+        `${TR_SUMA4} Ejemplo con este mismo: en (a) el MCM de 35, 7 y 5 es 35, así que 6/35 + 25/35 + 28/35 = 59/35.`),
+      () => { const b = parteSuma4('b','5 2/3 + 2 1/4 + 9 5/6', [C(17,3),C(9,4),C(59,6)]), d = parteSuma4('d','1 3/5 − 2 1/2 + 3 11/15', [C(8,5),C(-5,2),C(56,15)]);
+        return partes(2, `Simplifica.<br>(a) <b>${vx(2,'3x')} + ${vx(13,'4x')} + ${vx(17,'6x')}</b><br>(b) <b>${mixS(5,2,3)} + ${mixS(2,1,4)} + ${mixS(9,5,6)}</b><br>(c) <b>${vx('2a','3b')} − ${vx(5,'6b')} + ${vx('a','9b')}</b><br>(d) <b>${mixS(1,3,5)} − ${mixS(2,1,2)} + ${mixS(3,11,15)}</b>`,
+          [pSumaL('a', [mono(2,3,{},{x:1}), mono(13,4,{},{x:1}), mono(17,6,{},{x:1})]),
+           { campo:cQ('(b)', b.res), lineas:b.lineas },
+           pSumaL('c', [mono(2,3,{a:1},{b:1}), mono(-5,6,{},{b:1}), mono(1,9,{a:1},{b:1})]),
+           { campo:cQ('(d)', d.res), lineas:d.lineas }],
+          `${TR_SUMA4} Con letras abajo es igual: el MCM de 3x, 4x y 6x es 12x. Ejemplo con este mismo: en (a) 8/(12x) + 39/(12x) + 34/(12x) = 81/(12x) = 27/(4x).`); },
+      () => { const b = parteSuma4('b','14/3 − (−15/4): restar un negativo es SUMAR → 14/3 + 15/4', [C(14,3),C(15,4)]);
+        return partes(3, `Simplifica.<br>(a) <b>${fr(3,4)} − ${fr(2,3)}</b><br>(b) <b>${fr(14,3)} − (−${fr(15,4)})</b><br>(c) <b>${vx(3,'x')} − ${vx(9,'x')}</b><br>(d) <b>${vx(19,'y')} − ${vx(40,'7y')}</b>`,
+          [pS('a','3/4 − 2/3', [C(3,4),C(-2,3)]), { campo:cQ('(b)', b.res), lineas:b.lineas },
+           pSumaL('c', [mono(3,1,{},{x:1}), mono(-9,1,{},{x:1})]),
+           pSumaL('d', [mono(19,1,{},{y:1}), mono(-40,7,{},{y:1})])],
+          `${TR_SUMA4} Ejemplo con este mismo: en (d) 19/y se convierte en 133/(7y) y queda 133/(7y) − 40/(7y) = 93/(7y).`); },
+      () => partes(4, `Simplifica.<br>(a) <b>${mixS(1,3,4)} + ${mixS(2,1,2)}</b><br>(b) <b>${mixS(2,1,5)} − ${mixS(3,4,5)}</b><br>(c) <b>−${fr(15,7)} + ${mixS(2,6,7)}</b><br>(d) <b>−${mixS(3,3,4)} − 4</b>`,
+        [pS('a','1 3/4 + 2 1/2', [C(7,4),C(5,2)]), pS('b','2 1/5 − 3 4/5', [C(11,5),C(-19,5)]), pS('c','−15/7 + 2 6/7', [C(-15,7),C(20,7)]), pS('d','−3 3/4 − 4', [C(-15,4),C(-4)])],
+        `TRUCO: pasa todos los números mixtos a fracción impropia ANTES de sumar o restar; el resultado negativo puede quedar como fracción impropia (−8/5) o mixto (−1 3/5). Ejemplo con este mismo: en (b) 11/5 − 19/5 = −8/5.`),
+      () => { const d = parteSuma4('d','1/10 − (−3/10) − 4/15: restar un negativo es sumar → 1/10 + 3/10 − 4/15', [C(1,10),C(3,10),C(-4,15)]);
+        return partes(5, `Efectúa las operaciones indicadas y reduce la respuesta a su forma más simple.<br>(a) <b>${fr(3,5)} + ${fr(7,15)} + ${fr(5,6)}</b><br>(b) <b>${fr(21,16)} + ${fr(7,12)} − ${fr(5,24)}</b><br>(c) <b>${fr(15,45)} − ${fr(9,27)} + ${fr(1,5)}</b><br>(d) <b>${fr(1,10)} − (−${fr(3,10)}) − ${fr(4,15)}</b>`,
+          [pS('a','3/5 + 7/15 + 5/6', [C(3,5),C(7,15),C(5,6)]), pS('b','21/16 + 7/12 − 5/24', [C(21,16),C(7,12),C(-5,24)]),
+           pS('c','15/45 − 9/27 + 1/5', [C(15,45),C(-9,27),C(1,5)]), { campo:cQ('(d)', d.res), lineas:d.lineas }],
+          `${TR_SUMA4} A veces conviene simplificar cada fracción primero. Ejemplo con este mismo: en (c) 15/45 = 1/3 y 9/27 = 1/3, se cancelan y queda 1/5.`); },
+      () => partes(6, `Efectúa las operaciones indicadas. Asume que todas las variables son distintas de cero.<br>(a) <b>${vx('x',15)} − ${fr(1,3)} − ${fr(2,15)}</b><br>(b) <b>${vx(7,'6x')} − ${vx(1,'8x')} + ${vx(2,'3x')}</b><br>(c) <b>${vx(3,'2x')} − ${vx(5,'4x')} + ${vx(9,'5x')}</b><br>(d) <b>${vx('2x',3)} − ${vx(5,'2x')} + ${vx('x',6)}</b>`,
+        [pSumaL('a', [mono(1,15,{x:1}), mono(-1,3), mono(-2,15)]),
+         pSumaL('b', [mono(7,6,{},{x:1}), mono(-1,8,{},{x:1}), mono(2,3,{},{x:1})]),
+         pSumaL('c', [mono(3,2,{},{x:1}), mono(-5,4,{},{x:1}), mono(9,5,{},{x:1})]),
+         pSumaL('d', [mono(2,3,{x:1}), mono(-5,2,{},{x:1}), mono(1,6,{x:1})])],
+        `${TR_SUMA4} Si un denominador tiene x y otro no, el común lleva la x. Ejemplo con este mismo: en (d) el MCM de 3, 2x y 6 es 6x.`),
+      () => partes(7, `Multiplica las fracciones dadas y escribe el producto en su forma más simple.<br>(a) <b>${fr(1,2)}(−${fr(3,5)})(${fr(10,9)})</b><br>(b) <b>${fr(3,11)} · ${fr(7,2)} · ${fr(44,5)}</b><br>(c) <b>(−${fr(4,25)})(${fr(5,3)})(−${fr(2,3)}) · 5</b><br>(d) <b>(${fr(81,100)})(${fr(150,'−54')}) · 5</b><br>(e) <b>${mixS(4,1,5)} · ${mixS(5,3,5)} · ${mixS(3,4,7)}</b>`,
+        [pM('a','1/2 × (−3/5) × 10/9', [C(1,2),C(-3,5),C(10,9)]), pM('b','3/11 × 7/2 × 44/5', [C(3,11),C(7,2),C(44,5)]),
+         pM('c','(−4/25) × 5/3 × (−2/3) × 5 — dos negativos: el resultado es positivo', [C(-4,25),C(5,3),C(-2,3),C(5)]),
+         pM('d','81/100 × 150/(−54) × 5 — el signo de abajo se sube: 150/(−54) = −150/54', [C(81,100),C(-150,54),C(5)]),
+         pM('e','4 1/5 × 5 3/5 × 3 4/7', [C(21,5),C(28,5),C(25,7)])],
+        `TRUCO: cuenta los negativos primero (par → positivo, impar → negativo) y simplifica arriba con abajo antes de multiplicar. Ejemplo con este mismo: en (b) el 44 de arriba y el 11 de abajo se dividen entre 11, y queda 3 × 7 × 4/(2 × 5) = 84/10 = 42/5.`),
+      () => { const L = (n, fs) => { const r = pasosLetras(fs); return { campo:cE(`(${n})`, r.ex), lineas:[`${n}. Se multiplican las fracciones: todo lo de arriba junto y todo lo de abajo junto.`, ...r.lineas] }; };
+        return partes(8, `Multiplica las fracciones dadas y escribe el producto en su forma más simple.<br>(a) <b>${fr(2,3)}(−${vx('3c','4x')})(${vx('2x<sup>2</sup>','c<sup>2</sup>')})</b><br>(b) <b>${vx('15a<sup>2</sup>x','4b')} · ${vx('6ab','5x<sup>2</sup>')} · ${vx(2,'3a')}</b><br>(c) <b>${vx('−8xy<sup>2</sup>','16m<sup>3</sup>')} · ${vx('−8m','3y')} · 15m<sup>2</sup></b>`,
+          [L('a', [mono(2,3), mono(-3,4,{c:1},{x:1}), mono(2,1,{x:2},{c:2})]),
+           L('b', [mono(15,4,{a:2,x:1},{b:1}), mono(6,5,{a:1,b:1},{x:2}), mono(2,3,{},{a:1})]),
+           L('c', [mono(-8,16,{x:1,y:2},{m:3}), mono(-8,3,{m:1},{y:1}), mono(15,1,{m:2})])],
+          `${TRUCO_L} Ejemplo con este mismo: en (a) arriba hay x · x y abajo una x: se tacha una y sobra una x arriba; abajo hay c · c y arriba una c: sobra una c abajo → −x/c.`); },
+      () => prop(9, `(${vx('2x',3)} · ${fr('−5',6)}) · ${fr(18,7)} = ${vx('2x',3)} · (${fr('−5',6)} · ${fr(18,7)})`, 'Propiedad Asociativa',
+        ['Los tres factores están en el MISMO orden en los dos lados; lo único que se movió son los paréntesis.', 'Eso es la propiedad asociativa: (a · b) · c = a · (b · c).'], 'el orden 2x/3, −5/6, 18/7 no cambió, solo los paréntesis.'),
+      () => prop(10, `${fr('−7',5)} · 0 = 0`, 'Cero como factor',
+        ['Cualquier número multiplicado por 0 da 0: a · 0 = 0.'], 'hay un 0 multiplicando y el resultado es 0.'),
+      () => prop(11, `${vx('2a','3b')} · ${vx('3b','2a')} = 1`, 'Inverso Multiplicativo',
+        ['3b/(2a) es 2a/(3b) volteada (su recíproco), y un número por su recíproco da 1.'], '2a/(3b) volteada es 3b/(2a), y el producto da 1.'),
+      () => prop(12, `${vx('15x','y')} · ${fr('−3',4)} = ${fr('−3',4)} · ${vx('15x','y')}`, 'Propiedad Conmutativa',
+        ['Los mismos dos factores solo cambiaron de orden: a · b = b · a.'], '15x/y y −3/4 intercambiaron de lugar.'),
+      () => prop(13, `−${fr(1,5)} · (${fr(3,7)} · ${fr(4,9)}) = (−${fr(1,5)} · ${fr(3,7)}) · ${fr(4,9)}`, 'Propiedad Asociativa',
+        ['El orden de los factores es el mismo; solo cambiaron los paréntesis de lugar.'], 'el orden −1/5, 3/7, 4/9 no cambió, solo los paréntesis.'),
+      () => prop(14, `${fr('−5',17)} · 1 = ${fr('−5',17)}`, 'Identidad de la Multiplicación',
+        ['Multiplicar por 1 deja el número igual: el 1 es la identidad de la multiplicación.'], 'el 1 no cambia el −5/17.'),
+      () => prop(15, `1 · ${fr(215,317)} = ${fr(215,317)}`, 'Identidad de la Multiplicación',
+        ['Multiplicar por 1 deja el número igual: el 1 es la identidad de la multiplicación.'], 'el 1 no cambia el 215/317.'),
+      () => partes(16, `Escribe el recíproco de la expresión dada, si está definido.<br>(a) <b>${fr(7,5)}</b><br>(b) <b>−14</b><br>(c) <b>${vx(1,'13x<sup>2</sup>')}</b><br>(d) <b>${fr(0,5)}</b><br><small>Si no tiene recíproco escribe "no definido".</small>`,
+        [{ campo:cQ('(a)', C(5,7)), lineas:['a. Se voltea la fracción: 7/5 → 5/7'] },
+         { campo:cQ('(b)', C(-1,14)), lineas:['b. −14 = −14/1 → volteada: −1/14 (el signo se queda)'] },
+         { campo:cE('(c)', '13x^2'), lineas:['c. 1/(13x²) volteada es 13x²/1 = 13x²'] },
+         { campo:cE('(d)', 'No definido'), lineas:['d. 0/5 = 0, y el 0 no tiene recíproco (0 por cualquier número da 0, nunca 1) → no definido'] }],
+        'TRUCO: recíproco = voltear la fracción; el signo no cambia, y el 0 es el único que no tiene. Ejemplo con este mismo: 7/5 → 5/7 y −14 → −1/14.'),
+      () => partes(17, `Escribe el inverso multiplicativo del número dado, si está definido.<br>(a) <b>${fr(8,5)}</b><br>(b) <b>14</b><br>(c) <b>0</b><br>(d) <b>−${fr(37,25)}</b><br><small>Si no tiene inverso escribe "no definido".</small>`,
+        [{ campo:cQ('(a)', C(5,8)), lineas:['a. Inverso multiplicativo = recíproco: 8/5 → 5/8'] },
+         { campo:cQ('(b)', C(1,14)), lineas:['b. 14 = 14/1 → 1/14'] },
+         { campo:cE('(c)', 'No definido'), lineas:['c. El 0 no tiene inverso multiplicativo → no definido'] },
+         { campo:cQ('(d)', C(-25,37)), lineas:['d. −37/25 → −25/37 (el signo se queda)'] }],
+        'TRUCO: "inverso multiplicativo" es otro nombre del recíproco. Ejemplo con este mismo: 8/5 × 5/8 = 40/40 = 1.'),
+      () => uno5(k(18), `Divide y reduce a su forma más simple:<br><b>${fr(9,64)} ÷ ${fr('−27',80)}</b>`, respQ(C(-5,12)),
+        ['9/64 ÷ (−27/80)', ...pasosDivF(C(9,64), C(-27,80)).lineas, '→ −5/12'], `${TR_DIV4} Ejemplo con este mismo: 9/64 × (−80/27) = −5/12.`),
+      () => uno5(k(19), `Divide y reduce a su forma más simple:<br><b>(−${fr(24,36)}) ÷ (−${fr(8,9)})</b>`, respQ(C(3,4)),
+        ['(−24/36) ÷ (−8/9) — dos negativos: el resultado es positivo', ...pasosDivF(C(-24,36), C(-8,9)).lineas, '→ 3/4'], `${TR_DIV4} Ejemplo con este mismo: 24/36 × 9/8 = 216/288 = 3/4.`),
+      () => { const f1 = mono(-25,7,{},{x:1}), div = mono(32,14,{x:1},{}), f2 = voltearMono(div), r = pasosLetras([f1, f2]);
+        return ejVarios5(k(20), `Divide y reduce a su forma más simple:<br><b>${vx(25,'−7x')} ÷ ${vx('32x',14)}</b>`, [cE('Respuesta', r.ex)],
+          ['I. El signo de abajo se pasa arriba: 25/(−7x) = −25/(7x). Un solo negativo da igual en qué parte de la fracción esté.',
+           `II. ${lineaVoltear(div)}`, `III. Ahora se multiplica: ${txtMono(f1)} × ${txtMono(f2)}`, ...r.lineas],
+          `${TRUCO_DIV4_L} Ejemplo con este mismo: abajo hay una x de la primera fracción y otra de la fracción volteada → x · x = x², y queda −25/(16x²).`); },
+      () => uno5(k(21), `Efectúa las operaciones indicadas:<br><b>${fr(5,6)} · ${fr(3,10)} ÷ ${fr(15,'−4')}</b>`, respQ(C(-1,15)),
+        ['Multiplicación y división van de izquierda a derecha. Primero 5/6 × 3/10:', ...pasosMultF(C(5,6), C(3,10)).lineas,
+         'Luego ÷ 15/(−4) = ÷ (−15/4):', ...pasosDivF(C(1,4), C(-15,4)).lineas, '→ −1/15'],
+        `${TR_DIV4} Ejemplo con este mismo: 1/4 ÷ (−15/4) = 1/4 × (−4/15) = −1/15.`),
+      () => uno5(k(22), `Efectúa las operaciones indicadas:<br><b>${fr(7,8)} · ${fr(15,4)} ÷ ${fr(5,2)}</b>`, respQ(C(21,16)),
+        ['De izquierda a derecha. Primero 7/8 × 15/4:', ...pasosMultF(C(7,8), C(15,4)).lineas, 'Luego ÷ 5/2:', ...pasosDivF(C(105,32), C(5,2)).lineas, ...lineaMixto(C(21,16)), '→ 1 5/16'],
+        `${TR_DIV4} Ejemplo con este mismo: 105/32 × 2/5 = 21/16 = 1 5/16.`, 'Si es mayor que 1, escríbelo como número mixto.'),
+      () => { const f1 = mono(8,5,{a:2,x:1},{y:2}), div = mono(4,15,{a:1},{x:1,y:1}), f2 = voltearMono(div), f3 = mono(11,2,{y:3},{a:1,x:2}), r = pasosLetras([f1, f2, f3]);
+        return ejVarios5(k(23), `Efectúa las operaciones indicadas:<br><b>${vx('8a<sup>2</sup>x','5y<sup>2</sup>')} ÷ ${vx('4a','15xy')} · ${vx('11y<sup>3</sup>','2ax<sup>2</sup>')}</b>`, [cE('Respuesta', r.ex)],
+          [`I. ${lineaVoltear(div)}`, `II. Ahora todo es multiplicación: ${txtMono(f1)} × ${txtMono(f2)} × ${txtMono(f3)}`, ...r.lineas],
+          `${TRUCO_DIV4_L} Ejemplo con este mismo: la y de abajo (y²) se tacha con dos de las cuatro y de arriba y sobran y · y = y²; la a y la x se cancelan por completo → 33y².`); },
+      () => { const f1 = mono(5,8,{y:1,a:2},{a:1,y:1}), f2 = mono(24,10,{},{a:1}), div = mono(16,9,{y:2},{a:1}), f3 = voltearMono(div), r = pasosLetras([f1, f2, f3]);
+        return ejVarios5(k(24), `Efectúa las operaciones indicadas:<br><b>${vx('5ya<sup>2</sup>','8ay')} · ${vx(24,'10a')} ÷ ${vx('16y<sup>2</sup>','9a')}</b>`, [cE('Respuesta', r.ex)],
+          [`I. ${lineaVoltear(div)}`, `II. Ahora todo es multiplicación: ${txtMono(f1)} × ${txtMono(f2)} × ${txtMono(f3)}`, ...r.lineas],
+          `${TRUCO_DIV4_L} Ejemplo con este mismo: arriba hay 3 a y abajo 2 a → sobra una a arriba; arriba hay 1 y y abajo 3 y → sobran 2 y abajo → 27a/(32y²).`); },
+      () => { const a1 = pasosDivF(C(5,6),C(3,4)), a2 = pasosMultF(C(4,5),C(25,16)), a3 = pasosSumaF(a1.res, a2.res);
+        const b1 = pasosMultF(C(5,2),C(16,5)), b2 = pasosDivF(b1.res,C(3,4)), b3 = pasosSumaF(b2.res,C(7,10));
+        const c1 = pasosMultF(C(7,10),C(2,3)), c2 = pasosSumaF(C(3,5),c1.res), c3 = pasosMultF(C(3,2),C(3,2)), c4 = pasosMultF(c2.res,c3.res), c5 = pasosSumaF(C(3),{n:-c4.res.n,d:c4.res.d}), c6 = pasosDivF(C(24,25),c5.res);
+        return partes(25, `Usa el orden de operaciones para simplificar las siguientes expresiones.<br>(a) <b>${fr(5,6)} ÷ ${fr(3,4)} + ${fr(4,5)} · ${fr(25,16)}</b><br>(b) <b>${mixS(2,1,2)} · ${mixS(3,1,5)} ÷ ${fr(3,4)} + ${fr(7,10)}</b><br>(c) <b>${fr(24,25)} ÷ [3 − (${fr(3,5)} + ${fr(7,10)} · ${fr(2,3)})(${fr(3,2)})<sup>2</sup>]</b>`,
+          [{ campo:cQ('(a)', a3.res), lineas:['a. La división y la multiplicación van antes que la suma. Primero 5/6 ÷ 3/4:', ...a1.lineas, 'Luego 4/5 × 25/16:', ...a2.lineas, 'Por último la suma:', ...a3.lineas, ...lineaMixto(a3.res)] },
+           { campo:cQ('(b)', b3.res), lineas:['b. 2 1/2 = 5/2 y 3 1/5 = 16/5. De izquierda a derecha, primero 5/2 × 16/5:', ...sin1(b1.lineas), 'Luego ÷ 3/4:', ...sin1(b2.lineas), 'Por último + 7/10:', ...b3.lineas, ...lineaMixto(b3.res)] },
+           { campo:cQ('(c)', c6.res), lineas:['c. Primero lo de adentro del paréntesis ( ): la multiplicación 7/10 × 2/3 va antes que la suma:', ...c1.lineas, 'Ahora la suma 3/5 + 7/15:', ...c2.lineas,
+             'El exponente: (3/2)² = 3/2 × 3/2:', ...c3.lineas, 'Multiplicación dentro del corchete: 16/15 × 9/4:', ...c4.lineas, 'Resta dentro del corchete: 3 − 12/5:', ...sin1(c5.lineas), 'Por último 24/25 ÷ 3/5:', ...c6.lineas, ...lineaMixto(c6.res)] }],
+          `TRUCO: orden de operaciones = paréntesis y corchetes (de adentro hacia afuera), exponentes, × y ÷ de izquierda a derecha, + y − de izquierda a derecha. Ejemplo con este mismo: en (c) el corchete queda 3 − 12/5 = 3/5, y 24/25 ÷ 3/5 = 1 3/5.`); },
+      () => { const a1 = pasosDivF(C(4,7),C(8,5)), a2 = pasosSumaF(C(4),{n:-a1.res.n,d:a1.res.d});
+        const b1 = pasosDivF(C(27,10),C(21,4)), b2 = pasosSumaF(b1.res,C(-4,7));
+        const c1 = pasosMultF(C(8,9),C(9,4)), c2 = pasosSumaF(C(2,3),c1.res);
+        return partes(26, `Simplifica las expresiones dadas utilizando las reglas de orden de operaciones.<br>(a) <b>4 − ${fr(4,7)} ÷ ${mixS(1,3,5)}</b><br>(b) <b>${mixS(2,7,10)} ÷ ${mixS(5,1,4)} − ${fr(4,7)}</b><br>(c) <b>${fr(2,3)} + ${fr(8,9)} · (${mixS(2,1,4)})</b>`,
+          [{ campo:cQ('(a)', a2.res), lineas:['a. La división va antes que la resta. 1 3/5 = 8/5:', ...a1.lineas, 'Luego 4 − 5/14:', ...sin1(a2.lineas), ...lineaMixto(a2.res)] },
+           { campo:cQ('(b)', b2.res), lineas:['b. 2 7/10 = 27/10 y 5 1/4 = 21/4. Primero la división:', ...b1.lineas, 'Luego la resta 18/35 − 4/7:', ...b2.lineas] },
+           { campo:cQ('(c)', c2.res), lineas:['c. 2 1/4 = 9/4. La multiplicación va antes que la suma:', ...sin1(c1.lineas), 'Luego 2/3 + 2:', ...sin1(c2.lineas), ...lineaMixto(c2.res)] }],
+          `TRUCO: aunque la resta esté escrita primero, la división se hace antes. Ejemplo con este mismo: en (a) NO es (4 − 4/7) ÷ 1 3/5; primero 4/7 ÷ 8/5 = 5/14 y después 4 − 5/14 = 3 9/14.`); },
+      () => { const a1 = pasosSumaF(C(3,4),C(1,2)), a2 = pasosSumaF(C(1),C(-1,3)), a3 = pasosDivF(a1.res,a2.res);
+        const b1 = pasosSumaF(C(5,9),C(-4,3)), b2 = pasosSumaF(C(16,21),C(6,7)), b3 = pasosDivF(b1.res,b2.res);
+        const c1 = pasosSumaF(C(61,10),C(-16,5)), c2 = pasosSumaF(C(11,5),C(3,2)), c3 = pasosDivF(c1.res,c2.res);
+        return partes(27, `Simplifica las siguientes fracciones complejas.<br>(a) <b style="font-size:1.1em">${fr(`${fr(3,4)} + ${fr(1,2)}`, `1 − ${fr(1,3)}`)}</b><br>(b) <b style="font-size:1.1em">${fr(`${fr(5,9)} − ${fr(4,3)}`, `${fr(16,21)} + ${fr(6,7)}`)}</b><br>(c) <b style="font-size:1.1em">${fr(`${mixS(6,1,10)} − ${mixS(3,1,5)}`, `${mixS(2,1,5)} + ${mixS(1,1,2)}`)}</b>`,
+          [{ campo:cQ('(a)', a3.res), lineas:['a. Arriba: 3/4 + 1/2', ...a1.lineas, 'Abajo: 1 − 1/3', ...sin1(a2.lineas), 'La raya larga es una división: arriba ÷ abajo', ...a3.lineas, ...lineaMixto(a3.res)] },
+           { campo:cQ('(b)', b3.res), lineas:['b. Arriba: 5/9 − 4/3', ...b1.lineas, 'Abajo: 16/21 + 6/7', ...b2.lineas, 'Arriba ÷ abajo:', ...b3.lineas] },
+           { campo:cQ('(c)', c3.res), lineas:['c. Se pasan a impropias: 6 1/10 = 61/10, 3 1/5 = 16/5, 2 1/5 = 11/5, 1 1/2 = 3/2', 'Arriba: 61/10 − 16/5', ...c1.lineas, 'Abajo: 11/5 + 3/2', ...c2.lineas, 'Arriba ÷ abajo:', ...c3.lineas] }],
+          `TRUCO: resuelve arriba hasta dejar UNA fracción, abajo hasta dejar UNA fracción, y al final divide. Ejemplo con este mismo: en (a) arriba queda 5/4, abajo 2/3, y 5/4 ÷ 2/3 = 15/8 = 1 7/8.`); },
+      () => { const b1 = pasosSumaF(C(1,3),C(-2)), b2 = pasosSumaF(C(1,3),C(2)), b3 = pasosDivF(b1.res,b2.res);
+        const d1 = pasosSumaF(C(3,4),C(1,5)), d2 = pasosDivF(C(-19,5),d1.res);
+        const da = mono(8,9,{},{x:1}), ra = pasosLetras([mono(4,3,{},{x:1}), voltearMono(da)]);
+        const dc = mono(5,4,{x:1},{}), rc = pasosLetras([mono(5,8,{x:1}), voltearMono(dc)]);
+        return partes(28, `Simplifica las siguientes fracciones complejas.<br>(a) <b style="font-size:1.1em">${fr(vx(4,'3x'), vx(8,'9x'))}</b><br>(b) <b style="font-size:1.1em">${fr(`${fr(1,3)} − 2`, `${fr(1,3)} + 2`)}</b><br>(c) <b style="font-size:1.1em">${fr(`${vx('7x',8)} − ${vx('x',4)}`, `x + ${vx('x',4)}`)}</b><br>(d) <b style="font-size:1.1em">${fr(`−${mixS(3,4,5)}`, `${fr(3,4)} + ${fr(1,5)}`)}</b>`,
+          [{ campo:cQ('(a)', C(3,2)), lineas:['a. La raya larga es una división: lo de arriba entre lo de abajo → 4/(3x) ÷ 8/(9x).', lineaVoltear(da), `Ahora se multiplica: ${txtMono(mono(4,3,{},{x:1}))} × ${txtMono(voltearMono(da))}`, ...ra.lineas] },
+           { campo:cQ('(b)', b3.res), lineas:['b. Arriba: 1/3 − 2', ...sin1(b1.lineas), 'Abajo: 1/3 + 2', ...sin1(b2.lineas), 'Arriba ÷ abajo:', ...b3.lineas] },
+           { campo:cQ('(c)', C(1,2)), lineas:['c. Arriba: 7x/8 − x/4. El MCM de 8 y 4 es 8, y x/4 = 2x/8 (arriba y abajo por 2).', '7x/8 − 2x/8: son términos semejantes (los dos llevan x), así que solo se restan los números que acompañan a la x: 7 − 2 = 5 → 5x/8',
+              'Abajo: x + x/4. La x sola es x = 4x/4, y 4x/4 + x/4: 4 + 1 = 5 → 5x/4', 'La raya larga es una división: 5x/8 ÷ 5x/4', lineaVoltear(dc), `Ahora se multiplica: ${txtMono(mono(5,8,{x:1}))} × ${txtMono(voltearMono(dc))}`, ...rc.lineas] },
+           { campo:cQ('(d)', d2.res), lineas:['d. Arriba: −3 4/5 = −19/5', 'Abajo: 3/4 + 1/5', ...d1.lineas, 'Arriba ÷ abajo:', ...sin1(d2.lineas)] }],
+          `TRUCO: si la misma letra queda arriba y abajo, se tacha y la respuesta es solo un número. Ejemplo con este mismo: en (a) 36x/(24x): la x de arriba se tacha con la x de abajo y queda 36/24 = 3/2.`); },
+      () => { const s1 = pasosSumaF(C(5,7),C(-7,3)), s2 = pasosSumaF(C(-9,4),C(7,8)), s3 = pasosDivF(s1.res,s2.res);
+        return ejVarios5(k(29), `La diferencia entre ${fr(5,7)} y ${mixS(2,1,3)} se va a dividir por la suma de −${mixS(2,1,4)} y ${fr(7,8)}. (a) Escribe la expresión en forma de una fracción compleja. (b) Escribe una expresión equivalente usando dos pares de paréntesis y un símbolo de división. (c) Simplifica la expresión.<br><small>Escribe aquí la respuesta de (c); la (a) y la (b) están en la explicación.</small>`,
+          [cQ('(c)', s3.res)],
+          ['a. "La diferencia entre 5/7 y 2 1/3" va arriba y "la suma de −2 1/4 y 7/8" va abajo: (5/7 − 7/3) / (−9/4 + 7/8)', 'b. Con paréntesis y ÷: (5/7 − 7/3) ÷ (−9/4 + 7/8)',
+           'c. Arriba: 5/7 − 7/3', ...s1.lineas, 'Abajo: −9/4 + 7/8', ...s2.lineas, 'Arriba ÷ abajo:', ...s3.lineas, ...lineaMixto(s3.res)],
+          `TRUCO: "diferencia" es resta, "suma" es suma, y "se divide por" pone la primera ARRIBA. Ejemplo con este mismo: (−34/21) ÷ (−11/8) = 272/231 = 1 41/231.`); }
+    ];
+    return pick(banco)();
+  }
+},
+{
+  id:'autoeval-cap4', nombre:'Autoevaluación del capítulo 4 (la del libro)', secciones:['4.6'],
+  gen(){
+    const C = (n,d=1) => ({n,d});
+    const k = n => cab4(false, n);
+    const vx = (n,d) => fr(n,d);
+    const banco = [
+      () => uno5(k(1), `Suma: <b>${fr(5,6)} + ${fr(7,8)}</b>`, respQ(C(41,24)),
+        [...pasosSumaF(C(5,6),C(7,8)).lineas, ...lineaMixto(C(41,24)), '→ 1 17/24'], `${TR_SUMA4} Ejemplo con este mismo: MCM de 6 y 8 = 24 → 20/24 + 21/24 = 41/24.`, 'Si es mayor que 1, escríbelo como número mixto.'),
+      () => uno5(k(2), `Multiplica: <b>${mixS(4,3,5)} × (−${mixS(7,1,2)})</b>`, respQ(C(-69,2)),
+        ['Se pasan a impropias: 4 3/5 = 23/5 y −7 1/2 = −15/2', ...pasosMultF(C(23,5),C(-15,2)).lineas, '→ −69/2 = −34 1/2'],
+        'TRUCO: nunca multipliques entero con entero y fracción con fracción; pasa los mixtos a impropias primero. Ejemplo con este mismo: 23/5 × (−15/2) = −69/2.', 'Puede quedar como fracción impropia (−69/2).'),
+      () => ejVarios5(k(3), `Escribe el recíproco de <b>${vx('−a','2x')}</b>.`, [cE('Recíproco', '-2x/a')],
+        ['Se voltea la fracción: lo de abajo (2x) sube y lo de arriba (a) baja; el signo se queda.', '→ −2x/a'],
+        'TRUCO: el recíproco tiene el MISMO signo. Ejemplo con este mismo: (−a/(2x)) × (−2x/a) = 2ax/(2ax) = 1.'),
+      () => { const r = pasosSumaLetras([mono(3,8,{},{a:1}), mono(-4,5,{},{a:1})]);
+        return ejVarios5(k(4), `Resta: <b>${vx(3,'8a')} − ${vx(4,'5a')}</b>`, [cE('Respuesta', r.ex)],
+          ['I. Restar fracciones con letras es igual que sin letras: primero el denominador común.', ...r.lineas],
+          `${TR_SUMA4} Con letras abajo es igual: la letra que está en todos los denominadores se queda UNA sola vez en el común. Ejemplo con este mismo: 8a y 5a → el común es 40a.`); },
+      () => uno5(k(5), `Resta: <b>${mixS(7,3,8)} − 4</b>`, respQ(C(27,8)),
+        ['Al restar un entero solo cambia la parte entera: 7 − 4 = 3, y el 3/8 se queda.', '→ 3 3/8'],
+        'TRUCO: entero menos entero, y la fracción se queda igual. Ejemplo con este mismo: 7 3/8 − 4 = 3 3/8.', 'Escríbelo como número mixto.'),
+      () => { const f1 = mono(5,1,{x:1},{y:2}), div = mono(15,1,{x:2},{y:3}), f2 = voltearMono(div), r = pasosLetras([f1, f2]);
+        return ejVarios5(k(6), `Divide: <b>${vx('5x','y<sup>2</sup>')} ÷ ${vx('15x<sup>2</sup>','y<sup>3</sup>')}</b>`, [cE('Respuesta', r.ex)],
+          [`I. ${lineaVoltear(div)}`, `II. Ahora se multiplica: ${txtMono(f1)} × ${txtMono(f2)}`, ...r.lineas],
+          `${TRUCO_DIV4_L} Ejemplo con este mismo: arriba hay y · y · y y abajo y · y → sobra una y arriba; arriba una x y abajo x · x → sobra una x abajo → y/(3x).`); },
+      () => { const p1 = pasosDivF(C(7,6),C(5,3)), p2 = pasosMultF(p1.res,C(5,14)), p3 = pasosDivF(p2.res,C(1,2));
+        return uno5(k(7), `Simplifica: <b>${fr(7,6)} ÷ ${fr(5,3)} · ${fr(5,14)} ÷ (${fr(1,2)})</b>`, respQ(p3.res),
+          ['Solo hay × y ÷, así que se va de izquierda a derecha. Primero 7/6 ÷ 5/3:', ...p1.lineas, 'Luego × 5/14:', ...p2.lineas, 'Luego ÷ 1/2:', ...p3.lineas, '→ 1/2'],
+          `${TR_DIV4} Con × y ÷ juntos se va de izquierda a derecha. Ejemplo con este mismo: 7/10 × 5/14 = 1/4, y 1/4 ÷ 1/2 = 1/2.`); },
+      () => { const p1 = pasosSumaF(C(-5,6),C(1,2)), p2 = pasosSumaF(C(3,8),C(1,12)), p3 = pasosDivF(p1.res,p2.res);
+        return uno5(k(8), `Efectúa las operaciones indicadas: <b>(−${fr(5,6)} + ${fr(1,2)}) ÷ [${fr(3,8)} − (−${fr(1,12)})]</b>`, respQ(p3.res),
+          ['Primero el paréntesis: −5/6 + 1/2', ...p1.lineas, 'Luego el corchete: 3/8 − (−1/12) = 3/8 + 1/12', ...p2.lineas, 'Por último la división:', ...p3.lineas, '→ −8/11'],
+          `TRUCO: restar un negativo es sumar: 3/8 − (−1/12) = 3/8 + 1/12. Ejemplo con este mismo: (−1/3) ÷ (11/24) = −8/11.`); },
+      () => { const p1 = pasosSumaF(C(17,4),C(-7,2)), p2 = pasosMultF(C(3,2),p1.res), p3 = pasosDivF(p2.res,C(2,5)), p4 = pasosSumaF(C(3,5),p3.res);
+        return uno5(k(9), `Simplifica: <b>${fr(3,5)} + [${mixS(1,1,2)} · (${mixS(4,1,4)} − ${mixS(3,1,2)})] ÷ ${fr(2,5)}</b>`, respQ(p4.res),
+          ['Primero el paréntesis de adentro: 4 1/4 − 3 1/2 = 17/4 − 7/2', ...p1.lineas, 'Luego dentro del corchete: 1 1/2 × 3/4 = 3/2 × 3/4', ...p2.lineas, 'Luego la división 9/8 ÷ 2/5 (va antes que la suma):', ...p3.lineas, 'Por último la suma 3/5 + 45/16:', ...p4.lineas, ...lineaMixto(p4.res)],
+          `TRUCO: de adentro hacia afuera: ( ) primero, después [ ], y la suma del principio va AL FINAL. Ejemplo con este mismo: 3/5 + 45/16 = 273/80 = 3 33/80.`, 'Si es mayor que 1, escríbelo como número mixto.'); },
+      () => { const p1 = pasosDivF(C(15,16),C(5,2)), p2 = pasosSumaVarias([C(6,5), p1.res, C(-13,10)]);
+        return uno5(k(10), `Simplifica: <b>${mixS(1,1,5)} + ${fr(15,16)} ÷ ${mixS(2,1,2)} − ${fr(13,10)}</b>`, respQ(p2.res),
+          ['La división va antes que la suma y la resta. 2 1/2 = 5/2:', ...p1.lineas, 'Ahora de izquierda a derecha: 1 1/5 + 3/8 − 13/10, con 1 1/5 = 6/5:', ...p2.lineas, '→ 11/40'],
+          `TRUCO: la división del medio se hace primero; luego todas las sumas y restas juntas con un solo denominador común. Ejemplo con este mismo: 6/5 + 3/8 − 13/10 = 48/40 + 15/40 − 52/40 = 11/40.`); },
+      () => { const r = pasosSumaLetras([mono(1,15,{x:1}), mono(-2,15)]);
+        return ejVarios5(k(11), `Utiliza el orden de operaciones para simplificar, y escribe la respuesta como una fracción en su forma más simple:<br><b>${vx('x',5)} · ${fr(1,3)} − ${fr(2,5)} ÷ 3</b>`, [cE('Respuesta', r.ex)],
+          ['I. Primero la multiplicación y la división (van antes que la resta), cada una por separado.',
+           'x/5 × 1/3: arriba con arriba (x · 1 = x) y abajo con abajo (5 · 3 = 15) → x/15',
+           '2/5 ÷ 3: dividir entre 3 es multiplicar por 1/3 (3 volteado) → 2/5 × 1/3 = 2/15',
+           'II. Ahora la resta que quedó: x/15 − 2/15', ...r.lineas],
+          'TRUCO: ÷ 3 es lo mismo que × 1/3. Primero × y ÷, después + y −. Ejemplo con este mismo: 2/5 ÷ 3 = 2/15, y x/15 − 2/15 = (x − 2)/15.'); },
+      () => { const p1 = pasosSumaF(C(13,10),C(14,5)), p2 = pasosSumaF(C(13,5),C(-4,3)), p3 = pasosDivF(p1.res,p2.res);
+        return uno5(k(12), `Simplifica la fracción compleja y expresa la respuesta como un número mixto en su forma más simple:<br><b style="font-size:1.1em">${fr(`${mixS(1,3,10)} + ${mixS(2,4,5)}`, `${mixS(2,3,5)} − ${mixS(1,1,3)}`)}</b>`, respQ(p3.res),
+          ['Se pasan a impropias: 1 3/10 = 13/10, 2 4/5 = 14/5, 2 3/5 = 13/5, 1 1/3 = 4/3', 'Arriba:', ...p1.lineas, 'Abajo:', ...p2.lineas, 'Arriba ÷ abajo:', ...p3.lineas, ...lineaMixto(p3.res)],
+          `TRUCO: una sola fracción arriba, una sola abajo, y al final se divide. Ejemplo con este mismo: 41/10 ÷ 19/15 = 123/38 = 3 9/38.`, 'Escríbelo como número mixto.'); }
+    ];
+    return pick(banco)();
+  }
+},
 /* ── CAPÍTULO 5: Aplicaciones con Fracciones (EducoSoft, E-Book cap. 5) ── */
 {
   id:'ecuaciones-frac', nombre:'Ecuaciones con fracciones', secciones:['5.1'],
@@ -3175,6 +3653,579 @@ const MODULOS = [
         `Proporción: (${tMix(W)})/(${tMix(H)}) = x/${H2.n}`, `Productos cruzados: (${tMix(H)}) · x = (${tMix(W)}) · ${H2.n}`, ...lineasImpropias([W,H]), ...num.lineas,
         `Se despeja x dividiendo por ${tMix(H)}:`, ...div.lineas, ...lineaMixto(x), `→ ${tMix(x)} pulgadas`,
         `${TR} Ejemplo con este mismo: ${tMix(H)} · x = ${tMix(W)} · ${H2.n} → x = ${tMix(x)}.`] };
+  }
+},
+{
+  // los 36 del E-Book menos el 27 y el 28 (piden MEDIR la figura con regla al 1/8 de pulgada)
+  id:'repaso-cap5', nombre:'Ejercicios de Repaso del capítulo 5 (los del libro)', secciones:['5.5'],
+  gen(){
+    const C = (n,d=1) => ({n,d});
+    const k = n => cab5(true, n);
+    const banco = [
+      () => ec5(k(1), `−${fr(5,3)}x = −10`, 'x', [], C(-5,3), C(0), C(-10),
+        `(−5/3)(6) = −30/3 = −10`, `−10 × (−3/5) = 30/5 = 6 (dos negativos dan positivo).`),
+      () => ec5(k(2), `${fr(4,3)}x + 3 = −5`, 'x', [], C(4,3), C(3), C(-5),
+        `(4/3)(−6) + 3 = −24/3 + 3 = −8 + 3 = −5`, `por 3: 4x + 9 = −15 → 4x = −24 → x = −6.`),
+      () => ec5(k(3), `−${fr(1,3)} + ${fr('x',15)} = ${fr(1,5)}`, 'x',
+        [`x/15 es lo mismo que (1/15)x. Se reordena: (1/15)x − 1/3 = 1/5`], C(1,15), C(-1,3), C(1,5),
+        `−1/3 + 8/15 = −5/15 + 8/15 = 3/15 = 1/5`, `el MCD de 3, 15 y 5 es 15; por 15: −5 + x = 3 → x = 8.`),
+      () => ec5(k(4), `−${fr(7,10)} = ${fr('y',5)} + ${fr(1,2)}`, 'y',
+        [`Se intercambian los lados para que la y quede a la izquierda: y/5 + 1/2 = −7/10`, `y/5 es lo mismo que (1/5)y.`], C(1,5), C(1,2), C(-7,10),
+        `−6/5 + 1/2 = −12/10 + 5/10 = −7/10`, `el MCD de 10, 5 y 2 es 10; por 10: −7 = 2y + 5 → 2y = −12 → y = −6.`),
+      () => ec5(k(5), `${fr(2,3)}x + x = ${fr(10,3)}`, 'x',
+        [`Primero se combinan los términos semejantes. La x sola es 1x = (3/3)x: (2/3)x + (3/3)x = (5/3)x`, `Queda: (5/3)x = 10/3`], C(5,3), C(0), C(10,3),
+        `(2/3)(2) + 2 = 4/3 + 6/3 = 10/3`, `por 3: 2x + 3x = 10 → 5x = 10 → x = 2.`),
+      () => ec5(k(6), `${fr('2x',3)} − ${fr('x',2)} = ${fr(5,6)}`, 'x',
+        [`2x/3 = (2/3)x y x/2 = (1/2)x. Se combinan los términos semejantes: (2/3 − 1/2)x`, ...pasosSumaF(C(2,3), C(-1,2)).lineas, `Queda: (1/6)x = 5/6`], C(1,6), C(0), C(5,6),
+        `2(5)/3 − 5/2 = 10/3 − 5/2 = 20/6 − 15/6 = 5/6`, `el MCD de 3, 2 y 6 es 6; por 6: 4x − 3x = 5 → x = 5.`),
+      () => ec5(k(7), `2x − ${fr('x',4)} + ${fr(1,5)} = 3`, 'x',
+        [`Se combinan los términos con x: 2x − (1/4)x = (2 − 1/4)x`, ...sin1(pasosSumaF(C(2), C(-1,4)).lineas), `Queda: (7/4)x + 1/5 = 3`], C(7,4), C(1,5), C(3),
+        `2(8/5) − (8/5)/4 + 1/5 = 16/5 − 2/5 + 1/5 = 15/5 = 3`, `el MCD de 4 y 5 es 20; por 20: 40x − 5x + 4 = 60 → 35x = 56 → x = 56/35 = 8/5.`),
+      () => ec5(k(8), `${fr(5,4)}x − ${fr('x',2)} = ${fr(7,3)} − ${fr(3,2)}`, 'x',
+        [`Lado izquierdo, términos semejantes: (5/4 − 1/2)x`, ...pasosSumaF(C(5,4), C(-1,2)).lineas,
+         `Lado derecho: 7/3 − 3/2`, ...pasosSumaF(C(7,3), C(-3,2)).lineas, `Queda: (3/4)x = 5/6`], C(3,4), C(0), C(5,6),
+        `(5/4)(10/9) − (10/9)/2 = 50/36 − 20/36 = 30/36 = 5/6, y 7/3 − 3/2 = 14/6 − 9/6 = 5/6`, `el MCD de 4, 2, 3 y 2 es 12; por 12: 15x − 6x = 28 − 18 → 9x = 10 → x = 10/9.`),
+      () => ec5(k(9), `3x − ${fr(3,2)} = ${fr(5,2)}`, 'x', [], C(3), C(-3,2), C(5,2),
+        `3(4/3) − 3/2 = 4 − 3/2 = 8/2 − 3/2 = 5/2`, `por 2: 6x − 3 = 5 → 6x = 8 → x = 8/6 = 4/3.`),
+      () => ec5(k(10), `${fr(1,3)}x + ${fr(16,3)} = ${fr(17,3)}`, 'x', [], C(1,3), C(16,3), C(17,3),
+        `(1/3)(1) + 16/3 = 17/3`, `por 3: x + 16 = 17 → x = 1.`),
+      () => ejVarios5(k(11), `Determina si la proporción dada es cierta o falsa.<br>(a) <b>${fr(mixS(4,1,2), 2)} = ${fr(mixS(3,1,2), mixS(1,5,9))}</b><br>(b) <b>${fr(mixS(2,1,2), 3)} = ${fr(25,36)}</b>`,
+        [cCF('(a)','Cierta'), cCF('(b)','Falsa')],
+        [`a. Productos cruzados (el de arriba de cada lado por el de abajo del OTRO lado):`,
+         `4 1/2 × 1 5/9 = 9/2 × 14/9 = 126/18 = 7`, `2 × 3 1/2 = 2 × 7/2 = 14/2 = 7`, `7 = 7 → los productos cruzados son iguales → Cierta`,
+         `b. Productos cruzados:`, `2 1/2 × 36 = 5/2 × 36 = 180/2 = 90`, `3 × 25 = 75`, `90 ≠ 75 → Falsa`],
+        `TRUCO: con números mixtos, pásalos primero a fracción impropia y después haz los productos cruzados; si dan iguales es cierta. Ejemplo con este mismo: en (a) los dos productos dan 7, en (b) dan 90 y 75.`),
+      () => ejVarios5(k(12), `Determina si la proporción dada es cierta o falsa.<br>(a) <b>${fr('5 dólares','13 gramos')} = ${fr('40 dólares','104 gramos')}</b><br>(b) <b>${fr('10 dólares','20 pesetas')} = ${fr('16 monedas de 5¢','4 monedas de 10¢')}</b>`,
+        [cCF('(a)','Cierta'), cCF('(b)','Falsa')],
+        [`a. Productos cruzados: 5 × 104 = 520 y 13 × 40 = 520`, `520 = 520 → Cierta`,
+         `b. Productos cruzados: 10 × 4 = 40 y 20 × 16 = 320`, `40 ≠ 320 → Falsa (10/20 = 1/2, pero 16/4 = 4)`],
+        `TRUCO: las unidades solo te dicen qué va arriba y qué va abajo; la cuenta es con los números. Ejemplo con este mismo: (a) 520 y 520, iguales; (b) 40 y 320, distintos.`),
+      () => ejVarios5(k(13), `Resuelve las siguientes proporciones:<br>(a) <b>${fr(6,13)} = ${fr(30,'x')}</b><br>(b) <b>${fr(2,'x')} = ${fr(4,5)}</b><br>(c) <b>${mixS(6,2,5)}</b> es a <b>y</b> como 12 es a 15.`,
+        [cQ('(a) x', C(65)), cQ('(b) x', C(5,2)), cQ('(c) y', C(8))],
+        [`a. Productos cruzados: 6 · x = 13 × 30`, `6x = 390`, `x = 390 ÷ 6 = 65`,
+         `b. Productos cruzados: 4 · x = 2 × 5`, `4x = 10`, `x = 10/4 = 5/2 = 2 1/2`,
+         `c. "6 2/5 es a y como 12 es a 15" se escribe (6 2/5)/y = 12/15`, `Productos cruzados: 12 · y = 15 × 6 2/5`, `6 2/5 → 6 × 5 + 2 = 32 → 32/5`,
+         `15 × 32/5 = 480/5 = 96`, `12y = 96 → y = 96 ÷ 12 = 8`],
+        `TRUCO: "a es a b como c es a d" se escribe a/b = c/d. Ejemplo con este mismo: 6 2/5 es a y como 12 es a 15 → (6 2/5)/y = 12/15.`),
+      () => ejVarios5(k(14), `Halla el valor según se indica:<br>(a) Cinco séptimos de 1,785<br>(b) Tres mitades de 500<br>(c) 80% de 725<br>(d) 40% de (−135)<br>(e) Un séptimo de ${fr(49,50)}<br>(f) Dos tercios de ${fr(35,6)}<br>(g) ${fr(4,9)} de (−${fr(9,16)})`,
+        [cQ('(a)', C(1275)), cQ('(b)', C(750)), cQ('(c)', C(580)), cQ('(d)', C(-54)), cQ('(e)', C(7,50)), cQ('(f)', C(35,9)), cQ('(g)', C(-1,4))],
+        [`a. Cinco séptimos = 5/7, y "de" = multiplicar: 5/7 × 1,785`, `1,785 ÷ 7 = 255`, `255 × 5 = 1,275`,
+         `b. Tres mitades = 3/2: 3/2 × 500`, `500 ÷ 2 = 250`, `250 × 3 = 750`,
+         `c. 80% = 80/100 = 4/5: 4/5 × 725`, `725 ÷ 5 = 145`, `145 × 4 = 580`,
+         `d. 40% = 40/100 = 2/5: 2/5 × (−135)`, `−135 ÷ 5 = −27`, `−27 × 2 = −54 (positivo por negativo da negativo)`,
+         `e. Un séptimo = 1/7: 1/7 × 49/50`, ...pasosMultF(C(1,7), C(49,50)).lineas,
+         `f. Dos tercios = 2/3: 2/3 × 35/6`, ...pasosMultF(C(2,3), C(35,6)).lineas, `35/9 → 35 ÷ 9 = 3 y sobran 8 → 3 8/9`,
+         `g. 4/9 × (−9/16)`, ...pasosMultF(C(4,9), C(-9,16)).lineas],
+        `${TR_DE5} Con un entero grande divide primero por el denominador y luego multiplica por el numerador. Ejemplo con este mismo: 5/7 de 1,785 → 1,785 ÷ 7 = 255, × 5 = 1,275.`),
+      () => uno5(k(15), `Si ${fr(2,3)} del precio de venta de un libro usado corresponden al precio marcado por la tienda, ¿cuál es el precio marcado de un libro que se vende en $63?`,
+        { tipo:'num', respuesta:42 },
+        [`Paso 1 — sea x el precio marcado.`, `Paso 2 — "2/3 del precio de venta" es el precio marcado: x = 2/3 × 63`, `63 ÷ 3 = 21`, `21 × 2 = 42`, `→ $42`],
+        `${TR_DE5} Ejemplo con este mismo: 2/3 de 63 → 63 ÷ 3 = 21, × 2 = 42.`, 'Respuesta en dólares (solo el número).'),
+      () => uno5(k(16), `Si 120 onzas de leche contienen ${mixS(2,2,5)} onzas de grasa, ¿qué fracción de la leche es grasa?`,
+        { tipo:'frac', respuesta:{n:1,d:50}, pedirSimple:true },
+        [`Fracción = parte ÷ entero = 2 2/5 ÷ 120`, `2 2/5 → 2 × 5 + 2 = 12 → 12/5`, ...sin1(pasosDivF(C(12,5), C(120)).lineas), `→ 1/50`],
+        `TRUCO: "¿qué fracción es…?" siempre es (la parte) ÷ (el total). Ejemplo con este mismo: 12/5 ÷ 120 = 12/600 = 1/50.`),
+      () => uno5(k(17), `Janelle gasta 20% de su ingreso en alimentos. Si gasta $120 cada semana en alimentos, ¿cuál es su ingreso semanal?`,
+        { tipo:'num', respuesta:600 },
+        [`Paso 1 — sea x el ingreso semanal.`, `Paso 2 — 20% de x es 120: 20% = 20/100 = 1/5 → (1/5)x = 120`,
+         `Paso 3 — se multiplican ambos lados por el recíproco de 1/5, que es 5: x = 120 × 5 = 600`, `Paso 4 — verificación: 1/5 × 600 = 120 ✓`, `→ $600`],
+        `${TR_DE5} Si te dan la parte y el porciento, se busca el entero: (fracción) · x = parte. Ejemplo con este mismo: (1/5)x = 120 → x = 600.`, 'Respuesta en dólares (solo el número).'),
+      () => ejVarios5(k(18), `Una hamburguesa que pesa ${fr(1,3)} libra contiene 10% de grasa. ¿Cuánta grasa hay en la hamburguesa? ¿Cuánta carne hay en la hamburguesa?`,
+        [cQ('Grasa', C(1,30), 'lb'), cQ('Carne', C(3,10), 'lb')],
+        [`a. Grasa: 10% = 10/100 = 1/10, y "de" = multiplicar: 1/10 × 1/3`, ...pasosMultF(C(1,10), C(1,3)).lineas,
+         `b. Carne = todo − grasa: 1/3 − 1/30`, ...pasosSumaF(C(1,3), C(-1,30)).lineas],
+        `${TR_DE5} Lo que NO es grasa se halla restando del total. Ejemplo con este mismo: 1/3 − 1/30 = 9/30 = 3/10.`),
+      () => uno5(k(19), `Cuatro quintos del total de lluvia de este año cayó durante la temporada de otoño. Si se registraron 14 pulg de lluvia en otoño, halla la cantidad total de lluvia que cayó durante el año.`,
+        respPos(C(35,2)),
+        [`Paso 1 — sea x el total de lluvia del año.`, `Paso 2 — 4/5 de x es 14: (4/5)x = 14`,
+         `Paso 3 — se multiplican ambos lados por 5/4: x = 14 × 5/4`, ...sin1(pasosMultF(C(14), C(5,4)).lineas), `Como número mixto: ${explAMixto(C(35,2))}`, `→ 17 1/2 pulg`],
+        `${TR_DE5} Ejemplo con este mismo: (4/5)x = 14 → x = 14 × 5/4 = 17 1/2.`, 'Respuesta en pulg (como número mixto).'),
+      () => uno5(k(20), `Si 6 estudiantes de una clase son fumadores y 22 no lo son, ¿qué fracción de la clase no son fumadores?`,
+        { tipo:'frac', respuesta:{n:11,d:14}, pedirSimple:true },
+        [`El total de la clase es 6 + 22 = 28 estudiantes.`, `Fracción = parte ÷ total = 22/28`, explSimplif(22,28), `→ 11/14`],
+        `TRUCO: el total NO es 22: hay que sumar los dos grupos. Ejemplo con este mismo: 22/(6 + 22) = 22/28 = 11/14.`),
+      () => uno5(k(21), `Si entre 12 familias tienen un total de 32 vehículos de motor, ¿cuál es el promedio de vehículos por familia?`,
+        respPos(C(8,3)),
+        [`Promedio = total ÷ cantidad de familias = 32 ÷ 12 = 32/12`, explSimplif(32,12), `Como número mixto: ${explAMixto(C(8,3))}`, `→ 2 2/3 vehículos`],
+        `TRUCO: "por familia" = se divide entre las familias. Ejemplo con este mismo: 32/12 = 8/3 = 2 2/3.`, 'Respuesta como número mixto.'),
+      () => uno5(k(22), `El impuesto sobre la propiedad es ${mixS(1,1,2)} ¢ por cada dólar del valor de la propiedad. Si el valor para efectos de impuestos de una propiedad es de $200,000, ¿qué cantidad de impuestos pagará su dueño? (Recuerda: 100 ¢ = $1)`,
+        { tipo:'num', respuesta:3000 },
+        [`Por cada dólar se pagan 1 1/2 ¢, así que se multiplica: 1 1/2 × 200,000`, `1 1/2 = 3/2`, `200,000 ÷ 2 = 100,000`, `100,000 × 3 = 300,000 ¢`,
+         `Se pasan los centavos a dólares (100 ¢ = $1): 300,000 ÷ 100 = 3,000`, `→ $3,000`],
+        `TRUCO: no olvides pasar los centavos a dólares al final (÷ 100). Ejemplo con este mismo: 300,000 ¢ ÷ 100 = $3,000.`, 'Respuesta en dólares (solo el número).'),
+      () => ejVarios5(k(23), `Linda está planificando hacer un viaje de 240 millas y ella sabe que su auto rinde un promedio de ${mixS(18,4,5)} millas por galón.<br>(a) ¿Cuántos galones de gasolina necesitará para el viaje?<br>(b) Si la gasolina cuesta $${mixS(1,1,4)} por galón, ¿cuánto dinero gastará en gasolina?<br>Escribe las respuestas como números mixtos.`,
+        [cQ('(a) Galones', C(600,47)), cQ('(b) Dinero ($)', C(750,47))],
+        [`a. Galones = millas ÷ (millas por galón) = 240 ÷ 18 4/5`, `18 4/5 → 18 × 5 + 4 = 94 → 94/5`, ...sin1(pasosDivF(C(240), C(94,5)).lineas), `Como número mixto: ${explAMixto(C(600,47))}`,
+         `b. Dinero = galones × precio por galón = 600/47 × 1 1/4`, `1 1/4 → 1 × 4 + 1 = 5 → 5/4`, ...pasosMultF(C(600,47), C(5,4)).lineas, `Como número mixto: ${explAMixto(C(750,47))}`],
+        `TRUCO: "millas por galón" dice que se DIVIDEN las millas entre ese número para hallar galones; el precio "por galón" se MULTIPLICA por los galones. Ejemplo con este mismo: 240 ÷ 94/5 = 600/47 galones, y 600/47 × 5/4 = 750/47 dólares.`),
+      () => uno5(k(24), `Una máquina puede producir treinta y cinco bombillas en 40 minutos. ¿Cuánto tiempo tardará en producir 200 bombillas?`,
+        respPos(C(1600,7)),
+        [`Paso 1 — sea x el tiempo en minutos.`, `Paso 2 — tabla: Bombillas: Caso I = 35, Caso II = 200. Minutos: Caso I = 40, Caso II = x.`,
+         `Paso 3 — proporción: 35/40 = 200/x`, `Paso 4 — productos cruzados: 35 · x = 40 × 200 = 8,000`, `x = 8,000 ÷ 35 = 8000/35`, explSimplif(8000,35),
+         `Como número mixto: ${explAMixto(C(1600,7))}`, `→ 228 4/7 minutos`],
+        `${TR_PROP5} Ejemplo con este mismo: 35/40 = 200/x → 35x = 8,000 → x = 228 4/7.`, 'Respuesta en minutos (como número mixto).'),
+      () => uno5(k(25), `Un auto recorre 380 millas en ${mixS(8,1,2)} horas. ¿Cuántas millas recorrerá en 4 horas?`,
+        respPos(C(3040,17)),
+        [`Paso 1 — sea x las millas.`, `Paso 2 — tabla: Horas: Caso I = 8 1/2, Caso II = 4. Millas: Caso I = 380, Caso II = x.`,
+         `Paso 3 — proporción: (8 1/2)/380 = 4/x`, `Paso 4 — productos cruzados: (8 1/2) · x = 380 × 4 = 1,520`, `8 1/2 → 8 × 2 + 1 = 17 → 17/2: (17/2)x = 1,520`,
+         `Se multiplican ambos lados por 2/17: x = 1,520 × 2/17 = 3040/17`, `Como número mixto: ${explAMixto(C(3040,17))}`, `→ 178 14/17 millas`],
+        `${TR_PROP5} Ejemplo con este mismo: (17/2)x = 1,520 → x = 3040/17 = 178 14/17.`, 'Respuesta en millas (como número mixto).'),
+      () => {
+        const g = [[C(9,4), C(5,8), C(3,2)], [C(61,10), C(5,2), C(23,4), C(17,5)], [C(53,12), C(27,8), C(31,3)]];
+        const pasos = [];
+        ['a','b','c'].forEach((L,i) => {
+          const s = pasosSumaVarias(g[i]), d = pasosMultF(s.res, C(1, g[i].length));
+          pasos.push(`${L}. Se suman los ${g[i].length} números y la suma se divide por ${g[i].length}: ${g[i].map(tMix).join(' + ')}`,
+            ...lineasImpropias(g[i]), ...s.lineas, `Dividir por ${g[i].length} es multiplicar por 1/${g[i].length}:`, ...d.lineas, ...lineaMixto(d.res));
+        });
+        return ejVarios5(k(26), `Halla el promedio de los siguientes grupos de números:<br>(a) ${mixS(2,1,4)}, ${fr(5,8)} y ${mixS(1,1,2)}<br>(b) ${mixS(6,1,10)}, ${mixS(2,1,2)}, ${mixS(5,3,4)} y ${mixS(3,2,5)}<br>(c) ${mixS(4,5,12)}, ${mixS(3,3,8)} y ${mixS(10,1,3)}`,
+          [cQ('(a)', C(35,24)), cQ('(b)', C(71,16)), cQ('(c)', C(145,24))], pasos,
+          `TRUCO: promedio = suma ÷ cuántos son, y ÷ 3 es lo mismo que × 1/3. Ejemplo con este mismo: en (a) la suma da 35/8, y 35/8 ÷ 3 = 35/24 = 1 11/24.`);
+      },
+      () => uno5(k(29), `Halla el área de un rectángulo que tiene largo de ${fr(1,8)} pies y ancho de ${fr(7,9)} pies.`,
+        { tipo:'frac', respuesta:{n:7,d:72}, pedirSimple:true },
+        [`Fórmula: A = l × a`, `Sustitución: A = 1/8 × 7/9`, ...pasosMultF(C(1,8), C(7,9)).lineas, `→ 7/72 pies²`],
+        `${TR_GEO5} Ejemplo con este mismo: A = 1/8 × 7/9 = 7/72 pies².`, 'Respuesta en pies².'),
+      () => uno5(k(30), `Halla el largo de un rectángulo que tiene ancho de ${fr(3,4)} pies y área de 24 pies².`,
+        { tipo:'num', respuesta:32 },
+        [`Fórmula: A = l × a`, `Sustitución: 24 = l × 3/4`, `Para despejar l se divide el área por el ancho: l = 24 ÷ 3/4`, ...sin1(pasosDivF(C(24), C(3,4)).lineas), `→ 32 pies`],
+        `${TR_GEO5} Si te dan el área y un lado, el otro lado sale DIVIDIENDO. Ejemplo con este mismo: 24 ÷ 3/4 = 24 × 4/3 = 32.`, 'Respuesta en pies.'),
+      () => uno5(k(31), `Halla el perímetro de un cuadrado si un lado mide ${fr(1,10)} yd.`,
+        { tipo:'frac', respuesta:{n:2,d:5}, pedirSimple:true },
+        [`Fórmula: P = 4 × lado`, `Sustitución: P = 4 × 1/10`, ...sin1(pasosMultF(C(4), C(1,10)).lineas), `→ 2/5 yd`],
+        `${TR_GEO5} Ejemplo con este mismo: P = 4 × 1/10 = 4/10 = 2/5 yd.`, 'Respuesta en yd.'),
+      () => uno5(k(32), `El perímetro de un rectángulo es 115 pies y su ancho es ${mixS(40,1,2)} pies. ¿Cuál es su largo?`,
+        { tipo:'num', respuesta:17 },
+        [`Fórmula: P = 2l + 2a`, `Sustitución: 115 = 2l + 2(40 1/2)`, `2 × 40 1/2 = 2 × 81/2 = 162/2 = 81`, `115 = 2l + 81`,
+         `Se resta 81 en ambos lados: 2l = 115 − 81 = 34`, `Se divide por 2: l = 34 ÷ 2 = 17`, `→ 17 pies`],
+        `${TR_GEO5} Ejemplo con este mismo: 115 = 2l + 81 → 2l = 34 → l = 17.`, 'Respuesta en pies.'),
+      () => ejVarios5(k(33), `Halla el volumen de un cubo cuya arista mide:<br>(a) ${mixS(3,1,3)} pies<br>(b) ${fr(15,2)} cm`,
+        [cQ('(a)', C(1000,27), 'pies³'), cQ('(b)', C(3375,8), 'cm³')],
+        [`Fórmula: V = s × s × s = s³`,
+         `a. 3 1/3 → 3 × 3 + 1 = 10 → 10/3`, `V = 10/3 × 10/3 × 10/3`, ...pasosMultVarias([C(10,3), C(10,3), C(10,3)]).lineas, `Como número mixto: ${explAMixto(C(1000,27))}`,
+         `b. V = 15/2 × 15/2 × 15/2`, ...pasosMultVarias([C(15,2), C(15,2), C(15,2)]).lineas, `Como número mixto: ${explAMixto(C(3375,8))}`],
+        `${TR_GEO5} Ejemplo con este mismo: (10/3)³ = 1000/27 = 37 1/27 pies³.`),
+      () => uno5(k(34), `Halla el volumen de un sólido rectangular cuyo largo es ${mixS(3,1,3)} yd, ancho ${fr(4,5)} yd y altura ${mixS(2,2,5)} yd.`,
+        respPos(C(32,5)),
+        [`Fórmula: V = l × a × h`, `Sustitución: V = 3 1/3 × 4/5 × 2 2/5`, ...lineasImpropias([C(10,3), C(12,5)]),
+         ...pasosMultVarias([C(10,3), C(4,5), C(12,5)]).lineas, `Como número mixto: ${explAMixto(C(32,5))}`, `→ 6 2/5 yd³`],
+        `${TR_GEO5} Ejemplo con este mismo: 10/3 × 4/5 × 12/5 = 32/5 = 6 2/5 yd³.`, 'Respuesta en yd³ (como número mixto).'),
+      () => {
+        const l = C(57,4), a = C(92,5), h = C(11,2);
+        const ca = pasosMultVarias([C(2), l, a]), cb = pasosMultVarias([C(2), a, h]), cc = pasosMultVarias([C(2), h, l]);
+        const s = pasosSumaVarias([ca.res, cb.res, cc.res]), v = pasosMultVarias([l, a, h]);
+        return ejVarios5(k(35), `¿Cuánta cartulina se necesitará para hacer una caja de ${mixS(14,1,4)} pulg por ${mixS(18,2,5)} pulg por ${mixS(5,1,2)} pulg? Halla el volumen de la caja.`,
+          [cQ('Cartulina (área de superficie)', C(17671,20), 'pulg²'), cQ('Volumen', C(14421,10), 'pulg³')],
+          [`La cartulina que se necesita es el ÁREA DE SUPERFICIE de la caja (las 6 caras).`, ...lineasImpropias([l, a, h]),
+           `a. Fórmula: S = 2(l × a) + 2(a × h) + 2(h × l)`, `Cara de arriba y de abajo: 2 × 57/4 × 92/5`, ...sin1(ca.lineas),
+           `Frente y atrás: 2 × 92/5 × 11/2`, ...sin1(cb.lineas), `Los dos lados: 2 × 11/2 × 57/4`, ...sin1(cc.lineas), `Se suman las tres:`, ...s.lineas,
+           `Como número mixto: ${explAMixto(s.res)}`,
+           `b. Fórmula: V = l × a × h = 57/4 × 92/5 × 11/2`, ...v.lineas, `Como número mixto: ${explAMixto(v.res)}`],
+          `${TR_GEO5} "Cuánto material para hacer la caja" = área de superficie (pulg²); "cuánto le cabe" = volumen (pulg³). Ejemplo con este mismo: S = 883 11/20 pulg² y V = 1442 1/10 pulg³.`);
+      },
+      () => ({ enunciado:`${k(36)}Halla los lados que faltan en el triángulo más grande, si los dos triángulos son semejantes.${svgSemejantes(['2','3','4'], ['x','9','y'], [2,3,4], Math.random().toString(36).slice(2,8))}`,
+        tipo:'angulo2', etiquetas:['x','y'], respuesta:{a:6, b:12},
+        explicacion:[`Los lados correspondientes están en el mismo lugar: la base 2 ↔ x, el lado derecho 3 ↔ 9, el lado izquierdo 4 ↔ y.`,
+          `El par que tiene los DOS números es 3 ↔ 9, así que esa es la razón conocida: 9/3.`,
+          `Proporción para x: 9/3 = x/2 → productos cruzados: 3x = 9 × 2 = 18 → x = 18 ÷ 3 = 6`,
+          `Proporción para y: 9/3 = y/4 → productos cruzados: 3y = 9 × 4 = 36 → y = 36 ÷ 3 = 12`, `→ x = 6, y = 12`,
+          `TRUCO: busca primero el par de lados correspondientes que tiene los dos números; esa razón sirve para todos los demás. Ejemplo con este mismo: 9 ÷ 3 = 3, así que el grande es 3 veces el pequeño: x = 2 × 3 = 6 y y = 4 × 3 = 12.`] })
+    ];
+    return pick(banco)();
+  }
+},
+{
+  // los 17 del E-Book menos el 12 y el 13 (piden MEDIR la figura con regla al 1/8 de pulgada)
+  id:'autoeval-cap5', nombre:'Autoevaluación del capítulo 5 (la del libro)', secciones:['5.6'],
+  gen(){
+    const C = (n,d=1) => ({n,d});
+    const k = n => cab5(false, n);
+    const banco = [
+      () => ec5(k(1), `3x = ${fr(5,4)}`, 'x', [], C(3), C(0), C(5,4),
+        `3(5/12) = 15/12 = 5/4`, `por 4: 12x = 5 → x = 5/12.`),
+      () => ec5(k(2), `x + ${fr(2,5)} = ${fr(8,3)}`, 'x', [], C(1), C(2,5), C(8,3),
+        `34/15 + 2/5 = 34/15 + 6/15 = 40/15 = 8/3`, `el MCD de 5 y 3 es 15; por 15: 15x + 6 = 40 → 15x = 34 → x = 34/15.`),
+      () => ec5(k(3), `${fr(1,2)} − x = ${fr(1,4)}`, 'x', [`Se reordena con la x primero: −x + 1/2 = 1/4 (el coeficiente de x es −1)`], C(-1), C(1,2), C(1,4),
+        `1/2 − 1/4 = 2/4 − 1/4 = 1/4`, `por 4: 2 − 4x = 1 → −4x = −1 → x = 1/4.`),
+      () => ec5(k(4), `${fr(6,5)}x + ${fr(1,2)} = ${fr(11,2)}`, 'x', [], C(6,5), C(1,2), C(11,2),
+        `(6/5)(25/6) + 1/2 = 150/30 + 1/2 = 5 + 1/2 = 11/2`, `el MCD de 5 y 2 es 10; por 10: 12x + 5 = 55 → 12x = 50 → x = 50/12 = 25/6.`),
+      () => uno5(k(5), `Halla el número que falta: <b>${fr(15,23)} = ${fr(105,'?')}</b>`, { tipo:'num', respuesta:161 },
+        [`Sea x el número que falta: 15/23 = 105/x`, `Productos cruzados: 15 · x = 23 × 105`, `15x = 2,415`, `x = 2,415 ÷ 15 = 161`, `→ 161`],
+        `TRUCO: también se puede ver cuántas veces creció el de arriba: 105 ÷ 15 = 7, y el de abajo crece igual. Ejemplo con este mismo: 23 × 7 = 161.`),
+      () => uno5(k(6), `Resuelve la proporción: <b>${fr(12,35)} = ${fr('x',21)}</b>`, respPos(C(36,5)),
+        [`Productos cruzados: 35 · x = 12 × 21`, `35x = 252`, `x = 252 ÷ 35 = 252/35`, explSimplif(252,35), `Como número mixto: ${explAMixto(C(36,5))}`, `→ x = 7 1/5`],
+        `TRUCO: en una proporción los productos cruzados son iguales. Ejemplo con este mismo: 35x = 252 → x = 7 1/5.`, 'Si no sale entero, escríbelo como número mixto.'),
+      () => uno5(k(7), `Determina si la proporción es cierta o falsa: <b>${fr('3 pulgadas', mixS(1,1,2)+' pies')} = ${fr('2 pies','4 yds')}</b>`,
+        { tipo:'opciones', opciones:['Cierta','Falsa'], respuesta:'Cierta' },
+        [`Cada razón tiene que compararse en la MISMA unidad arriba y abajo.`,
+         `Lado izquierdo: 1 1/2 pies = 1 1/2 × 12 = 18 pulgadas → 3 pulgadas / 18 pulgadas = 3/18 = 1/6`,
+         `Lado derecho: 4 yds = 4 × 3 = 12 pies → 2 pies / 12 pies = 2/12 = 1/6`, `1/6 = 1/6 → la proporción es cierta.`, `→ Cierta`],
+        `TRUCO: si arriba y abajo tienen unidades distintas, conviértelas primero (1 pie = 12 pulgadas, 1 yd = 3 pies). Ejemplo con este mismo: 3/18 = 1/6 y 2/12 = 1/6.`),
+      () => uno5(k(8), `Resuelve la proporción: <b>${fr('x − 1',4)} = ${fr(2,7)}</b>`,
+        { tipo:'frac', respuesta:{n:15,d:7}, pedirSimple:true, signo:true },
+        [`Productos cruzados: 7(x − 1) = 4 × 2`, `Se distribuye el 7: 7x − 7 = 8`, `Se suma 7 en ambos lados: 7x = 8 + 7 = 15`, `Se divide ambos lados por 7: x = 15/7`,
+         `Verificación: (15/7 − 1)/4 = (15/7 − 7/7)/4 = (8/7)/4 = 8/28 = 2/7 ✓ Cierto`, `→ x = 15/7`],
+        `TRUCO: cuando arriba hay una resta (x − 1), ponla entre paréntesis al hacer los productos cruzados y distribuye. Ejemplo con este mismo: 7(x − 1) = 8 → 7x − 7 = 8 → x = 15/7.`,
+        'x = ___ (puede quedar como fracción impropia)'),
+      () => uno5(k(9), `En un examen, Alicia contestó 32 de 40 preguntas correctamente. A esa misma razón, ¿cuántas preguntas contestará correctamente en un examen que tiene 150 preguntas?`,
+        { tipo:'num', respuesta:120 },
+        [`Paso 1 — sea x las preguntas correctas.`, `Paso 2 — tabla: Correctas: Caso I = 32, Caso II = x. Total: Caso I = 40, Caso II = 150.`,
+         `Paso 3 — proporción: 32/40 = x/150`, `Paso 4 — productos cruzados: 40 · x = 32 × 150 = 4,800`, `x = 4,800 ÷ 40 = 120`, `→ 120 preguntas`],
+        `${TR_PROP5} Ejemplo con este mismo: 32/40 = x/150 → 40x = 4,800 → x = 120.`),
+      () => {
+        const ls = [C(122,3), C(136,3), C(117,2), C(47,2)], s = pasosSumaVarias(ls);
+        const svg = `<svg viewBox="0 0 320 150" style="width:100%;max-width:320px;height:auto;color:var(--texto);display:block;margin:10px auto 0" xmlns="http://www.w3.org/2000/svg">
+          <polygon points="95,30 225,30 280,120 40,120" fill="none" stroke="currentColor" stroke-width="2"/>
+          <text x="160" y="22" fill="currentColor" font-size="13" font-weight="700" text-anchor="middle">40 2/3 yd</text>
+          <text x="258" y="72" fill="currentColor" font-size="13" font-weight="700" text-anchor="start">45 1/3 yd</text>
+          <text x="160" y="140" fill="currentColor" font-size="13" font-weight="700" text-anchor="middle">58 1/2 yd</text>
+          <text x="62" y="72" fill="currentColor" font-size="13" font-weight="700" text-anchor="end">23 1/2 yd</text></svg>`;
+        return uno5(k(10), `Halla el largo de la verja que se necesita para cercar un parque con la forma y medidas dadas en la figura.${svg}`, { tipo:'num', respuesta:168 },
+          [`La verja va alrededor del parque: es el PERÍMETRO, la suma de los 4 lados.`, `P = 40 2/3 + 45 1/3 + 58 1/2 + 23 1/2`, ...lineasImpropias(ls), ...sin1(s.lineas), `→ 168 yd`],
+          `TRUCO: junta primero los que tienen el mismo denominador: 40 2/3 + 45 1/3 = 86 y 58 1/2 + 23 1/2 = 82. Ejemplo con este mismo: 86 + 82 = 168 yd.`, 'Respuesta en yd.');
+      },
+      () => uno5(k(11), `Un avión está transportando 180 pasajeros. Esto es el 90% de su capacidad. ¿Qué capacidad tiene el avión?`, { tipo:'num', respuesta:200 },
+        [`Paso 1 — sea x la capacidad del avión.`, `Paso 2 — 90% de x es 180: 90% = 90/100 = 9/10 → (9/10)x = 180`,
+         `Paso 3 — se multiplican ambos lados por 10/9: x = 180 × 10/9`, `180 ÷ 9 = 20`, `20 × 10 = 200`, `Paso 4 — verificación: 9/10 × 200 = 180 ✓`, `→ 200 pasajeros`],
+        `${TR_DE5} Ejemplo con este mismo: (9/10)x = 180 → x = 180 × 10/9 = 200.`),
+      () => uno5(k(14), `Halla el área de un rectángulo cuyo largo es ${mixS(16,1,2)} m y ancho es ${mixS(12,1,3)} m.`, respPos(C(407,2)),
+        [`Fórmula: A = l × a`, `Sustitución: A = 16 1/2 × 12 1/3`, ...lineasImpropias([C(33,2), C(37,3)]), ...pasosMultF(C(33,2), C(37,3)).lineas,
+         `Como número mixto: ${explAMixto(C(407,2))}`, `→ 203 1/2 m²`],
+        `${TR_GEO5} Nunca multipliques 16 × 12 y 1/2 × 1/3 por separado. Ejemplo con este mismo: 33/2 × 37/3 = 407/2 = 203 1/2 m².`, 'Respuesta en m² (como número mixto).'),
+      () => uno5(k(15), `Halla el volumen del sólido mostrado: un sólido rectangular de ${mixS(4,4,5)} pies de largo, ${mixS(3,2,5)} pies de ancho y ${mixS(6,3,5)} pies de alto.`, respPos(C(13464,125)),
+        [`Fórmula: V = l × a × h`, `Sustitución: V = 4 4/5 × 3 2/5 × 6 3/5`, ...lineasImpropias([C(24,5), C(17,5), C(33,5)]),
+         ...pasosMultVarias([C(24,5), C(17,5), C(33,5)]).lineas, `Como número mixto: ${explAMixto(C(13464,125))}`, `→ 107 89/125 pies³`],
+        `${TR_GEO5} Ejemplo con este mismo: 24/5 × 17/5 × 33/5 = 13464/125 = 107 89/125 pies³.`, 'Respuesta en pies³ (como número mixto).'),
+      () => {
+        const l = C(19,2), a = C(19,2), h = C(17,5);
+        const ca = pasosMultVarias([C(2), l, a]), cb = pasosMultVarias([C(2), a, h]), cc = pasosMultVarias([C(2), h, l]);
+        const s = pasosSumaVarias([ca.res, cb.res, cc.res]);
+        return uno5(k(16), `Halla el área de superficie del sólido utilizando la información dada en la figura: una caja de ${mixS(9,1,2)} pies de largo, ${mixS(9,1,2)} pies de ancho y ${mixS(3,2,5)} pies de alto.`, respPos(s.res),
+          [`Fórmula: S = 2(l × a) + 2(a × h) + 2(h × l)`, ...lineasImpropias([l, h]),
+           `Cara de arriba y de abajo: 2 × 19/2 × 19/2`, ...sin1(ca.lineas), `Frente y atrás: 2 × 19/2 × 17/5`, ...sin1(cb.lineas),
+           `Los dos lados: 2 × 17/5 × 19/2`, ...sin1(cc.lineas), `Se suman las tres:`, ...s.lineas, `Como número mixto: ${explAMixto(s.res)}`, `→ ${tMix(s.res)} pies²`],
+          `${TR_GEO5} El área de superficie son las 6 caras, de a pares iguales. Ejemplo con este mismo: S = ${tMix(s.res)} pies².`, 'Respuesta en pies² (como número mixto).');
+      },
+      () => uno5(k(17), `Las siguientes figuras son semejantes. Halla la medida del lado que falta: el rectángulo pequeño mide 4 cm de alto y 5 cm de ancho; el grande mide 10 cm de ancho y x de alto.`,
+        { tipo:'num', respuesta:8 },
+        [`Lados correspondientes: alto 4 ↔ x, ancho 5 ↔ 10.`, `Proporción: 4/5 = x/10`, `Productos cruzados: 5 · x = 4 × 10 = 40`, `x = 40 ÷ 5 = 8`, `→ 8 cm`],
+        `TRUCO: en figuras semejantes, alto/ancho es la misma razón en las dos. Ejemplo con este mismo: 10 ÷ 5 = 2, así que x = 4 × 2 = 8 cm.`, 'Respuesta en cm.')
+    ];
+    return pick(banco)();
+  }
+},
+{
+  // Los tipos de ejercicio que salieron en el Homework, el Quiz y el Quiz de práctica de 5.1–5.3 en EducoSoft.
+  // EducoSoft cambia los números en cada intento, así que aquí también salen al azar.
+  id:'educo-cap5', nombre:'Tarea y Quiz 5.1–5.3 (los tipos de EducoSoft)', secciones:['5.7'],
+  gen(){
+    const C = (n,d=1) => ({n,d});
+    const OK = '✓ Cierto';
+    const plant = [
+      // 1. x + a/b = c/d
+      () => { let a, c; do { a = fracR([2,3,4,5,6,7,8,9]); c = fracR([2,3,4,5,6,7,8,9]); } while(a.n*c.d >= c.n*a.d);
+        const p = pasosSumaF(c, C(-a.n,a.d)), x = p.res;
+        return { enunciado:`Halla el valor de <i>x</i> para la ecuación dada.<br><b><i>x</i> + ${fr(a.n,a.d)} = ${fr(c.n,c.d)}</b>`, tipo:'frac', respuesta:{n:x.n, d:x.d}, pedirSimple:true, ayuda:'x = ___',
+          explicacion:[`Paso 1 — la x tiene que quedar sola. Para quitar el + ${tf(a.n,a.d)} se suma su opuesto, −${tf(a.n,a.d)}, en AMBOS lados (Principio de Suma de la Igualdad): x + ${tf(a.n,a.d)} − ${tf(a.n,a.d)} = ${tf(c.n,c.d)} − ${tf(a.n,a.d)}`,
+            `Paso 2 — a la derecha se resta: ${tf(c.n,c.d)} − ${tf(a.n,a.d)} = ${tf(c.n,c.d)} + ${tfP(-a.n,a.d)}`, ...p.lineas,
+            `Paso 3 — verificación: ${tf(x.n,x.d)} + ${tf(a.n,a.d)} = ${tf(c.n,c.d)} ${OK}`, `→ x = ${tf(x.n,x.d)}`,
+            `TRUCO: lo que SUMA a la x pasa al otro lado RESTANDO. Ejemplo con este mismo: x = ${tf(c.n,c.d)} − ${tf(a.n,a.d)} = ${tf(x.n,x.d)}.`] }; },
+      // 2. (a y)/b = c/d
+      () => { let a, b, c, d, x; do { c = pick([3,7,11,13]); a = c*R(2,7); b = R(2,9); d = R(2,9); x = Fq(c*b, a*d); } while(x.d===1);
+        const L = pick(['y','x','m']), v = Fq(a*x.n, b*x.d), w = Fq(c,d);
+        return { enunciado:`Resuelve la ecuación:<br><b>${fr(a+'<i>'+L+'</i>',b)} = ${fr(c,d)}</b>`, tipo:'frac', respuesta:{n:x.n, d:x.d}, pedirSimple:true, ayuda:`${L} = ___`,
+          explicacion:[`Paso 1 — productos cruzados (lo de arriba de un lado por lo de abajo del otro): (${a}${L})(${d}) = (${c})(${b})`,
+            `Paso 2 — se multiplica: ${a*d}${L} = ${c*b}`, `Paso 3 — se dividen ambos lados entre ${a*d} (Principio de Multiplicación de la Igualdad): ${L} = ${tf(c*b,a*d)}`,
+            explSimplif(c*b, a*d), `Paso 4 — verificación: ${a} × ${tf(x.n,x.d)} ÷ ${b} = ${tf(v.n,v.d)} y ${tf(c,d)} = ${tf(w.n,w.d)} ${OK}`, `→ ${L} = ${tf(x.n,x.d)}`,
+            `TRUCO: en una proporción los productos cruzados son iguales. Ejemplo con este mismo: ${a*d}${L} = ${c*b} → ${L} = ${tf(x.n,x.d)}.`] }; },
+      // 3. cierta o falsa (a veces con yardas, pies y pulgadas)
+      () => {
+        const TRc = 'TRUCO: si las unidades de arriba y abajo no son las mismas, primero conviértelas (1 yarda = 3 pies, 1 pie = 12 pulgadas) y después haz los productos cruzados. Ejemplo con este mismo:';
+        if(Math.random() < 0.5){
+          const ok = Math.random() < 0.5; let a, b, c, d;
+          do { const p = R(1,9), q = R(p+1,12), s1 = R(1,4), s2 = R(1,4); a = p*s1; b = q*s1; c = p*s2; d = q*s2; if(!ok) c += pick([1,2,3]); } while((a===c && b===d) || c<=0);
+          const p1 = a*d, p2 = b*c, es = p1===p2;
+          return { enunciado:`Determina si la proporción dada a continuación es cierta o falsa.<br><b>${fr(a,b)} = ${fr(c,d)}</b>`, tipo:'opciones', opciones:['Cierta','Falsa'], respuesta: es ? 'Cierta' : 'Falsa',
+            explicacion:[`Se hallan los productos cruzados (el numerador de cada fracción por el denominador de la OTRA):`, `${a} × ${d} = ${p1}`, `${b} × ${c} = ${p2}`,
+              es ? `Son iguales (${p1} = ${p2}) → la proporción es cierta.` : `Son distintos (${p1} ≠ ${p2}) → la proporción es falsa.`, `→ ${es ? 'Cierta' : 'Falsa'}`,
+              `TRUCO: en una proporción los productos cruzados siempre son iguales. Ejemplo con este mismo: ${p1} y ${p2} → ${es ? 'iguales, cierta' : 'distintos, falsa'}.`] };
+        }
+        const ok = Math.random() < 0.5; let A, B, C3, D;
+        if(ok){ do { A = R(2,9); B = R(2,9); D = R(2,9); C3 = 4*A*D/B; } while(!Number.isInteger(C3) || C3<2 || C3>40); }
+        else { do { A = R(2,9); B = R(2,9); D = R(2,9); C3 = R(4,36); } while(4*A*D === B*C3); }
+        const izq = 12*A, der = 3*C3, p1 = izq*D, p2 = B*der, es = p1===p2;
+        return { enunciado:`Determina si la proporción dada a continuación es cierta o falsa.<br><b>${fr(A+' pies', B+' pulgadas')} = ${fr(C3+' yardas', D+' pies')}</b>`, tipo:'opciones', opciones:['Cierta','Falsa'], respuesta: es ? 'Cierta' : 'Falsa',
+          explicacion:[`Las dos razones tienen unidades distintas, así que primero se pasa todo a las mismas unidades: 1 yarda = 3 pies y 1 pie = 12 pulgadas.`,
+            `Lado izquierdo: ${A} pies = ${A} × 12 = ${izq} pulgadas → ${izq} pulgadas / ${B} pulgadas = ${tf(izq,B)}`,
+            `Lado derecho: ${C3} yardas = ${C3} × 3 = ${der} pies → ${der} pies / ${D} pies = ${tf(der,D)}`,
+            `Productos cruzados: ${izq} × ${D} = ${p1} y ${B} × ${der} = ${p2}`, es ? `${p1} = ${p2} → la proporción es cierta.` : `${p1} ≠ ${p2} → la proporción es falsa.`, `→ ${es ? 'Cierta' : 'Falsa'}`,
+            `${TRc} ${p1} y ${p2} → ${es ? 'iguales, cierta' : 'distintos, falsa'}.`] };
+      },
+      // 4. "a es a x como b es a c"
+      () => { const b = pick([2,3,4,5,6]), a = b*R(3,9), c = b*R(5,15), x = a*c/b;
+        return { enunciado:`Halla el término que falta.<br><b>${a}</b> es a <i>x</i> como <b>${b}</b> es a <b>${c}</b>.`, tipo:'num', respuesta:x, ayuda:'x = ___',
+          explicacion:[`Paso 1 — "${a} es a x como ${b} es a ${c}" se escribe como proporción: ${a}/x = ${b}/${c}`, `Paso 2 — productos cruzados: ${b} · x = ${a} × ${c}`, `${b}x = ${a*c}`,
+            `Paso 3 — se divide entre ${b}: x = ${a*c} ÷ ${b} = ${x}`, `Paso 4 — verificación: ${a}/${x} = ${tf(...simplificar(a,x))} y ${b}/${c} = ${tf(...simplificar(b,c))} ${OK}`, `→ x = ${x}`,
+            `${TR_PROP5} Ejemplo con este mismo: ${a}/x = ${b}/${c} → ${b}x = ${a*c} → x = ${x}.`] }; },
+      // 5. (mixto)/x = n/d
+      () => { const q = pick([2,3,4,5,6]); let p; do { p = R(1,q-1); } while(mcd(p,q)!==1);
+        const e = R(1,7), N = e*q+p, divs = []; for(let i=2;i<=N;i++) if(N%i===0) divs.push(i);
+        const n = pick(divs); let d; do { d = R(2,15); } while(d===n);
+        const x = Fq(N*d, q*n), pr = pasosMultF(C(N,q), C(d)), dv = pasosDivF(pr.res, C(n));
+        return { enunciado:`Resuelve la proporción.<br><b>${fr(mixS(e,p,q),'<i>x</i>')} = ${fr(n,d)}</b>`, ...respPos(x), ayuda:`x = ___ (como número mixto si es mayor que 1)`,
+          explicacion:[`Paso 1 — el número mixto pasa a fracción impropia: ${e} ${p}/${q} → ${e} × ${q} + ${p} = ${N} → ${N}/${q}`, `Paso 2 — la proporción queda: (${N}/${q})/x = ${n}/${d}`,
+            `Paso 3 — productos cruzados: ${n} · x = (${N}/${q}) · ${d}`, ...sin1(pr.lineas), `Paso 4 — se divide entre ${n}: x = ${opTP(pr.res)} ÷ ${n}`, ...sin1(dv.lineas), ...lineaMixto(x), `→ x = ${tMix(x)}`,
+            `${TR_PROP5} Con un mixto, pásalo SIEMPRE a impropia antes de multiplicar. Ejemplo con este mismo: ${n}x = ${tf(pr.res.n,pr.res.d)} → x = ${tMix(x)}.`] }; },
+      // 6. tercer lado de un triángulo
+      () => { const a = Fq(R(3,9), pick([2,3,4])), b = mixR(1,5,[2,3,4]), c3 = mixR(2,6,[2,4,5,10,20]), P = addF(addF(a,b),c3), s = pasosSumaVarias([P, C(-a.n,a.d), C(-b.n,b.d)]);
+        if(a.d===1 || a.n<=a.d) return this.gen();
+        return { enunciado:`La suma de los lados de un triángulo es ${hMix(P)} pulgadas. Si dos de sus lados miden ${fr(a.n,a.d)} pulgadas y ${hMix(b)} pulgadas, halla la medida del tercer lado.`, ...respPos(c3), ayuda:'Respuesta en pulgadas (como número mixto).',
+          explicacion:[`Paso 1 — sea x el tercer lado.`, `Paso 2 — la suma de los tres lados es ${tMix(P)}: ${tf(a.n,a.d)} + ${tMix(b)} + x = ${tMix(P)}, así que x = ${tMix(P)} − ${tf(a.n,a.d)} − ${tMix(b)}`,
+            `Paso 3 — se resuelve:`, ...lineasImpropias([P, b]), ...sin1(s.lineas), ...lineaMixto(c3), `→ ${tMix(c3)} pulgadas`,
+            `TRUCO: el lado que falta es el total MENOS los lados que ya conoces. Ejemplo con este mismo: ${tMix(P)} − ${tf(a.n,a.d)} − ${tMix(b)} = ${tMix(c3)}.`] }; },
+      // 7. promedio de un par de fracciones
+      () => { let a, b; do { a = fracR([2,3,4,5,6,8,9]); b = fracR([2,3,4,5,6,8,9]); } while(a.d===b.d);
+        const s = pasosSumaF(a,b), m = pasosMultF(s.res, C(1,2)), r = m.res;
+        return { enunciado:`Halla el promedio del siguiente par de fracciones.<br><b>${fr(a.n,a.d)} y ${fr(b.n,b.d)}</b>`, tipo:'frac', respuesta:{n:r.n, d:r.d}, pedirSimple:true,
+          explicacion:[`Promedio = (la suma de los números) ÷ (cuántos son). Aquí son 2.`, `Paso 1 — la suma: ${tf(a.n,a.d)} + ${tf(b.n,b.d)}`, ...s.lineas,
+            `Paso 2 — se divide entre 2, que es multiplicar por 1/2: ${tf(s.res.n,s.res.d)} × 1/2`, ...sin1(m.lineas), `→ ${tf(r.n,r.d)}`,
+            `TRUCO: el promedio de fracciones se hace igual que el de enteros: sumas y divides entre cuántos son. Ejemplo con este mismo: la suma da ${tf(s.res.n,s.res.d)} y ÷ 2 queda ${tf(r.n,r.d)}.`] }; },
+      // 8. fracción de una cantidad (ganancias / estacionamiento)
+      () => { const d = pick([3,4,5,6,7,8,9]), n = pick([1,2,3,4,5,6,7,8].filter(v => v<d && mcd(v,d)===1)), q = R(50,400), W = d*q, r = n*q;
+        const est = Math.random() < 0.5;
+        return { enunciado: est ? `Un estudiante planifica gastar ${fr(n,d)} de sus ganancias en su educación. Si se gana $${miles(W)} este año, ¿cuánto planifica gastar en su educación?`
+            : `Un estacionamiento puede acomodar ${miles(W)} carros. Si ${fr(n,d)} de los espacios del estacionamiento están llenos, ¿cuántos carros están estacionados en ese momento?`,
+          tipo:'num', respuesta:r, ayuda: est ? 'Respuesta en dólares (solo el número).' : 'Respuesta: número de carros.',
+          explicacion:[`"${n}/${d} de ${miles(W)}": la palabra "de" significa MULTIPLICAR → ${tf(n,d)} × ${miles(W)}`, `Primero se divide por el denominador: ${miles(W)} ÷ ${d} = ${miles(q)}`, `Luego se multiplica por el numerador: ${miles(q)} × ${n} = ${miles(r)}`, `→ ${est ? '$' : ''}${miles(r)}${est ? '' : ' carros'}`,
+            `${TR_DE5} Ejemplo con este mismo: ${miles(W)} ÷ ${d} = ${miles(q)}, × ${n} = ${miles(r)}.`] }; },
+      // 9. propina = 1/d del costo
+      () => { const d = pick([8,10,12,15,16,20]), T = R(100,400), X = T*d;
+        return { enunciado:`La propina promedio es ${fr(1,d)} del costo de las comidas. Una noche un mesero se ganó $${miles(T)} en propinas. Halla el costo total de las comidas que sirvió.`, tipo:'num', respuesta:X, ayuda:'Respuesta en dólares (solo el número).',
+          explicacion:[`Paso 1 — sea x el costo total de las comidas.`, `Paso 2 — "1/${d} del costo es la propina": (1/${d}) · x = ${miles(T)}`, `Paso 3 — se multiplican ambos lados por el recíproco de 1/${d}, que es ${d}: x = ${miles(T)} × ${d} = ${miles(X)}`,
+            `Paso 4 — verificación: ${miles(X)} ÷ ${d} = ${miles(T)} ✓ Cierto`, `→ $${miles(X)}`,
+            `${TR_DE5} Si te dan la parte y la fracción, el entero sale MULTIPLICANDO por el denominador. Ejemplo con este mismo: ${miles(T)} × ${d} = ${miles(X)}.`] }; },
+      // 10. sombras
+      () => { const p = R(1,5), q = R(p+1,9), m = R(3,9), t = R(1,4), h1 = p*m, s1 = q*m, s2 = q*t, x = p*t;
+        if(mcd(p,q)!==1) return this.gen();
+        return { enunciado:`Si un árbol de ${h1} pies de alto produce una sombra de ${s1} pies, ¿cuál es la altura de un árbol si su sombra mide ${s2} pies de largo?`, tipo:'num', respuesta:x, ayuda:'Respuesta en pies.',
+          explicacion:[`Paso 1 — sea x la altura del árbol.`, `Paso 2 — tabla: Altura: Caso I = ${h1}, Caso II = x. Sombra: Caso I = ${s1}, Caso II = ${s2}.`, `Paso 3 — proporción: ${h1}/${s1} = x/${s2}`,
+            `Paso 4 — productos cruzados: ${s1} · x = ${h1} × ${s2} = ${h1*s2}`, `x = ${h1*s2} ÷ ${s1} = ${x}`, `→ ${x} pies`,
+            `${TR_PROP5} Ejemplo con este mismo: ${h1}/${s1} = x/${s2} → ${s1}x = ${h1*s2} → x = ${x}.`] }; },
+      // 11. camión de concreto
+      () => { const ini = mixR(8,12,[2,3,4]), e1 = mixR(3,5,[2,3,4]), e2 = mixR(1,2,[2,3]), rec = R(4,8), ts = [ini, C(-e1.n,e1.d), C(-e2.n,e2.d), C(rec)], s = pasosSumaVarias(ts), r = s.res;
+        if(r.n <= 0) return this.gen();
+        return { enunciado:`Un camión de concreto se carga con ${hMix(ini)} pies cúbicos de concreto. El conductor entrega ${hMix(e1)} pies cúbicos de concreto en su primera parada y ${hMix(e2)} pies cúbicos en su segunda parada. En la tercera parada recoge ${rec} pies cúbicos de concreto que el cliente no quiere. ¿Cuánto concreto hay en el camión después de la tercera parada?`,
+          ...respPos(r), ayuda:'Respuesta en pies cúbicos (como número mixto).',
+          explicacion:[`Paso 1 — sea x el concreto que queda.`, `Paso 2 — lo que entrega se RESTA y lo que recoge se SUMA: x = ${tMix(ini)} − ${tMix(e1)} − ${tMix(e2)} + ${rec}`, `Paso 3 — se resuelve:`,
+            ...lineasImpropias([ini, {n:e1.n,d:e1.d}, {n:e2.n,d:e2.d}, C(rec)]), ...sin1(s.lineas), ...lineaMixto(r), `→ ${tMix(r)} pies cúbicos`,
+            `TRUCO: traduce la historia a UNA sola cuenta: lo que se entrega se resta, lo que se recoge se suma. Ejemplo con este mismo: x = ${tMix(ini)} − ${tMix(e1)} − ${tMix(e2)} + ${rec} = ${tMix(r)}.`] }; },
+      // 12. ¿qué fracción?
+      () => { const f = Fq(R(1,11), R(12,17)), s = R(40,200), parte = f.n*s, todo = f.d*s;
+        return { enunciado:`Durante el año pasado, ${miles(parte)} de ${miles(todo)} estudiantes recibieron beca de estudios. ¿Qué fracción de los estudiantes recibieron beca de estudios?`, tipo:'frac', respuesta:{n:f.n, d:f.d}, pedirSimple:true,
+          explicacion:[`Fracción = parte ÷ total = ${miles(parte)}/${miles(todo)}`, explSimplif(parte, todo), `→ ${tf(f.n,f.d)}`,
+            `${TR_DE5} "¿Qué fracción es…?" siempre es (la parte) ÷ (el total). Ejemplo con este mismo: ${miles(parte)}/${miles(todo)} = ${tf(f.n,f.d)}.`] }; },
+      // 13. cubo: volumen y área de superficie (la arista viene en yardas)
+      () => { let n; do { n = R(4,14); } while(n%3===0);
+        const V = n**3, S = 6*n*n;
+        return ejVarios5('', `¿Cuántos pies cúbicos hay en la figura dada? Y, ¿cuál es el área de su superficie en pies cuadrados?<br><b>${fr(n,3)} yd = ${n} pies</b>${svgCubo(`${n}/3 yd`)}`,
+          [{ et:'Volumen', u:'pies³', r:V }, { et:'Área de superficie', u:'pies²', r:S }],
+          [`La arista viene en yardas y hay que pasarla a pies: 1 yarda = 3 pies, así que ${n}/3 yd = (${n}/3) × 3 pies = ${n} pies.`,
+           `Volumen: V = s × s × s = s³ = ${n} × ${n} × ${n} = ${n*n} × ${n} = ${V} pies³`, `Área de superficie: un cubo tiene 6 caras cuadradas iguales, S = 6 × s² = 6 × ${n} × ${n} = 6 × ${n*n} = ${S} pies²`],
+          `TRUCO: el volumen son 3 factores (s³) y el área de superficie son 6 caras (6s²). Pasa la arista a pies ANTES de calcular. Ejemplo con este mismo: V = ${n}³ = ${V} y S = 6 × ${n}² = ${S}.`); },
+      // 14. triángulos rectángulos semejantes
+      () => { const [a,b,c] = pick([[5,12,13],[3,4,5],[8,15,17],[6,8,10],[9,12,15]]), k = R(2,4), A = a*k, x = b*k, y = c*k, u = pick(['pulg','cm','pies']);
+        return { enunciado:`Dado un par de triángulos semejantes, halla los lados que faltan.${svgRectSem(a,b,c,A,u)}`, tipo:'angulo2', etiquetas:['x','y'], respuesta:{a:x, b:y},
+          explicacion:[`Los lados correspondientes están en el mismo lugar: el lado vertical ${a} ↔ ${A}, la base ${b} ↔ x, el lado inclinado ${c} ↔ y.`, `El par que tiene los DOS números es ${a} ↔ ${A}: el grande es ${A} ÷ ${a} = ${k} veces el pequeño.`,
+            `Proporción para x: ${A}/${a} = x/${b} → ${a}x = ${A} × ${b} = ${A*b} → x = ${A*b} ÷ ${a} = ${x}`, `Proporción para y: ${A}/${a} = y/${c} → ${a}y = ${A} × ${c} = ${A*c} → y = ${A*c} ÷ ${a} = ${y}`, `→ x = ${x} ${u}, y = ${y} ${u}`,
+            `TRUCO: busca primero el par de lados correspondientes que tiene los dos números; esa razón sirve para todos los demás. Ejemplo con este mismo: ${A} ÷ ${a} = ${k}, así que x = ${b} × ${k} = ${x} y y = ${c} × ${k} = ${y}.`] }; },
+      // 15. MC: ¿qué número sumado al cociente de a/b y c/d es igual a 1?
+      () => { let a, c, q; do { a = fracR([3,4,5,6,7,8,9,10,12,14,16]); c = fracR([3,4,5,6,7,8,9,10,12,14,16]); q = Fq(a.n*c.d, a.d*c.n); } while(q.n >= q.d || (a.n===c.n && a.d===c.d));
+        const r = addF(C(1), C(-q.n,q.d)), dv = pasosDivF(a, c);
+        const malas = [optF(q), optF(Fq(a.d-a.n, a.d)), optF(Fq(c.d-c.n, c.d)), optF(addF(a, C(-c.n,c.d))), optF(Fq(q.d, q.n)), optF(Fq(r.n + 1, r.d))];
+        const mc = opcionesMC(optF(r), malas);
+        return { enunciado:`¿Qué número sumado al cociente de ${fr(a.n,a.d)} y ${fr(c.n,c.d)} es igual a 1?`, tipo:'opciones', opciones:mc.opciones, respuesta:mc.respuesta,
+          explicacion:[`Paso 1 — el cociente de ${tf(a.n,a.d)} y ${tf(c.n,c.d)} es ${tf(a.n,a.d)} ÷ ${tf(c.n,c.d)}:`, ...dv.lineas,
+            `Paso 2 — se busca el número x que cumple: ${tf(q.n,q.d)} + x = 1, así que x = 1 − ${tf(q.n,q.d)}`, ...sin1(pasosSumaF(C(1), C(-q.n,q.d)).lineas), `→ ${tf(r.n,r.d)}${mc.respuesta===NING ? ' (no está entre las opciones → "Ninguno de los anteriores")' : ''}`,
+            `TRUCO: "cociente" es una DIVISIÓN y "1 menos algo" se hace con denominador común. Ejemplo con este mismo: ${tf(a.n,a.d)} ÷ ${tf(c.n,c.d)} = ${tf(q.n,q.d)}, y 1 − ${tf(q.n,q.d)} = ${tf(r.n,r.d)}.`] }; },
+      // 16. MC: (1/q)x + b = c
+      () => { const q = pick([2,3,4,5,6,7,8]), b = R(2,15); let c; do { c = R(-40,40); } while(c===b || c===0);
+        const x = q*(c-b), mc = opcionesMC(mm(x), [mm(q*(c+b)), mm(c-q*b), mm(q*c-b), mm(q*c+b), mm(x+q), mm(-x)]);
+        return { enunciado:`Resuelve para <i>x</i>: <b>${fr(1,q)}<i>x</i> + ${b} = ${mm(c)}</b>`, tipo:'opciones', opciones:mc.opciones, respuesta:mc.respuesta,
+          explicacion:[`Paso 1 — primero se quita lo que SUMA: se resta ${b} en ambos lados: (1/${q})x = ${mm(c)} − ${b} = ${mm(c-b)}`, `Paso 2 — ahora se quita el coeficiente: se multiplican AMBOS lados por el recíproco de 1/${q}, que es ${q}: x = ${q} × (${mm(c-b)}) = ${mm(x)}`,
+            `Paso 3 — verificación: (1/${q})(${mm(x)}) + ${b} = ${mm(c-b)} + ${b} = ${mm(c)} ✓ Cierto`, `→ ${mm(x)}${mc.respuesta===NING ? ' (no está entre las opciones → "Ninguno de los anteriores")' : ''}`,
+            `TRUCO: en ax + b = c el orden es SIEMPRE el mismo: primero quitas lo que suma o resta, después lo que multiplica. Ejemplo con este mismo: x = ${q} × ${mm(c-b)} = ${mm(x)}.`] }; },
+      // 17. MC: resolver para y:  A/B = (C/B) y
+      () => { let A, B, Cc; do { A = R(2,19); Cc = R(2,19); B = R(2,12); } while(A===Cc || mcd(A,Cc)!==1 || B===A || B===Cc);
+        const r = Fq(A, Cc), mc = opcionesMC(optF(r), [optF(Fq(Cc,A)), optF(Fq(B,Cc)), optF(Fq(Cc,B)), optF(Fq(A,B)), optF(Fq(A*B,Cc))]);
+        return { enunciado:`Resuelve para <i>y</i>: <b>${fr(A,B)} = ${fr(Cc,B)}<i>y</i></b>`, tipo:'opciones', opciones:mc.opciones, respuesta:mc.respuesta,
+          explicacion:[`Paso 1 — la y está multiplicada por ${tf(Cc,B)}. Se multiplican AMBOS lados por su recíproco, ${tf(B,Cc)}: (${tf(B,Cc)})(${tf(A,B)}) = (${tf(B,Cc)})(${tf(Cc,B)})y`, `Paso 2 — a la derecha ${tf(Cc,B)} × ${tf(B,Cc)} = 1, así que queda 1 · y = y.`,
+            `Paso 3 — a la izquierda: ${tf(B,Cc)} × ${tf(A,B)} = ${tf(A*B, Cc*B)} = ${tf(r.n,r.d)}`, `→ y = ${tf(r.n,r.d)}${mc.respuesta===NING ? ' (no está entre las opciones → "Ninguno de los anteriores")' : ''}`,
+            `TRUCO: cuando la letra tiene un coeficiente fracción, multiplica por su recíproco (la fracción volteada). Si los dos lados tienen el mismo denominador, se cancela y y = ${tf(A,Cc)}. Ejemplo con este mismo: y = ${tf(r.n,r.d)}.`] }; },
+      // 18. MC: si p/a = q/r, entonces a = ?
+      () => { let p, q, r; do { p = R(2,9); q = R(2,9); r = R(2,9); } while(p===q || mcd(p*r,q)===q);
+        const a = Fq(p*r, q), mc = opcionesMC(optF(a), [optF(Fq(q, p*r)), String(q), String(p), String(r), optF(Fq(p*q, r)), optF(Fq(q*r, p))]);
+        return { enunciado:`Si <b>${fr(p,'<i>a</i>')} = ${fr(q,r)}</b>, entonces <i>a</i> = ?`, tipo:'opciones', opciones:mc.opciones, respuesta:mc.respuesta,
+          explicacion:[`Paso 1 — productos cruzados: ${p} · ${r} = ${q} · a`, `Paso 2 — ${p*r} = ${q}a → se divide entre ${q}: a = ${tf(p*r, q)}`, explSimplif(p*r, q), `→ a = ${tf(a.n,a.d)}${mc.respuesta===NING ? ' (no está entre las opciones → "Ninguno de los anteriores")' : ''}`,
+            `TRUCO: en una proporción los productos cruzados son iguales; la letra queda multiplicada por un número y se despeja dividiendo. Ejemplo con este mismo: ${p} × ${r} = ${p*r} y ${p*r} ÷ ${q} = ${tf(a.n,a.d)}.`] }; },
+      // 19. MC: identifica la solución de (1/k)x = c
+      () => { const k = pick([4,5,6,8,9,10,12,15,20]), c = R(3,15), X = k*c, mc = opcionesMC(String(X), [String(k-c), String(k+c), String(X+k), String(X-k), String(c), String(X+1)].filter(s => +s > 0));
+        return { enunciado:`Identifica la solución de <b>${fr(1,k)}<i>x</i> = ${c}</b>.`, tipo:'opciones', opciones:mc.opciones, respuesta:mc.respuesta,
+          explicacion:[`Se multiplican AMBOS lados por el recíproco de 1/${k}, que es ${k}: x = ${c} × ${k} = ${X}`, `Verificación: (1/${k}) × ${X} = ${X} ÷ ${k} = ${c} ✓ Cierto`, `→ ${X}${mc.respuesta===NING ? ' (no está entre las opciones → "Ninguno de los anteriores")' : ''}`,
+            `TRUCO: (1/${k})x significa "x dividido entre ${k}"; para deshacerlo se MULTIPLICA por ${k}. Ejemplo con este mismo: x = ${c} × ${k} = ${X}.`] }; },
+      // 20. MC: (a/b)y − c/d = e/f
+      () => { let a, c, e, y; do { a = fracR([2,3,4,5,6]); c = fracR([2,3,4,5,6]); e = fracR([2,3,4,5,6]); y = Fq((e.n*c.d + c.n*e.d) * a.d, e.d*c.d*a.n); } while(y.d===1 || y.n<=0 || y.n/y.d>6);
+        const s = pasosSumaF(e, c), dv = pasosDivF(s.res, a);
+        const malas = [optF(Fq(y.d,y.n)), optF(pasosDivF(addF(e, C(-c.n,c.d)), a).res), optF(pasosMultF(s.res, a).res), optF(Fq(y.n+1,y.d)), optF(Fq(y.n,y.d+1))];
+        const mc = opcionesMC(optF(y), malas);
+        return { enunciado:`Resuelve: <b>${fr(a.n,a.d)}<i>y</i> − ${fr(c.n,c.d)} = ${fr(e.n,e.d)}</b>`, tipo:'opciones', opciones:mc.opciones, respuesta:mc.respuesta,
+          explicacion:[`Paso 1 — primero se quita lo que RESTA: se suma ${tf(c.n,c.d)} en ambos lados: (${tf(a.n,a.d)})y = ${tf(e.n,e.d)} + ${tf(c.n,c.d)}`, ...s.lineas,
+            `Paso 2 — ahora se quita el coeficiente: se multiplican ambos lados por el recíproco de ${tf(a.n,a.d)}, que es ${opT(C(a.d,a.n))}: y = ${tf(s.res.n,s.res.d)} × ${opT(C(a.d,a.n))}`, ...dv.lineas, `→ y = ${tf(y.n,y.d)}${mc.respuesta===NING ? ' (no está entre las opciones → "Ninguno de los anteriores")' : ''}`,
+            `TRUCO: en ay − b = c primero SUMAS b a los dos lados, y después multiplicas por el recíproco de a. Ejemplo con este mismo: (${tf(a.n,a.d)})y = ${tf(s.res.n,s.res.d)} → y = ${tf(y.n,y.d)}.`] }; },
+      // 21. proporción con decimales
+      () => { let a, u, v, forma = pick(['xa','ax']), X;
+        do { a = R(2,9); u = pick([R(10,60), R(1,6)*10]); v = R(10,60); X = forma==='xa' ? a*u/v : a*v/u; } while(u===v || Math.abs(X*100 - Math.round(X*100)) > 1e-9 || X<=0 || X>200);
+        const d1 = u/10, d2 = v/10, tex = forma==='xa' ? `${fr('<i>x</i>',a)} = ${fr(dec1(d1),dec1(d2))}` : `${fr(a,'<i>x</i>')} = ${fr(dec1(d1),dec1(d2))}`;
+        const cruz = forma==='xa' ? [`${dec1(d2)} · x = ${a} × ${dec1(d1)}`, `${dec1(d2)}x = ${r2(a*d1)}`, `x = ${r2(a*d1)} ÷ ${dec1(d2)} = ${r2(X)}`] : [`${dec1(d1)} · x = ${a} × ${dec1(d2)}`, `${dec1(d1)}x = ${r2(a*d2)}`, `x = ${r2(a*d2)} ÷ ${dec1(d1)} = ${r2(X)}`];
+        return { enunciado:`Resuelve la proporción.<br><b>${tex}</b>`, tipo:'num', respuesta:Math.round(X*100)/100, ayuda:'Escribe la respuesta con punto decimal si hace falta (ej. 1.2).',
+          explicacion:[`Paso 1 — productos cruzados (con decimales se hace igual que con enteros):`, ...cruz.slice(0,2), `Paso 2 — se despeja x dividiendo: ${cruz[2]}`, `→ x = ${r2(X)}`,
+            `TRUCO: los decimales no cambian nada: productos cruzados y se divide. Para dividir entre un decimal, mueve el punto igual en los dos números. Ejemplo con este mismo: ${cruz[2]}.`] }; }
+    ];
+    return pick(plant)();
+  }
+},
+{
+  // Los tipos de ejercicio que salieron en tu práctica del Examen Departamental (caps. 1–5) y que la app aún no tenía.
+  // Muchos son de opción múltiple a)–e), como en EducoSoft.
+  id:'educo-dep', nombre:'Práctica del Examen Departamental (los tipos de EducoSoft)', secciones:['5.8'],
+  gen(){
+    const C = (n,d=1) => ({n,d});
+    const NOTA_NING = mc => mc.respuesta===NING ? ' (no está entre las opciones → "Ninguno de los anteriores")' : '';
+    const plant = [
+      // ── completar la propiedad distributiva ──
+      () => { const a = R(2,9), b = R(2,9), c = R(2,9), menos = Math.random() < 0.3, op = menos ? '−' : '+', ab = a*b, ac = a*c;
+        return ejVarios5('', `Completa las oraciones siguientes.<br><b>${a}(${b} ${op} ${c}) = ${a}( ___ ) ${op} ${a}( ___ )</b>`, [{ et:'Primer espacio', r:b }, { et:'Segundo espacio', r:c }],
+          [`La propiedad DISTRIBUTIVA dice que un número que multiplica a una ${menos ? 'resta' : 'suma'} entre paréntesis se REPARTE a cada término de adentro: a(b ${op} c) = a·b ${op} a·c.`,
+           `Aquí el ${a} multiplica al ${b} y al ${c}: ${a}(${b} ${op} ${c}) = ${a}(${b}) ${op} ${a}(${c}).`, `Lo que va en los espacios son los mismos números que estaban dentro del paréntesis: ${b} y ${c}.`,
+           `Comprobación: ${a}(${b} ${op} ${c}) = ${a}(${menos ? b-c : b+c}) = ${menos ? a*(b-c) : a*(b+c)} y ${a}(${b}) ${op} ${a}(${c}) = ${ab} ${op} ${ac} = ${menos ? ab-ac : ab+ac} ✓ Cierto`],
+          `TRUCO: el número de afuera se REPITE multiplicando a cada término de adentro, y el signo del medio se queda igual. Ejemplo con este mismo: ${a}(${b} ${op} ${c}) = ${a}(${b}) ${op} ${a}(${c}).`); },
+      // ── suplemento → complemento (o al revés) ──
+      () => { const ang = R(1,89);
+        if(Math.random() < 0.5){ const S = 180-ang;
+          return { enunciado:`Si el suplemento de un ángulo es <b>${S}°</b>, entonces halla el complemento de ese ángulo.`, tipo:'num', respuesta:90-ang, ayuda:'Respuesta en grados (solo el número).',
+            explicacion:[`Paso 1 — el suplemento es lo que le falta al ángulo para llegar a 180°: ángulo = 180 − ${S} = ${ang}°.`, `Paso 2 — el complemento es lo que le falta al ángulo para llegar a 90°: complemento = 90 − ${ang} = ${90-ang}°.`, `→ ${90-ang}°`,
+              `TRUCO: con dos pasos, primero encuentra el ÁNGULO y después pide lo que te preguntan. Complemento → 90 menos el ángulo; suplemento → 180 menos el ángulo (la C va antes que la S, igual que el 90 antes que el 180). Ejemplo con este mismo: ${S}° → ángulo ${ang}° → complemento ${90-ang}°.`] }; }
+        const X = 90-ang;
+        return { enunciado:`Si el complemento de un ángulo es <b>${X}°</b>, entonces halla el suplemento de ese ángulo.`, tipo:'num', respuesta:180-ang, ayuda:'Respuesta en grados (solo el número).',
+          explicacion:[`Paso 1 — el complemento es lo que le falta al ángulo para llegar a 90°: ángulo = 90 − ${X} = ${ang}°.`, `Paso 2 — el suplemento es lo que le falta al ángulo para llegar a 180°: suplemento = 180 − ${ang} = ${180-ang}°.`, `→ ${180-ang}°`,
+            `TRUCO: primero encuentra el ÁNGULO y después pide lo que te preguntan. Complemento → 90 menos el ángulo; suplemento → 180 menos el ángulo. Ejemplo con este mismo: ${X}° → ángulo ${ang}° → suplemento ${180-ang}°.`] }; },
+      // ── forma corta con una potencia de 10 (el número de adelante puede tener varias cifras) ──
+      () => { let c; do { c = pick([R(2,9), R(11,99), R(101,999)]); } while(c%10===0);
+        const k = R(3,8), N = c * 10**k, dolar = Math.random() < 0.5;
+        return ejVarios5('', `Escribe <b>${dolar ? '$' : ''}${miles(N)}</b> en forma corta usando una potencia de 10.<br><small>Respuesta: ___ × 10<sup>___</sup>. Quita TODOS los ceros del final: el número que queda va delante y la cantidad de ceros que quitaste es el exponente.</small>`,
+          [{ et:'Número delante', r:c }, { et:'Exponente de 10', r:k }],
+          [`Se cuentan los ceros del final de ${miles(N)}: hay ${k}.`, `Se quitan esos ${k} ceros y queda ${c}.`, `Una potencia de 10 con exponente ${k} es 1 seguido de ${k} ceros: 10<sup>${k}</sup> = ${miles(10**k)}.`, `Comprobación: ${c} × ${miles(10**k)} = ${miles(N)} ✓ Cierto`],
+          `TRUCO: el exponente de 10 es la cantidad de ceros que quitas del final. No te quedes con un solo dígito: se quitan TODOS los ceros y el número de adelante puede tener varias cifras. Ejemplo con este mismo: ${miles(N)} = ${c} × 10<sup>${k}</sup>.`); },
+      // ── aseveraciones P y Q sobre polinomios ──
+      () => { const v = pick(['x','y','a','n']), c = pick([2,3,4,5,6,7,8,9]) * pick([1,1,-1]), e = R(2,5), pOk = Math.random() < 0.5, qOk = Math.random() < 0.5;
+        const t1 = termTxt(c, v, e, true), cLen = R(1,3);
+        const falsaP = pick([`${v}`, `${Math.abs(c)}${v}${supE(e)}`, `${v}${supE(e+1)}`, `${Math.abs(c)}`]);
+        const P = pOk ? `La parte variable de ${t1} es ${v}${supE(e)}.` : `La parte variable de ${t1} es ${falsaP}.`;
+        const m = cLen, exps = m===1 ? [e] : m===2 ? [e,1] : [e,1,0];
+        let poly = ''; for(let i=0;i<m;i++){ const cc = (i===0 ? c : pick([2,3,5,7]) * pick([1,-1])); poly += termTxt(cc, v, exps[i], i===0); }
+        const claim = qOk ? m : pick([1,2,3].filter(z => z !== m)), pal = z => z===1 ? 'un término' : `${NUMW[z]} términos`;
+        const Q = `La expresión ${poly} tiene solamente ${pal(claim)}.`;
+        const resp = pOk && qOk ? 'Ambos P y Q' : pOk ? 'P solamente' : qOk ? 'Q solamente' : 'Ni P ni Q';
+        return { enunciado:`¿Cuál de las siguientes aseveraciones es cierta?<br><b>P: ${P}<br>Q: ${Q}</b>`, tipo:'opciones', opciones:['P solamente','Q solamente','Ambos P y Q','Ni P ni Q'], respuesta:resp,
+          explicacion:[`P — en un término como ${t1}, el número es el COEFICIENTE (${Math.abs(c) === 1 ? '1' : mm(c)}) y la parte variable es la letra con su exponente (${v}${supE(e)}). Entonces P es ${pOk ? 'CIERTA' : 'FALSA'}: la parte variable es ${v}${supE(e)}.`,
+            `Q — los términos se separan con + y −; en ${poly} hay ${m} término${m>1 ? 's' : ''}. Q dice "solamente ${pal(claim)}", así que Q es ${qOk ? 'CIERTA' : 'FALSA'}.`, `→ ${resp}`,
+            `TRUCO: revisa P y Q por separado. Parte variable = la letra con su exponente (sin el número); términos = los pedazos separados por + o −. Ejemplo con este mismo: P es ${pOk ? 'cierta' : 'falsa'} y Q es ${qOk ? 'cierta' : 'falsa'}.`] }; },
+      // ── contar ángulos agudos y rectos en un dibujo ──
+      () => { const nombres = Object.keys(FIGS_ANG), cuantas = pick([1,2,2,3]), sel = Array.from({length:cuantas}, () => pick(nombres)), f = svgFiguras(sel);
+        const A = f.info.reduce((s,i) => s + i.agudos, 0), Rr = f.info.reduce((s,i) => s + i.rectos, 0);
+        return ejVarios5('', `En la siguiente figura, marca todos los ángulos agudos y todos los ángulos rectos. (Cuenta los ángulos de adentro de cada figura.)${f.svg}`, [{ et:'Número de ángulos agudos', r:A }, { et:'Número de ángulos rectos', r:Rr }],
+          [`Un ángulo AGUDO mide menos de 90°; un ángulo RECTO mide exactamente 90° (tiene el cuadradito); un ángulo OBTUSO mide más de 90°.`,
+           ...f.info.map((i, k) => `Figura ${k+1} (${i.nom}): ${i.agudos} agudo${i.agudos===1 ? '' : 's'}, ${i.rectos} recto${i.rectos===1 ? '' : 's'}${i.obtusos ? `, ${i.obtusos} obtuso${i.obtusos===1 ? '' : 's'} (no se cuenta${i.obtusos===1 ? '' : 'n'})` : ''}.`)],
+          `TRUCO: recorre las figuras de izquierda a derecha y cuenta cada esquina: ¿tiene cuadradito? recto; ¿está más cerrado que una esquina de cuadrado? agudo; ¿más abierto? obtuso. Un triángulo siempre tiene 3 ángulos y un cuadrilátero 4. Ejemplo con este mismo: en total ${A} agudos y ${Rr} rectos.`); },
+      // ── MC: resta con números con signo ──
+      () => { const a = R(10,99), b = R(10,99), neg = Math.random() < 0.5, v = neg ? a+b : a-b;
+        const mc = opcionesMC(mm(v), [mm(-v), mm(neg ? a-b : b-a), mm(b-a), mm(-(a+b)), mm(a+b), mm(v+10)]);
+        return { enunciado:`Resta: <b>${a} − ${neg ? `(−${b})` : b}</b>`, tipo:'opciones', opciones:mc.opciones, respuesta:mc.respuesta,
+          explicacion: [...(neg ? [`Restar un número negativo es SUMAR su opuesto: ${a} − (−${b}) = ${a} + ${b}.`, `${a} + ${b} = ${a+b}.`]
+              : [`${a} − ${b}: ${b>a ? `${b} es mayor que ${a}, así que el resultado es NEGATIVO: se resta el más chico del más grande (${b} − ${a} = ${b-a}) y se pone el signo menos.` : `se restan directo, ${a} − ${b} = ${a-b}.`}`]),
+            `→ ${mm(v)}${NOTA_NING(mc)}`, `TRUCO: "menos menos" se vuelve MÁS: a − (−b) = a + b. Y si el que se resta es más grande que el primero, el resultado es negativo. Ejemplo con este mismo: ${a} − ${neg ? `(−${b})` : b} = ${mm(v)}.`] }; },
+      // ── MC: evalúa una potencia con base negativa ──
+      () => { const n = R(2,6), k = R(2,5), v = (-n) ** k, expl = [`(−${n})<sup>${k}</sup> significa multiplicar (−${n}) por sí mismo ${k} veces: ${Array(k).fill(`(−${n})`).join(' × ')}.`, `Cantidad de negativos: ${k}. ${k%2 ? 'Es IMPAR → el resultado es NEGATIVO.' : 'Es PAR → los negativos se cancelan y el resultado es POSITIVO.'}`, `${n}<sup>${k}</sup> = ${n**k}, así que el resultado es ${mm(v)}.`];
+        const mc = opcionesMC(mm(v), [mm(-v), mm(-n*k), mm(n*k), String(n**(k+1)), String(n**(k-1)), mm(-(n**(k-1)))]);
+        return { enunciado:`Evalúa <b>(−${n})<sup>${k}</sup></b>.`, tipo:'opciones', opciones:mc.opciones, respuesta:mc.respuesta,
+          explicacion:[...expl, `→ ${mm(v)}${NOTA_NING(mc)}`, `TRUCO: el exponente dice CUÁNTAS VECES se multiplica la base, no que se multiplique por el exponente. Con base negativa: exponente par → positivo; exponente impar → negativo. Ejemplo con este mismo: (−${n})<sup>${k}</sup> = ${mm(v)}.`] }; },
+      // ── MC: convertir a expresión algebraica ──
+      () => { const n = R(2,5), k = R(2,9), PAL = NUMW, caso = pick(['menosQue','masQue','vecesSuma','diferencia']);
+        let frase, ok, malas;
+        if(caso==='menosQue'){ frase = `${PAL[k]} menos que ${PAL[n]} veces un número`; ok = `${n}x − ${k}`; malas = [`${k} − ${n}x`, `${n}x − ${n*k}`, `−${n}x − ${k}`, `${n}(x − ${k})`, `${k}x − ${n}`]; }
+        else if(caso==='masQue'){ frase = `${PAL[k]} más que ${PAL[n]} veces un número`; ok = `${n}x + ${k}`; malas = [`${n}(x + ${k})`, `${k}x + ${n}`, `${n}x − ${k}`, `${k} − ${n}x`, `x + ${n*k}`]; }
+        else if(caso==='vecesSuma'){ frase = `${PAL[n]} veces la suma de un número y ${PAL[k]}`; ok = `${n}(x + ${k})`; malas = [`${n}x + ${k}`, `x + ${n}${k}`, `${n} + x + ${k}`, `${n}x + ${n}`, `${k}(x + ${n})`]; }
+        else { frase = `la diferencia entre ${PAL[k]} y ${PAL[n]} veces un número`; ok = `${k} − ${n}x`; malas = [`${n}x − ${k}`, `${k}x − ${n}`, `${n}(${k} − x)`, `${n} − ${k}x`, `${k} − x`]; }
+        const mc = opcionesMC(ok, malas);
+        return { enunciado:`Convierte a una expresión algebraica, si <i>x</i> representa el número desconocido: <b>${frase}</b>.`, tipo:'opciones', opciones:mc.opciones, respuesta:mc.respuesta,
+          explicacion:[`Se traduce palabra por palabra: "${PAL[n]} veces un número" es ${n}x.`, caso==='menosQue' ? `"${PAL[k]} menos QUE ${n}x" invierte el orden: se empieza por lo que viene después de "que" → ${n}x − ${k}.` : caso==='masQue' ? `"${PAL[k]} más que ${n}x" → ${n}x + ${k}.` : caso==='vecesSuma' ? `"la suma de un número y ${PAL[k]}" es (x + ${k}), y va entre paréntesis porque TODA la suma se multiplica por ${n}.` : `"la diferencia entre ${PAL[k]} y ${n}x" se resta en ESE orden: ${k} − ${n}x.`,
+            `→ ${ok}${NOTA_NING(mc)}`, `TRUCO: "menos que" y "más que" cambian el orden: "A menos que B" es B − A. "La diferencia entre A y B" sí va en el orden que se dice: A − B. Ejemplo con este mismo: ${frase} → ${ok}.`] }; },
+      // ── MC: ax + b = c ──
+      () => { const a = R(2,9), x = R(1,9), b = R(1,15) * pick([1,-1]), c = a*x + b, mal = f => optX(f);
+        const mc = opcionesMC(optX(C(x)), [mal(Fq(c+b, a)), mal(C(c-b)), mal(Fq(a, c-b)), mal(C(x+1)), mal(C(x-1)), mal(Fq(c, a))]);
+        return { enunciado:`Resuelve la ecuación: <b>${a}x ${b<0 ? '−' : '+'} ${Math.abs(b)} = ${mm(c)}</b>`, tipo:'opciones', opciones:mc.opciones, respuesta:mc.respuesta,
+          explicacion:[`Paso 1 — primero se quita lo que SUMA o RESTA: ${b<0 ? `se suma ${Math.abs(b)}` : `se resta ${b}`} en ambos lados: ${a}x = ${mm(c)} ${b<0 ? '+' : '−'} ${Math.abs(b)} = ${c-b}`, `Paso 2 — después lo que MULTIPLICA: se divide ambos lados entre ${a}: x = ${c-b} ÷ ${a} = ${x}`,
+            `Paso 3 — verificación: ${a}(${x}) ${b<0 ? '−' : '+'} ${Math.abs(b)} = ${a*x} ${b<0 ? '−' : '+'} ${Math.abs(b)} = ${mm(c)} ✓ Cierto`, `→ x = ${x}${NOTA_NING(mc)}`,
+            `TRUCO: en ax + b = c el orden es SIEMPRE el mismo: primero quitas b (con la operación contraria) y después divides entre a. Ejemplo con este mismo: ${a}x = ${c-b} → x = ${x}.`] }; },
+      // ── MC: perímetro de un triángulo (a veces la correcta no está) ──
+      () => { const a = R(3,9), b = R(3,9), c = R(3,9), u = pick(['cm','m','pulg']); if(a+b<=c || a+c<=b || b+c<=a) return this.gen();
+        const P = a+b+c, mc = opcionesMC(`${P} ${u}`, [`${P+1} ${u}`, `${P-2} ${u}`, `${a+b} ${u}`, `${P+2} ${u}`, `${a*b*c} ${u}`, `${P-1} ${u}`]);
+        return { enunciado:`Halla el perímetro de la siguiente figura.${svgTrianguloLados(a,b,c,u)}`, tipo:'opciones', opciones:mc.opciones, respuesta:mc.respuesta,
+          explicacion:[`El perímetro es lo que mide TODO el borde: se SUMAN los tres lados.`, `P = ${a} + ${b} + ${c} = ${P} ${u}.`, `→ ${P} ${u}${NOTA_NING(mc)}`,
+            `${TRUCO_PERIM} Ejemplo con este mismo: ${a} + ${b} + ${c} = ${P} ${u}.`] }; },
+      // ── MC: promedio dado, hallar el número que falta ──
+      () => { const n = pick([3,4,5]), A = R(60,95); let conocidos, falta;
+        do { conocidos = Array.from({length:n-1}, () => A + R(-18,18)); falta = n*A - conocidos.reduce((s,v) => s+v, 0); } while(falta < 30 || falta > 150 || falta === A);
+        const lista = conocidos.length>1 ? conocidos.slice(0,-1).join(', ') + ' y ' + conocidos[conocidos.length-1] : String(conocidos[0]), ord = {3:'tercer',4:'cuarto',5:'quinto'}[n], pal = {3:'tres',4:'cuatro',5:'cinco'}[n], pal1 = NUMW[n-1];
+        const suma = conocidos.reduce((s,v) => s+v, 0), mc = opcionesMC(String(falta), [String(A), String(falta+n), String(falta-n), String(Math.round(suma/(n-1))), String(n*A), String(falta+10)]);
+        return { enunciado:`El promedio de ${pal} números es ${A}. Si ${pal1} de los números son ${lista}, halla el ${ord} número.`, tipo:'opciones', opciones:mc.opciones, respuesta:mc.respuesta,
+          explicacion:[`Promedio = (suma de los números) ÷ (cuántos son). Entonces suma de los ${pal} números = promedio × ${n} = ${A} × ${n} = ${A*n}.`, `Los números que ya se conocen suman ${conocidos.join(' + ')} = ${suma}.`, `El que falta es la diferencia: ${A*n} − ${suma} = ${falta}.`, `→ ${falta}${NOTA_NING(mc)}`,
+            `TRUCO: al revés del promedio: promedio × cuántos son = suma total; después restas lo que ya tienes. Ejemplo con este mismo: ${A} × ${n} = ${A*n}, menos ${suma} = ${falta}.`] }; },
+      // ── MC: razón unitaria ──
+      () => { const k = pick([2,3,4,5,6,8]), N = pick([8,12,16,20,24,32,40]), T = k*N, cx = pick([[`Gabriel tiene ${T} barras de dulce para ${N} niños.`, 'barras de dulce/niño'], [`Un auto recorre ${T} millas con ${N} galones de gasolina.`, 'millas/galón'], [`${N} estudiantes pagaron $${T} en total por una excursión.`, 'dólares/estudiante']]);
+        const mc = opcionesMC(`${k} ${cx[1]}`, [`${k-1} ${cx[1]}`, `${k+1} ${cx[1]}`, `${k+2} ${cx[1]}`, `${k*2} ${cx[1]}`, `${k+0.5} ${cx[1]}`, `${k-0.5} ${cx[1]}`]);
+        return { enunciado:`${cx[0]} ¿Cuál es la razón unitaria?`, tipo:'opciones', opciones:mc.opciones, respuesta:mc.respuesta,
+          explicacion:[`La razón unitaria dice cuánto le toca a UNO: se divide la primera cantidad entre la segunda.`, `${T} ÷ ${N} = ${k}`, `→ ${k} ${cx[1]}${NOTA_NING(mc)}`, `${TR_PROP5} Razón unitaria: ${T}/${N} = ${k}/1. Ejemplo con este mismo: ${T} ÷ ${N} = ${k}.`] }; },
+      // ── MC: factorizar completamente (con letras) ──
+      () => { const g = pick([2,3,4,5,6,7]), m1 = pick([2,3,4,5,7,8,9]), m2 = pick([2,3,4,5,7,8,9]), p1 = R(1,4), q1 = R(1,3), p2 = R(1,4), q2 = R(1,3); if(mcd(m1,m2)!==1 || m1===m2 || (p1===p2 && q1===q2)) return this.gen();
+        const u = pick(['r','a','x']), w = pick(['s','b','y']), pm = Math.min(p1,p2), qm = Math.min(q1,q2);
+        const mt = (cf, a, b) => (cf===1 && (a||b) ? '' : String(cf)) + (a ? u + supE(a) : '') + (b ? w + supE(b) : ''), c1 = g*m1, c2 = g*m2;
+        const expr = `${mt(c1,p1,q1)} + ${mt(c2,p2,q2)}`, G = mt(g,pm,qm), ok = `${G}(${mt(m1,p1-pm,q1-qm)} + ${mt(m2,p2-pm,q2-qm)})`;
+        const malas = [`${mt(g,0,0)}(${mt(m1,p1,q1)} + ${mt(m2,p2,q2)})`, `${mt(1,pm,qm)}(${mt(c1,p1-pm,q1-qm)} + ${mt(c2,p2-pm,q2-qm)})`, `${G}(${mt(m1,p1,q1)} + ${mt(m2,p2,q2)})`, `${mt(g,pm,0)}(${mt(m1,p1-pm,q1)} + ${mt(m2,p2-pm,q2)})`, `${mt(g,pm,qm)}`];
+        const mc = opcionesMC(ok, malas);
+        return { enunciado:`Factoriza completamente: <b>${expr}</b>`, tipo:'opciones', opciones:mc.opciones, respuesta:mc.respuesta,
+          explicacion:[`Se busca el FCM (factor común mayor) de los dos términos: de los números y de cada letra.`, `Números: el FCM de ${c1} y ${c2} es ${g}.`, `Letra ${u}: los exponentes son ${p1} y ${p2}; se saca la MENOR potencia → ${u}${supE(pm)}.`,
+            `Letra ${w}: los exponentes son ${q1} y ${q2}; se saca la MENOR → ${w}${supE(qm)}.`, `FCM = ${G}.`, `Adentro del paréntesis va cada término dividido entre el FCM: ${mt(c1,p1,q1)} ÷ ${G} = ${mt(m1,p1-pm,q1-qm)} y ${mt(c2,p2,q2)} ÷ ${G} = ${mt(m2,p2-pm,q2-qm)}.`, `→ ${ok}${NOTA_NING(mc)}`,
+            `TRUCO: comprueba multiplicando: ${G} × (${mt(m1,p1-pm,q1-qm)} + ${mt(m2,p2-pm,q2-qm)}) tiene que devolverte ${expr}. De las letras sacas la MENOR potencia que está en todos los términos. Ejemplo con este mismo: el FCM es ${G}.`] }; },
+      // ── MC: sumar un número mixto y una fracción propia ──
+      () => { const q = pick([2,3,4,5,6,7,8]); let p; do { p = R(1,q-1); } while(mcd(p,q)!==1); const e = R(1,5); let a, b; do { b = pick([2,3,4,5,6,7,8,9]); a = R(1,b-1); } while(mcd(a,b)!==1 || b===q);
+        const s = addF({n:e*q+p, d:q}, {n:a,d:b}), mix = f => esMixto(f) ? hMix(f) : optF(f), ok = mix(s);
+        const ent = Math.floor(s.n/s.d), rf = {n:s.n%s.d, d:s.d};
+        const malas = [mix(Fq(e*q+p + a, q+b)), optF(rf), mixS(e+a, p, q), mixS(ent, (rf.d - rf.n), rf.d), mixS(ent+1, rf.n, rf.d), mixS(ent-1 || 2, rf.n, rf.d), mixS(ent, rf.n, rf.d+1)].filter(z => z && !/NaN|undefined/.test(z));
+        const mc = opcionesMC(ok, malas), ls = pasosSumaF({n:e*q+p, d:q}, {n:a,d:b});
+        return { enunciado:`Halla la suma: <b>${mixS(e,p,q)} + ${fr(a,b)}</b>`, tipo:'opciones', opciones:mc.opciones, respuesta:mc.respuesta,
+          explicacion:[`Primero el número mixto pasa a fracción impropia: ${e} ${p}/${q} → ${e} × ${q} + ${p} = ${e*q+p} → ${tf(e*q+p,q)}.`, ...sin1(ls.lineas), ...lineaMixto(s), `→ ${tMix(s)}${NOTA_NING(mc)}`,
+            `TRUCO: con un mixto y una fracción, pasa el mixto a impropia, busca denominador común y al final vuelve a mixto. Nunca sumes los denominadores. Ejemplo con este mismo: ${tf(e*q+p,q)} + ${tf(a,b)} = ${tf(s.n,s.d)} = ${tMix(s)}.`] }; },
+      // ── MC: orden de operaciones con fracciones ──
+      () => { const a = fracR([2,3,4]), c = fracR([3,4,5,6]), d = fracR([5,6,8,9]); const prod = multF([c,d]), ok = addF(a, {n:prod.n, d:prod.d}), mal1 = multF([addF(a,c), d]);
+        const fm = f => f.d===1 ? mm(f.n) : esMixto(f) ? hMix(f) : frS(f.n, f.d);
+        const malas = [fm(Fq(mal1.n, mal1.d)), fm(Fq(ok.d, ok.n)), fm(addF(a, {n:-prod.n,d:prod.d})), fm(addF(addF(a,c), d)), fm(Fq(ok.n+1, ok.d)), fm(Fq(ok.n+ok.d, ok.d*2))];
+        const mc = opcionesMC(fm(ok), malas);
+        const p1 = pasosMultF(c,d), p2 = pasosSumaF(a, p1.res);
+        return { enunciado:`Simplifica: <b>${fr(a.n,a.d)} + ${fr(c.n,c.d)} × ${fr(d.n,d.d)}</b>`, tipo:'opciones', opciones:mc.opciones, respuesta:mc.respuesta,
+          explicacion:[`Orden de operaciones: la MULTIPLICACIÓN va antes que la suma, aunque la suma esté escrita primero.`, `Paso 1 — ${tf(c.n,c.d)} × ${tf(d.n,d.d)}:`, ...sin1(p1.lineas), `Paso 2 — ahora la suma ${tf(a.n,a.d)} + ${tf(p1.res.n,p1.res.d)}:`, ...sin1(p2.lineas), ...lineaMixto(p2.res), `→ ${tMix(p2.res)}${NOTA_NING(mc)}`,
+            `TRUCO: marca la operación que va PRIMERO (la multiplicación) y resuélvela sola; después reescribe y sigue. Ejemplo con este mismo: ${tf(c.n,c.d)} × ${tf(d.n,d.d)} = ${tf(p1.res.n,p1.res.d)}, y recién después se suma ${tf(a.n,a.d)}.`] }; }
+    ];
+    return pick(plant)();
   }
 },
 /* ══════════════════════════════════════════════════════════
@@ -3978,6 +5029,17 @@ function verificar(ej, ent){
       const mal = [], fBien = [], fMal = [];
       ej.campos.forEach((c,i) => {
         if(c.ops){ if(ent[i] !== ej.respuesta[i]) mal.push(c.et); return; }
+        if(c.q){   // valor exacto (Repaso/Autoevaluación del cap. 5): "7/50", "3 8/9", "-54"
+          const v = leerQ(ent[i]);
+          if(!v || v.d <= 0 || v.n*c.q.d !== c.q.n*v.d) mal.push(c.et);
+          else if(v.d !== 1 && (mcd(v.fn, v.d) !== 1 || (v.mixto && v.fn >= v.d))) mal.push(`${c.et} (falta simplificar)`);
+          return;
+        }
+        if(c.ex){   // con letras (Repaso/Autoevaluación del cap. 4): se compara sustituyendo valores
+          const s = String(ent[i]).toLowerCase().replace(/\s+/g,'');
+          if(!(c.ex === 'No definido' ? NO_DEF.test(s) : !NO_DEF.test(s) && mismaExpr(ent[i], c.ex))) mal.push(c.et);
+          return;
+        }
         const escrita = c.fs && String(fs[i] || '').trim() !== '';
         const malF = escrita && !formulaOk(fs[i], c);
         if(escrita) (malF ? fMal : fBien).push(c.et);
@@ -4077,9 +5139,15 @@ const SECMAP = {
   '4.1': ['suma-resta-frac','resta-mental-frac','propiedades-frac'],
   '4.2': ['mult-div-frac','reciproco','propiedades-frac'],
   '4.3': ['orden-op-frac','frac-compleja'],
+  '4.5': ['repaso-cap4'],
+  '4.6': ['autoeval-cap4'],
   '5.1': ['ecuaciones-frac','proporciones'],
   '5.2': ['aplicaciones-frac','promedio-frac','de-multiplicar','razon-unitaria-prop'],
-  '5.3': ['geometria-frac','semejantes']
+  '5.3': ['geometria-frac','semejantes'],
+  '5.5': ['repaso-cap5'],
+  '5.6': ['autoeval-cap5'],
+  '5.7': ['educo-cap5'],
+  '5.8': ['educo-dep']
 };
 // EducoSoft está en inglés — las claves van en los dos idiomas
 const CLAVES = {
@@ -4132,6 +5200,12 @@ const CLAVES = {
   'de-multiplicar':   ['de a multiplicación','traducir de','parte de un entero','fraction of a number'],
   'razon-unitaria-prop': ['razón unitaria','razones unitarias','unit rate','problemas de razones','caso i','caso ii'],
   'geometria-frac':   ['aplicaciones geométricas','volumen','área de superficie','sólido rectangular','cubo','volume','surface area','paralelogramo','trapecio'],
+  'repaso-cap4':      ['repaso del capítulo 4','4.5 ejercicios de repaso'],
+  'autoeval-cap4':    ['autoevaluación del capítulo 4','4.6 autoevaluación'],
+  'educo-dep':        ['examen departamental','midterm','departmental'],
+  'educo-cap5':       ['tarea y quiz de 5.1','homework on 5.1','quiz on 5.1'],
+  'repaso-cap5':      ['ejercicios de repaso','repaso del capítulo 5','review exercises'],
+  'autoeval-cap5':    ['autoevaluación','autoevaluacion','self-test','self test'],
   'semejantes':       ['figuras semejantes','triángulos semejantes','semejantes','similar figures','similar triangles','ampliación']
 };
 
@@ -5118,7 +6192,7 @@ function entradaHTML(ej){
               <input class="campo" id="inM${i}" inputmode="decimal" autocomplete="off" placeholder="Resultado"></div>`
           : `<label class="multiFila"><span>${c.et}${c.u ? ` <small>(${c.u})</small>` : ''}</span>${c.ops
           ? `<select class="campo" id="inM${i}"><option value="">— elige —</option>${c.ops.map(o => `<option>${escHtml(o)}</option>`).join('')}</select>`
-          : `<input class="campo" id="inM${i}" inputmode="decimal" autocomplete="off" placeholder="?">`}</label>`).join('')}</div>
+          : `<input class="campo" id="inM${i}" inputmode="${c.q || c.ex ? 'text' : 'decimal'}" autocomplete="off" autocapitalize="off" placeholder="${c.ex ? 'ej. (x−2)/15' : c.q ? 'ej. 3 1/2' : '?'}">`}</label>`).join('')}</div>
         <button class="btn amar" style="margin-top:12px" onclick="responder()">Comprobar</button>`;
     case 'basexp': return `
         <div class="mixIn" style="flex-wrap:wrap">
