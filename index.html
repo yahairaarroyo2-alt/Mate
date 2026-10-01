@@ -721,6 +721,78 @@ function pasosDivF(a, b){
   return { res:m.res, lineas: lineas.concat(m.lineas) };
 }
 const opTP = f => f.n<0 ? `(${opT(f)})` : opT(f);
+// ── capítulo 5 (Aplicaciones con Fracciones) ──
+// fracción simplificada con el signo siempre arriba
+const Fq = (n,d=1) => { if(d<0){ n=-n; d=-d; } const [a,b] = simplificar(n,d); return {n:a, d:b}; };
+// valor como lo escribe el libro: entero, fracción propia o número mixto (texto plano / apilado)
+const tMix = f => f.d===1 ? mm(f.n) : Math.abs(f.n) < f.d ? tf(f.n,f.d)
+  : `${f.n<0?'−':''}${Math.floor(Math.abs(f.n)/f.d)} ${Math.abs(f.n)%f.d}/${f.d}`;
+const hMix = f => f.d===1 ? mm(f.n) : Math.abs(f.n) < f.d ? frS(f.n,f.d)
+  : mixS((f.n<0?-1:1)*Math.floor(Math.abs(f.n)/f.d), Math.abs(f.n)%f.d, f.d);
+const esMixto = f => f.d !== 1 && Math.abs(f.n) > f.d;
+// número mixto al azar (como fracción impropia) con la parte fraccionaria ya simplificada
+function mixR(eMin, eMax, dens){ const d = pick(dens); let p; do { p = R(1,d-1); } while(mcd(p,d)!==1); return Fq(R(eMin,eMax)*d + p, d); }
+function fracR(dens){ const d = pick(dens); let n; do { n = R(1,d-1); } while(mcd(n,d)!==1); return {n,d}; }
+// respuesta positiva en la forma del libro: entero → número, menor que 1 → fracción, mayor → número mixto
+function respPos(f){
+  if(f.d===1) return { tipo:'num', respuesta:f.n };
+  if(f.n < f.d) return { tipo:'frac', respuesta:{n:f.n, d:f.d}, pedirSimple:true };
+  return { tipo:'mixto', respuesta:{ e:Math.floor(f.n/f.d), n:f.n%f.d, d:f.d } };
+}
+const explImpropia = f => `${tMix(f)} → ${Math.floor(Math.abs(f.n)/f.d)} × ${f.d} + ${Math.abs(f.n)%f.d} = ${Math.abs(f.n)} → ${tf(f.n,f.d)}`;
+const explAMixto = f => `${tf(f.n,f.d)} → ${f.n} ÷ ${f.d} = ${Math.floor(f.n/f.d)} y sobran ${f.n%f.d} → ${tMix(f)}`;
+// "pasa a impropia" para todos los mixtos de la lista (y los enteros como n/1)
+function lineasImpropias(fs){
+  const li = [], mix = fs.filter(esMixto), ent = fs.filter(f => f.d===1);
+  if(mix.length){ li.push('Se pasan los números mixtos a fracciones impropias (entero × denominador + numerador):'); mix.forEach(f => li.push(explImpropia(f))); }
+  if(ent.length) li.push(`Un entero es una fracción con denominador 1: ${ent.map(f => `${mm(f.n)} = ${tf(f.n,1)}`).join(', ')}.`);
+  return li;
+}
+// suma de varios términos con signo: MCD, fracciones equivalentes, se operan los numeradores
+function pasosSumaVarias(ts){
+  const lineas = [], m = ts.reduce((a,f) => mcm(a,f.d), 1);
+  if(ts.some(f => f.d !== m)){
+    lineas.push(`Denominador común: el MCM de ${[...new Set(ts.map(f=>f.d))].join(', ')} = ${m} (en tu examen le dicen MCD, mínimo común denominador).`);
+    ts.forEach(f => { if(f.d !== m) lineas.push(`${tf(f.n,f.d)} → arriba y abajo por ${m/f.d} → ${tf(f.n*(m/f.d), m)}`); });
+  }
+  const nums = ts.map(f => f.n*(m/f.d)), tot = nums.reduce((a,b)=>a+b, 0);
+  lineas.push(`Se operan solo los de arriba (el ${m} de abajo se queda): ${nums.map((v,i) => i===0 ? mm(v) : v<0 ? `− ${-v}` : `+ ${v}`).join(' ')} = ${mm(tot)} → ${tf(tot,m)}`);
+  const r = Fq(tot, m);
+  if(r.n !== tot || r.d !== m) lineas.push(explSimplif(tot, m));
+  return { res:r, lineas };
+}
+// multiplicación de 2 o 3 factores, desglosada
+function pasosMultVarias(fs){
+  let p = pasosMultF(fs[0], fs[1]); const lineas = [...p.lineas];
+  for(let i=2;i<fs.length;i++){ const q = pasosMultF(p.res, fs[i]); lineas.push(...q.lineas); p = q; }
+  return { res:p.res, lineas };
+}
+// cierre: si el resultado es impropio se pasa a número mixto, como contesta el libro
+const lineaMixto = f => esMixto(f) && f.n > 0 ? [`Como número mixto: ${explAMixto(f)}`] : [];
+// palabras para fracciones ("Cinco séptimos de …")
+const NUM_PAL = ['','Un','Dos','Tres','Cuatro','Cinco','Seis','Siete','Ocho','Nueve'];
+const DEN_PAL = {2:['medio','mitades'],3:['tercio','tercios'],4:['cuarto','cuartos'],5:['quinto','quintos'],6:['sexto','sextos'],
+                 7:['séptimo','séptimos'],8:['octavo','octavos'],9:['noveno','novenos'],10:['décimo','décimos']};
+const fracPal = (n,d) => `${NUM_PAL[n]} ${DEN_PAL[d][n===1?0:1]}`;
+const miles = n => n.toLocaleString('en-US');
+// dos triángulos semejantes (el grande es una ampliación del pequeño), con las medidas en los lados
+// lados = [base, derecho, izquierdo] del pequeño: la forma sale de las medidas (ley de cosenos)
+function svgSemejantes(ls, lg, lados, uid){
+  const [a,b,c] = lados, ax = (a*a + c*c - b*b)/(2*a), ay = Math.sqrt(Math.max(c*c - ax*ax, 0));
+  const minX = Math.min(0, ax), ancho = Math.max(a, ax) - minX, esc = 1/Math.max(ancho, ay*1.1);
+  const P = [[-minX*esc,0],[(a-minX)*esc,0],[(ax-minX)*esc,-ay*esc]];     // cabe en un cuadro de 1×1
+  const tri = (ox, oy, s, labs) => {
+    const p = P.map(([x,y]) => [ox+x*s, oy+y*s]);
+    const mid = (i,j) => [(p[i][0]+p[j][0])/2, (p[i][1]+p[j][1])/2];
+    const [a,b,c] = [mid(0,1), mid(1,2), mid(2,0)];
+    return `<polygon points="${p.map(q=>q.map(v=>v.toFixed(1)).join(',')).join(' ')}" fill="none" stroke="currentColor" stroke-width="2"/>
+      <text x="${a[0].toFixed(1)}" y="${(a[1]+17).toFixed(1)}" fill="currentColor" font-size="13" font-weight="700" text-anchor="middle">${labs[0]}</text>
+      <text x="${(b[0]+8).toFixed(1)}" y="${b[1].toFixed(1)}" fill="currentColor" font-size="13" font-weight="700" text-anchor="start">${labs[1]}</text>
+      <text x="${(c[0]-8).toFixed(1)}" y="${c[1].toFixed(1)}" fill="currentColor" font-size="13" font-weight="700" text-anchor="end">${labs[2]}</text>`;
+  };
+  return `<svg viewBox="0 0 340 175" style="width:100%;max-width:340px;height:auto;color:var(--texto);display:block;margin:10px auto 0" xmlns="http://www.w3.org/2000/svg">
+    ${tri(40,140,85,ls)}${tri(175,152,135,lg)}</svg>`;
+}
 // teclado numérico del teléfono a veces no trae signo "-" (iOS, sobre todo) — botón ± como atajo
 function toggleSigno(id){
   const el = $(id);
@@ -2660,6 +2732,451 @@ const MODULOS = [
         `TRUCO: la raya larga es un ÷ disfrazado. Escribe (arriba) ÷ (abajo) con paréntesis, resuelve cada paréntesis hasta dejar UNA fracción en cada uno, y al final voltea la de abajo y multiplica. Nunca "canceles" un número de arriba con uno de abajo mientras todavía haya sumas o restas sin hacer. Ejemplo con este mismo: ${arribaT} ÷ ${abajoT} → arriba queda ${opT(num)}, abajo queda ${opT(den)}, y ${opT(num)} ÷ ${opTP(den)} se convierte en ${opT(num)} × ${tfP(recipF(den).n,recipF(den).d)} = ${tf(r.n,r.d)}.`] };
   }
 },
+/* ── CAPÍTULO 5: Aplicaciones con Fracciones (EducoSoft, E-Book cap. 5) ── */
+{
+  id:'ecuaciones-frac', nombre:'Ecuaciones con fracciones', secciones:['5.1'],
+  gen(nv){
+    const L = pick(['x','x','y','t','m']);
+    const dens = nv==='facil' ? [2,3,4,5,6,8,10] : [2,3,4,5,6,7,8,9,10,12,15];
+    const neg = nv==='facil' ? 0 : nv==='medio' ? 0.3 : 0.45;
+    const F = () => { const f = fracR(dens); if(Math.random()<neg) f.n = -f.n; return f; };
+    const tipo = pick(nv==='facil' ? ['suma','suma','mult'] : nv==='medio' ? ['suma','mult','mult','dos'] : ['suma','mult','dos','dos']);
+    const signoT = f => `${f.n<0 ? '−' : '+'} ${fr(Math.abs(f.n), f.d)}`;           // "+ 2/3" / "− 2/3" en el enunciado
+    const signoTt = f => `${f.n<0 ? '−' : '+'} ${tf(Math.abs(f.n), f.d)}`;
+    const opuesto = f => ({n:-f.n, d:f.d});
+    const pasos = []; let enun, sol, truco;
+    // paso de multiplicar ambos lados por el recíproco del coeficiente (k·L = c)
+    const pasoRecip = (k, c) => {
+      const rec = recipF(k);
+      pasos.push(`El coeficiente de ${L} es ${tf(k.n,k.d)}. Para dejar la ${L} sola se multiplican AMBOS lados por su recíproco, ${tf(rec.n,rec.d)} (Principio de Multiplicación de la Igualdad).`,
+        `${tfP(rec.n,rec.d)} · (${tf(k.n,k.d)})${L} = ${tfP(rec.n,rec.d)} · ${opTP(c)}`,
+        `A la izquierda: ${tfP(rec.n,rec.d)} × ${tfP(k.n,k.d)} = 1 (un número por su recíproco da 1), así que queda 1 · ${L} = ${L} (Propiedad de Identidad).`,
+        `A la derecha:`);
+      const p = pasosMultF(rec, c); pasos.push(...p.lineas);
+      return p.res;
+    };
+    if(tipo==='suma'){
+      const a = F(), b = F();
+      sol = addF(b, opuesto(a));
+      if(sol.n===0) return this.gen(nv);
+      enun = `${L} ${signoT(a)} = ${frS(b.n,b.d)}`;
+      pasos.push(`Hay que dejar la ${L} sola a la izquierda. Para quitar el ${signoTt(a)} se suma su opuesto, ${tf(-a.n,a.d)}, en AMBOS lados (Principio de Suma de la Igualdad).`,
+        `${L} ${signoTt(a)} + ${tfP(-a.n,a.d)} = ${tf(b.n,b.d)} + ${tfP(-a.n,a.d)}`,
+        `${L} + 0 = ${tf(b.n,b.d)} + ${tfP(-a.n,a.d)} ← Propiedad del Inverso (un número más su opuesto da 0)`,
+        `A la derecha:`);
+      const p = pasosSumaF(b, opuesto(a)); pasos.push(...p.lineas);
+      pasos.push(`${L} = ${tf(sol.n,sol.d)} (Propiedad de Identidad: ${L} + 0 = ${L})`,
+        `Verificación: ${tfP(sol.n,sol.d)} ${signoTt(a)} = ${tf(addF(sol,a).n, addF(sol,a).d)} = ${tf(b.n,b.d)} ✓ Cierto`);
+      truco = `TRUCO: lo que está SUMANDO a la letra se quita sumando su opuesto en los dos lados (es lo mismo que "pasarlo al otro lado con el signo cambiado"). Ejemplo con este mismo: ${L} ${signoTt(a)} = ${tf(b.n,b.d)} → ${L} = ${tf(b.n,b.d)} ${a.n<0?'+':'−'} ${tf(Math.abs(a.n),a.d)} = ${tf(sol.n,sol.d)}.`;
+    } else if(tipo==='mult'){
+      const k = F(); let x = F(); if(nv!=='facil' && Math.random()<0.3) x = {n:R(1,9)*(Math.random()<neg?-1:1), d:1};
+      const c = multF([k,x]); const cF = {n:c.n, d:c.d}; sol = x;
+      const vuelta = Math.random()<0.3;
+      enun = vuelta ? `${opS(cF)} = ${frS(k.n,k.d)}${L}` : `${frS(k.n,k.d)}${L} = ${opS(cF)}`;
+      if(vuelta) pasos.push(`Intercambia los lados de la ecuación para que la ${L} quede a la izquierda: (${tf(k.n,k.d)})${L} = ${opT(cF)}.`);
+      const r = pasoRecip(k, cF);
+      pasos.push(`${L} = ${tf(r.n,r.d)}`,
+        `Verificación: ${tfP(k.n,k.d)} × ${opTP(sol)} = ${opT(cF)} ✓ Cierto`);
+      truco = `TRUCO: cuando la letra está MULTIPLICADA por una fracción, voltea esa fracción y multiplica los dos lados por ella — así la fracción se "cancela" y la letra queda sola. Ejemplo con este mismo: el coeficiente es ${tf(k.n,k.d)}, se multiplica por ${tf(recipF(k).n,recipF(k).d)} y queda ${L} = ${tf(sol.n,sol.d)}.`;
+    } else {
+      const k = F(), x = F(), cc = F();
+      const kx = multF([k,x]); const d = addF({n:kx.n,d:kx.d}, cc); sol = x;
+      if(d.n===0) return this.gen(nv);
+      enun = `${frS(k.n,k.d)}${L} ${signoT(cc)} = ${opS(d)}`;
+      pasos.push(`Paso 1 — primero se quita el término que NO tiene ${L}: se suma el opuesto de ${signoTt(cc)}, o sea ${tf(-cc.n,cc.d)}, en ambos lados.`,
+        `(${tf(k.n,k.d)})${L} = ${opT(d)} + ${tfP(-cc.n,cc.d)}`);
+      const p = pasosSumaF(d, opuesto(cc)); pasos.push(...p.lineas);
+      pasos.push(`Queda: (${tf(k.n,k.d)})${L} = ${opT(p.res)}`, `Paso 2 — ahora se quita el coeficiente:`);
+      const r = pasoRecip(k, p.res);
+      pasos.push(`${L} = ${tf(r.n,r.d)}`,
+        `Verificación: ${tfP(k.n,k.d)} × ${tfP(sol.n,sol.d)} = ${tf(kx.n,kx.d)}; ${tf(kx.n,kx.d)} ${signoTt(cc)} = ${opT(d)} ✓ Cierto`);
+      truco = `TRUCO: en ecuaciones del tipo ax + b = c el orden es SIEMPRE el mismo: primero quitas lo que suma o resta (sumando el opuesto) y después lo que multiplica (multiplicando por el recíproco). Ejemplo con este mismo: primero se quita el ${signoTt(cc)}, queda (${tf(k.n,k.d)})${L} = ${opT(p.res)}, y luego se multiplica por ${tf(recipF(k).n,recipF(k).d)} → ${L} = ${tf(sol.n,sol.d)}.`;
+    }
+    return { enunciado:`${pick(['Resuelve la ecuación y verifica la respuesta:','Resuelve la ecuación:',`Resuelve para ${L}:`])}<br><b>${enun}</b>`,
+      tipo:'frac', respuesta:{n:sol.n, d:sol.d}, pedirSimple:true, signo:true,
+      ayuda:`${L} = ___ (si sale un entero, escríbelo con denominador 1; puede quedar como fracción impropia)`,
+      explicacion:[...pasos, `→ ${L} = ${tf(sol.n,sol.d)}`, truco] };
+  }
+},
+{
+  id:'proporciones', nombre:'Proporciones (cierta o falsa, término que falta)', secciones:['5.1'],
+  gen(nv){
+    const tipo = pick(nv==='facil' ? ['cf','falta','falta'] : nv==='medio' ? ['cf','falta','falta','expr'] : ['cf','falta','expr','expr']);
+    const TR = `TRUCO: en una proporción los productos CRUZADOS siempre son iguales (el de arriba de un lado por el de abajo del otro). Con eso se revisa si es cierta, y se halla el término que falta: productos cruzados → ecuación → se despeja.`;
+    if(tipo==='cf'){
+      const a = R(2,12), b = R(2,15), k = R(2, porNivel(nv,4,6,9));
+      let c = a*k, d = b*k;
+      if(Math.random()<0.5){ if(Math.random()<0.5) c += R(1,3); else d += R(1,3); }
+      const p1 = a*d, p2 = b*c, es = p1===p2;
+      return { enunciado:`Determina si la proporción es cierta o falsa:<br><b>${fr(a,b)} = ${fr(c,d)}</b>`,
+        tipo:'opciones', opciones:['Cierta','Falsa'], respuesta: es ? 'Cierta' : 'Falsa',
+        explicacion:[`Se hallan los productos cruzados (el numerador de cada fracción por el denominador de la OTRA):`,
+          `${a} × ${d} = ${p1}`, `${b} × ${c} = ${p2}`,
+          es ? `Los productos cruzados son iguales (${p1} = ${p2}) → la proporción es cierta.` : `Los productos cruzados son distintos (${p1} ≠ ${p2}) → la proporción es falsa.`,
+          `→ ${es ? 'Cierta' : 'Falsa'}`,
+          `${TR} Ejemplo con este mismo: ${a} × ${d} = ${p1} y ${b} × ${c} = ${p2} → ${es ? 'iguales, cierta' : 'distintos, falsa'}.`] };
+    }
+    if(tipo==='falta'){
+      // A/B = C/D con uno de los cuatro desconocido
+      let V;
+      if(nv==='facil'){ const a = R(2,9), b = R(2,12), m = R(2,6); V = [a, b, a*m, b*m]; }
+      else V = [R(2,15), R(2,20), R(2,20), R(2,25)];
+      // productos cruzados: V0·V3 = V1·V2 — la x queda multiplicada por su pareja de producto
+      const u = R(0,3);
+      const coef = u===0 ? V[3] : u===3 ? V[0] : u===1 ? V[2] : V[1];
+      const sinX = (u===0 || u===3) ? [V[1],V[2]] : [V[0],V[3]];
+      const prod = sinX[0]*sinX[1], x = Fq(prod, coef);
+      const S = V.map((v,i) => i===u ? 'x' : String(v));
+      const H = V.map((v,i) => i===u ? '<i>x</i>' : String(v));
+      const izq = `${S[0]} × ${S[3]}`, der = `${S[1]} × ${S[2]}`;
+      const pasos = [`Proporción: ${S[0]}/${S[1]} = ${S[2]}/${S[3]}`, `Se igualan los productos cruzados: ${izq} = ${der}`,
+        `${coef}x = ${prod} (${sinX[0]} × ${sinX[1]} = ${prod})`,
+        `Se divide ambos lados por ${coef}: x = ${tf(prod,coef)}`];
+      if(x.d !== coef || x.n !== prod) pasos.push(explSimplif(prod, coef));
+      pasos.push(...lineaMixto(x), `→ x = ${tMix(x)}`);
+      return { enunciado:`${pick(['Resuelve la proporción:','Halla el término que falta:'])}<br><b>${fr(H[0],H[1])} = ${fr(H[2],H[3])}</b>`,
+        ...respPos(x), ayuda: x.d===1 ? '' : 'Si no sale entero, escríbelo como número mixto (o fracción si es menor que 1).',
+        explicacion:[...pasos, `${TR} Ejemplo con este mismo: ${izq} = ${der} → ${coef}x = ${prod} → x = ${tMix(x)}.`] };
+    }
+    // (a·x ± k)/b = c/d → d(a·x ± k) = b·c
+    const a = nv==='dificil' && Math.random()<0.5 ? R(2,3) : 1;
+    const k = R(1,9) * (Math.random()<0.5 ? -1 : 1), b = R(2,9), c = R(1,9), d = R(2,9);
+    const bc = b*c, dk = d*k, x = Fq(bc - dk, d*a);
+    const ax = a===1 ? 'x' : `${a}x`;
+    const numH = `${ax} ${k<0?'−':'+'} ${Math.abs(k)}`;
+    const pasos = [`Se igualan los productos cruzados: ${d}(${numH}) = ${b} × ${c}`,
+      `Se distribuye el ${d}: ${d*a}x ${dk<0?'−':'+'} ${Math.abs(dk)} = ${bc}`,
+      `Se suma ${mm(-dk)} en ambos lados: ${d*a}x = ${bc} ${dk<0?'+':'−'} ${Math.abs(dk)} = ${bc-dk}`,
+      `Se divide ambos lados por ${d*a}: x = ${tf(bc-dk, d*a)}`];
+    if(x.d !== d*a || x.n !== bc-dk) pasos.push(explSimplif(bc-dk, d*a));
+    return { enunciado:`Resuelve la proporción:<br><b>${fr(numH, b)} = ${fr(c, d)}</b>`,
+      tipo:'frac', respuesta:{n:x.n, d:x.d}, pedirSimple:true, signo:true,
+      ayuda:'x = ___ (si sale un entero, escríbelo con denominador 1)',
+      explicacion:[...pasos, `→ x = ${tf(x.n,x.d)}`, `${TR} Ejemplo con este mismo: ${d}(${numH}) = ${bc} → ${d*a}x = ${bc-dk} → x = ${tf(x.n,x.d)}.`] };
+  }
+},
+{
+  id:'aplicaciones-frac', nombre:'Problemas de aplicación con fracciones', secciones:['5.2'],
+  gen(nv){
+    const dm = nv==='facil' ? [2,3,4] : [2,3,4,5,6,8,12];
+    const M = (a,b) => mixR(a, b, dm);
+    const plantillas = [
+      () => { const ini = M(10,16), e1 = M(2,4), e2 = M(2,4), rec = M(1,5);
+        return { enun:`Un camión va cargado con ${hMix(ini)} pies cúbicos de concreto. El conductor entregó ${hMix(e1)} pies cúbicos de concreto en la primera parada y ${hMix(e2)} pies cúbicos en la segunda parada. En la tercera parada, recogió ${hMix(rec)} pies cúbicos de concreto. ¿Cuánto concreto hay en el camión luego de la tercera parada?`,
+          sea:'la cantidad de concreto que queda en el camión', u:'pies cúbicos',
+          ts:[ini, {n:-e1.n,d:e1.d}, {n:-e2.n,d:e2.d}, rec], lee:'lo que había − lo que entregó en cada parada + lo que recogió' }; },
+      () => { const d1 = fracR([3,4,6,8,9,12]), d2 = fracR([3,4,6,8,9,12]), d3 = fracR([3,4,6,8]), pen = fracR([2,4,8]);
+        return { enun:`Un clavo debe pasar tres niveles de madera y penetrar ${fr(pen.n,pen.d)} pulg en un cuarto nivel. Si el primer pedazo de madera mide ${fr(d1.n,d1.d)} pulg, el segundo mide ${fr(d2.n,d2.d)} pulg y el tercero mide ${fr(d3.n,d3.d)} pulg, ¿cuán largo debe ser el clavo?`,
+          sea:'el largo del clavo', u:'pulg', ts:[d1, d2, d3, pen], lee:'la suma de los tres pedazos más lo que penetra' }; },
+      () => { const a = M(1,3), b = M(1,3), c = M(1,3), P = addF(addF(a,b),c);
+        return { enun:`La suma de las medidas de los lados de un triángulo es ${hMix(P)} pulgadas. Si dos lados miden ${hMix(a)} y ${hMix(b)} pulgadas, halla la medida del tercer lado.`,
+          sea:'la medida del tercer lado', u:'pulg', ts:[P, {n:-a.n,d:a.d}, {n:-b.n,d:b.d}], lee:`${tMix(a)} + ${tMix(b)} + x = ${tMix(P)}, así que x = ${tMix(P)} − ${tMix(a)} − ${tMix(b)}` }; },
+      () => { const Lg = R(22,30), a = M(6,10), b = M(5,9);
+        return { enun:`Dos pedazos de ${hMix(a)} metros y ${hMix(b)} metros se cortan de una soga que mide ${Lg} metros de largo. ¿Cuál es el largo del pedazo de soga que sobra?`,
+          sea:'el largo del pedazo que sobra', u:'metros', ts:[{n:Lg,d:1}, {n:-a.n,d:a.d}, {n:-b.n,d:b.d}], lee:'el largo de la soga − los dos pedazos' }; },
+      () => { const A = mixR(125,160,[2,3,4]), B = mixR(2,8,[2,3,4]), nom = pick(['Janet','Marta','Luisa','Carmen']);
+        return { enun:`${nom} pesaba ${hMix(A)} libras y decidió perder algún peso. Ella rebajó un total de ${hMix(B)} libras en una semana. ¿Cuál es su peso luego de rebajar?`,
+          sea:'su peso luego de rebajar', u:'libras', ts:[A, {n:-B.n,d:B.d}], lee:'el peso de antes − lo que rebajó' }; },
+      () => { const a = M(9,15), b = M(10,18);
+        return { enun:`De un tanque que contiene 100 galones de gasolina, William usó ${hMix(a)} galones para llenar el tanque de su auto y Luis usó ${hMix(b)} galones para su camioneta. ¿Cuánta gasolina queda en el tanque?`,
+          sea:'la gasolina que queda', u:'galones', ts:[{n:100,d:1}, {n:-a.n,d:a.d}, {n:-b.n,d:b.d}], lee:'100 − lo que usó William − lo que usó Luis' }; },
+      () => { const a = M(6,8), b = M(6,8), c = M(6,8);
+        return { enun:`El peso de tres niños recién nacidos en la sala de maternidad de un hospital se registró como ${hMix(a)} lbs, ${hMix(b)} lbs y ${hMix(c)} lbs respectivamente. Si los tres bebés se pesaron en la misma escala, ¿cuál es el peso total?`,
+          sea:'el peso total', u:'lbs', ts:[a, b, c], lee:'la suma de los tres pesos' }; }
+    ];
+    const c = pick(plantillas)();
+    const r = pasosSumaVarias(c.ts.map(f => ({n:f.n, d:f.d})));
+    if(r.res.n <= 0) return this.gen(nv);
+    const ec = c.ts.map((f,i) => (i===0 ? '' : f.n<0 ? ' − ' : ' + ') + tMix({n:Math.abs(f.n), d:f.d})).join('');
+    return { enunciado:c.enun, ...respPos(r.res), ayuda:`Respuesta en ${c.u}.`,
+      explicacion:[`Paso 1 — sea x ${c.sea}.`, `Paso 2 — se traduce el problema a una ecuación (${c.lee}): x = ${ec}`,
+        `Paso 3 — se resuelve:`, ...lineasImpropias(c.ts.map(f => ({n:Math.abs(f.n), d:f.d}))), ...r.lineas, ...lineaMixto(r.res),
+        `Paso 4 — ¿hace sentido? Sí: x = ${tMix(r.res)} ${c.u}.`, `→ ${tMix(r.res)} ${c.u}`,
+        `TRUCO: traduce la historia a UNA sola cuenta — lo que se entrega, se usa, se corta o se rebaja se RESTA; lo que se recoge o se junta se SUMA. En resta es más fácil trabajar todo como fracciones impropias con el mismo denominador. Ejemplo con este mismo: x = ${ec} = ${tMix(r.res)}.`] };
+  }
+},
+{
+  id:'promedio-frac', nombre:'Promedio de números racionales', secciones:['5.2'],
+  gen(nv){
+    const dm = nv==='facil' ? [2,4,8] : [2,3,4,6,8,12];
+    const k = nv==='dificil' ? R(3,5) : R(3,4);
+    const xs = Array.from({length:k}, () => Math.random()<0.7 ? mixR(1, porNivel(nv,5,9,15), dm) : fracR(dm));
+    const lista = xs.map(hMix), listaT = xs.map(tMix);
+    const yJ = arr => arr.slice(0,-1).join(', ') + ' y ' + arr[arr.length-1];
+    const ctx = pick(['plano','plano','lluvia','horas','millas']);
+    const DIAS = ['el lunes','el martes','el miércoles','el jueves','el viernes'];
+    let enun, u = '';
+    if(ctx==='plano') enun = `Halla el promedio del siguiente grupo de números racionales:<br><b>${yJ(lista)}</b>`;
+    else if(ctx==='lluvia'){ u = 'pulg'; enun = `El medidor de lluvia de una reserva de agua registró las siguientes precipitaciones durante un período de ${k} meses: ${yJ(lista.map(v=>v+' pulg'))}. ¿Cuál fue el promedio de lluvia por mes durante ese período?`; }
+    else if(ctx==='horas'){ u = 'horas'; enun = `Carlos trabajó ${xs.map((v,i)=>`${lista[i]} horas ${DIAS[i]}`).join(', ').replace(/, ([^,]*)$/,' y $1')}. Halla el promedio de horas que trabajó cada día.`; }
+    else { u = 'millas'; enun = `El doctor de Roberto le recomendó que camine por las mañanas. Durante ${k} días caminó ${yJ(lista.map(v=>v+' millas'))}. Halla el promedio de millas que Roberto caminó por día.`; }
+    const S = pasosSumaVarias(xs);
+    const D = pasosMultF(S.res, {n:1, d:k});
+    const r = D.res;
+    return { enunciado:enun, ...respPos(r), ayuda: u ? `Respuesta en ${u}.` : '',
+      explicacion:[`El promedio se halla en dos pasos: Paso 1, se suman todos los números; Paso 2, la suma se divide por la cantidad de números (aquí hay ${k}).`,
+        `Paso 1 — la suma: ${listaT.join(' + ')}`, ...lineasImpropias(xs), ...S.lineas,
+        `Paso 2 — se divide la suma por ${k}. Dividir por ${k} es multiplicar por ${tf(1,k)}:`, ...D.lineas, ...lineaMixto(r),
+        `→ ${tMix(r)}${u ? ' '+u : ''}`,
+        `TRUCO: el promedio de fracciones se hace IGUAL que el de enteros — suma todo y divide por cuántos son. El truco está en la división: ÷ ${k} es × ${tf(1,k)}, o sea que el ${k} pasa a multiplicar el denominador. Ejemplo con este mismo: la suma da ${tf(S.res.n,S.res.d)}, y ${tf(S.res.n,S.res.d)} ÷ ${k} = ${tf(S.res.n, S.res.d*k)}${S.res.d*k!==r.d ? ` = ${tf(r.n,r.d)}` : ''}.`] };
+  }
+},
+{
+  id:'de-multiplicar', nombre:'Traducir "de" a multiplicación', secciones:['5.2'],
+  gen(nv){
+    const tipo = pick(nv==='facil' ? ['valor','valor','fraccion','entero'] : nv==='medio' ? ['valor','fraccion','entero','descuento','resto'] : ['fraccion','entero','descuento','resto','valor']);
+    const TR = `TRUCO: la palabra "de" significa MULTIPLICAR: (fracción) de (entero) = (parte). Si te dan la fracción y el entero, multiplicas; si te dan la parte y el entero, divides parte ÷ entero; si te dan la fracción y la parte, la ecuación (fracción)·x = parte se resuelve multiplicando por el recíproco.`;
+    if(tipo==='valor'){
+      if(Math.random()<0.35){
+        const p = pick([10,15,20,25,30,40,60,65,75,80,90]), g = mcd(p,100), base = 100/g, W = base*R(3, porNivel(nv,20,60,120));
+        const f = Fq(p,100), r = p*W/100;
+        return { enunciado:`Halla el valor según se indica:<br><b>${p}% de ${miles(W)}</b>`, tipo:'num', respuesta:r,
+          explicacion:[`"%" significa "de cada 100": ${p}% = ${tf(p,100)}.`, explSimplif(p,100), `"de" significa multiplicar: ${tf(f.n,f.d)} × ${miles(W)}`,
+            `Primero se divide por el denominador: ${miles(W)} ÷ ${f.d} = ${miles(W/f.d)}`, `Luego se multiplica por el numerador: ${miles(W/f.d)} × ${f.n} = ${miles(r)}`, `→ ${miles(r)}`,
+            `${TR} Ejemplo con este mismo: ${p}% de ${miles(W)} = ${tf(f.n,f.d)} × ${miles(W)} = ${miles(r)}.`] };
+      }
+      const d = pick([3,4,5,6,7,8,9]), n = pick([1,2,3,4,5,6,7,8].filter(v => v<d && mcd(v,d)===1));
+      const q = R(3, porNivel(nv,30,150,400)), W = d*q, r = n*q;
+      return { enunciado:`Halla el valor según se indica:<br><b>${fracPal(n,d)} de ${miles(W)}</b>`, tipo:'num', respuesta:r,
+        explicacion:[`"${fracPal(n,d)}" es la fracción ${tf(n,d)}, y "de" significa multiplicar: ${tf(n,d)} × ${miles(W)}`,
+          `Primero se divide por el denominador: ${miles(W)} ÷ ${d} = ${miles(q)}`, `Luego se multiplica por el numerador: ${miles(q)} × ${n} = ${miles(r)}`, `→ ${miles(r)}`,
+          `${TR} Ejemplo con este mismo: ${tf(n,d)} de ${miles(W)} → ${miles(W)} ÷ ${d} = ${miles(q)}, × ${n} = ${miles(r)}.`] };
+    }
+    if(tipo==='fraccion'){
+      const f = Fq(R(1,8), R(9,12)); const esc = pick([10,20,25,50,100,150]);
+      const T = f.d*esc, p = f.n*esc;
+      const casos = [
+        { t:`Durante los pasados años ${miles(p)} de un total de ${miles(T)} estudiantes recibieron ayuda económica. ¿Qué fracción de los estudiantes recibió ayuda económica?`, parte:p, todo:T, c:false },
+        { t:`De un total de ${miles(T)} calorías, ${miles(p)} se ingieren en el desayuno. ¿Qué fracción de las calorías se ingiere en el desayuno?`, parte:p, todo:T, c:false },
+        { t:`El dueño de una propiedad paga $${miles(p)} mensualmente de hipoteca. Si sus gastos mensuales totalizan $${miles(T)}, ¿qué fracción de sus gastos son para pagar la hipoteca?`, parte:p, todo:T, c:false },
+        { t:`Durante la primavera, un agente de agricultura encontró que ${miles(p)} de cada ${miles(T)} árboles están infectados con gusanos. ¿Qué fracción de los árboles NO están infectados?`, parte:T-p, todo:T, c:true },
+        { t:`Si ${p} estudiantes de una clase son fumadores y ${T-p} no lo son, ¿qué fracción de la clase no son fumadores?`, parte:T-p, todo:T, c:true, suma:true }
+      ];
+      const cs = pick(nv==='facil' ? casos.slice(0,3) : casos);
+      const r = Fq(cs.parte, cs.todo);
+      const pasos = [];
+      if(cs.suma) pasos.push(`El total de la clase es ${p} + ${T-p} = ${T} estudiantes.`);
+      else if(cs.c) pasos.push(`Los que NO están infectados son ${miles(T)} − ${miles(p)} = ${miles(T-p)}.`);
+      pasos.push(`Fracción = parte ÷ entero = ${tf(cs.parte, cs.todo)}`, ...explFcm([cs.parte, cs.todo]).slice(0,-1), explSimplif(cs.parte, cs.todo));
+      const trad = `Se traduce: (qué fracción) de (el total) es (la parte) → x · ${miles(cs.todo)} = ${miles(cs.parte)}, o sea x = ${tf(cs.parte,cs.todo)}.`;
+      pasos.splice(cs.suma || cs.c ? 1 : 0, 0, trad);
+      return { enunciado:cs.t, tipo:'frac', respuesta:{n:r.n, d:r.d}, pedirSimple:true,
+        explicacion:[...pasos, `→ ${tf(r.n,r.d)}`,
+          `${TR} Ejemplo con este mismo: ${tf(cs.parte,cs.todo)} simplificada es ${tf(r.n,r.d)}.`] };
+    }
+    if(tipo==='entero'){
+      const casos = [
+        () => { const d = pick([3,4,5,7]), n = pick([1,2,3].filter(v=>v<d&&mcd(v,d)===1)); const x = d*R(20,400); const P = n*x/d;
+          return { t:`Miguel ahorra ${fr(n,d)} de su ingreso total. ¿Cuál es su ingreso mensual si ahorra $${miles(P)}?`, n, d, P, x, u:'$' }; },
+        () => { const d = 3, n = 2, x = 3*R(200,900), P = n*x/d;
+          return { t:`María gasta dos terceras partes de su ingreso mensual en pagar deudas. Si el total de sus deudas mensuales es $${miles(P)}, halla su ingreso mensual.`, n, d, P, x, u:'$' }; },
+        () => { const n = 3, d = 20, x = 20*R(10,150), P = n*x/d;
+          return { t:`La propina promedio que se deja en un restaurante es de 15%. Una noche un mesero se ganó $${miles(P)} en propinas. Estima el costo total de las comidas servidas por el mesero.`, n, d, P, x, u:'$', pct:'15% = 15/100 = 3/20' }; },
+        () => { const n = 4, d = 5, x = 5*R(3,9), P = n*x/d;
+          return { t:`Cuatro quintos del total de lluvia de este año cayó durante la temporada de otoño. Si se registraron ${P} pulg de lluvia en otoño, halla la cantidad total de lluvia que cayó durante el año.`, n, d, P, x, u:'pulg' }; }
+      ];
+      const c = pick(casos)();
+      const din = c.u==='$';
+      return { enunciado:c.t, tipo:'num', respuesta:c.x, ayuda: din ? 'Respuesta en dólares (solo el número).' : `Respuesta en ${c.u}.`,
+        explicacion:[`Paso 1 — sea x ${din ? 'la cantidad total (el entero)' : 'el total'}.`,
+          ...(c.pct ? [`${c.pct}`] : []),
+          `Paso 2 — (fracción) de (entero) = (parte): ${tf(c.n,c.d)} · x = ${miles(c.P)}`,
+          `Paso 3 — se multiplican ambos lados por el recíproco de ${tf(c.n,c.d)}, que es ${tf(c.d,c.n)}: x = ${miles(c.P)} × ${tf(c.d,c.n)}`,
+          `${miles(c.P)} ÷ ${c.n} = ${miles(c.P/c.n)}, y ${miles(c.P/c.n)} × ${c.d} = ${miles(c.x)}`,
+          `Paso 4 — verificación: ${tf(c.n,c.d)} × ${miles(c.x)} = ${miles(c.P)} ✓ Cierto`,
+          `→ ${din ? '$' : ''}${miles(c.x)}${din ? '' : ' '+c.u}`,
+          `${TR} Ejemplo con este mismo: ${tf(c.n,c.d)} · x = ${miles(c.P)} → x = ${miles(c.P)} × ${tf(c.d,c.n)} = ${miles(c.x)}.`] };
+    }
+    if(tipo==='descuento'){
+      const d = pick([3,4,5]), n = pick([1,2].filter(v=>v<d)), q = R(5,40), x = d*q, P = (d-n)*q;
+      const art = pick([['ropa deportiva','Un par de pantalones está marcado'],['trajes para caballeros','Un traje tiene un precio especial'],['zapatos','Un par de zapatos está marcado']]);
+      return { enunciado:`Una tienda anuncia un "descuento" de ${fr(n,d)} del precio original en ${art[0]}. ${art[1]} en $${P}. ¿Cuál es el precio original?`, tipo:'num', respuesta:x, ayuda:'Respuesta en dólares (solo el número).',
+        explicacion:[`Paso 1 — sea x el precio original. El descuento es ${tf(n,d)} de x.`,
+          `Paso 2 — precio de venta = precio original − descuento: ${P} = x − ${tf(n,d)}x`,
+          `x − ${tf(n,d)}x = (1 − ${tf(n,d)})x = (${tf(d,d)} − ${tf(n,d)})x = ${tf(d-n,d)}x`,
+          `Paso 3 — ${tf(d-n,d)}x = ${P} → se multiplican ambos lados por ${tf(d,d-n)}: x = ${P} × ${tf(d,d-n)}`,
+          `${P} ÷ ${d-n} = ${q}, y ${q} × ${d} = ${x}`,
+          `Paso 4 — verificación: ${x} − ${tf(n,d)} × ${x} = ${x} − ${n*q} = ${P} ✓ Cierto`, `→ $${x}`,
+          `${TR} Ejemplo con este mismo: si el descuento es ${tf(n,d)}, lo que se paga es ${tf(d-n,d)} del precio original, así que ${tf(d-n,d)}x = ${P} → x = ${x}.`] };
+    }
+    // resto: testamento
+    const opciones = [[2,7],[1,5],[1,4],[1,6],[1,8],[1,3],[2,9],[1,10]];
+    const suma3 = a => a.reduce((s,f)=>s+f.n/f.d, 0);
+    let fs; do { fs = shuffle(opciones).slice(0,3).map(([n,d]) => ({n,d})); } while(suma3(fs) >= 1);
+    const S = pasosSumaVarias(fs), rest = addF({n:1,d:1}, {n:-S.res.n, d:S.res.d});
+    const R2 = pasosSumaF({n:1,d:1}, {n:-S.res.n, d:S.res.d});
+    return { enunciado:`Juan hizo su testamento indicando que desea que ${fr(fs[0].n,fs[0].d)} de su propiedad sean para su hijo mayor, ${fr(fs[1].n,fs[1].d)} para su hijo menor, ${fr(fs[2].n,fs[2].d)} para su hija y el resto para su esposa. ¿Qué fracción de la propiedad le dejó Juan a su esposa?<br><small>(Ayuda: comienza con la propiedad entera = 1)</small>`,
+      tipo:'frac', respuesta:{n:rest.n, d:rest.d}, pedirSimple:true,
+      explicacion:[`Paso 1 — lo que se reparte a los hijos: ${fs.map(f=>tf(f.n,f.d)).join(' + ')}`, ...S.lineas,
+        `Paso 2 — el resto es la propiedad entera (1) menos eso: 1 − ${tf(S.res.n,S.res.d)}`, ...R2.lineas, `→ ${tf(rest.n,rest.d)}`,
+        `${TR} Ejemplo con este mismo: "el resto" siempre es 1 − (lo repartido) = 1 − ${tf(S.res.n,S.res.d)} = ${tf(rest.n,rest.d)}.`] };
+  }
+},
+{
+  id:'razon-unitaria-prop', nombre:'Razones unitarias y problemas de proporciones', secciones:['5.2'],
+  gen(nv){
+    const tipo = pick(nv==='facil' ? ['unit','unit','prop'] : nv==='medio' ? ['unit','unitFr','prop','prop'] : ['unitFr','prop','prop','prop']);
+    const TR = `TRUCO: razón unitaria = cuánto le toca a UNO → se divide. Problema de proporción → tabla con Caso I y Caso II, cada fila con la misma unidad, y productos cruzados.`;
+    if(tipo==='unit'){
+      const casos = [
+        () => { const k = R(4,9), q = R(150,450); return { t:`Si los boletos de avión para una familia de ${k} cuestan $${miles(k*q)}, ¿cuál es el costo por persona?`, a:k*q, b:k, r:q, ua:'$', ub:'personas', res:`$${q} por persona` }; },
+        () => { const g = R(12,45), m = R(22,38); return { t:`Un automóvil usa ${g} galones de gasolina para viajar ${miles(g*m)} millas. ¿Cuántas millas viaja por galón?`, a:g*m, b:g, r:m, ua:'millas', ub:'galones', res:`${m} millas por galón` }; },
+        () => { const k = R(20,40), q = R(40,99); return { t:`Una clase de ${k} estudiantes gastó $${miles(k*q)} en un viaje de campo. ¿Qué parte le corresponde pagar a cada estudiante?`, a:k*q, b:k, r:q, ua:'$', ub:'estudiantes', res:`$${q} por estudiante` }; }
+      ];
+      const c = pick(casos)();
+      return { enunciado:c.t, tipo:'num', respuesta:c.r,
+        explicacion:[`Paso 1 — se escribe la razón con la información dada: ${miles(c.a)} ${c.ua} / ${c.b} ${c.ub}`,
+          `Paso 2 — se cambia a razón unitaria (denominador 1) dividiendo: ${miles(c.a)} ÷ ${c.b} = ${c.r}`, `→ ${c.res}`,
+          `${TR} Ejemplo con este mismo: ${miles(c.a)} ÷ ${c.b} = ${c.r}.`] };
+    }
+    if(tipo==='unitFr'){
+      const casos = [
+        () => { const k = R(5,15), carne = mixR(3,8,[2,3,4]); return { t:`Si se utilizan ${hMix(carne)} libras de carne molida para hacer ${k} hamburguesas, ¿cuánta carne se usó en cada hamburguesa?`, tot:carne, k, u:'libras' }; },
+        () => { const k = R(3,9), mn = mixR(40,90,[2,3,4]); return { t:`A un maquinista le toma ${hMix(mn)} minutos hacer ${k} broches. ¿Cuánto tiempo le tomará hacer un broche?`, tot:mn, k, u:'minutos' }; },
+        () => { const k = R(4,7), g = {n:R(9,20), d:1}; return { t:`Una familia de ${k} miembros consume ${g.n} galones de leche cada semana. Expresa el consumo semanal de cada miembro de la familia como un número mixto, asumiendo que cada miembro consume la misma cantidad.`, tot:g, k, u:'galones' }; }
+      ];
+      const c = pick(casos)();
+      const D = pasosMultF({n:c.tot.n, d:c.tot.d}, {n:1, d:c.k});
+      if(D.res.d===1) return this.gen(nv);
+      return { enunciado:c.t, ...respPos(D.res), ayuda:`Respuesta en ${c.u}.`,
+        explicacion:[`Se busca cuánto le toca a UNO, así que se divide: ${tMix(c.tot)} ÷ ${c.k}`, ...lineasImpropias([c.tot]),
+          `Dividir por ${c.k} es multiplicar por ${tf(1,c.k)}:`, ...D.lineas, ...lineaMixto(D.res), `→ ${tMix(D.res)} ${c.u}`,
+          `${TR} Ejemplo con este mismo: ${tMix(c.tot)} ÷ ${c.k} = ${tMix(D.res)}.`] };
+    }
+    // proporción con tabla Caso I / Caso II:  A1/A2 = B1/x  →  x = A2·B1 / A1
+    const casos = [
+      () => { const a = R(25,45), b = R(1,3), c = R(60,120); return { t:`Si un auto recorre ${a} millas con ${b} galones de gasolina, halla el número de galones que se necesitan para recorrer ${c} millas.`, f1:'Millas', f2:'Galones', A1:{n:a,d:1}, A2:{n:b,d:1}, B1:{n:c,d:1}, u:'galones' }; },
+      () => { const a = R(25,40), b = pick([30,40,45,60]), c = R(100,250); return { t:`Una máquina puede producir ${a} bombillas en ${b} minutos. ¿Cuánto tiempo tardará en producir ${c} bombillas?`, f1:'Bombillas', f2:'Minutos', A1:{n:a,d:1}, A2:{n:b,d:1}, B1:{n:c,d:1}, u:'minutos' }; },
+      () => { const b = mixR(3,9,[2,4]), a = R(150,400), c = R(2,6); return { t:`Un auto recorre ${a} millas en ${hMix(b)} horas. ¿Cuántas millas recorrerá en ${c} horas?`, f1:'Horas', f2:'Millas', A1:b, A2:{n:a,d:1}, B1:{n:c,d:1}, u:'millas' }; },
+      () => { const a = pick([24,36,48,60]), az = mixR(1,2,[2,3,4]), c = pick([18,30,72,90]); return { t:`Una receta para ${a} galletas requiere ${hMix(az)} tazas de azúcar. ¿Cuánta azúcar se necesita para hacer ${c} galletas?`, f1:'Galletas', f2:'Tazas', A1:{n:a,d:1}, A2:az, B1:{n:c,d:1}, u:'tazas' }; },
+      () => { const b = R(2,5), q = R(30,60), c = R(6,12); return { t:`Juan gana $${b*q} en ${b} días. A esa razón, ¿cuánto ganará en ${c} días?`, f1:'Días', f2:'Dólares', A1:{n:b,d:1}, A2:{n:b*q,d:1}, B1:{n:c,d:1}, u:'dólares' }; },
+      () => { const a = R(2,4), b = R(15,30), c = mixR(5,9,[2,3,5]); return { t:`En un mapa ${a} cm representan ${b} millas. Si la distancia entre dos ciudades en el mapa es ${hMix(c)} cm, ¿cuántas millas de separación hay entre las ciudades?`, f1:'Centímetros', f2:'Millas', A1:{n:a,d:1}, A2:{n:b,d:1}, B1:c, u:'millas' }; }
+    ];
+    const c = pick(nv==='facil' ? [casos[0],casos[1],casos[4]] : casos)();
+    const pm = f => esMixto(f) ? `(${tMix(f)})` : tMix(f);
+    // con enteros se escribe la cuenta directa ("30 × 151 = 4530"), sin el "/1" de las fracciones
+    const enteros = [c.A1, c.A2, c.B1].every(f => f.d===1);
+    const num = enteros ? { res:{n:c.A2.n*c.B1.n, d:1}, lineas:[`${c.A2.n} × ${c.B1.n} = ${c.A2.n*c.B1.n}`] } : pasosMultF(c.A2, c.B1);
+    const div = enteros
+      ? { res:Fq(num.res.n, c.A1.n), lineas:[`x = ${num.res.n} ÷ ${c.A1.n} = ${tf(num.res.n, c.A1.n)}`, ...(mcd(num.res.n, c.A1.n)>1 ? [explSimplif(num.res.n, c.A1.n)] : [])] }
+      : pasosDivF(num.res, c.A1);
+    const x = div.res;
+    return { enunciado:c.t, ...respPos(x), ayuda:`Respuesta en ${c.u}${x.d===1 ? '' : ' (como número mixto si no sale entero)'}.`,
+      explicacion:[`Paso 1 — sea x lo que se busca (${c.u}).`,
+        `Paso 2 — tabla: ${c.f1}: Caso I = ${tMix(c.A1)}, Caso II = ${tMix(c.B1)}. ${c.f2}: Caso I = ${tMix(c.A2)}, Caso II = x.`,
+        `Paso 3 — la proporción sale directo de la tabla (arriba ${c.f1.toLowerCase()}, abajo ${c.f2.toLowerCase()} en los dos lados): ${pm(c.A1)}/${pm(c.A2)} = ${pm(c.B1)}/x`,
+        `Paso 4 — productos cruzados: ${pm(c.A1)} · x = ${pm(c.A2)} · ${pm(c.B1)}`,
+        ...lineasImpropias([c.A1, c.A2, c.B1].filter(esMixto)),
+        `Lado derecho:`, ...num.lineas,
+        `Se despeja x dividiendo por ${tMix(c.A1)}:`, ...div.lineas, ...lineaMixto(x),
+        `→ ${tMix(x)} ${c.u}`,
+        `${TR} Ejemplo con este mismo: ${tMix(c.A1)} · x = ${tMix(c.A2)} · ${tMix(c.B1)} → x = ${tMix(x)}.`] };
+  }
+},
+{
+  id:'geometria-frac', nombre:'Perímetro, área y volumen con fracciones', secciones:['5.3'],
+  gen(nv){
+    const u = pick(['pies','pulg','m','cm','yd']);
+    const dm = nv==='facil' ? [2,3,4] : [2,3,4,5,8];
+    const M = (a,b) => Math.random()<0.8 ? mixR(a, b, dm) : fracR(dm);
+    const tipos = nv==='facil' ? ['area-rect','perim-rect','area-tri','vol-cubo','perim-cuad']
+      : nv==='medio' ? ['area-rect','perim-rect','area-tri','area-paral','area-trap','vol-caja','vol-cubo','area-cuad','largo-rect']
+      : ['area-trap','vol-caja','sup-caja','sup-cubo','altura-paral','largo-rect','ancho-perim','area-tri'];
+    const tipo = pick(tipos);
+    let enun, formula, pasos = [], unid = u, sust;
+    const t = tMix, h = hMix;
+    const mult = fs => { const p = pasosMultVarias(fs); pasos.push(...lineasImpropias(fs), ...p.lineas); return p.res; };
+    let r;
+    if(tipo==='area-rect'){ const l = M(3,12), a = M(1,6); enun = `Halla el área de un rectángulo cuyo largo es ${h(l)} ${u} y ancho es ${h(a)} ${u}.`;
+      formula = 'A = l × a'; sust = `A = ${t(l)} × ${t(a)}`; unid = u+'²'; pasos.push(formula, sust); r = mult([l,a]); }
+    else if(tipo==='perim-rect'){ const l = M(3,12), a = M(1,6); enun = `Halla el perímetro de un rectángulo que mide ${h(l)} ${u} de largo y ${h(a)} ${u} de ancho.`;
+      formula = 'P = 2l + 2a'; sust = `P = 2(${t(l)}) + 2(${t(a)})`; pasos.push(formula, sust);
+      const p1 = pasosMultF({n:2,d:1}, l), p2 = pasosMultF({n:2,d:1}, a); pasos.push(...lineasImpropias([l,a]), ...p1.lineas, ...p2.lineas);
+      const s = pasosSumaVarias([p1.res, p2.res]); pasos.push(...s.lineas); r = s.res; }
+    else if(tipo==='perim-cuad' || tipo==='area-cuad'){ const s0 = M(2,9);
+      if(tipo==='perim-cuad'){ enun = `Halla el perímetro de un cuadrado si un lado mide ${h(s0)} ${u}.`; formula = 'P = 4 × lado'; sust = `P = 4 × ${t(s0)}`; pasos.push(formula, sust); r = mult([{n:4,d:1}, s0]); }
+      else { enun = `Halla el área de un cuadrado con lado de ${h(s0)} ${u}.`; formula = 'A = lado × lado'; sust = `A = ${t(s0)} × ${t(s0)}`; unid = u+'²'; pasos.push(formula, sust); r = mult([s0,s0]); } }
+    else if(tipo==='area-tri'){ const b = M(2,12), hh = M(2,9); enun = `Halla el área de un triángulo cuya base mide ${h(b)} ${u} y su altura ${h(hh)} ${u}.`;
+      formula = 'A = ½ × b × h'; sust = `A = ${tf(1,2)} × ${t(b)} × ${t(hh)}`; unid = u+'²'; pasos.push(formula, sust); r = mult([{n:1,d:2}, b, hh]); }
+    else if(tipo==='area-paral'){ const b = M(3,10), hh = M(2,7); enun = `Halla el área de un paralelogramo que tiene base de ${h(b)} ${u} y altura de ${h(hh)} ${u}.`;
+      formula = 'A = b × h'; sust = `A = ${t(b)} × ${t(hh)}`; unid = u+'²'; pasos.push(formula, sust); r = mult([b,hh]); }
+    else if(tipo==='altura-paral'){ const b = M(3,10), hh = M(1,6); const A = multF([b,hh]); const Af = {n:A.n,d:A.d};
+      enun = `El paralelogramo tiene base de ${h(b)} ${u} y área de ${h(Af)} ${u}². Halla su altura.`;
+      formula = 'A = b × h'; sust = `${t(Af)} = ${t(b)} × h`; pasos.push(formula, sust, `Para despejar h se divide el área por la base: h = ${t(Af)} ÷ ${t(b)}`, ...lineasImpropias([Af,b]));
+      const d = pasosDivF(Af, b); pasos.push(...d.lineas); r = d.res; }
+    else if(tipo==='area-trap'){ const b1 = M(4,10), b2 = M(2,7), hh = M(2,6); enun = `Halla el área de un trapecio cuyas bases paralelas miden ${h(b1)} ${u} y ${h(b2)} ${u}, y su altura es ${h(hh)} ${u}.`;
+      formula = 'A = ½ (b₁ + b₂) × h'; sust = `A = ${tf(1,2)} (${t(b1)} + ${t(b2)}) × ${t(hh)}`; unid = u+'²'; pasos.push(formula, sust, 'Primero lo del paréntesis:', ...lineasImpropias([b1,b2]));
+      const s = pasosSumaVarias([b1,b2]); pasos.push(...s.lineas, `Ahora: ${tf(1,2)} × ${tf(s.res.n,s.res.d)} × ${t(hh)}`); r = mult([{n:1,d:2}, s.res, hh]); }
+    else if(tipo==='vol-caja'){ const l = M(2,8), a = M(1,5), hh = M(1,5); enun = `Halla el volumen de un sólido rectangular cuyo largo es ${h(l)} ${u}, ancho ${h(a)} ${u} y altura ${h(hh)} ${u}.`;
+      formula = 'V = l × a × h'; sust = `V = ${t(l)} × ${t(a)} × ${t(hh)}`; unid = u+'³'; pasos.push(formula, sust); r = mult([l,a,hh]); }
+    else if(tipo==='vol-cubo'){ const s0 = M(1,5); enun = `Halla el volumen de un cubo cuya arista mide ${h(s0)} ${u}.`;
+      formula = 'V = s × s × s = s³'; sust = `V = ${t(s0)} × ${t(s0)} × ${t(s0)}`; unid = u+'³'; pasos.push(formula, sust); r = mult([s0,s0,s0]); }
+    else if(tipo==='sup-caja'){ const l = M(2,6), a = M(1,4), hh = M(1,4); enun = `Halla el área de superficie de una caja rectangular de ${h(l)} ${u} por ${h(a)} ${u} por ${h(hh)} ${u}.`;
+      formula = 'S = 2(l × a) + 2(a × h) + 2(h × l)'; sust = `S = 2(${t(l)} × ${t(a)}) + 2(${t(a)} × ${t(hh)}) + 2(${t(hh)} × ${t(l)})`; unid = u+'²';
+      pasos.push(formula, sust, ...lineasImpropias([l,a,hh]));
+      const ca = pasosMultVarias([{n:2,d:1}, l, a]), cb = pasosMultVarias([{n:2,d:1}, a, hh]), cc = pasosMultVarias([{n:2,d:1}, hh, l]);
+      pasos.push('Cara de arriba y de abajo:', ...ca.lineas, 'Frente y atrás:', ...cb.lineas, 'Los dos lados:', ...cc.lineas, 'Se suman las tres:');
+      const s = pasosSumaVarias([ca.res, cb.res, cc.res]); pasos.push(...s.lineas); r = s.res; }
+    else if(tipo==='sup-cubo'){ const s0 = M(1,6); enun = `Halla el área de superficie de un cubo cuya arista mide ${h(s0)} ${u}.`;
+      formula = 'S = 6 × s²'; sust = `S = 6 × ${t(s0)} × ${t(s0)}`; unid = u+'²'; pasos.push(formula, sust); r = mult([{n:6,d:1}, s0, s0]); }
+    else if(tipo==='largo-rect'){ const a = M(1,5), l = M(3,10); const A = multF([l,a]); const Af = {n:A.n,d:A.d};
+      enun = `Halla el largo de un rectángulo que tiene ancho de ${h(a)} ${u} y área de ${h(Af)} ${u}².`;
+      formula = 'A = l × a'; sust = `${t(Af)} = l × ${t(a)}`; pasos.push(formula, sust, `Para despejar l se divide el área por el ancho: l = ${t(Af)} ÷ ${t(a)}`, ...lineasImpropias([Af,a]));
+      const d = pasosDivF(Af, a); pasos.push(...d.lineas); r = d.res; }
+    else { const a = M(10,40), l = M(20,60); const P = addF(multF([{n:2,d:1},l]), multF([{n:2,d:1},a]));
+      enun = `El perímetro de un rectángulo es ${h(P)} ${u} y su ancho es ${h(a)} ${u}. ¿Cuál es su largo?`;
+      formula = 'P = 2l + 2a'; sust = `${t(P)} = 2l + 2(${t(a)})`; pasos.push(formula, sust, ...lineasImpropias([P,a]));
+      const dos = pasosMultF({n:2,d:1}, a); pasos.push(...dos.lineas, `Se resta ${t(dos.res)} en ambos lados: 2l = ${t(P)} − ${t(dos.res)}`);
+      const res = pasosSumaF(P, {n:-dos.res.n, d:dos.res.d}); pasos.push(...res.lineas, `Se divide por 2: l = ${tf(res.res.n,res.res.d)} ÷ 2`);
+      const d = pasosDivF(res.res, {n:2,d:1}); pasos.push(...d.lineas); r = d.res; }
+    pasos.push(...lineaMixto(r));
+    return { enunciado:enun, ...respPos(r), ayuda:`Respuesta en ${unid}${r.d===1 ? '' : ' (como número mixto si es mayor que 1)'}.`,
+      explicacion:[`Fórmula y sustitución:`, ...pasos, `→ ${tMix(r)} ${unid}`,
+        `TRUCO: escribe primero la fórmula, sustituye, y pasa TODOS los números mixtos a fracciones impropias antes de multiplicar (nunca multipliques entero con entero y fracción con fracción por separado). Al final vuelve a número mixto. Ejemplo con este mismo: ${sust} → ${tMix(r)} ${unid}.`] };
+  }
+},
+{
+  id:'semejantes', nombre:'Figuras semejantes', secciones:['5.3'],
+  gen(nv){
+    const uid = Math.random().toString(36).slice(2,8);
+    const u = pick(['cm','pulg','pies','m']);
+    const tipo = pick(nv==='facil' ? ['dos','dos','foto'] : ['dos','una','foto']);
+    const TR = `TRUCO: en figuras semejantes los lados correspondientes son proporcionales — escribe (lado de la grande)/(lado de la pequeña) = (otro lado de la grande)/(su pareja en la pequeña) y resuelve con productos cruzados. Primero identifica bien qué lado corresponde con cuál (mismo lugar en las dos figuras).`;
+    if(tipo==='dos'){
+      let a, b, c, k;
+      do { a = R(3,8); b = R(3,10); c = R(3,10); } while(a+b<=c+2 || a+c<=b+2 || b+c<=a+2);   // margen de 2: nada de triángulos casi aplastados
+      k = R(2, porNivel(nv,3,4,5));
+      const A = a*k, x = b*k, y = c*k;
+      return { enunciado:`Los dos triángulos son semejantes (el grande es una ampliación del pequeño). Halla los lados que faltan, x y y.${svgSemejantes([`${a} ${u}`, `${b} ${u}`, `${c} ${u}`], [`${A} ${u}`, 'x', 'y'], [a,b,c], uid)}`,
+        tipo:'angulo2', etiquetas:['x','y'], respuesta:{a:x, b:y},
+        explicacion:[`Los lados correspondientes están en el mismo lugar: la base ${a} ↔ ${A}, el lado derecho ${b} ↔ x, el lado izquierdo ${c} ↔ y.`,
+          `Proporción para x: ${A}/${a} = x/${b} → productos cruzados: ${a}x = ${A} × ${b} = ${A*b} → x = ${A*b} ÷ ${a} = ${x}`,
+          `Proporción para y: ${A}/${a} = y/${c} → productos cruzados: ${a}y = ${A} × ${c} = ${A*c} → y = ${A*c} ÷ ${a} = ${y}`,
+          `→ x = ${x} ${u}, y = ${y} ${u}`,
+          `${TR} Ejemplo con este mismo: ${A} ÷ ${a} = ${k}, así que la figura grande es ${k} veces la pequeña: x = ${b} × ${k} = ${x} y y = ${c} × ${k} = ${y}.`] };
+    }
+    if(tipo==='una'){
+      const dm = [2,3,4];
+      const a = mixR(1,4,dm), b = mixR(1,5,dm), A = {n:R(5,15), d:1};
+      const num = pasosMultF(A, b), div = pasosDivF(num.res, a), x = div.res;
+      return { enunciado:`Las siguientes figuras son semejantes. En la pequeña, dos lados correspondientes miden ${hMix(a)} ${u} y ${hMix(b)} ${u}. En la ampliación, el lado que corresponde a ${hMix(a)} ${u} mide ${A.n} ${u}. Halla la medida x del lado que corresponde a ${hMix(b)} ${u}.`,
+        ...respPos(x), ayuda:`Respuesta en ${u}${x.d===1 ? '' : ' (como número mixto si es mayor que 1)'}.`,
+        explicacion:[`Paso 1 — sea x el lado que falta.`, `Paso 2 — proporción de lados correspondientes: (${tMix(a)})/(${tMix(b)}) = ${A.n}/x`,
+          `Paso 3 — productos cruzados: (${tMix(a)}) · x = (${tMix(b)}) · ${A.n}`, ...lineasImpropias([a,b]), ...num.lineas,
+          `Se despeja x dividiendo por ${tMix(a)}:`, ...div.lineas, ...lineaMixto(x), `→ x = ${tMix(x)} ${u}`,
+          `${TR} Ejemplo con este mismo: ${tMix(a)} · x = ${tMix(b)} · ${A.n} → x = ${tMix(x)}.`] };
+    }
+    const W = mixR(3,8,[2,4]), H2 = {n:R(10,24), d:1};
+    let H; do { H = mixR(2,6,[2,4]); } while(H.n*W.d === W.n*H.d);          // foto cuadrada = pregunta trivial
+    const num = pasosMultF(W, H2), div = pasosDivF(num.res, H), x = div.res;
+    return { enunciado:`Una fotografía que mide ${hMix(W)} pulgadas de ancho y ${hMix(H)} pulgadas de alto se quiere ampliar de modo que el alto sea de ${H2.n} pulgadas. ¿Cuál será el ancho de la ampliación?`,
+      ...respPos(x), ayuda:`Respuesta en pulgadas${x.d===1 ? '' : ' (como número mixto)'}.`,
+      explicacion:[`La foto y la ampliación son figuras semejantes: ancho/alto es la misma razón en las dos.`,
+        `Proporción: (${tMix(W)})/(${tMix(H)}) = x/${H2.n}`, `Productos cruzados: (${tMix(H)}) · x = (${tMix(W)}) · ${H2.n}`, ...lineasImpropias([W,H]), ...num.lineas,
+        `Se despeja x dividiendo por ${tMix(H)}:`, ...div.lineas, ...lineaMixto(x), `→ ${tMix(x)} pulgadas`,
+        `${TR} Ejemplo con este mismo: ${tMix(H)} · x = ${tMix(W)} · ${H2.n} → x = ${tMix(x)}.`] };
+  }
+},
 /* ══════════════════════════════════════════════════════════
    WORLD CULTURE I (HUGS 101) — clase:'wc'. Contenido sacado de las 3 presentaciones de
    Blackboard: "Conceptos Básicos" (secciones ['1.x']), "Orígenes del ser humano" (['2.x']),
@@ -3381,7 +3898,7 @@ const MOD_POR_ID = {}; MODULOS.forEach(m => MOD_POR_ID[m.id] = m);
 // secciones[0][0]===cap que ya usan construirCola/pantallaTemas/elegirModulo) y el nombre de
 // cada capítulo para el encabezado (si falta, se usa "Capítulo N")
 const MATERIAS = {
-  mate: { nombre:'Álgebra', caps:[1,2,3,4] },
+  mate: { nombre:'Álgebra', caps:[1,2,3,4,5] },
   wc:   { nombre:'World Culture I', caps:[1,2,3],
           capNombre:{1:'Conceptos básicos', 2:'Orígenes del ser humano', 3:'La Prehistoria'} },
   circ: { nombre:'Circuitos Eléctricos', caps:[1,2],
@@ -3559,7 +4076,10 @@ const SECMAP = {
   '3.8': ['razones','tasas-porciento'],
   '4.1': ['suma-resta-frac','resta-mental-frac','propiedades-frac'],
   '4.2': ['mult-div-frac','reciproco','propiedades-frac'],
-  '4.3': ['orden-op-frac','frac-compleja']
+  '4.3': ['orden-op-frac','frac-compleja'],
+  '5.1': ['ecuaciones-frac','proporciones'],
+  '5.2': ['aplicaciones-frac','promedio-frac','de-multiplicar','razon-unitaria-prop'],
+  '5.3': ['geometria-frac','semejantes']
 };
 // EducoSoft está en inglés — las claves van en los dos idiomas
 const CLAVES = {
@@ -3604,7 +4124,15 @@ const CLAVES = {
   'mult-div-frac':    ['multiplicación de fracciones','división de fracciones','multiplicar fracciones','dividir fracciones','multiplying fractions','dividing fractions','producto de fracciones','cociente de fracciones'],
   'reciproco':        ['recíproco','reciproco','recíprocos','inverso multiplicativo','reciprocal','multiplicative inverse'],
   'orden-op-frac':    ['orden de operaciones con fracciones','order of operations with fractions','expresiones con fracciones'],
-  'frac-compleja':    ['fracción compleja','fracciones complejas','complex fraction','complex fractions']
+  'frac-compleja':    ['fracción compleja','fracciones complejas','complex fraction','complex fractions'],
+  'ecuaciones-frac':  ['ecuaciones con fracciones','ecuaciones lineales con fracciones','principio de suma','principio de multiplicación','equations with fractions'],
+  'proporciones':     ['proporción','proporciones','productos cruzados','término que falta','proportion','proportions','cross products'],
+  'aplicaciones-frac':['aplicaciones generales','problemas de aplicación','aplicaciones con fracciones','applications with fractions'],
+  'promedio-frac':    ['promedio de números racionales','promedio de fracciones','average of fractions'],
+  'de-multiplicar':   ['de a multiplicación','traducir de','parte de un entero','fraction of a number'],
+  'razon-unitaria-prop': ['razón unitaria','razones unitarias','unit rate','problemas de razones','caso i','caso ii'],
+  'geometria-frac':   ['aplicaciones geométricas','volumen','área de superficie','sólido rectangular','cubo','volume','surface area','paralelogramo','trapecio'],
+  'semejantes':       ['figuras semejantes','triángulos semejantes','semejantes','similar figures','similar triangles','ampliación']
 };
 
 function analizarTexto(txt){

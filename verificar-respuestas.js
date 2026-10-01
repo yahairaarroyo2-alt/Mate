@@ -81,7 +81,8 @@ C['conjuntos-numericos']=(ej,t)=>{ const m=/pertenece (.+?) \?/.exec(t); if(!m) 
 C['valor-absoluto']=(ej,t,h)=>{ let m; if(m=/Halla el opuesto de (−?\d+)/.exec(t)) { const v=-N(m[1])[0]; return {mine:v, ok:v===ej.respuesta}; }
   if(/^Calcula:/.test(t)){ const v=val(ev(h.replace(/Calcula:/,''))); return {mine:v, ok:v===ej.respuesta}; } return null; };
 C['reglas-signos']=(ej,t,h)=>{ const v=val(ev(h.replace(/=\s*$/,''))); return {mine:v, ok:v===ej.respuesta}; };
-C['comparar-enteros']=(ej,t)=>{ const [a,b]=N(t.replace(/^[^?]*\?/,'')); const s=a<b?'<':a>b?'>':'='; return {mine:s, ok:s===ej.respuesta}; };
+C['comparar-enteros']=(ej,t)=>{ let m; if(m=/¿Cuál es (menor|mayor): (−?\d+) ó (−?\d+) \?/.exec(t)){ const a=N(m[2])[0], b=N(m[3])[0]; const s=a===b?'Son iguales':(m[1]==='menor')===(a<b)?m[2]:m[3]; return {mine:s, ok:s===ej.respuesta}; }
+  const [a,b]=N(t.replace(/^[^?]*\?/,'')); const s=a<b?'<':a>b?'>':'='; return {mine:s, ok:s===ej.respuesta}; };
 C['problemas-enteros']=(ej,t)=>{ let m,v;
   if(m=/temperatura era de (−?\d+)° y bajó (\d+)°/.exec(t)) v=N(m[1])[0]-+m[2];
   else if(m=/subió de (−?\d+)° a (−?\d+)°/.exec(t)) v=N(m[2])[0]-N(m[1])[0];
@@ -135,7 +136,9 @@ C['tasas-porciento']=(ej,t)=>{ let m; if(m=/Escribe (\d+)% como fracción/.exec(
   if(m=/bolsa de (\d+) libras de arroz cuesta \$(\d+)/.exec(t)){ const v=+m[2]/+m[1]; return {mine:v, ok:v===ej.respuesta}; }
   if(m=/tasa de (\d+) millas a (\d+) galones/.exec(t)||/hay (\d+) estudiantes y (\d+) computadoras/.exec(t)||/usa (\d+) tazas de harina para (\d+) huevos/.exec(t)){ const f=Fr(+m[1],+m[2]); return {mine:f, ok:fracOk(f,ej.respuesta)}; } return null; };
 const evalTras=(h)=>ev(h.replace(/^[\s\S]*?:/,''));
-C['suma-resta-frac']=(ej,t,h)=>{ const f=evalTras(h); return {mine:f, ok:fracOk(f,ej.respuesta)}; };
+C['suma-resta-frac']=(ej,t,h)=>{ if(/Halla el MCD|caja con libros/.test(t)) return null; const f=evalTras(h);
+  if(ej.tipo==='opciones'){ const [n,d]=String(ej.respuesta).replace(/−/g,'-').split('/').map(Number); return {mine:f, ok:fracOk(f,{n,d:d||1})}; }
+  return {mine:f, ok:fracOk(f,ej.respuesta)}; };
 C['mult-div-frac']=C['suma-resta-frac'];
 C['orden-op-frac']=C['suma-resta-frac'];
 C['resta-mental-frac']=(ej,t,h)=>{ let m; if(m=/Resta \[(\d+)\/(\d+)\] de \[(\d+)\/(\d+)\]/.exec(t)){ const f=sub(Fr(+m[3],+m[4]),Fr(+m[1],+m[2])); return {mine:f, ok:fracOk(f,ej.respuesta)}; }
@@ -147,6 +150,72 @@ C['reciproco']=(ej,t,h)=>{ const {vals}=tokens(t.replace(/^.*?(recíproco de|Com
   if(x.n===0) return {mine:'indefinido', ok:false}; const f=Fr(x.d,x.n); return {mine:f, ok:fracOk(f,ej.respuesta)}; };
 C['frac-compleja']=(ej,t,h)=>{ let m; if(m=/La suma de (.+?) y (.+?) se va a dividir por la diferencia entre (.+?) y (.+?)\./.exec(t)){ const {vals}=tokens(m[0]); if(vals.length!==4) return null; const f=div(add(vals[0],vals[1]),sub(vals[2],vals[3])); return {mine:f, ok:fracOk(f,ej.respuesta)}; }
   const f=evalTras(h); return {mine:f, ok:fracOk(f,ej.respuesta)}; };
+// ─── capítulo 5 (2026-09-30) ───
+const respVal=ej=>ej.tipo==='num'?Fr(Math.round(ej.respuesta*1e6),1e6):ej.tipo==='mixto'?Fr(ej.respuesta.e*ej.respuesta.d+ej.respuesta.n,ej.respuesta.d):Fr(ej.respuesta.n,ej.respuesta.d);
+const nn=s=>+String(s).replace(/,/g,'');
+// valores en el orden del texto: "7 [1/6]" (mixto) cuenta como UNO, comas de miles fuera
+const mv=t=>{ const out=[]; t.replace(/(−?)(\d[\d,]*) \[(\d+)\/(\d+)\]|(−?)\[(\d+)\/(\d+)\]|(\d[\d,]*)/g,(m,s1,e,n,d,s2,n2,d2,i)=>{ if(e!==undefined) out.push(Fr((s1?-1:1)*(nn(e)*+d+ +n),+d)); else if(n2!==undefined) out.push(Fr((s2?-1:1)*+n2,+d2)); else out.push(Fr(nn(i))); return m; }); return out; };
+const ok5=(r,ej)=>({mine:r, ok:eq(Fr(r.n,r.d),respVal(ej))});
+const ecuacion=h=>h.split('<br><b>')[1].replace(/<\/b>\s*$/,'');
+const sustituye=(e,L,v)=>e.replace(new RegExp('\\)\\s*'+L,'g'),')*'+L).replace(new RegExp(L,'g'),`(${v.n}/${v.d})`);
+C['ecuaciones-frac']=(ej,t,h)=>{ const e=toExpr(ecuacion(h)); const L=(e.match(/[xytm]/)||[])[0]; if(!L) return null; const v=Fr(ej.respuesta.n,ej.respuesta.d);
+  const [A,B]=sustituye(e,L,v).split('='); const a=parse(A), b=parse(B); return {mine:`${a.n}/${a.d} vs ${b.n}/${b.d}`, ok:eq(a,b)}; };
+C['proporciones']=(ej,t,h)=>{ if(ej.tipo==='opciones'){ const {vals:v}=tokens(t.replace(/^[^:]*:/,'')); if(v.length!==2) return null; const a=mul(v[0],Fr(1)), b=v[1]; const es=eq(a,b)?'Cierta':'Falsa'; return {mine:es, ok:es===ej.respuesta}; }
+  const [A,B]=sustituye(toExpr(ecuacion(h)),'x',respVal(ej)).split('='); const a=parse(A), b=parse(B); return {mine:`${a.n}/${a.d} vs ${b.n}/${b.d}`, ok:eq(a,b)}; };
+C['aplicaciones-frac']=(ej,t)=>{ const v=mv(t); let r;
+  if(/concreto/.test(t)) r=add(sub(sub(v[0],v[1]),v[2]),v[3]); else if(/clavo/.test(t)) r=v.reduce(add);
+  else if(/triángulo/.test(t)) r=sub(sub(v[0],v[1]),v[2]); else if(/soga/.test(t)) r=sub(sub(v[2],v[0]),v[1]);
+  else if(/rebajó/.test(t)) r=sub(v[0],v[1]); else if(/tanque/.test(t)) r=sub(sub(v[0],v[1]),v[2]);
+  else if(/recién nacidos/.test(t)) r=v.reduce(add); else return null; return ok5(r,ej); };
+C['promedio-frac']=(ej,t)=>{ let s=t; if(s.includes(':')) s=s.slice(s.indexOf(':')+1); else if(s.includes('caminó')) s=s.slice(s.indexOf('caminó')); const v=mv(s); if(v.length<3) return null; return ok5(div(v.reduce(add),Fr(v.length)),ej); };
+const PAL={'Un':1,'Dos':2,'Tres':3,'Cuatro':4,'Cinco':5,'Seis':6,'Siete':7,'Ocho':8,'Nueve':9};
+const DPAL={medio:2,mitades:2,tercio:3,tercios:3,cuarto:4,cuartos:4,quinto:5,quintos:5,sexto:6,sextos:6,'séptimo':7,'séptimos':7,octavo:8,octavos:8,noveno:9,novenos:9,'décimo':10,'décimos':10};
+C['de-multiplicar']=(ej,t)=>{ let m, r;
+  if(m=/según se indica: (\d+)% de ([\d,]+)/.exec(t)) r=Fr(+m[1]*nn(m[2]),100);
+  else if(m=/según se indica: (\S+) (\S+) de ([\d,]+)/.exec(t)) r=Fr(PAL[m[1]]*nn(m[3]),DPAL[m[2]]);
+  else if(m=/pasados años ([\d,]+) de un total de ([\d,]+)/.exec(t)) r=Fr(nn(m[1]),nn(m[2]));
+  else if(m=/De un total de ([\d,]+) calorías, ([\d,]+)/.exec(t)) r=Fr(nn(m[2]),nn(m[1]));
+  else if(m=/paga \$([\d,]+) mensualmente de hipoteca\. Si sus gastos mensuales totalizan \$([\d,]+)/.exec(t)) r=Fr(nn(m[1]),nn(m[2]));
+  else if(m=/encontró que ([\d,]+) de cada ([\d,]+) árboles/.exec(t)) r=Fr(nn(m[2])-nn(m[1]),nn(m[2]));
+  else if(m=/Si (\d+) estudiantes de una clase son fumadores y (\d+) no/.exec(t)) r=Fr(+m[2],+m[1]+ +m[2]);
+  else if(m=/ahorra \[(\d+)\/(\d+)\] de su ingreso total.*ahorra \$([\d,]+)/.exec(t)) r=Fr(nn(m[3])*+m[2],+m[1]);
+  else if(m=/dos terceras partes.*es \$([\d,]+)/.exec(t)) r=Fr(nn(m[1])*3,2);
+  else if(m=/es de 15%.*se ganó \$([\d,]+)/.exec(t)) r=Fr(nn(m[1])*20,3);
+  else if(m=/Cuatro quintos.*registraron (\d+) pulg/.exec(t)) r=Fr(+m[1]*5,4);
+  else if(m=/descuento" de \[(\d+)\/(\d+)\].* en \$(\d+)\./.exec(t)) r=Fr(+m[3]*+m[2],+m[2]-+m[1]);
+  else if(m=/que \[(\d+)\/(\d+)\] de su propiedad.*?, \[(\d+)\/(\d+)\] para su hijo menor, \[(\d+)\/(\d+)\] para su hija/.exec(t)) r=sub(Fr(1),add(add(Fr(+m[1],+m[2]),Fr(+m[3],+m[4])),Fr(+m[5],+m[6])));
+  else return null; return ok5(r,ej); };
+C['razon-unitaria-prop']=(ej,t)=>{ let m, r; const v=mv(t);
+  if(m=/familia de (\d+) cuestan \$([\d,]+)/.exec(t)) r=Fr(nn(m[2]),+m[1]);
+  else if(m=/usa (\d+) galones de gasolina para viajar ([\d,]+) millas/.exec(t)) r=Fr(nn(m[2]),+m[1]);
+  else if(m=/Una clase de (\d+) estudiantes gastó \$([\d,]+)/.exec(t)) r=Fr(nn(m[2]),+m[1]);
+  else if(/carne molida|maquinista/.test(t)) r=div(v[0],v[1]);
+  else if(m=/familia de (\d+) miembros consume (\d+) galones/.exec(t)) r=Fr(+m[2],+m[1]);
+  else if(m=/recorre (\d+) millas con (\d+) galones.*recorrer (\d+) millas/.exec(t)) r=Fr(+m[2]*+m[3],+m[1]);
+  else if(m=/producir (\d+) bombillas en (\d+) minutos.*producir (\d+) bombillas/.exec(t)) r=Fr(+m[2]*+m[3],+m[1]);
+  else if(/Un auto recorre/.test(t)) r=div(mul(v[0],v[2]),v[1]);
+  else if(/receta/.test(t)) r=div(mul(v[1],v[2]),v[0]);
+  else if(m=/Juan gana \$(\d+) en (\d+) días.*en (\d+) días/.exec(t)) r=Fr(+m[1]*+m[3],+m[2]);
+  else if(/mapa/.test(t)) r=div(mul(v[1],v[2]),v[0]);
+  else return null; return ok5(r,ej); };
+C['geometria-frac']=(ej,t)=>{ const v=mv(t); const two=Fr(2), half=Fr(1,2); let r;
+  if(/área de un rectángulo cuyo largo/.test(t)) r=mul(v[0],v[1]);
+  else if(/perímetro de un rectángulo que mide/.test(t)) r=add(mul(two,v[0]),mul(two,v[1]));
+  else if(/perímetro de un cuadrado/.test(t)) r=mul(Fr(4),v[0]);
+  else if(/área de un cuadrado/.test(t)) r=mul(v[0],v[0]);
+  else if(/área de un triángulo/.test(t)) r=mul(half,mul(v[0],v[1]));
+  else if(/área de un paralelogramo/.test(t)) r=mul(v[0],v[1]);
+  else if(/paralelogramo tiene base/.test(t)) r=div(v[1],v[0]);
+  else if(/área de un trapecio/.test(t)) r=mul(half,mul(add(v[0],v[1]),v[2]));
+  else if(/volumen de un sólido rectangular/.test(t)) r=mul(mul(v[0],v[1]),v[2]);
+  else if(/volumen de un cubo/.test(t)) r=mul(mul(v[0],v[0]),v[0]);
+  else if(/superficie de una caja/.test(t)) r=mul(two,add(add(mul(v[0],v[1]),mul(v[1],v[2])),mul(v[2],v[0])));
+  else if(/superficie de un cubo/.test(t)) r=mul(Fr(6),mul(v[0],v[0]));
+  else if(/largo de un rectángulo que tiene ancho/.test(t)) r=div(v[1],v[0]);
+  else if(/perímetro de un rectángulo es/.test(t)) r=div(sub(v[0],mul(two,v[1])),two);
+  else return null; return ok5(r,ej); };
+C['semejantes']=(ej,t,h)=>{ if(ej.tipo==='angulo2'){ const L=[...h.matchAll(/<text[^>]*>([^<]*)<\/text>/g)].map(m=>parseInt(m[1])); const [a,b,c,A]=L; const x=A*b/a, y=A*c/a; return {mine:{a:x,b:y}, ok:x===ej.respuesta.a&&y===ej.respuesta.b}; }
+  const v=mv(t); let r; if(/fotografía/.test(t)) r=div(mul(v[0],v[2]),v[1]); else if(/En la pequeña/.test(t)) r=div(mul(v[3],v[1]),v[0]); else return null; return ok5(r,ej); };
 // ─── corrida ───
 const out={}, POR=300;
 for(const m of MODULOS){ const r={ver:0,unv:0,fallos:[],errores:[]}; out[m.id]=r; const chk=C[m.id]; if(!chk){ r.sinCheck=true; continue; }
