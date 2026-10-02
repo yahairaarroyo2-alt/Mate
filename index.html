@@ -723,6 +723,22 @@ function diagFrac(tokens, flechas){
 const _tx = s => ({ t:'x', s });
 // dibujo + una línea corta debajo que dice POR QUÉ (para quien parte de cero)
 const _nota = (svg, t) => svg + `<div class="dgNota">${t}</div>`;
+// línea de 0° a 90° (c) o a 180° (s): el ángulo desde el 0 y una flecha a lo que le falta
+function diagAngulo(a, modo){
+  const id = 'dg' + (++_dgId), tope = modo === 'c' ? 90 : 180, X = v => 20 + v/tope*280, xa = X(a), y = 70;
+    const flecha = (xb, alto, txt) => { const m = (xa + xb)/2, y0 = y - 6, h = txt.length*3.4, tx = Math.min(Math.max(m, 4 + h), 316 - h);
+    return `<path d="M${xa} ${y0} Q${m} ${y - alto} ${xb} ${y0}" fill="none" stroke="#e8a23a" stroke-width="1.8" marker-end="url(#${id})"/><text x="${tx}" y="${y - alto/2 - 8}" text-anchor="middle" font-size="12.5" font-weight="700" fill="#e8a23a">${txt}</text>`; };
+  const tick = v => `<line x1="${X(v)}" x2="${X(v)}" y1="${y - 6}" y2="${y + 6}" stroke="currentColor" stroke-width="1.6"/><text x="${X(v)}" y="${y + 22}" text-anchor="middle" font-size="12" fill="currentColor">${v}°</text>`;
+  let g = `<line x1="${X(0)}" x2="${X(tope)}" y1="${y}" y2="${y}" stroke="currentColor" stroke-width="1.6"/><line x1="${X(0)}" x2="${xa}" y1="${y}" y2="${y}" stroke="#6aa9ff" stroke-width="5"/>${tick(0)}${tick(tope)}${tope === 180 && a !== 90 ? tick(90) : ''}`;
+  g += `<text x="${(X(0) + xa)/2}" y="${y - 10}" text-anchor="middle" font-size="12.5" font-weight="700" fill="#6aa9ff">${a}°</text>`;
+  if(modo === 'c') g += flecha(X(90), 46, `complemento: 90 − ${a} = ${90 - a}`);
+  if(modo === 's') g += flecha(X(180), 46, `suplemento: 180 − ${a} = ${180 - a}`);
+  return `<svg viewBox="0 0 320 100" style="width:100%;max-width:380px;height:auto;display:block;margin:4px 0" xmlns="http://www.w3.org/2000/svg"><defs><marker id="${id}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#e8a23a"/></marker></defs>${g}</svg>`;
+}
+const _angNota = (a, modo) => _nota(modo === 'cs' ? diagAngulo(a, 'c') + diagAngulo(a, 's') : diagAngulo(a, modo), modo === 'c'
+  ? `La línea va de 0° a 90° (una esquina recta). El ángulo ocupa ${a}° (en azul); la flecha es lo que le falta para llegar a 90°.`
+  : modo === 's' ? `La línea va de 0° a 180° (una línea recta). El ángulo ocupa ${a}° (en azul); la flecha es lo que le falta para llegar a 180°.`
+  : `Arriba, lo que le falta al ángulo (${a}°, en azul) para llegar a 90° es su complemento. Abajo, lo que le falta para llegar a 180° es su suplemento.`);
 // a(b ± c) = ab ± ac: flechas del número de afuera a cada término de adentro
 function diagDistribuir(a, b, op, c, r1, r2){
   return _nota(diagFrac([_tx(a), _tx('('), _tx(b), _tx(op), _tx(c), _tx(')'), _op('='), _tx(r1), _tx(op), _tx(r2)],
@@ -2004,6 +2020,7 @@ const MODULOS = [
         explicacion:[`Dos ángulos son "complementarios" cuando, juntos, suman exactamente 90°.`,
           `Si uno mide ${a}°, el otro (x) tiene que completar hasta 90°: x + ${a}° = 90°`,
           `x = 90 − ${a} = ${90-a}`,
+          _angNota(a, 'c'),
           `TRUCO: para no confundir cuál es cuál, acuérdate del abecedario: la C va antes que la S, igual que el 90 va antes que el 180. Complemento → 90 menos el ángulo. Suplemento → 180 menos el ángulo. Es una resta, nada más. Ejemplo con este mismo ángulo de ${a}°: el complemento es 90 − ${a} = ${90-a}, y el suplemento sería 180 − ${a} = ${180-a}.`] };
     }
     if(variante==='suplemento'){
@@ -2012,6 +2029,7 @@ const MODULOS = [
         explicacion:[`Dos ángulos son "suplementarios" cuando, juntos, suman exactamente 180° (forman una línea recta).`,
           `Si uno mide ${a}°, el otro (x) tiene que completar hasta 180°: x + ${a}° = 180°`,
           `x = 180 − ${a} = ${180-a}`,
+          _angNota(a, 's'),
           `TRUCO: el mismo del abecedario: C antes que S, 90 antes que 180. Complemento → 90 − ángulo. Suplemento → 180 − ángulo. Otra señal: si el ángulo ya pasa de 90°, solo puede tener suplemento. Ejemplo con este mismo ángulo de ${a}°: el suplemento es 180 − ${a} = ${180-a}${a>90?`, y complemento no tiene, porque ${a} ya pasó de 90`:`, y el complemento sería 90 − ${a} = ${90-a}`}.`] };
     }
     if(variante==='par'){
@@ -4147,11 +4165,11 @@ const MODULOS = [
       () => { const ang = R(1,89);
         if(Math.random() < 0.5){ const S = 180-ang;
           return { enunciado:`Si el suplemento de un ángulo es <b>${S}°</b>, entonces halla el complemento de ese ángulo.`, tipo:'num', respuesta:90-ang, ayuda:'Respuesta en grados (solo el número).',
-            explicacion:[`Paso 1 — el suplemento es lo que le falta al ángulo para llegar a 180°: ángulo = 180 − ${S} = ${ang}°.`, `Paso 2 — el complemento es lo que le falta al ángulo para llegar a 90°: complemento = 90 − ${ang} = ${90-ang}°.`, `→ ${90-ang}°`,
+            explicacion:[`Paso 1 — el suplemento es lo que le falta al ángulo para llegar a 180°: ángulo = 180 − ${S} = ${ang}°.`, `Paso 2 — el complemento es lo que le falta al ángulo para llegar a 90°: complemento = 90 − ${ang} = ${90-ang}°.`, _angNota(ang, 'cs'), `→ ${90-ang}°`,
               `TRUCO: con dos pasos, primero encuentra el ÁNGULO y después pide lo que te preguntan. Complemento → 90 menos el ángulo; suplemento → 180 menos el ángulo (la C va antes que la S, igual que el 90 antes que el 180). Ejemplo con este mismo: ${S}° → ángulo ${ang}° → complemento ${90-ang}°.`] }; }
         const X = 90-ang;
         return { enunciado:`Si el complemento de un ángulo es <b>${X}°</b>, entonces halla el suplemento de ese ángulo.`, tipo:'num', respuesta:180-ang, ayuda:'Respuesta en grados (solo el número).',
-          explicacion:[`Paso 1 — el complemento es lo que le falta al ángulo para llegar a 90°: ángulo = 90 − ${X} = ${ang}°.`, `Paso 2 — el suplemento es lo que le falta al ángulo para llegar a 180°: suplemento = 180 − ${ang} = ${180-ang}°.`, `→ ${180-ang}°`,
+          explicacion:[`Paso 1 — el complemento es lo que le falta al ángulo para llegar a 90°: ángulo = 90 − ${X} = ${ang}°.`, `Paso 2 — el suplemento es lo que le falta al ángulo para llegar a 180°: suplemento = 180 − ${ang} = ${180-ang}°.`, _angNota(ang, 'cs'), `→ ${180-ang}°`,
             `TRUCO: primero encuentra el ÁNGULO y después pide lo que te preguntan. Complemento → 90 menos el ángulo; suplemento → 180 menos el ángulo. Ejemplo con este mismo: ${X}° → ángulo ${ang}° → suplemento ${180-ang}°.`] }; },
       // ── forma corta con una potencia de 10 (el número de adelante puede tener varias cifras) ──
       () => { let c; do { c = pick([R(2,9), R(11,99), R(101,999)]); } while(c%10===0);
