@@ -176,6 +176,7 @@
   .procesoCaja{margin-bottom:12px}
   .procesoTit{font-weight:700;margin-bottom:6px}
   .procesoTit small{font-weight:400;opacity:.7}
+  .dgNota{font-size:.92em;opacity:.85;margin:0 0 10px;line-height:1.35}
   .pasoFila{display:flex;align-items:center;gap:8px;margin-bottom:8px}
   .pasoFila > span{min-width:18px;font-weight:700;opacity:.7;text-align:center}
   .pasoFila .campo{flex:1;min-width:0;margin:0;text-align:left}
@@ -720,41 +721,45 @@ function diagFrac(tokens, flechas){
 }
 // texto libre (para ecuaciones)
 const _tx = s => ({ t:'x', s });
+// dibujo + una línea corta debajo que dice POR QUÉ (para quien parte de cero)
+const _nota = (svg, t) => svg + `<div class="dgNota">${t}</div>`;
 // a(b ± c) = ab ± ac: flechas del número de afuera a cada término de adentro
 function diagDistribuir(a, b, op, c, r1, r2){
-  return diagFrac([_tx(a), _tx('('), _tx(b), _tx(op), _tx(c), _tx(')'), _op('='), _tx(r1), _tx(op), _tx(r2)],
-    [{ de:[0,'n'], a:[2,'n'], txt:'×' }, { de:[0,'n'], a:[4,'n'], txt:'×', nivel:2 }]);
+  return _nota(diagFrac([_tx(a), _tx('('), _tx(b), _tx(op), _tx(c), _tx(')'), _op('='), _tx(r1), _tx(op), _tx(r2)],
+    [{ de:[0,'n'], a:[2,'n'], txt:'×' }, { de:[0,'n'], a:[4,'n'], txt:'×', nivel:2 }]), 'El número de afuera multiplica a CADA término de adentro del paréntesis (el signo del medio se queda).');
 }
 // productos cruzados: flechas en X entre a/b = c/d
-const diagCruzados = (a, b, c, d) => diagFrac([{ t:'f', n:a, d:b }, _op('='), { t:'f', n:c, d:d }],
-  [{ de:[0,'n'], a:[2,'d'], recta:true }, { de:[0,'d'], a:[2,'n'], recta:true }]);
+const diagCruzados = (a, b, c, d) => _nota(diagFrac([{ t:'f', n:a, d:b }, _op('='), { t:'f', n:c, d:d }],
+  [{ de:[0,'n'], a:[2,'d'], recta:true }, { de:[0,'d'], a:[2,'n'], recta:true }]), 'Se multiplica en X: lo de arriba de un lado por lo de abajo del otro. Si la proporción es cierta, los dos resultados son iguales.');
 // lo mismo en los DOS lados de la ecuación: izq = der  →  (op a los dos lados)  →  izq2 = der2
 function diagAmbosLados(izq, der, op, izq2, der2){
   const w = s => String(s).length*9.2 + 14, wl = Math.max(w(izq), w(izq2), 40), wr = Math.max(w(der), w(der2), 36), W = 12 + wl + 30 + wr, id = 'dg' + (++_dgId);
   const xl = 6 + wl/2, xe = 6 + wl + 15, xr = 6 + wl + 30 + wr/2;
   const fila = (y, a, b) => `<text x="${xl}" y="${y}" text-anchor="middle">${a}</text><text x="${xe}" y="${y}" text-anchor="middle">=</text><text x="${xr}" y="${y}" text-anchor="middle">${b}</text>`;
   const fl = x => `<path d="M${x} 32 L${x} 54" stroke="#e8a23a" stroke-width="1.8" fill="none" marker-end="url(#${id})"/><text x="${x + 8}" y="48" font-size="13" font-weight="700" fill="#e8a23a">${op}</text>`;
-  return `<svg viewBox="0 0 ${W} 86" style="width:100%;max-width:${Math.min(Math.round(W*0.95), 300)}px;height:auto;display:block;margin:4px 0" xmlns="http://www.w3.org/2000/svg"><defs><marker id="${id}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#e8a23a"/></marker></defs><g font-size="17" fill="currentColor" font-family="inherit">${fila(24, izq, der)}${fl(xl)}${fl(xr)}${fila(78, izq2, der2)}</g></svg>`;
+  const nota = { '+':'Para quitar lo que está restando se SUMA ese número, en los DOS lados (así la igualdad no se rompe).', '−':'Para quitar lo que está sumando se RESTA ese número, en los DOS lados (así la igualdad no se rompe).', '÷':'La letra está multiplicada por un número; para dejarla sola se DIVIDE entre ese número, en los DOS lados.', '×':'Para dejar la letra sola se MULTIPLICA en los DOS lados (así se cancela la división o la fracción).' }[String(op)[0]] || '';
+  const svg = `<svg viewBox="0 0 ${W} 86" style="width:100%;max-width:${Math.min(Math.round(W*0.95), 300)}px;height:auto;display:block;margin:4px 0" xmlns="http://www.w3.org/2000/svg"><defs><marker id="${id}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#e8a23a"/></marker></defs><g font-size="17" fill="currentColor" font-family="inherit">${fila(24, izq, der)}${fl(xl)}${fl(xr)}${fila(78, izq2, der2)}</g></svg>`;
+  return _nota(svg, nota);
 }
 const _fT = (n, d) => ({ t:'f', n:mm(n), d });
 const _op = s => ({ t:'o', s });
 // flechas de un par de fracciones: numerador → numerador y denominador → denominador (el de abajo solo si hay denominador)
 const _par = (i, j, txt, conAbajo) => [{ de:[i,'n'], a:[j,'n'], txt }, ...(conAbajo ? [{ de:[i,'d'], a:[j,'d'], txt }] : [])];
 // a/b → (a·k)/(b·k) con flechas × k
-function diagConvertir(f, nuevoN, m){ const k = m/f.d; return diagFrac([_fT(f.n, f.d), _op('='), _fT(nuevoN, m)], _par(0, 2, '× ' + k, f.d !== 1)); }
+function diagConvertir(f, nuevoN, m){ const k = m/f.d; return _nota(diagFrac([_fT(f.n, f.d), _op('='), _fT(nuevoN, m)], _par(0, 2, '× ' + k, f.d !== 1)), `Abajo: ${f.d} × ${k} = ${m}. Arriba también × ${k}, para que la fracción valga lo mismo.`); }
 // línea de simplificación: solo si hay algo que simplificar ('' si ya está simple; explPasos descarta las vacías)
 function explSimplif(n, d){
   const g = mcd(n, d), [sn, sd] = simplificar(n, d);
   if(n === 0) return `${tf(n,d)} = 0`;
   if(g === 1) return '';
-  return diagFrac([_fT(n, d), _op('='), _fT(sn, sd)], _par(0, 2, '÷ ' + g, sd !== 1));
+  return _nota(diagFrac([_fT(n, d), _op('='), _fT(sn, sd)], _par(0, 2, '÷ ' + g, sd !== 1)), `¿Por qué ${g}? Es el número MÁS GRANDE que entra exacto en los dos: ${Math.abs(n)} ÷ ${g} = ${Math.abs(sn)} y ${d} ÷ ${g} = ${sd}. Se divide arriba y abajo entre ${g}: vale lo mismo, pero más chica.`);
 }
 // a + b (b puede venir negativo = resta). Devuelve { res, lineas }
 function pasosSumaF(a, b){
   const r = sumarF([a, b]), lineas = [];
   if(a.d === b.d) lineas.push(`${opTP(a)} + ${opTP(b)} = ${opT({n:r.tot, d:r.m})}`);
   else {
-    lineas.push(`MCM de ${a.d} y ${b.d} = ${r.m}   (${a.d} × ${r.m/a.d} = ${r.m},  ${b.d} × ${r.m/b.d} = ${r.m})`);
+    lineas.push(`MCM de ${a.d} y ${b.d} = ${r.m}   (el número más chico que está en la tabla del ${a.d} y en la del ${b.d})`);
     if(r.m !== a.d) lineas.push(diagConvertir(a, r.nums[0], r.m));
     if(r.m !== b.d) lineas.push(diagConvertir(b, r.nums[1], r.m));
     lineas.push(`${tf(r.nums[0], r.m)} + ${tfP(r.nums[1], r.m)} = ${opT({n:r.tot, d:r.m})}`);
@@ -765,13 +770,13 @@ function pasosSumaF(a, b){
 // a × b: flechas arriba×arriba y abajo×abajo
 function pasosMultF(a, b){
   const r = multF([a, b]);
-  const lineas = [diagFrac([_fT(a.n, a.d), _op('×'), _fT(b.n, b.d), _op('='), _fT(r.rawN, r.rawD)], [..._par(0, 2, '×', a.d !== 1 && b.d !== 1)])];
+  const lineas = [_nota(diagFrac([_fT(a.n, a.d), _op('×'), _fT(b.n, b.d), _op('='), _fT(r.rawN, r.rawD)], [..._par(0, 2, '×', a.d !== 1 && b.d !== 1)]), 'Se multiplica arriba con arriba y abajo con abajo.')];
   const s = explSimplif(r.rawN, r.rawD); if(s) lineas.push(s);
   return { res:{n:r.n, d:r.d}, lineas };
 }
 // a ÷ b: se voltea SOLO la segunda
 const diagVoltear = (a, b) => { const rec = recipF(b);
-  return diagFrac([_fT(a.n, a.d), _op('÷'), _fT(b.n, b.d), _op('='), _fT(a.n, a.d), _op('×'), _fT(rec.n, rec.d)], [{ de:[2,'n'], a:[6,'n'], txt:'se voltea' }]); };
+  return _nota(diagFrac([_fT(a.n, a.d), _op('÷'), _fT(b.n, b.d), _op('='), _fT(a.n, a.d), _op('×'), _fT(rec.n, rec.d)], [{ de:[2,'n'], a:[6,'n'], txt:'se voltea' }]), 'Dividir entre una fracción es MULTIPLICAR por esa fracción dada vuelta (lo de arriba pasa abajo y lo de abajo arriba). Solo se voltea la segunda.'); };
 function pasosDivF(a, b){
   const m = pasosMultF(a, recipF(b));
   return { res:m.res, lineas:[diagVoltear(a, b), ...m.lineas] };
@@ -796,7 +801,7 @@ function respPos(f){
   return { tipo:'mixto', respuesta:{ e:Math.floor(f.n/f.d), n:f.n%f.d, d:f.d } };
 }
 const explImpropia = f => { const e = Math.floor(Math.abs(f.n)/f.d), p = Math.abs(f.n)%f.d;
-  return diagFrac([{ t:'m', e:(f.n<0 ? '−' : '') + e, n:p, d:f.d }, _op('='), _fT(f.n, f.d)], [{ de:[0,'e'], a:[2,'n'], txt:`${e} × ${f.d} + ${p}` }]); };
+  return _nota(diagFrac([{ t:'m', e:(f.n<0 ? '−' : '') + e, n:p, d:f.d }, _op('='), _fT(f.n, f.d)], [{ de:[0,'e'], a:[2,'n'], txt:`${e} × ${f.d} + ${p}` }]), `Entero × denominador + numerador: ${e} × ${f.d} = ${e*f.d}, más ${p} = ${Math.abs(f.n)}. El de abajo se queda igual.`); };
 const explAMixto = f => `${tf(f.n,f.d)} = ${tMix(f)}   (${f.n} ÷ ${f.d} = ${Math.floor(f.n/f.d)}, sobra ${f.n%f.d})`;
 // "pasa a impropia" para todos los mixtos de la lista (y los enteros como n/1)
 function lineasImpropias(fs){
@@ -809,7 +814,7 @@ function lineasImpropias(fs){
 function pasosSumaVarias(ts){
   const lineas = [], m = ts.reduce((a,f) => mcm(a,f.d), 1);
   if(ts.some(f => f.d !== m)){
-    lineas.push(`MCM de ${[...new Set(ts.map(f=>f.d))].join(', ')} = ${m}`);
+    lineas.push(`MCM de ${[...new Set(ts.map(f=>f.d))].join(', ')} = ${m}   (el número más chico que está en la tabla de todos)`);
     ts.forEach(f => { if(f.d !== m) lineas.push(diagConvertir(f, f.n*(m/f.d), m)); });
   }
   const nums = ts.map(f => f.n*(m/f.d)), tot = nums.reduce((a,b)=>a+b, 0);
