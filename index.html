@@ -173,6 +173,12 @@
   .mixIn{display:flex;align-items:center;justify-content:center;gap:12px}
   .mixIn .campo{width:80px}
   .multiIn{display:grid;gap:8px}
+  .procesoCaja{margin-bottom:12px}
+  .procesoTit{font-weight:700;margin-bottom:6px}
+  .procesoTit small{font-weight:400;opacity:.7}
+  .pasoFila{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+  .pasoFila > span{min-width:18px;font-weight:700;opacity:.7;text-align:center}
+  .pasoFila .campo{flex:1;min-width:0;margin:0;text-align:left}
   .multiFila{display:flex;align-items:center;gap:10px}
   .multiFila > span{min-width:96px;font-weight:700}
   .multiFila .campo{flex:1;min-width:0;margin:0}
@@ -679,36 +685,96 @@ function explSumaEnteros(a, b){
   const g = Math.abs(a) >= Math.abs(b) ? a : b;
   return `${mm(a)} + ${b<0?`(${mm(b)})`:b}: signos distintos, se restan los valores (${Math.max(Math.abs(a),Math.abs(b))} − ${Math.min(Math.abs(a),Math.abs(b))} = ${Math.abs(r)}) y gana el signo del más grande, ${mm(g)} → ${mm(r)}.`;
 }
+// ── dibujos con flechas para las explicaciones: × al pasar a denominador común, ÷ al simplificar,
+//    "se voltea" al dividir, arriba×arriba / abajo×abajo al multiplicar ──
+let _dgId = 0;
+// tokens: {t:'f',n,d} fracción (d===1 → solo el número) · {t:'m',e,n,d} mixto · {t:'o',s} signo
+// flechas: {de:[token,'n'|'d'|'e'], a:[token,'n'|'d'], txt}  (las de 'd' van por abajo)
+function diagFrac(tokens, flechas){
+  const FW = s => Math.max(String(s).length*9.5 + 12, 26), TW = s => Math.max(String(s).length*9.2 + 6, 12), pos = []; let x = 6;
+  tokens.forEach(t => { let w;
+    if(t.t === 'f') w = t.d === 1 ? FW(t.n) : Math.max(FW(t.n), FW(t.d));
+    else if(t.t === 'm'){ t.we = String(t.e).length*10 + 10; t.wf = Math.max(FW(t.n), FW(t.d)); w = t.we + t.wf; }
+    else if(t.t === 'x') w = TW(t.s);
+    else w = 24;
+    pos.push({ x, w }); x += w + 6; });
+  const W = x, id = 'dg' + (++_dgId), yN = 44, yL = 50, yD = 68;
+  const niv = f => f.nivel || 1, extraTop = Math.max(0, ...flechas.filter(f => f.de[1] !== 'd' && !f.recta).map(f => 15*(niv(f)-1))), extraBot = Math.max(0, ...flechas.filter(f => f.de[1] === 'd' && !f.recta).map(f => 15*(niv(f)-1)));
+  const frac = (px, w, n, d) => `<text x="${px + w/2}" y="${yN}" text-anchor="middle">${n}</text><line x1="${px + 2}" x2="${px + w - 2}" y1="${yL}" y2="${yL}" stroke="currentColor" stroke-width="1.6"/><text x="${px + w/2}" y="${yD}" text-anchor="middle">${d}</text>`;
+  let g = '';
+  tokens.forEach((t, i) => { const { x:px, w } = pos[i];
+    if(t.t === 'f') g += t.d === 1 ? `<text x="${px + w/2}" y="${yL + 6}" text-anchor="middle">${t.n}</text>` : frac(px, w, t.n, t.d);
+    else if(t.t === 'm') g += `<text x="${px + t.we/2}" y="${yL + 6}" text-anchor="middle">${t.e}</text>` + frac(px + t.we, t.wf, t.n, t.d);
+    else g += `<text x="${px + w/2}" y="${yL + 6}" text-anchor="middle">${t.t === 'x' ? t.s : t.s}</text>`; });
+  const anc = ([i, p]) => { const t = tokens[i], q = pos[i];
+    if(t.t === 'm'){ if(p === 'e') return [q.x + t.we/2, 30]; const cx = q.x + t.we + t.wf/2; return [cx, p === 'n' ? 30 : 74]; }
+    return [q.x + q.w/2, p === 'd' ? 74 : 30]; };
+  flechas.forEach(f => {
+    if(f.recta){ const i = f.de[0], j = f.a[0], izq = i < j, yy = p => p === 'n' ? 38 : 63;
+      const x1 = izq ? pos[i].x + pos[i].w - 5 : pos[i].x + 5, x2 = izq ? pos[j].x + 5 : pos[j].x + pos[j].w - 5;
+      g += `<path d="M${x1} ${yy(f.de[1])} L${x2} ${yy(f.a[1])}" fill="none" stroke="#e8a23a" stroke-width="1.8" marker-end="url(#${id})"/>`; return; }
+    const [x1, y1] = anc(f.de), [x2, y2] = anc(f.a), abajo = f.de[1] === 'd', dir = abajo ? 1 : -1, mx = (x1 + x2)/2, n = niv(f);
+    g += `<path d="M${x1} ${y1 + dir*2} Q${mx} ${y1 + dir*30*n} ${x2} ${y2 + dir*4}" fill="none" stroke="#e8a23a" stroke-width="1.8" marker-end="url(#${id})"/><text x="${mx}" y="${abajo ? y1 + 15*n + 13 : y1 - 15*n - 4}" text-anchor="middle" font-size="13" font-weight="700" fill="#e8a23a">${f.txt}</text>`; });
+  const H = 108 + extraTop + extraBot;
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:${Math.min(Math.round(W*0.95), 300)}px;height:auto;display:block;margin:4px 0" xmlns="http://www.w3.org/2000/svg"><defs><marker id="${id}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#e8a23a"/></marker></defs><g transform="translate(0 ${extraTop})" font-size="17" fill="currentColor" font-family="inherit">${g}</g></svg>`;
+}
+// texto libre (para ecuaciones)
+const _tx = s => ({ t:'x', s });
+// a(b ± c) = ab ± ac: flechas del número de afuera a cada término de adentro
+function diagDistribuir(a, b, op, c, r1, r2){
+  return diagFrac([_tx(a), _tx('('), _tx(b), _tx(op), _tx(c), _tx(')'), _op('='), _tx(r1), _tx(op), _tx(r2)],
+    [{ de:[0,'n'], a:[2,'n'], txt:'×' }, { de:[0,'n'], a:[4,'n'], txt:'×', nivel:2 }]);
+}
+// productos cruzados: flechas en X entre a/b = c/d
+const diagCruzados = (a, b, c, d) => diagFrac([{ t:'f', n:a, d:b }, _op('='), { t:'f', n:c, d:d }],
+  [{ de:[0,'n'], a:[2,'d'], recta:true }, { de:[0,'d'], a:[2,'n'], recta:true }]);
+// lo mismo en los DOS lados de la ecuación: izq = der  →  (op a los dos lados)  →  izq2 = der2
+function diagAmbosLados(izq, der, op, izq2, der2){
+  const w = s => String(s).length*9.2 + 14, wl = Math.max(w(izq), w(izq2), 40), wr = Math.max(w(der), w(der2), 36), W = 12 + wl + 30 + wr, id = 'dg' + (++_dgId);
+  const xl = 6 + wl/2, xe = 6 + wl + 15, xr = 6 + wl + 30 + wr/2;
+  const fila = (y, a, b) => `<text x="${xl}" y="${y}" text-anchor="middle">${a}</text><text x="${xe}" y="${y}" text-anchor="middle">=</text><text x="${xr}" y="${y}" text-anchor="middle">${b}</text>`;
+  const fl = x => `<path d="M${x} 32 L${x} 54" stroke="#e8a23a" stroke-width="1.8" fill="none" marker-end="url(#${id})"/><text x="${x + 8}" y="48" font-size="13" font-weight="700" fill="#e8a23a">${op}</text>`;
+  return `<svg viewBox="0 0 ${W} 86" style="width:100%;max-width:${Math.min(Math.round(W*0.95), 300)}px;height:auto;display:block;margin:4px 0" xmlns="http://www.w3.org/2000/svg"><defs><marker id="${id}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#e8a23a"/></marker></defs><g font-size="17" fill="currentColor" font-family="inherit">${fila(24, izq, der)}${fl(xl)}${fl(xr)}${fila(78, izq2, der2)}</g></svg>`;
+}
+const _fT = (n, d) => ({ t:'f', n:mm(n), d });
+const _op = s => ({ t:'o', s });
+// flechas de un par de fracciones: numerador → numerador y denominador → denominador (el de abajo solo si hay denominador)
+const _par = (i, j, txt, conAbajo) => [{ de:[i,'n'], a:[j,'n'], txt }, ...(conAbajo ? [{ de:[i,'d'], a:[j,'d'], txt }] : [])];
+// a/b → (a·k)/(b·k) con flechas × k
+function diagConvertir(f, nuevoN, m){ const k = m/f.d; return diagFrac([_fT(f.n, f.d), _op('='), _fT(nuevoN, m)], _par(0, 2, '× ' + k, f.d !== 1)); }
 // línea de simplificación: solo si hay algo que simplificar ('' si ya está simple; explPasos descarta las vacías)
 function explSimplif(n, d){
   const g = mcd(n, d), [sn, sd] = simplificar(n, d);
   if(n === 0) return `${tf(n,d)} = 0`;
   if(g === 1) return '';
-  return `${tf(n,d)} = ${sd === 1 ? mm(sn) : tf(sn,sd)}   (÷ ${g})`;
+  return diagFrac([_fT(n, d), _op('='), _fT(sn, sd)], _par(0, 2, '÷ ' + g, sd !== 1));
 }
 // a + b (b puede venir negativo = resta). Devuelve { res, lineas }
 function pasosSumaF(a, b){
   const r = sumarF([a, b]), lineas = [];
   if(a.d === b.d) lineas.push(`${opTP(a)} + ${opTP(b)} = ${opT({n:r.tot, d:r.m})}`);
   else {
-    lineas.push(`MCM de ${a.d} y ${b.d} = ${r.m}`);
-    if(r.m !== a.d) lineas.push(`${tf(a.n,a.d)} × ${r.m/a.d}/${r.m/a.d} = ${tf(r.nums[0], r.m)}   (${r.m} ÷ ${a.d} = ${r.m/a.d})`);
-    if(r.m !== b.d) lineas.push(`${tf(b.n,b.d)} × ${r.m/b.d}/${r.m/b.d} = ${tf(r.nums[1], r.m)}   (${r.m} ÷ ${b.d} = ${r.m/b.d})`);
+    lineas.push(`MCM de ${a.d} y ${b.d} = ${r.m}   (${a.d} × ${r.m/a.d} = ${r.m},  ${b.d} × ${r.m/b.d} = ${r.m})`);
+    if(r.m !== a.d) lineas.push(diagConvertir(a, r.nums[0], r.m));
+    if(r.m !== b.d) lineas.push(diagConvertir(b, r.nums[1], r.m));
     lineas.push(`${tf(r.nums[0], r.m)} + ${tfP(r.nums[1], r.m)} = ${opT({n:r.tot, d:r.m})}`);
   }
   const s = explSimplif(r.tot, r.m); if(s) lineas.push(s);
   return { res:{n:r.n, d:r.d}, lineas };
 }
-// a × b
+// a × b: flechas arriba×arriba y abajo×abajo
 function pasosMultF(a, b){
-  const r = multF([a, b]), lineas = [`${opTP(a)} × ${opTP(b)} = ${opT({n:r.rawN, d:r.rawD})}`];
+  const r = multF([a, b]);
+  const lineas = [diagFrac([_fT(a.n, a.d), _op('×'), _fT(b.n, b.d), _op('='), _fT(r.rawN, r.rawD)], [..._par(0, 2, '×', a.d !== 1 && b.d !== 1)])];
   const s = explSimplif(r.rawN, r.rawD); if(s) lineas.push(s);
   return { res:{n:r.n, d:r.d}, lineas };
 }
 // a ÷ b: se voltea SOLO la segunda
+const diagVoltear = (a, b) => { const rec = recipF(b);
+  return diagFrac([_fT(a.n, a.d), _op('÷'), _fT(b.n, b.d), _op('='), _fT(a.n, a.d), _op('×'), _fT(rec.n, rec.d)], [{ de:[2,'n'], a:[6,'n'], txt:'se voltea' }]); };
 function pasosDivF(a, b){
-  const rec = recipF(b), m = pasosMultF(a, rec);
-  return { res:m.res, lineas:[`${opTP(a)} ÷ ${opTP(b)} = ${m.lineas[0]}`, ...m.lineas.slice(1)] };
+  const m = pasosMultF(a, recipF(b));
+  return { res:m.res, lineas:[diagVoltear(a, b), ...m.lineas] };
 }
 const opTP = f => f.n<0 ? `(${opT(f)})` : opT(f);
 // ── capítulo 5 (Aplicaciones con Fracciones) ──
@@ -729,7 +795,8 @@ function respPos(f){
   if(f.n < f.d) return { tipo:'frac', respuesta:{n:f.n, d:f.d}, pedirSimple:true };
   return { tipo:'mixto', respuesta:{ e:Math.floor(f.n/f.d), n:f.n%f.d, d:f.d } };
 }
-const explImpropia = f => `${tMix(f)} → ${Math.floor(Math.abs(f.n)/f.d)} × ${f.d} + ${Math.abs(f.n)%f.d} = ${Math.abs(f.n)} → ${tf(f.n,f.d)}`;
+const explImpropia = f => { const e = Math.floor(Math.abs(f.n)/f.d), p = Math.abs(f.n)%f.d;
+  return diagFrac([{ t:'m', e:(f.n<0 ? '−' : '') + e, n:p, d:f.d }, _op('='), _fT(f.n, f.d)], [{ de:[0,'e'], a:[2,'n'], txt:`${e} × ${f.d} + ${p}` }]); };
 const explAMixto = f => `${tf(f.n,f.d)} = ${tMix(f)}   (${f.n} ÷ ${f.d} = ${Math.floor(f.n/f.d)}, sobra ${f.n%f.d})`;
 // "pasa a impropia" para todos los mixtos de la lista (y los enteros como n/1)
 function lineasImpropias(fs){
@@ -743,7 +810,7 @@ function pasosSumaVarias(ts){
   const lineas = [], m = ts.reduce((a,f) => mcm(a,f.d), 1);
   if(ts.some(f => f.d !== m)){
     lineas.push(`MCM de ${[...new Set(ts.map(f=>f.d))].join(', ')} = ${m}`);
-    ts.forEach(f => { if(f.d !== m) lineas.push(`${tf(f.n,f.d)} × ${m/f.d}/${m/f.d} = ${tf(f.n*(m/f.d), m)}   (${m} ÷ ${f.d} = ${m/f.d})`); });
+    ts.forEach(f => { if(f.d !== m) lineas.push(diagConvertir(f, f.n*(m/f.d), m)); });
   }
   const nums = ts.map(f => f.n*(m/f.d)), tot = nums.reduce((a,b)=>a+b, 0);
   lineas.push(`Arriba: ${nums.map((v,i) => i===0 ? mm(v) : v<0 ? `− ${-v}` : `+ ${v}`).join(' ')} = ${mm(tot)}  →  ${tf(tot,m)}`);
@@ -1799,31 +1866,27 @@ const MODULOS = [
       const tipoOp = pick(['suma','resta','mult','div']);
       if(tipoOp==='suma'){ const c=R(1,alto), r=x+c;
         return { enunciado:`Resuelve la ecuación: <b>${letra} + ${c} = ${r}</b>`, tipo:'num', respuesta:x, ayuda:`${letra} = ___`,
-          explicacion:[`"Despejar" ${letra} significa dejarla sola en un lado de la igualdad, para saber cuánto vale.`,
-            `Aquí le están sumando ${c} a ${letra}. Para deshacer esa suma se hace la operación contraria — restar ${c} — en LOS DOS lados de la igualdad, así se mantiene el equilibrio.`,
+          explicacion:[diagAmbosLados(`${letra} + ${c}`, r, `− ${c}`, letra, `${r} − ${c}`),
             `${letra} = ${r} − ${c} = ${x}`, T(`${letra} + ${c} = ${r}`, x)] }; }
       if(tipoOp==='resta'){ const c=R(1,alto), r=x-c;
         return { enunciado:`Resuelve la ecuación: <b>${letra} − ${c} = ${r}</b>`, tipo:'num', respuesta:x, ayuda:`${letra} = ___`,
-          explicacion:[`"Despejar" ${letra} significa dejarla sola en un lado de la igualdad.`,
-            `Aquí le están restando ${c} a ${letra}. La operación contraria de restar es sumar, así que se suma ${c} en los dos lados.`,
+          explicacion:[diagAmbosLados(`${letra} − ${c}`, r, `+ ${c}`, letra, `${r} + ${c}`),
             `${letra} = ${r} + ${c} = ${x}`, T(`${letra} − ${c} = ${r}`, x)] }; }
       if(tipoOp==='mult'){ const c=R(2,10), r=x*c;
         return { enunciado:`Resuelve la ecuación: <b>${c}${letra} = ${r}</b>`, tipo:'num', respuesta:x, ayuda:`${letra} = ___`,
-          explicacion:[`"Despejar" ${letra} significa dejarla sola en un lado de la igualdad.`,
-            `Aquí ${letra} está multiplicada por ${c}. La operación contraria de multiplicar es dividir, así que se divide entre ${c} en los dos lados.`,
+          explicacion:[diagAmbosLados(`${c}${letra}`, r, `÷ ${c}`, letra, `${r} ÷ ${c}`),
             `${letra} = ${r} ÷ ${c} = ${x}`, T(`${c}${letra} = ${r}`, x)] }; }
       const c=R(2,10), k=R(1,alto), sol=k*c;
       return { enunciado:`Resuelve la ecuación para ${letra}: <b>${letra} ÷ ${c} = ${k}</b>`, tipo:'num', respuesta:sol, ayuda:`${letra} = ___`,
-        explicacion:[`"Despejar" ${letra} significa dejarla sola en un lado de la igualdad.`,
-          `Aquí ${letra} está dividida entre ${c}. La operación contraria de dividir es multiplicar, así que se multiplica por ${c} en los dos lados.`,
+        explicacion:[diagAmbosLados(`${letra} ÷ ${c}`, k, `× ${c}`, letra, `${k} × ${c}`),
           `${letra} = ${k} × ${c} = ${sol}`, T(`${letra} ÷ ${c} = ${k}`, sol)] };
     }
     const c1 = R(2,10), c2 = R(1,alto), sig = pick(['+','−']);
     const r = sig==='+' ? c1*x + c2 : c1*x - c2;
     return { enunciado:`Resuelve la ecuación para ${letra}: <b>${c1}${letra} ${sig} ${c2} = ${r}</b>`, tipo:'num', respuesta:x, ayuda:`${letra} = ___`,
-      explicacion:[`Esta ecuación necesita dos pasos porque a ${letra} le están haciendo dos cosas a la vez: multiplicarla por ${c1} y ${sig==='+'?'sumarle':'restarle'} ${c2}.`,
-        `Paso 1 — deshacer la suma/resta primero (fue lo último que se le hizo a ${letra}, así que se deshace primero): ${sig==='+'?`${r} − ${c2}`:`${r} + ${c2}`} = ${c1*x}`,
-        `Paso 2 — deshacer la multiplicación: ${c1*x} ÷ ${c1} = ${x}`, `→ ${letra} = ${x}`,
+      explicacion:[diagAmbosLados(`${c1}${letra} ${sig} ${c2}`, r, `${sig==='+'?'−':'+'} ${c2}`, `${c1}${letra}`, `${r} ${sig==='+'?'−':'+'} ${c2}`),
+        `${c1}${letra} = ${c1*x}`,
+        diagAmbosLados(`${c1}${letra}`, c1*x, `÷ ${c1}`, letra, `${c1*x} ÷ ${c1}`), `→ ${letra} = ${x}`,
         `TRUCO: deshazlo en orden inverso, como quitarte la ropa: primero lo que está más LEJOS de ${letra} (el número que suma o resta) y de último lo que está pegado a ella (el que la multiplica). Nunca al revés. Ejemplo con este mismo: ${r} ${sig==='+'?'−':'+'} ${c2} = ${c1*x}, y ${c1*x} ÷ ${c1} = ${x}; para comprobar, ${c1}×${x} ${sig} ${c2} tiene que dar ${r}.`] };
   }
 },
@@ -2803,7 +2866,7 @@ const MODULOS = [
     let r, factores;
     if(div){
       const rec = recipF(fs[1]);
-      expl.push(`${opT(fs[0])} ÷ ${opTP(fs[1])} = ${opT(fs[0])} × ${opTP(rec)}   (se voltea la segunda)`);
+      expl.push(diagVoltear(fs[0], fs[1]));
       factores = [fs[0], rec];
     } else factores = fs;
     r = multF(factores);
@@ -3196,10 +3259,7 @@ const MODULOS = [
     // paso de multiplicar ambos lados por el recíproco del coeficiente (k·L = c)
     const pasoRecip = (k, c) => {
       const rec = recipF(k);
-      pasos.push(`El coeficiente de ${L} es ${tf(k.n,k.d)}. Para dejar la ${L} sola se multiplican AMBOS lados por su recíproco, ${tf(rec.n,rec.d)} (Principio de Multiplicación de la Igualdad).`,
-        `${tfP(rec.n,rec.d)} · (${tf(k.n,k.d)})${L} = ${tfP(rec.n,rec.d)} · ${opTP(c)}`,
-        `A la izquierda: ${tfP(rec.n,rec.d)} × ${tfP(k.n,k.d)} = 1 (un número por su recíproco da 1), así que queda 1 · ${L} = ${L} (Propiedad de Identidad).`,
-        `A la derecha:`);
+      pasos.push(diagAmbosLados(`(${tf(k.n,k.d)})${L}`, opT(c), `× ${tf(rec.n,rec.d)}`, L, `${tf(rec.n,rec.d)} × ${opTP(c)}`));
       const p = pasosMultF(rec, c); pasos.push(...p.lineas);
       return p.res;
     };
@@ -3208,12 +3268,9 @@ const MODULOS = [
       sol = addF(b, opuesto(a));
       if(sol.n===0) return this.gen(nv);
       enun = `${L} ${signoT(a)} = ${frS(b.n,b.d)}`;
-      pasos.push(`Hay que dejar la ${L} sola a la izquierda. Para quitar el ${signoTt(a)} se suma su opuesto, ${tf(-a.n,a.d)}, en AMBOS lados (Principio de Suma de la Igualdad).`,
-        `${L} ${signoTt(a)} + ${tfP(-a.n,a.d)} = ${tf(b.n,b.d)} + ${tfP(-a.n,a.d)}`,
-        `${L} + 0 = ${tf(b.n,b.d)} + ${tfP(-a.n,a.d)} ← Propiedad del Inverso (un número más su opuesto da 0)`,
-        `A la derecha:`);
+      pasos.push(diagAmbosLados(`${L} ${signoTt(a)}`, tf(b.n,b.d), `${a.n<0?'+':'−'} ${tf(Math.abs(a.n),a.d)}`, L, `${tf(b.n,b.d)} ${a.n<0?'+':'−'} ${tf(Math.abs(a.n),a.d)}`));
       const p = pasosSumaF(b, opuesto(a)); pasos.push(...p.lineas);
-      pasos.push(`${L} = ${tf(sol.n,sol.d)} (Propiedad de Identidad: ${L} + 0 = ${L})`,
+      pasos.push(`${L} = ${tf(sol.n,sol.d)}`,
         `Verificación: ${tfP(sol.n,sol.d)} ${signoTt(a)} = ${tf(addF(sol,a).n, addF(sol,a).d)} = ${tf(b.n,b.d)} ✓ Cierto`);
       truco = `TRUCO: lo que está SUMANDO a la letra se quita sumando su opuesto en los dos lados (es lo mismo que "pasarlo al otro lado con el signo cambiado"). Ejemplo con este mismo: ${L} ${signoTt(a)} = ${tf(b.n,b.d)} → ${L} = ${tf(b.n,b.d)} ${a.n<0?'+':'−'} ${tf(Math.abs(a.n),a.d)} = ${tf(sol.n,sol.d)}.`;
     } else if(tipo==='mult'){
@@ -3231,10 +3288,9 @@ const MODULOS = [
       const kx = multF([k,x]); const d = addF({n:kx.n,d:kx.d}, cc); sol = x;
       if(d.n===0) return this.gen(nv);
       enun = `${frS(k.n,k.d)}${L} ${signoT(cc)} = ${opS(d)}`;
-      pasos.push(`Paso 1 — primero se quita el término que NO tiene ${L}: se suma el opuesto de ${signoTt(cc)}, o sea ${tf(-cc.n,cc.d)}, en ambos lados.`,
-        `(${tf(k.n,k.d)})${L} = ${opT(d)} + ${tfP(-cc.n,cc.d)}`);
+      pasos.push(diagAmbosLados(`(${tf(k.n,k.d)})${L} ${signoTt(cc)}`, opT(d), `${cc.n<0?'+':'−'} ${tf(Math.abs(cc.n),cc.d)}`, `(${tf(k.n,k.d)})${L}`, `${opT(d)} ${cc.n<0?'+':'−'} ${tf(Math.abs(cc.n),cc.d)}`));
       const p = pasosSumaF(d, opuesto(cc)); pasos.push(...p.lineas);
-      pasos.push(`Queda: (${tf(k.n,k.d)})${L} = ${opT(p.res)}`, `Paso 2 — ahora se quita el coeficiente:`);
+      pasos.push(`Queda: (${tf(k.n,k.d)})${L} = ${opT(p.res)}`);
       const r = pasoRecip(k, p.res);
       pasos.push(`${L} = ${tf(r.n,r.d)}`,
         `Verificación: ${tfP(k.n,k.d)} × ${tfP(sol.n,sol.d)} = ${tf(kx.n,kx.d)}; ${tf(kx.n,kx.d)} ${signoTt(cc)} = ${opT(d)} ✓ Cierto`);
@@ -3258,7 +3314,7 @@ const MODULOS = [
       const p1 = a*d, p2 = b*c, es = p1===p2;
       return { enunciado:`Determina si la proporción es cierta o falsa:<br><b>${fr(a,b)} = ${fr(c,d)}</b>`,
         tipo:'opciones', opciones:['Cierta','Falsa'], respuesta: es ? 'Cierta' : 'Falsa',
-        explicacion:[`Se hallan los productos cruzados (el numerador de cada fracción por el denominador de la OTRA):`,
+        explicacion:[diagCruzados(a, b, c, d),
           `${a} × ${d} = ${p1}`, `${b} × ${c} = ${p2}`,
           es ? `Los productos cruzados son iguales (${p1} = ${p2}) → la proporción es cierta.` : `Los productos cruzados son distintos (${p1} ≠ ${p2}) → la proporción es falsa.`,
           `→ ${es ? 'Cierta' : 'Falsa'}`,
@@ -3277,7 +3333,7 @@ const MODULOS = [
       const S = V.map((v,i) => i===u ? 'x' : String(v));
       const H = V.map((v,i) => i===u ? '<i>x</i>' : String(v));
       const izq = `${S[0]} × ${S[3]}`, der = `${S[1]} × ${S[2]}`;
-      const pasos = [`Proporción: ${S[0]}/${S[1]} = ${S[2]}/${S[3]}`, `Se igualan los productos cruzados: ${izq} = ${der}`,
+      const pasos = [diagCruzados(S[0], S[1], S[2], S[3]), `Se igualan los productos cruzados: ${izq} = ${der}`,
         `${coef}x = ${prod} (${sinX[0]} × ${sinX[1]} = ${prod})`,
         `Se divide ambos lados por ${coef}: x = ${tf(prod,coef)}`];
       if(x.d !== coef || x.n !== prod) pasos.push(explSimplif(prod, coef));
@@ -3292,15 +3348,20 @@ const MODULOS = [
     const bc = b*c, dk = d*k, x = Fq(bc - dk, d*a);
     const ax = a===1 ? 'x' : `${a}x`;
     const numH = `${ax} ${k<0?'−':'+'} ${Math.abs(k)}`;
-    const pasos = [`Se igualan los productos cruzados: ${d}(${numH}) = ${b} × ${c}`,
-      `Se distribuye el ${d}: ${d*a}x ${dk<0?'−':'+'} ${Math.abs(dk)} = ${bc}`,
-      `Se suma ${mm(-dk)} en ambos lados: ${d*a}x = ${bc} ${dk<0?'+':'−'} ${Math.abs(dk)} = ${bc-dk}`,
-      `Se divide ambos lados por ${d*a}: x = ${tf(bc-dk, d*a)}`];
+    const sg = dk<0 ? '−' : '+', sgInv = dk<0 ? '+' : '−', izq = `${d*a}x ${sg} ${Math.abs(dk)}`;
+    const pasos = [diagCruzados(numH, b, c, d), `Productos cruzados: ${d}(${numH}) = ${b} × ${c}`,
+      diagDistribuir(d, ax, k<0?'−':'+', Math.abs(k), `${d*a}x`, Math.abs(dk)),
+      `Lado derecho: ${b} × ${c} = ${bc}`,
+      `La ecuación queda: ${izq} = ${bc}   (el ${bc} es lo que vale TODO el lado izquierdo, no la x)`,
+      diagAmbosLados(izq, bc, `${sgInv} ${Math.abs(dk)}`, `${d*a}x`, `${bc} ${sgInv} ${Math.abs(dk)}`),
+      `${d*a}x = ${bc-dk}`,
+      diagAmbosLados(`${d*a}x`, bc-dk, `÷ ${d*a}`, 'x', `${bc-dk} ÷ ${d*a}`),
+      `x = ${tf(bc-dk, d*a)}`];
     if(x.d !== d*a || x.n !== bc-dk) pasos.push(explSimplif(bc-dk, d*a));
     return { enunciado:`Resuelve la proporción:<br><b>${fr(numH, b)} = ${fr(c, d)}</b>`,
       tipo:'frac', respuesta:{n:x.n, d:x.d}, pedirSimple:true, signo:true,
       ayuda:'x = ___ (si sale un entero, escríbelo con denominador 1)',
-      explicacion:[...pasos, `→ x = ${tf(x.n,x.d)}`, `${TR} Ejemplo con este mismo: ${d}(${numH}) = ${bc} → ${d*a}x = ${bc-dk} → x = ${tf(x.n,x.d)}.`] };
+      explicacion:[...pasos, `→ x = ${opT(x)}`, `${TR} Ejemplo con este mismo: ${d}(${numH}) = ${bc} → ${d*a}x = ${bc-dk} → x = ${opT(x)}.`] };
   }
 },
 {
@@ -3896,15 +3957,14 @@ const MODULOS = [
       () => { let a, c; do { a = fracR([2,3,4,5,6,7,8,9]); c = fracR([2,3,4,5,6,7,8,9]); } while(a.n*c.d >= c.n*a.d);
         const p = pasosSumaF(c, C(-a.n,a.d)), x = p.res;
         return { enunciado:`Halla el valor de <i>x</i> para la ecuación dada.<br><b><i>x</i> + ${fr(a.n,a.d)} = ${fr(c.n,c.d)}</b>`, tipo:'frac', respuesta:{n:x.n, d:x.d}, pedirSimple:true, ayuda:'x = ___',
-          explicacion:[`Paso 1 — la x tiene que quedar sola. Para quitar el + ${tf(a.n,a.d)} se suma su opuesto, −${tf(a.n,a.d)}, en AMBOS lados (Principio de Suma de la Igualdad): x + ${tf(a.n,a.d)} − ${tf(a.n,a.d)} = ${tf(c.n,c.d)} − ${tf(a.n,a.d)}`,
-            `Paso 2 — a la derecha se resta: ${tf(c.n,c.d)} − ${tf(a.n,a.d)} = ${tf(c.n,c.d)} + ${tfP(-a.n,a.d)}`, ...p.lineas,
+          explicacion:[diagAmbosLados(`x + ${tf(a.n,a.d)}`, tf(c.n,c.d), `− ${tf(a.n,a.d)}`, 'x', `${tf(c.n,c.d)} − ${tf(a.n,a.d)}`), ...p.lineas,
             `Paso 3 — verificación: ${tf(x.n,x.d)} + ${tf(a.n,a.d)} = ${tf(c.n,c.d)} ${OK}`, `→ x = ${tf(x.n,x.d)}`,
             `TRUCO: lo que SUMA a la x pasa al otro lado RESTANDO. Ejemplo con este mismo: x = ${tf(c.n,c.d)} − ${tf(a.n,a.d)} = ${tf(x.n,x.d)}.`] }; },
       // 2. (a y)/b = c/d
       () => { let a, b, c, d, x; do { c = pick([3,7,11,13]); a = c*R(2,7); b = R(2,9); d = R(2,9); x = Fq(c*b, a*d); } while(x.d===1);
         const L = pick(['y','x','m']), v = Fq(a*x.n, b*x.d), w = Fq(c,d);
         return { enunciado:`Resuelve la ecuación:<br><b>${fr(a+'<i>'+L+'</i>',b)} = ${fr(c,d)}</b>`, tipo:'frac', respuesta:{n:x.n, d:x.d}, pedirSimple:true, ayuda:`${L} = ___`,
-          explicacion:[`Paso 1 — productos cruzados (lo de arriba de un lado por lo de abajo del otro): (${a}${L})(${d}) = (${c})(${b})`,
+          explicacion:[diagCruzados(`${a}${L}`, b, c, d), `Productos cruzados: (${a}${L})(${d}) = (${c})(${b})`,
             `Paso 2 — se multiplica: ${a*d}${L} = ${c*b}`, `Paso 3 — se dividen ambos lados entre ${a*d} (Principio de Multiplicación de la Igualdad): ${L} = ${tf(c*b,a*d)}`,
             explSimplif(c*b, a*d), `Paso 4 — verificación: ${a} × ${tf(x.n,x.d)} ÷ ${b} = ${tf(v.n,v.d)} y ${tf(c,d)} = ${tf(w.n,w.d)} ${OK}`, `→ ${L} = ${tf(x.n,x.d)}`,
             `TRUCO: en una proporción los productos cruzados son iguales. Ejemplo con este mismo: ${a*d}${L} = ${c*b} → ${L} = ${tf(x.n,x.d)}.`] }; },
@@ -3916,7 +3976,7 @@ const MODULOS = [
           do { const p = R(1,9), q = R(p+1,12), s1 = R(1,4), s2 = R(1,4); a = p*s1; b = q*s1; c = p*s2; d = q*s2; if(!ok) c += pick([1,2,3]); } while((a===c && b===d) || c<=0);
           const p1 = a*d, p2 = b*c, es = p1===p2;
           return { enunciado:`Determina si la proporción dada a continuación es cierta o falsa.<br><b>${fr(a,b)} = ${fr(c,d)}</b>`, tipo:'opciones', opciones:['Cierta','Falsa'], respuesta: es ? 'Cierta' : 'Falsa',
-            explicacion:[`Se hallan los productos cruzados (el numerador de cada fracción por el denominador de la OTRA):`, `${a} × ${d} = ${p1}`, `${b} × ${c} = ${p2}`,
+            explicacion:[diagCruzados(a, b, c, d), `${a} × ${d} = ${p1}`, `${b} × ${c} = ${p2}`,
               es ? `Son iguales (${p1} = ${p2}) → la proporción es cierta.` : `Son distintos (${p1} ≠ ${p2}) → la proporción es falsa.`, `→ ${es ? 'Cierta' : 'Falsa'}`,
               `TRUCO: en una proporción los productos cruzados siempre son iguales. Ejemplo con este mismo: ${p1} y ${p2} → ${es ? 'iguales, cierta' : 'distintos, falsa'}.`] };
         }
@@ -4075,7 +4135,7 @@ const MODULOS = [
       () => { const a = R(2,9), b = R(2,9), c = R(2,9), menos = Math.random() < 0.3, op = menos ? '−' : '+', ab = a*b, ac = a*c;
         return ejVarios5('', `Completa las oraciones siguientes.<br><b>${a}(${b} ${op} ${c}) = ${a}( ___ ) ${op} ${a}( ___ )</b>`, [{ et:'Primer espacio', r:b }, { et:'Segundo espacio', r:c }],
           [`La propiedad DISTRIBUTIVA dice que un número que multiplica a una ${menos ? 'resta' : 'suma'} entre paréntesis se REPARTE a cada término de adentro: a(b ${op} c) = a·b ${op} a·c.`,
-           `Aquí el ${a} multiplica al ${b} y al ${c}: ${a}(${b} ${op} ${c}) = ${a}(${b}) ${op} ${a}(${c}).`, `Lo que va en los espacios son los mismos números que estaban dentro del paréntesis: ${b} y ${c}.`,
+           diagDistribuir(a, b, op, c, `${a}·${b}`, `${a}·${c}`), `Lo que va en los espacios son los mismos números que estaban dentro del paréntesis: ${b} y ${c}.`,
            `Comprobación: ${a}(${b} ${op} ${c}) = ${a}(${menos ? b-c : b+c}) = ${menos ? a*(b-c) : a*(b+c)} y ${a}(${b}) ${op} ${a}(${c}) = ${ab} ${op} ${ac} = ${menos ? ab-ac : ab+ac} ✓ Cierto`],
           `TRUCO: el número de afuera se REPITE multiplicando a cada término de adentro, y el signo del medio se queda igual. Ejemplo con este mismo: ${a}(${b} ${op} ${c}) = ${a}(${b}) ${op} ${a}(${c}).`); },
       // ── suplemento → complemento (o al revés) ──
@@ -4143,7 +4203,8 @@ const MODULOS = [
       () => { const a = R(2,9), x = R(1,9), b = R(1,15) * pick([1,-1]), c = a*x + b, mal = f => optX(f);
         const mc = opcionesMC(optX(C(x)), [mal(Fq(c+b, a)), mal(C(c-b)), mal(Fq(a, c-b)), mal(C(x+1)), mal(C(x-1)), mal(Fq(c, a))]);
         return { enunciado:`Resuelve la ecuación: <b>${a}x ${b<0 ? '−' : '+'} ${Math.abs(b)} = ${mm(c)}</b>`, tipo:'opciones', opciones:mc.opciones, respuesta:mc.respuesta,
-          explicacion:[`Paso 1 — primero se quita lo que SUMA o RESTA: ${b<0 ? `se suma ${Math.abs(b)}` : `se resta ${b}`} en ambos lados: ${a}x = ${mm(c)} ${b<0 ? '+' : '−'} ${Math.abs(b)} = ${c-b}`, `Paso 2 — después lo que MULTIPLICA: se divide ambos lados entre ${a}: x = ${c-b} ÷ ${a} = ${x}`,
+          explicacion:[diagAmbosLados(`${a}x ${b<0 ? '−' : '+'} ${Math.abs(b)}`, mm(c), `${b<0 ? '+' : '−'} ${Math.abs(b)}`, `${a}x`, `${mm(c)} ${b<0 ? '+' : '−'} ${Math.abs(b)}`), `${a}x = ${c-b}`,
+            diagAmbosLados(`${a}x`, c-b, `÷ ${a}`, 'x', `${c-b} ÷ ${a}`), `x = ${x}`,
             `Paso 3 — verificación: ${a}(${x}) ${b<0 ? '−' : '+'} ${Math.abs(b)} = ${a*x} ${b<0 ? '−' : '+'} ${Math.abs(b)} = ${mm(c)} ✓ Cierto`, `→ x = ${x}${NOTA_NING(mc)}`,
             `TRUCO: en ax + b = c el orden es SIEMPRE el mismo: primero quitas b (con la operación contraria) y después divides entre a. Ejemplo con este mismo: ${a}x = ${c-b} → x = ${x}.`] }; },
       // ── MC: perímetro de un triángulo (a veces la correcta no está) ──
@@ -5617,7 +5678,20 @@ function _programarRepeticion(){
   sesionTotal++;
 }
 let ultimoFeedback = null;// resultado de verificar() del último responder(), para poder retomarlo
-let ultimoProceso = '';   // lo que el usuario escribió en "Tu proceso" antes de responder
+let ultimoProceso = '';   // lo que el usuario escribió en "Tu proceso" antes de responder (un paso por línea)
+// "Tu proceso": una caja por paso, opcional, en todos los ejercicios. Va FUERA de #zonaEntrada
+// para que la calculadora no escriba ahí y no se ponga opaca al contestar.
+const attrEsc = s => escHtml(s).replace(/"/g, '&quot;');
+const pasoFilaHTML = (i, v) => `<div class="pasoFila"><span>${i+1}</span><input class="campo" id="inP${i}" autocomplete="off" autocapitalize="off" placeholder="Paso ${i+1}" value="${attrEsc(v)}"></div>`;
+function procesoHTML(){
+  const guardados = ((respondido || vioExpl) && ultimoProceso) ? ultimoProceso.split('\n') : [];
+  const n = Math.max(3, guardados.length);
+  return `<div class="procesoCaja"><div class="procesoTit">Tu proceso <small>(opcional) — un paso en cada línea</small></div>
+    <div id="listaPasos">${Array.from({length:n}, (_, i) => pasoFilaHTML(i, guardados[i] || '')).join('')}</div>
+    <button type="button" class="btn sec chico" onclick="agregarPaso()">+ Agregar paso</button></div>`;
+}
+function agregarPaso(){ const l = $('listaPasos'), i = l.children.length; l.insertAdjacentHTML('beforeend', pasoFilaHTML(i, '')); $('inP' + i).focus(); }
+const leerProceso = () => [...document.querySelectorAll('#listaPasos input')].map(x => x.value.trim()).filter(Boolean).join('\n');
 
 /* ---------- retomar donde quedó (mate_sesion_v1) ---------- */
 function guardarSesion(){
@@ -5742,8 +5816,8 @@ function abrirCalc(){
   _calcRender();
   _calcRenderHist();
   // "Usar" aparece si hay al menos un campo de respuesta donde ponerlo (num, frac, mixto,
-  // ángulos con figura...); el textarea de "Tu proceso" también es .campo pero es <textarea>,
-  // no <input>, así que el selector de abajo ya lo deja afuera solo.
+  // ángulos con figura...); los pasos de "Tu proceso" están en #zonaProceso, fuera de #zonaEntrada,
+  // así que este selector no los toma.
   $('calcUsarBtn').style.display = $('zonaEntrada').querySelector('input.campo') ? '' : 'none';
   $('calcOv').style.display = 'flex';
 }
@@ -5839,7 +5913,9 @@ document.addEventListener('keydown', e => {
 document.addEventListener('keydown', e => {
   if(e.key !== 'Enter') return;
   if($('calcOv').style.display === 'flex') return;   // la calculadora ya maneja su propio Enter
-  if(e.target && e.target.id === 'inProceso') return; // ahí Enter es salto de línea, no avanzar
+  if(e.target && /^inP\d+$/.test(e.target.id || '')){   // Enter en un paso: al siguiente paso (o agrega uno), no avanza
+    e.preventDefault(); const sig = $('inP' + (+e.target.id.slice(3) + 1)); if(sig) sig.focus(); else agregarPaso(); return;
+  }
   const btnSig = $('zonaFb') && $('zonaFb').querySelector('button.btn.amar');
   if(!btnSig) return;
   e.preventDefault();
@@ -6194,11 +6270,8 @@ function pintarEjercicio(){
     <div class="card">
       <span class="pill">${esTemaFijo ? '' : capFijo ? `${nombreCapitulo(capFijo)} · ` : (clase && clase.mods && clase.mods.length) ? `${clase.etiqueta.length>20?'Mi mezcla':clase.etiqueta} · ` : 'Mezcla · '}${modActual.nombre}</span>
       <div class="enunciado">${ejActual.enunciado}</div>
-      <div id="zonaEntrada">
-        <textarea class="campo" id="inProceso" style="min-height:70px;margin-bottom:12px"
-          placeholder="Tu proceso (opcional) — escribe aquí los pasos antes de responder">${(respondido || vioExpl) ? escHtml(ultimoProceso) : ''}</textarea>
-        ${entradaHTML(ejActual)}
-      </div>
+      <div id="zonaProceso">${procesoHTML()}</div>
+      <div id="zonaEntrada">${entradaHTML(ejActual)}</div>
       <div id="zonaFb"></div>
       <div class="row" id="accionesPre">
         <button class="btn sec chico" onclick="saltarEjercicio()">Saltar</button>
@@ -6328,7 +6401,7 @@ function responder(valor){
 
   respondido = true;
   ultimoFeedback = res;
-  ultimoProceso = ($('inProceso') || {}).value || '';
+  ultimoProceso = leerProceso();
   if(modoErrores){
     // acierto → sale de la lista. Fallo → se manda al final en vez de quedarse en el frente,
     // o "Siguiente ejercicio" volvía a mostrar EXACTAMENTE la misma pregunta que acabas de fallar.
@@ -6401,7 +6474,7 @@ function explPasos(lista, sinNumeros){
   // Método…); las líneas de fórmula van debajo, sin número
   const cuerpo = sinNumeros
     ? `<div class="pasosLibres">${pasos.map(l => `<div class="${/^(→|[IVX]+\. |[a-z]\. |Método|Fórmula|Calcular|Comprobación)/.test(l) ? 'pasoTit' : 'pasoLin'}">${l}</div>`).join('')}</div>`
-    : `<ol>${pasos.map(l=>`<li>${l}</li>`).join('')}</ol>`;
+    : `<ol>${pasos.map(l => l.startsWith('<svg') ? `<li style="display:block">${l}</li>` : `<li>${l}</li>`).join('')}</ol>`;
   return cuerpo +
     trucos.map(t=>`<div class="truco"><b>TRUCO PARA QUE SEA MÁS FÁCIL</b>${t}</div>`).join('');
 }
@@ -6425,7 +6498,7 @@ function otroDelMismoTema(){
 function verExplicacion(){
   if(respondido) return;             // ya contestó de verdad: eso sí queda cerrado
   vioExpl = true;                    // solo "espió" la explicación — el ejercicio sigue abierto
-  ultimoProceso = ($('inProceso') || {}).value || '';
+  ultimoProceso = leerProceso();
   _pintarVistaExplicacion();
   guardarSesion();
 }
