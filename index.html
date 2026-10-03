@@ -213,6 +213,7 @@
   .receta .rPaso{margin-bottom:12px}
   .receta .rTit{font-weight:700;color:var(--titulo);font-size:.97rem}
   .receta .rLin{font-size:.95rem;margin-top:5px;padding-left:10px}
+  .receta .rSub{font-weight:600;font-size:.92rem;margin-top:8px;opacity:.95}
   .receta .rFin{font-size:.95rem;margin-top:7px}
   .receta .oculto{display:none}
   .receta .rBtns{display:flex;gap:8px;margin-top:4px}
@@ -825,27 +826,30 @@ function explSimplif(n, d){
   return _nota(diagFrac([_fT(n, d), _op('='), _fT(sn, sd)], _par(0, 2, '÷ ' + g, sd !== 1)), `¿Por qué ${g}? Es el número MÁS GRANDE que entra exacto en los dos: ${Math.abs(n)} ÷ ${g} = ${Math.abs(sn)} y ${d} ÷ ${g} = ${sd}. Se divide arriba y abajo entre ${g}: vale lo mismo, pero más chica.`);
 }
 // a + b (b puede venir negativo = resta). Devuelve { res, lineas }
+// líneas con grupos "▸ título" (pasosSumaF, pasosMultF…) → pasos de receta [{t, l}]
+const lineasAPasos = ls => { const P = []; ls.forEach(l => { if(typeof l === 'string' && l.startsWith('▸ ')) P.push({ t:l.slice(2), l:[] }); else { if(!P.length) P.push({ t:'Haz la cuenta', l:[] }); P[P.length - 1].l.push(l); } }); return P; };
 function pasosSumaF(a, b){
   const r = sumarF([a, b]), lineas = [];
-  if(a.d === b.d) lineas.push(`${opTP(a)} + ${opTP(b)}: el de abajo es el mismo (${r.m}), solo se suman los de arriba.`, `Arriba: ${sumaArriba(a.n, b.n)} → ${opT({n:r.tot, d:r.m})}`);
+  if(a.d === b.d) lineas.push('▸ Suma los de arriba (el de abajo se queda igual)', `${opTP(a)} + ${opTP(b)}: el de abajo es el mismo (${r.m}), solo se suman los de arriba.`, `Arriba: ${sumaArriba(a.n, b.n)} → ${opT({n:r.tot, d:r.m})}`);
   else {
-    lineas.push(`Los de abajo (${a.d} y ${b.d}) son distintos, y para sumar o restar deben ser iguales. Se busca el MCM: el número más chico que está en la tabla del ${a.d} y en la del ${b.d} → ${r.m}`);
+    lineas.push('▸ Busca el MCM de los de abajo', `Los de abajo (${a.d} y ${b.d}) son distintos, y para sumar o restar deben ser iguales. Se busca el MCM: el número más chico que está en la tabla del ${a.d} y en la del ${b.d} → ${r.m}`);
+    lineas.push('▸ Pasa cada fracción al denominador común');
     if(r.m !== a.d) lineas.push(diagConvertir(a, r.nums[0], r.m));
     if(r.m !== b.d) lineas.push(diagConvertir(b, r.nums[1], r.m));
-    lineas.push(`${tf(r.nums[0], r.m)} + ${tfP(r.nums[1], r.m)}: ya tienen el mismo de abajo (${r.m}), ahora se suman los de arriba.`, `Arriba: ${sumaArriba(r.nums[0], r.nums[1])} → ${opT({n:r.tot, d:r.m})}`);
+    lineas.push('▸ Suma los de arriba (el de abajo se queda igual)', `${tf(r.nums[0], r.m)} + ${tfP(r.nums[1], r.m)}: ya tienen el mismo de abajo (${r.m}), ahora se suman los de arriba.`, `Arriba: ${sumaArriba(r.nums[0], r.nums[1])} → ${opT({n:r.tot, d:r.m})}`);
   }
-  const s = explSimplif(r.tot, r.m); if(s) lineas.push(s);
+  const s = explSimplif(r.tot, r.m); if(s) lineas.push('▸ Simplifica', s);
   return { res:{n:r.n, d:r.d}, lineas };
 }
 // a × b: flechas arriba×arriba y abajo×abajo
 function pasosMultF(a, b){
   const r = multF([a, b]);
-  const lineas = [_nota(diagFrac([_fT(a.n, a.d), _op('×'), _fT(b.n, b.d), _op('='), _fT(r.rawN, r.rawD)], [..._par(0, 2, '×', a.d !== 1 && b.d !== 1)]), 'Se multiplica arriba con arriba y abajo con abajo.', 'mult')];
+  const lineas = ['▸ Multiplica arriba con arriba y abajo con abajo', _nota(diagFrac([_fT(a.n, a.d), _op('×'), _fT(b.n, b.d), _op('='), _fT(r.rawN, r.rawD)], [..._par(0, 2, '×', a.d !== 1 && b.d !== 1)]), 'Se multiplica arriba con arriba y abajo con abajo.', 'mult')];
   const negs = (a.n < 0) + (b.n < 0);
   if(negs) lineas.push(negs === 1 ? 'Signos: hay UN negativo → el resultado es negativo.' : 'Signos: hay DOS negativos → se cancelan, el resultado es positivo.');
   if(Math.abs(r.rawN) > 100) lineas.push(`Arriba: ${porPedazos(Math.abs(a.n), Math.abs(b.n))}`);
   if(r.rawD > 100) lineas.push(`Abajo: ${porPedazos(a.d, b.d)}`);
-  const s = explSimplif(r.rawN, r.rawD); if(s) lineas.push(s);
+  const s = explSimplif(r.rawN, r.rawD); if(s) lineas.push('▸ Simplifica', s);
   return { res:{n:r.n, d:r.d}, lineas };
 }
 // a ÷ b: se voltea SOLO la segunda
@@ -853,7 +857,7 @@ const diagVoltear = (a, b) => { const rec = recipF(b);
   return _nota(diagFrac([_fT(a.n, a.d), _op('÷'), _fT(b.n, b.d), _op('='), _fT(a.n, a.d), _op('×'), _fT(rec.n, rec.d)], [{ de:[2,'n'], a:[6,'n'], txt:'se voltea' }]), `Dividir entre una fracción es MULTIPLICAR por esa fracción dada vuelta (lo de arriba pasa abajo y lo de abajo arriba). Solo se voltea la segunda: ${tf(b.n,b.d)} se voltea y queda ${tf(rec.n,rec.d)}.`); };
 function pasosDivF(a, b){
   const m = pasosMultF(a, recipF(b));
-  return { res:m.res, lineas:[diagVoltear(a, b), ...m.lineas] };
+  return { res:m.res, lineas:['▸ Voltea la segunda fracción (÷ pasa a ×)', diagVoltear(a, b), ...m.lineas] };
 }
 const opTP = f => f.n<0 ? `(${opT(f)})` : opT(f);
 // ── capítulo 5 (Aplicaciones con Fracciones) ──
@@ -880,21 +884,22 @@ const explAMixto = f => `${tf(f.n,f.d)} = ${tMix(f)}   (${f.n} ÷ ${f.d} = ${Mat
 // "pasa a impropia" para todos los mixtos de la lista (y los enteros como n/1)
 function lineasImpropias(fs){
   const li = [], mix = fs.filter(esMixto), ent = fs.filter(f => f.d===1);
-  if(mix.length){ li.push('Mixtos a fracción impropia:'); mix.forEach(f => li.push(explImpropia(f))); }
-  if(ent.length) li.push(ent.map(f => `${mm(f.n)} = ${tf(f.n,1)}`).join(',  '));
+  if(mix.length){ li.push('▸ Pasa los mixtos a fracción impropia'); mix.forEach(f => li.push(explImpropia(f))); }
+  if(ent.length) li.push('▸ Escribe el entero como fracción (con 1 abajo)', ent.map(f => `${mm(f.n)} = ${tf(f.n,1)}`).join(',  '));
   return li;
 }
 // suma de varios términos con signo
 function pasosSumaVarias(ts){
   const lineas = [], m = ts.reduce((a,f) => mcm(a,f.d), 1);
   if(ts.some(f => f.d !== m)){
-    { const ds = [...new Set(ts.map(f=>f.d))]; lineas.push(`Los de abajo (${ds.join(', ')}) son distintos, y para sumar o restar deben ser iguales. Se busca el MCM de ${ds.join(', ')}: el número más chico que está en la tabla del ${ds.join(', del ').replace(/, del ([0-9]+)$/, ' y del $1')} → ${m}`); }
+    { const ds = [...new Set(ts.map(f=>f.d))]; lineas.push('▸ Busca el MCM de los de abajo', `Los de abajo (${ds.join(', ')}) son distintos, y para sumar o restar deben ser iguales. Se busca el MCM de ${ds.join(', ')}: el número más chico que está en la tabla del ${ds.join(', del ').replace(/, del ([0-9]+)$/, ' y del $1')} → ${m}`); }
+    lineas.push('▸ Pasa cada fracción al denominador común');
     ts.forEach(f => { if(f.d !== m) lineas.push(diagConvertir(f, f.n*(m/f.d), m)); });
   }
   const nums = ts.map(f => f.n*(m/f.d)), tot = nums.reduce((a,b)=>a+b, 0);
   { let s = nums[0]; const c = []; nums.slice(1).forEach(v => { c.push(`${mm(s)} ${v<0 ? '−' : '+'} ${Math.abs(v)} = ${mm(s + v)}`); s += v; });
-    lineas.push(`Arriba, de dos en dos: ${c.join(' → ')}  →  ${tf(tot,m)}`); }
-  const r = Fq(tot, m), s = explSimplif(tot, m); if(s) lineas.push(s);
+    lineas.push('▸ Suma los de arriba (el de abajo se queda igual)', `Arriba, de dos en dos: ${c.join(' → ')}  →  ${tf(tot,m)}`); }
+  const r = Fq(tot, m), s = explSimplif(tot, m); if(s) lineas.push('▸ Simplifica', s);
   return { res:r, lineas };
 }
 // multiplicación de 2 o 3 factores, desglosada
@@ -1060,12 +1065,16 @@ function pasosLetras(fs){
   const g = mcd(P,Q), n2 = P/g, d2 = Q/g, letras = [...new Set([...Object.keys(up), ...Object.keys(dn)])].sort();
   const rep = (l,k) => Array(k).fill(l).join(' · '), todas = m => letras.filter(l => m[l]).map(l => rep(l, m[l])).join(' · ') || '(ninguna)';
   const lin = [];
+  lin.push('▸ Mira los signos');
   lin.push(negs===0 ? 'Signos: no hay ningún negativo, el resultado es positivo.'
     : negs%2 ? `Signos: hay ${negs} negativo${negs>1?'s':''}, así que el resultado es NEGATIVO.`
     : `Signos: hay ${negs} negativos; dos negativos se cancelan (− por − da +), así que el resultado es positivo.`);
+  lin.push('▸ Multiplica los números (y simplifícalos)');
   lin.push(`Números: arriba ${upN.join(' × ') || 1} = ${P}; abajo ${dnN.join(' × ') || 1} = ${Q}. ` +
     (g>1 ? `Se simplifica ${P}/${Q}: arriba y abajo se dividen entre ${g} → ${n2}${d2===1 ? '' : '/'+d2}.` : `${P}/${Q} ya no se puede simplificar.`));
+  lin.push('▸ Escribe las letras una por una');
   lin.push(`Letras: un exponente solo dice cuántas veces se multiplica la letra (x² = x · x). Escritas una por una, arriba hay: ${todas(up)}. Abajo hay: ${todas(dn)}.`);
+  lin.push('▸ Tacha las letras iguales (arriba con abajo)');
   lin.push(diagTachar(up, dn, letras, P, Q, g, n2, d2, negs%2 === 1));
   const ru = {}, rd = {};
   letras.forEach(l => { const u = up[l]||0, d = dn[l]||0, m = Math.min(u,d);
@@ -1077,7 +1086,7 @@ function pasosLetras(fs){
   const num = lu ? (n2===1 ? '' : n2) + lu : String(n2), den = ld ? (d2===1 ? '' : d2) + ld : (d2===1 ? '' : String(d2));
   const ex = (negs%2 ? '-' : '') + num + (den ? '/' + (_necesitaPar(den) ? '('+den+')' : den) : '');
   const vis = ex.replace(/\^(\d)/g, (m,e) => SUP_E[e] || m).replace('-','−');
-  lin.push(`Se junta lo que sobró (número, letras de arriba y letras de abajo): ${vis}`, `→ ${vis}`);
+  lin.push('▸ Junta lo que sobró', `Se junta lo que sobró (número, letras de arriba y letras de abajo): ${vis}`, `→ ${vis}`);
   return { lineas:lin, ex };
 }
 // suma/resta de fracciones con letras: denominador común, cada fracción convertida, términos semejantes
@@ -2836,32 +2845,36 @@ const MODULOS = [
     if(tipo==='uno'){                                                  // 1 − a/b
       const d = R(3, porNivel(nv,9,13,20)); let n; do { n = R(1,d-1); } while(mcd(n,d)!==1);
       return { enunciado:`Resta mentalmente:<br><b>1 − ${fr(n,d)}</b>`, tipo:'frac', respuesta:{n:d-n, d}, pedirSimple:true,
-        explicacion:[`Para restar una fracción de 1, imagina el 1 partido en ${d} pedazos iguales: 1 = ${d}/${d}.`,
-          `${d}/${d} − ${n}/${d} = ${d-n}/${d} (mismo denominador, se restan los numeradores).`,
-          `→ ${d-n}/${d}`,
-          `TRUCO: el denominador se queda y arriba haces "denominador menos numerador", sin escribir nada. Piensa en una pizza cortada en ${d} pedazos: si te comes ${n}, quedan ${d} − ${n} = ${d-n} pedazos, o sea ${d-n}/${d}. Comprobación: lo que comiste más lo que queda tiene que dar la pizza entera, ${n}/${d} + ${d-n}/${d} = ${d}/${d} = 1. Ejemplo con este mismo: 1 − ${n}/${d} → ${d} − ${n} = ${d-n} → ${d-n}/${d}.`] };
+        explicacion: receta({ pide:`1 − ${n}/${d}, sin escribir mucho.`,
+          pasos:[{ t:`Escribe el 1 como fracción con ${d} abajo`, l:[`1 = ${cb(d + '/' + d)} (el 1 partido en ${d} pedazos iguales)`] },
+            { t:'Resta los de arriba; el de abajo se queda igual', l:[`${d}/${d} − ${n}/${d}: ${d} − ${n} = ${d-n}`, `→ ${cb((d-n) + '/' + d)}`] }],
+          resp:`${d-n}/${d}`, comp:`${n}/${d} + ${d-n}/${d} = ${d}/${d} = 1 ✓ (lo que comiste más lo que queda es la pizza entera)`,
+          error:`restar también los de abajo (${d} − ${d} = 0): el de abajo no se resta.`, ejemplo:`1 − ${n}/${d} → ${d} − ${n} = ${d-n} → ${d-n}/${d}.` }) };
     }
     if(tipo==='entero'){                                               // E − m n/d
       const d = R(3, porNivel(nv,8,12,16)); let n; do { n = R(1,d-1); } while(mcd(n,d)!==1);
       const m = R(1, porNivel(nv,4,7,10)), E = m + R(2, porNivel(nv,4,6,9));
       const e = E - m - 1;
       return { enunciado:`Resta mentalmente el número mixto del entero:<br><b>${E} − ${mixS(m,n,d)}</b>`, tipo:'mixto', respuesta:{e, n:d-n, d},
-        explicacion:[`Se resta primero la parte entera: ${E} − ${m} = ${E-m}.`,
-          `Quedan ${E-m} enteros sin tocar, pero todavía hay que restar ${n}/${d}. Se parte UNO de esos enteros en ${d}/${d}: ${E-m} = ${e} + ${d}/${d}.`,
-          `${d}/${d} − ${n}/${d} = ${d-n}/${d}.`,
-          `→ ${e} ${d-n}/${d}`,
-          `TRUCO: dos pasos y listo — (1) entero menos entero, (2) "préstate" un entero completo para restar la fracción. Por eso la parte entera del resultado es ${E} − ${m} − 1 = ${e}, y la fracción es "${d} − ${n}" sobre ${d}. Comprobación: ${e} ${d-n}/${d} + ${m} ${n}/${d} = ${E}.`] };
+        explicacion: receta({ pide:`${E} − ${m} ${n}/${d}.`,
+          pasos:[{ t:'Resta primero los enteros', l:[`${E} − ${m} = ${cb(E-m)}`, `Pero todavía falta restar ${n}/${d}.`] },
+            { t:'Préstate un entero y pártelo en pedazos', l:[`${E-m} = ${e} + ${cb(d + '/' + d)}`, `Quedan ${e} enteros y ${d}/${d}.`] },
+            { t:'Resta las fracciones', l:[`${d}/${d} − ${n}/${d}: ${d} − ${n} = ${d-n} → ${cb((d-n) + '/' + d)}`] },
+            { t:'Junta el entero y la fracción', l:[`→ ${cb(`${e} ${d-n}/${d}`)}`] }],
+          resp:`${e} ${d-n}/${d}`, comp:`${e} ${d-n}/${d} + ${m} ${n}/${d} = ${E} ✓`,
+          error:`olvidar prestar un entero: la parte entera del resultado es ${E} − ${m} − 1 = ${e}, no ${E-m}.`, ejemplo:`${E} − ${m} = ${E-m}, prestas 1 → ${e} y ${d-n}/${d}.` }) };
     }
     // "resta a/b de c/d" → c/d − a/b (el orden importa)
     const a = { n:R(1,7), d:pick([3,4,5,6,8]) }, c = { n:R(1,9), d:pick([4,6,8,9,10,12]) };
     const r = sumarF([c, {n:-a.n, d:a.d}]);
     return { enunciado:`Resta ${fr(a.n,a.d)} de ${fr(c.n,c.d)}. Escribe la respuesta en su forma más simple.`,
       tipo:'frac', respuesta:{n:r.n, d:r.d}, pedirSimple:true, signo:true,
-      explicacion:[`"Restar A de B" significa B − A: lo que se resta va DESPUÉS del signo menos, aunque en la frase se mencione primero. Aquí: ${tf(c.n,c.d)} − ${tf(a.n,a.d)}.`,
-        `Restar es sumar el opuesto (se le cambia el signo al que se resta): ${tf(c.n,c.d)} + ${tfP(-a.n,a.d)}.`,
-        ...pasosSumaF(c, {n:-a.n, d:a.d}).lineas,
-        `→ ${tf(r.n,r.d)}`,
-        `TRUCO: la resta NO es conmutativa, así que lee dos veces quién se resta a quién. "Resta X de Y" = Y − X; "X menos Y" = X − Y. Si te sale un signo distinto al esperado, casi seguro invertiste el orden. Ejemplo con este mismo: "resta ${tf(a.n,a.d)} de ${tf(c.n,c.d)}" → ${tf(c.n,c.d)} va primero y ${tf(a.n,a.d)} es lo que se le quita → ${tf(c.n,c.d)} − ${tf(a.n,a.d)} = ${tf(r.n,r.d)}; al revés daría ${tf(-r.n,r.d)}, que es otra respuesta.`] };
+      explicacion: receta({ pide:`"Resta ${tf(a.n,a.d)} de ${tf(c.n,c.d)}": lo que se resta es ${tf(a.n,a.d)}.`,
+        pasos:[{ t:'"Restar A de B" es B − A', l:[`Lo que se resta va DESPUÉS del menos: ${cb(tf(c.n,c.d) + ' − ' + tf(a.n,a.d))}`] },
+          { t:'Cambia la resta por "más el opuesto"', l:[`${tf(c.n,c.d)} − ${tf(a.n,a.d)} = ${tf(c.n,c.d)} + ${tfP(-a.n,a.d)}`] },
+          ...lineasAPasos(pasosSumaF(c, {n:-a.n, d:a.d}).lineas)],
+        resp: tf(r.n,r.d), error:`restar al revés (${tf(a.n,a.d)} − ${tf(c.n,c.d)}): daría ${tf(-r.n,r.d)}. "Resta X de Y" es Y − X.`,
+        ejemplo:`${tf(c.n,c.d)} − ${tf(a.n,a.d)} = ${tf(r.n,r.d)}.` }) };
   }
 },
 {
@@ -2871,52 +2884,35 @@ const MODULOS = [
     const f = () => { const d = R(2,alto); let n = R(1,d-1); if(nv!=='facil' && Math.random()<0.4) n=-n; return {n,d}; };
     const a = f(), b = f(), c = f();
     const A = frP(a.n,a.d), B = frP(b.n,b.d), C = frP(c.n,c.d), Af = frS(a.n,a.d);
+    const rec = (cs, def, error) => receta({ pide:'qué propiedad muestra la igualdad.',
+      pasos:[{ t:'Compara los dos lados del =: ¿qué fue lo ÚNICO que cambió?', l:[cs.cambio] }, { t:'Ponle el nombre', l:[`${def} → ${cb(cs.cat)}`] }],
+      resp: cs.cat, error, ejemplo:`${cs.cambio.replace(/<[^>]+>/g, '')} → ${cs.cat}.` });
     if(Math.random()<0.5){                                           // 4.2 C — propiedades de la multiplicación
       const p = pick(['conmutativa','asociativa','identidad','inverso','cero']);
       const Bf = frS(b.n,b.d);
       const casosM = {
-        conmutativa: { enun:`${Af} × ${B} = ${Bf} × ${A}`, cat:'Conmutativa',
-          expl:[`La propiedad conmutativa de la multiplicación dice que el ORDEN de los factores no cambia el producto: a · b = b · a.`,
-            `Aquí ${tf(a.n,a.d)} y ${tf(b.n,b.d)} solo intercambiaron de lugar.`] },
-        asociativa:  { enun:`(${Af} × ${B}) × ${C} = ${Af} × (${Bf} × ${C})`, cat:'Asociativa',
-          expl:[`La propiedad asociativa dice que, con tres factores, da igual cuáles se AGRUPAN primero: (a · b) · c = a · (b · c).`,
-            `Los factores siguen en el mismo orden; solo cambiaron de sitio los paréntesis.`] },
-        identidad:   { enun: Math.random()<0.5 ? `${Af} × 1 = ${Af}` : `1 × ${A} = ${Af}`, cat:'Identidad',
-          expl:[`El 1 es la identidad de la multiplicación: multiplicar cualquier número por 1 lo deja igual, a · 1 = a.`,
-            `Aquí ${tf(a.n,a.d)} × 1 sigue siendo ${tf(a.n,a.d)}.`] },
-        inverso:     { enun:`${Af} × ${frP(a.n<0?-a.d:a.d, Math.abs(a.n))} = 1`, cat:'Inverso',
-          expl:[`Cada número racional distinto de cero tiene un recíproco (inverso multiplicativo) con el que multiplica a 1: a · (1/a) = 1.`,
-            `El recíproco de ${tf(a.n,a.d)} es ${tf(a.n<0?-a.d:a.d, Math.abs(a.n))} (se invierte la fracción, el signo se conserva). El producto da ${Math.abs(a.n*a.d)}/${Math.abs(a.n*a.d)} = 1.`] },
-        cero:        { enun: Math.random()<0.5 ? `${Af} × 0 = 0` : `0 × ${A} = 0`, cat:'Cero como factor',
-          expl:[`Propiedad del cero como factor: cualquier número multiplicado por 0 da 0, a · 0 = 0.`,
-            `No importa cuánto valga ${tf(a.n,a.d)}: al multiplicarlo por 0 el producto es 0.`] }
+        conmutativa: { enun:`${Af} × ${B} = ${Bf} × ${A}`, cat:'Conmutativa', cambio:`${tf(a.n,a.d)} y ${tf(b.n,b.d)} solo ${cb('cambiaron de lugar (el ORDEN)')}`, def:'Conmutativa: cambiar el orden de los factores no cambia el producto', err:'confundirla con Asociativa: aquí cambió el ORDEN, no los paréntesis.' },
+        asociativa:  { enun:`(${Af} × ${B}) × ${C} = ${Af} × (${Bf} × ${C})`, cat:'Asociativa', cambio:`Los factores siguen en el mismo orden; solo ${cb('se movieron los paréntesis')}`, def:'Asociativa: con tres factores, da igual cuáles se agrupan primero', err:'confundirla con Conmutativa: el orden es el mismo, solo cambiaron los paréntesis.' },
+        identidad:   { enun: Math.random()<0.5 ? `${Af} × 1 = ${Af}` : `1 × ${A} = ${Af}`, cat:'Identidad', cambio:`Se multiplicó por ${cb('1')} y la fracción ${cb('quedó igual')}`, def:'Identidad: multiplicar por 1 deja el número igual', err:'confundirla con Inverso: aquí la fracción queda igual, no da 1.' },
+        inverso:     { enun:`${Af} × ${frP(a.n<0?-a.d:a.d, Math.abs(a.n))} = 1`, cat:'Inverso', cambio:`${tf(a.n,a.d)} se multiplicó por su volteada (${tf(a.n<0?-a.d:a.d, Math.abs(a.n))}) y ${cb('dio 1')}`, def:'Inverso: una fracción por su volteada (recíproco) da 1', err:'confundirla con Identidad: aquí el resultado es 1 porque se multiplicó por la volteada.' },
+        cero:        { enun: Math.random()<0.5 ? `${Af} × 0 = 0` : `0 × ${A} = 0`, cat:'Cero como factor', cambio:`Se multiplicó por ${cb('0')} y todo ${cb('dio 0')}`, def:'Cero como factor: cualquier número por 0 da 0', err:'confundirla con Identidad: la identidad es el 1; con el 0 el resultado es 0.' }
       };
       const cs = casosM[p];
       return { enunciado:`¿Qué propiedad de la multiplicación se ilustra?<br><b>${cs.enun}</b>`,
         tipo:'opciones', opciones: shuffle(['Conmutativa','Asociativa','Identidad','Inverso','Cero como factor']),
-        respuesta: cs.cat, explicacion: cs.expl.concat(
-          `TRUCO: mira qué fue lo ÚNICO que cambió entre los dos lados. ¿Cambió el orden? Conmutativa. ¿Solo se movieron los paréntesis? Asociativa. ¿Hay un 1 que no hace nada? Identidad. ¿Una fracción por su volteada da 1? Inverso. ¿Hay un 0 y el resultado es 0? Cero como factor. Ojo: "identidad" es el 1 en multiplicación pero el 0 en suma; "inverso" es la fracción volteada en multiplicación pero el signo contrario en suma. Ejemplo con este mismo: lo único que cambió fue ${({Conmutativa:'el orden de los factores',Asociativa:'dónde están los paréntesis (los números siguen en el mismo orden)',Identidad:'que aparece un 1 multiplicando, que no cambia nada','Inverso':'que la fracción se multiplica por su volteada y da 1','Cero como factor':'que hay un 0 multiplicando y todo da 0'})[cs.cat]} → ${cs.cat}.`) };
+        respuesta: cs.cat, explicacion: rec(cs, cs.def, cs.err) };
     }
     const p = pick(['conmutativa','asociativa','identidad','inverso']);
     const casos = {
-      conmutativa: { enun:`${Af} + ${B} = ${frS(b.n,b.d)} + ${frP(a.n,a.d)}`, cat:'Conmutativa',
-        expl:[`La propiedad conmutativa dice que el ORDEN de los sumandos no cambia la suma: a + b = b + a.`,
-          `Aquí ${tf(a.n,a.d)} y ${tf(b.n,b.d)} solo intercambiaron de lugar; no apareció ningún número nuevo ni se movieron paréntesis.`] },
-      asociativa:  { enun:`(${Af} + ${B}) + ${C} = ${Af} + (${frS(b.n,b.d)} + ${C})`, cat:'Asociativa',
-        expl:[`La propiedad asociativa dice que, con tres sumandos, da igual cuáles se AGRUPAN primero: (a + b) + c = a + (b + c).`,
-          `Los números están en el mismo orden en los dos lados; lo único que cambió fue dónde están los paréntesis.`] },
-      identidad:   { enun: Math.random()<0.5 ? `${Af} + 0 = ${Af}` : `0 + ${Af} = ${Af}`, cat:'Identidad',
-        expl:[`El 0 es la identidad de la suma: sumar 0 a cualquier número racional lo deja igual, a + 0 = a.`,
-          `Aquí ${tf(a.n,a.d)} + 0 sigue siendo ${tf(a.n,a.d)}.`] },
-      inverso:     { enun:`${Af} + ${frP(-a.n,a.d)} = 0`, cat:'Inverso',
-        expl:[`Cada número racional tiene un opuesto (inverso aditivo) con el que suma 0: a + (−a) = 0.`,
-          `El opuesto de ${tf(a.n,a.d)} es ${tf(-a.n,a.d)}: mismo tamaño, signo contrario. Por eso la suma da 0.`] }
+      conmutativa: { enun:`${Af} + ${B} = ${frS(b.n,b.d)} + ${frP(a.n,a.d)}`, cat:'Conmutativa', cambio:`${tf(a.n,a.d)} y ${tf(b.n,b.d)} solo ${cb('cambiaron de lugar (el ORDEN)')}`, def:'Conmutativa: cambiar el orden de los sumandos no cambia la suma', err:'confundirla con Asociativa: aquí cambió el ORDEN, no los paréntesis.' },
+      asociativa:  { enun:`(${Af} + ${B}) + ${C} = ${Af} + (${frS(b.n,b.d)} + ${C})`, cat:'Asociativa', cambio:`Los números están en el mismo orden; lo único que cambió es ${cb('dónde están los paréntesis')}`, def:'Asociativa: con tres sumandos, da igual cuáles se agrupan primero', err:'confundirla con Conmutativa: el orden es el mismo, solo se movieron los paréntesis.' },
+      identidad:   { enun: Math.random()<0.5 ? `${Af} + 0 = ${Af}` : `0 + ${Af} = ${Af}`, cat:'Identidad', cambio:`Se sumó ${cb('0')} y la fracción ${cb('quedó igual')}`, def:'Identidad: sumar 0 deja el número igual', err:'confundirla con Inverso: aquí la fracción queda igual, no da 0.' },
+      inverso:     { enun:`${Af} + ${frP(-a.n,a.d)} = 0`, cat:'Inverso', cambio:`Se sumó ${tf(a.n,a.d)} con ${tf(-a.n,a.d)} (la misma con el signo contrario) y ${cb('dio 0')}`, def:'Inverso: un número más su opuesto da 0', err:'confundirla con Identidad: aquí el resultado es 0 porque se sumaron opuestos.' }
     };
     const cs = casos[p];
     return { enunciado:`¿Qué propiedad de la suma se ilustra?<br><b>${cs.enun}</b>`,
       tipo:'opciones', opciones: shuffle(['Conmutativa','Asociativa','Identidad','Inverso']),
-      respuesta: cs.cat, explicacion: cs.expl.concat(
-        `TRUCO: mira qué fue lo ÚNICO que cambió entre los dos lados. ¿Se cambió el orden? Conmutativa. ¿Solo se movieron los paréntesis? Asociativa. ¿Hay un 0 que no hace nada? Identidad. ¿Dos fracciones iguales con signo contrario que dan 0? Inverso. Con fracciones es exactamente igual que con enteros — el denominador no cambia nada. Ejemplo con este mismo: lo único que cambió fue ${({Conmutativa:'el orden de los sumandos',Asociativa:'dónde están los paréntesis (los números siguen en el mismo orden)',Identidad:'que aparece un 0 sumando, que no cambia nada',Inverso:'que se suma la misma fracción con el signo contrario y da 0'})[cs.cat]} → ${cs.cat}.`) };
+      respuesta: cs.cat, explicacion: rec(cs, cs.def, cs.err) };
   }
 },
 {
@@ -2930,12 +2926,12 @@ const MODULOS = [
       return { enunciado:`Un camión transporta <b>${mixS(e3,pn3,d3)}</b> pies cúbicos de pajote por viaje. Si ya ha hecho <b>${viajes}</b> viajes, ¿cuántos pies cúbicos de pajote ha transportado en total?`,
         tipo:'frac', respuesta:{n:r3.n, d:r3.d}, pedirSimple:true,
         ayuda: r3.d===1 ? 'Si sale un entero, escríbelo con denominador 1.' : 'Puedes dejar el resultado como fracción impropia.',
-        explicacion:[`Primero se pasa el mixto a fracción impropia: ${e3} × ${d3} + ${pn3} = ${mx.n} → ${tf(mx.n,mx.d)} pies cúbicos por viaje.`,
-          `"Por viaje" repetido ${viajes} veces es multiplicar: ${tf(mx.n,mx.d)} × ${viajes}`,
-          `Arriba: ${mx.n} × ${viajes} = ${mx.n*viajes}. Abajo se queda ${mx.d} (multiplicar por un entero no cambia el denominador).`,
-          explSimplif(mx.n*viajes, mx.d),
-          `→ ${tf(r3.n,r3.d)} pies cúbicos`,
-          `TRUCO: "por viaje" (o "por unidad") seguido de una cantidad de veces siempre es multiplicar, igual que con enteros — solo que aquí lo que se multiplica es una fracción (el mixto ya convertido). Ejemplo con este mismo: ${tf(mx.n,mx.d)} × ${viajes} = ${tf(r3.n,r3.d)}.`] };
+        explicacion: receta({ pide:'los pies cúbicos de todos los viajes juntos.',
+          pasos:[{ t:'"Por viaje" repetido varias veces es multiplicar', l:[`${e3} ${pn3}/${d3} × ${viajes}`] },
+            { t:'Pasa el mixto a fracción impropia', l:[explImpropia(mx)] },
+            { t:'Multiplica solo el de arriba por el entero', l:[`${mx.n} × ${viajes} = ${cb(mx.n*viajes)}; el de abajo se queda en ${mx.d}`, `→ ${tf(mx.n*viajes, mx.d)}`] },
+            ...lineasAPasos(explSimplif(mx.n*viajes, mx.d) ? ['▸ Simplifica', explSimplif(mx.n*viajes, mx.d)] : [])],
+          resp:`${tf(r3.n,r3.d)} pies cúbicos`, error:`multiplicar también el de abajo (${mx.d} × ${viajes}): multiplicar por un entero no cambia el de abajo.`, ejemplo:`${tf(mx.n,mx.d)} × ${viajes} = ${tf(r3.n,r3.d)}.` }) };
     }
     const dens = nv==='facil' ? [2,3,4,5,6,8,9,10] : DENS_FRAC;
     const neg = nv==='facil' ? 0 : nv==='medio' ? 0.35 : 0.55;
@@ -2951,69 +2947,66 @@ const MODULOS = [
     if(div && fs[1].n===0) fs[1].n = 1;
     const verOp = f => f.mixto ? (f.e<0 ? `(${mixS(f.e,f.pn,f.d)})` : mixS(f.e,f.pn,f.d)) : opP(f);
     const enun = fs.map((f,i) => (i===0 ? (f.mixto ? mixS(f.e,f.pn,f.d) : opS(f)) : (div ? ' ÷ ' : ' × ') + verOp(f))).join('');
-    const expl = [];
-    if(fs.some(f=>f.mixto)){
-      expl.push('Mixtos a fracción impropia:');
-      fs.filter(f=>f.mixto).forEach(f => expl.push(`${mm(f.e)} ${f.pn}/${f.d} → ${Math.abs(f.e)} × ${f.d} + ${f.pn} = ${Math.abs(f.n)} → ${tf(f.n,f.d)}`));
-    }
-    if(fs.some(f=>f.d===1)) expl.push(fs.filter(f=>f.d===1).map(f=>`${mm(f.n)} = ${tf(f.n,1)}`).join(',  '));
-    let r, factores;
-    if(div){
-      const rec = recipF(fs[1]);
-      expl.push(diagVoltear(fs[0], fs[1]));
-      factores = [fs[0], rec];
-    } else factores = fs;
-    r = multF(factores);
-    const absN = factores.map(f=>Math.abs(f.n)), absD = factores.map(f=>f.d);
-    expl.push(...pasosMultVarias(factores).lineas);
-    expl.push(`→ ${tf(r.n,r.d)}`);
-    const cruz = (() => { for(let i=0;i<absN.length;i++) for(let j=0;j<absD.length;j++){ const g = mcd(absN[i], absD[j]); if(g > 1) return `el ${absN[i]} de arriba y el ${absD[j]} de abajo se dividen entre ${g} (quedan ${absN[i]/g} y ${absD[j]/g}) antes de multiplicar`; } return 'aquí no había nada que tachar'; })();
-    expl.push(`TRUCO: cancela ANTES de multiplicar (un número de arriba con uno de abajo, aunque sean de fracciones distintas). En la división se voltea solo la segunda. No se busca denominador común. Ejemplo con este mismo: ${cruz}; el resultado es ${tf(r.n,r.d)}.`);
+    const pasos = [];
+    if(fs.some(f=>f.mixto)) pasos.push({ t:'Pasa los mixtos a fracción impropia', l: fs.filter(f=>f.mixto).map(f => explImpropia({n:f.n, d:f.d})) });
+    if(fs.some(f=>f.d===1)) pasos.push({ t:'Escribe el entero como fracción (con 1 abajo)', l:[fs.filter(f=>f.d===1).map(f=>`${mm(f.n)} = ${tf(f.n,1)}`).join(',  ')] });
+    let factores;
+    if(div){ pasos.push({ t:'Voltea la segunda fracción (÷ pasa a ×)', l:[diagVoltear(fs[0], fs[1])] }); factores = [fs[0], recipF(fs[1])]; }
+    else factores = fs;
+    const r = multF(factores), dec = x => Math.round(x.n / x.d * 100) / 100;
+    pasos.push(...lineasAPasos(pasosMultVarias(factores).lineas));
     return { enunciado:`${div ? 'Divide' : 'Multiplica'} y escribe el resultado en su forma más simple:<br><b>${enun}</b>`,
       tipo:'frac', respuesta:{n:r.n, d:r.d}, pedirSimple:true, signo:true,
       ayuda: r.d===1 ? 'Si sale un entero, escríbelo con denominador 1.' : (fs.some(f=>f.mixto) ? 'Puedes dejar el resultado como fracción impropia.' : ''),
-      explicacion: expl };
+      explicacion: receta({ pide: div ? 'dividir las dos fracciones (se voltea la segunda y se multiplica).' : 'multiplicar las fracciones, sin buscar denominador común.', pasos,
+        resp: tf(r.n,r.d), comp: div ? `${tf(r.n,r.d)} × ${tfP(fs[1].n, fs[1].d)} = ${tf(fs[0].n, fs[0].d)} ✓ (el resultado por lo que dividiste devuelve el primer número)` : `en decimales: ${fs.map(x => dec(x)).join(' × ')} ≈ ${dec(r)} ✓`,
+        error: div ? 'voltear la primera fracción (o las dos): se voltea SOLO la segunda.' : 'buscar denominador común: al multiplicar NO hace falta, se multiplica arriba con arriba y abajo con abajo.',
+        ejemplo:`${enun.replace(/<[^>]+>/g, '')} = ${tf(r.n,r.d)}.` }) };
   }
 },
 {
   id:'reciproco', nombre:'Recíproco (inverso multiplicativo)', secciones:['4.2'],
   gen(nv){
     const tipo = pick(nv==='facil' ? ['frac','entero','cero'] : ['frac','neg','entero','cero','completa','completa']);
-    const TR = `TRUCO: recíproco = "voltear" la fracción (arriba pasa abajo y abajo pasa arriba). Un entero es una fracción con 1 abajo, así que su recíproco es 1 sobre él. El signo NO cambia: el recíproco de un negativo es negativo. Y el 0 es el único número sin recíproco, porque 0 por cualquier cosa da 0, nunca 1. Comprobación siempre: número × recíproco tiene que dar exactamente 1.`;
     if(tipo==='cero'){
       const k = R(2,9), forma = pick(['0', `0/${k}`]);
       return { enunciado:`Escribe el recíproco de <b>${forma.includes('/') ? fr(0,k) : '0'}</b>, si está definido.`,
         tipo:'opciones', opciones: shuffle(['No está definido', '0', '1', `${k}/0`]), respuesta:'No está definido',
-        explicacion:[`${forma.includes('/') ? `0/${k} vale 0, y ` : ''}el recíproco de un número es el que multiplicado por él da 1.`,
-          `Pero 0 × (cualquier número) = 0, nunca 1. Voltearlo daría ${forma.includes('/') ? `${k}/0` : '1/0'}, y dividir entre 0 no está definido.`,
-          `→ El 0 no tiene recíproco.`, TR] };
+        explicacion: receta({ pide:'el número que, multiplicado por el que te dan, da 1.',
+          pasos:[{ t:'Recuerda qué es el recíproco', l:['Es el número que multiplicado por el tuyo da 1. Se saca volteando la fracción.'] },
+            { t:'Prueba con el 0', l:[`${forma.includes('/') ? `0/${k} vale 0, y ` : ''}0 × (cualquier número) = 0, nunca 1.`, `Voltearlo daría ${forma.includes('/') ? `${k}/0` : '1/0'}, y dividir entre 0 no está definido.`] },
+            { t:'Concluye', l:[`→ ${cb('No está definido')}: el 0 es el único número sin recíproco.`] }],
+          resp:'No está definido', error:`escoger ${k}/0 o 1/0: eso es dividir entre 0, que no se puede.`, ejemplo:'0 × lo que sea = 0, nunca 1 → no está definido.' }) };
     }
     if(tipo==='entero'){
       let k = R(2, porNivel(nv,12,30,99)); if(nv!=='facil' && Math.random()<0.4) k = -k;
-      return { enunciado:`Escribe el recíproco de <b>${mm(k)}</b>.`, tipo:'frac', respuesta:{n: k<0?-1:1, d:Math.abs(k)}, pedirSimple:true, signo:k<0,
-        explicacion:[`Un entero se escribe como fracción con denominador 1: ${mm(k)} = ${tf(k,1)}.`,
-          `Se voltea: ${tf(k,1)} → ${tf(k<0?-1:1, Math.abs(k))}${k<0 ? ' (el signo se conserva)' : ''}.`, diagRec(k, 1, k<0?-1:1, Math.abs(k)),
-          `Comprobación: ${k<0?`(${mm(k)})`:k} × ${tfP(k<0?-1:1,Math.abs(k))} = ${Math.abs(k)}/${Math.abs(k)} = 1 ✓ (un número por su recíproco siempre da 1).`, `→ ${tf(k<0?-1:1, Math.abs(k))}`, TR + ` Ejemplo con este mismo: ${mm(k)} es ${tf(k,1)}, volteado queda ${tf(k<0?-1:1,Math.abs(k))}.`] };
+      const rn = k<0 ? -1 : 1, rd = Math.abs(k);
+      return { enunciado:`Escribe el recíproco de <b>${mm(k)}</b>.`, tipo:'frac', respuesta:{n:rn, d:rd}, pedirSimple:true, signo:k<0,
+        explicacion: receta({ pide:`el número que multiplicado por ${mm(k)} da 1.`,
+          pasos:[{ t:'Escribe el entero como fracción (con 1 abajo)', l:[`${mm(k)} = ${cb(tf(k,1))}`] },
+            { t:'Voltea la fracción', l:[diagRec(k, 1, rn, rd), k<0 ? 'El signo se queda.' : ''] }],
+          resp: tf(rn, rd), comp:`${k<0?`(${mm(k)})`:k} × ${tfP(rn, rd)} = ${rd}/${rd} = 1 ✓`, error: k<0 ? 'cambiarle el signo: el recíproco de un negativo es negativo.' : `contestar ${-k}: eso es el opuesto, no el recíproco.`,
+          ejemplo:`${mm(k)} = ${tf(k,1)} → ${tf(rn, rd)}.` }) };
     }
     const d = R(2, porNivel(nv,9,15,30)); let n = R(1, porNivel(nv,9,15,30)); if(n===d) n++;
     const [sn,sd] = simplificar(n,d); n = sn; const dd = sd;
     const s = tipo==='neg' ? -1 : 1;
     const rec = { n: s*dd, d: n };
+    const rn = s*n;
+    const pasosFrac = [{ t:'Voltea la fracción: el de arriba baja y el de abajo sube', l:[diagRec(rn, dd, rec.n, rec.d)] }, ...(s<0 ? [{ t:'El signo se queda', l:['Un número y su recíproco tienen el MISMO signo.'] }] : [])];
+    const err = s<0 ? 'cambiarle el signo: el recíproco de un negativo es negativo.' : 'cambiarle el signo: el recíproco solo voltea la fracción, el signo no cambia.';
     if(tipo==='completa'){
       const izq = Math.random()<0.5;
-      const rn = s*n;
       return { enunciado: izq ? `Completa: <b>1 ÷ ${frP(rn,dd)} = ___</b>` : `Completa: <b>${fr(1, frS(rn,dd))} = ___</b>`,
         tipo:'frac', respuesta:rec, pedirSimple:true, signo:s<0, ayuda: rec.d===1 ? 'Si sale un entero, escríbelo con denominador 1.' : '',
-        explicacion:[`${izq ? `1 ÷ (número)` : `1 sobre (número)`} es, por definición, el recíproco de ese número.`,
-          `El recíproco de ${tf(rn,dd)} se obtiene volteando la fracción: ${tf(rec.n,rec.d)}${s<0?' (el signo se queda)':''}.`, diagRec(rn, dd, rec.n, rec.d),
-          `Comprobación: ${tfP(rn,dd)} × ${tfP(rec.n,rec.d)} = ${n*dd}/${n*dd} = 1 ✓.`, `→ ${tf(rec.n,rec.d)}`, TR + ` Ejemplo con este mismo: ${tf(rn,dd)} volteado es ${tf(rec.n,rec.d)}.`] };
+        explicacion: receta({ pide:`el resultado de ${izq ? `1 ÷ ${tf(rn,dd)}` : `1 sobre ${tf(rn,dd)}`}.`,
+          pasos:[{ t:`${izq ? '1 ÷ (número)' : '1 sobre (número)'} es el recíproco de ese número`, l:[`Dividir 1 entre una fracción es multiplicar por ella volteada.`] }, ...pasosFrac],
+          resp: tf(rec.n,rec.d), comp:`${tfP(rn,dd)} × ${tfP(rec.n,rec.d)} = ${n*dd}/${n*dd} = 1 ✓`, error:err, ejemplo:`${tf(rn,dd)} volteado = ${tf(rec.n,rec.d)}.` }) };
     }
-    const rn = s*n;
     return { enunciado:`Escribe el recíproco de <b>${frS(rn,dd)}</b>.`, tipo:'frac', respuesta:rec, pedirSimple:true, signo:s<0,
       ayuda: rec.d===1 ? 'Si sale un entero, escríbelo con denominador 1.' : '',
-      explicacion:[`El recíproco (inverso multiplicativo) de una fracción se obtiene intercambiando numerador y denominador.`,
-        `${tf(rn,dd)} → ${tf(rec.n,rec.d)}${s<0 ? ' — el signo negativo se conserva, un número y su recíproco tienen el mismo signo' : ''}.`, diagRec(rn, dd, rec.n, rec.d),
-        `Comprobación: ${tfP(rn,dd)} × ${tfP(rec.n,rec.d)} = ${n*dd}/${n*dd} = 1 ✓.`, `→ ${tf(rec.n,rec.d)}`, TR + ` Ejemplo con este mismo: ${tf(rn,dd)} volteado es ${tf(rec.n,rec.d)} — el ${Math.abs(rn)} bajó y el ${dd} subió${s<0?', y el menos se quedó':''}.`] };
+      explicacion: receta({ pide:`el número que multiplicado por ${tf(rn,dd)} da 1.`, pasos: pasosFrac,
+        resp: tf(rec.n,rec.d), comp:`${tfP(rn,dd)} × ${tfP(rec.n,rec.d)} = ${n*dd}/${n*dd} = 1 ✓`, error:err, ejemplo:`el ${Math.abs(rn)} baja y el ${dd} sube → ${tf(rec.n,rec.d)}.` }) };
   }
 },
 {
@@ -3024,63 +3017,63 @@ const MODULOS = [
     const F = () => { const d = pick(dens); let n = R(1,d-1); if(Math.random()<neg) n=-n; return {n,d}; };
     const A = F(), B = F(), C = F(), D = F();
     const pat = pick(nv==='facil' ? ['sumaMult','restaDiv','multDiv'] : nv==='medio' ? ['sumaMult','restaDiv','multDiv','parDiv','divSuma'] : ['restaDiv','parDiv','divSuma','cuadrado','restaMultPar']);
-    // cada paso: un título que dice QUÉ va primero y POR QUÉ, y debajo la operación desglosada
+    // cada paso del orden de operaciones: título (QUÉ va primero) y debajo la operación desglosada
     const pasos = [];
-    const paso = (titulo, r) => { pasos.push(titulo, ...r.lineas); return r.res; };
+    const paso = (titulo, r) => { pasos.push({ t:titulo, l:r.lineas }); return r.res; };
     const suma = (x,y) => pasosSumaF(x,y);
     const resta = (x,y) => { const r = pasosSumaF(x, {n:-y.n, d:y.d}); return { res:r.res, lineas:[`${opT(x)} − ${opTP(y)} = ${opT(x)} + ${tfP(-y.n,y.d)}`, ...r.lineas] }; };
-    let enun, enunT, res, primero;
+    let enun, enunT, res, primero, error;
     switch(pat){
       case 'sumaMult':                                                // A + B × C
         enun = `${opS(A)} + ${opP(B)} × ${opP(C)}`; enunT = `${opT(A)} + ${opTP(B)} × ${opTP(C)}`;
-        primero = `la multiplicación ${opT(B)} × ${opTP(C)} va antes que la suma, aunque la suma esté escrita primero`;
-        { const p = paso(`Primero la multiplicación:`, pasosMultF(B,C));
+        primero = `la multiplicación ${opT(B)} × ${opTP(C)} va antes que la suma`; error = 'sumar primero porque la suma está escrita primero: la multiplicación va antes.';
+        { const p = paso(`Primero la multiplicación (va antes que la suma)`, pasosMultF(B,C));
           res = paso(`Ahora la suma: ${opT(A)} + ${opTP(p)}`, suma(A,p)); }
         break;
       case 'restaDiv':                                                // A ÷ B − C
         enun = `${opS(A)} ÷ ${opP(B)} − ${opP(C)}`; enunT = `${opT(A)} ÷ ${opTP(B)} − ${opTP(C)}`;
-        primero = `la división ${opT(A)} ÷ ${opTP(B)} va antes que la resta`;
-        { const p = paso(`Primero la división:`, pasosDivF(A,B));
+        primero = `la división ${opT(A)} ÷ ${opTP(B)} va antes que la resta`; error = 'restar primero: la división va antes que la resta.';
+        { const p = paso(`Primero la división (va antes que la resta)`, pasosDivF(A,B));
           res = paso(`Ahora la resta: ${opT(p)} − ${opTP(C)}`, resta(p,C)); }
         break;
       case 'multDiv':                                                 // A × B ÷ C  (izquierda a derecha)
         enun = `${opS(A)} × ${opP(B)} ÷ ${opP(C)}`; enunT = `${opT(A)} × ${opTP(B)} ÷ ${opTP(C)}`;
-        primero = `multiplicar y dividir empatan, así que se hace lo que esté más a la izquierda: ${opT(A)} × ${opTP(B)}`;
-        { const p = paso(`De izquierda a derecha. Primero la multiplicación:`, pasosMultF(A,B));
+        primero = `multiplicar y dividir empatan: se hace lo que esté más a la izquierda`; error = 'hacer la división primero: × y ÷ empatan, se va de izquierda a derecha.';
+        { const p = paso(`Primero la multiplicación (× y ÷ van de izquierda a derecha)`, pasosMultF(A,B));
           res = paso(`Luego la división: ${opT(p)} ÷ ${opTP(C)}`, pasosDivF(p,C)); }
         break;
       case 'parDiv':                                                  // (A + B) ÷ C
         enun = `(${opS(A)} + ${opP(B)}) ÷ ${opP(C)}`; enunT = `(${opT(A)} + ${opTP(B)}) ÷ ${opTP(C)}`;
-        primero = `el paréntesis (${opT(A)} + ${opTP(B)}) va antes que todo lo demás`;
-        { const p = paso(`Primero el paréntesis:`, suma(A,B));
+        primero = `el paréntesis va antes que todo lo demás`; error = 'dividir primero: lo que está dentro del paréntesis se resuelve antes.';
+        { const p = paso(`Primero el paréntesis`, suma(A,B));
           res = paso(`Ahora la división: ${opT(p)} ÷ ${opTP(C)}`, pasosDivF(p,C)); }
         break;
       case 'divSuma':                                                 // A ÷ B + C × D
         enun = `${opS(A)} ÷ ${opP(B)} + ${opP(C)} × ${opP(D)}`; enunT = `${opT(A)} ÷ ${opTP(B)} + ${opTP(C)} × ${opTP(D)}`;
-        primero = `la división y la multiplicación van las dos antes que la suma del medio`;
-        { const p1 = paso(`Primero la división (está a la izquierda):`, pasosDivF(A,B));
-          const p2 = paso(`Luego la multiplicación:`, pasosMultF(C,D));
+        primero = `la división y la multiplicación van las dos antes que la suma`; error = 'sumar en medio primero: la división y la multiplicación van antes.';
+        { const p1 = paso(`Primero la división (la de más a la izquierda)`, pasosDivF(A,B));
+          const p2 = paso(`Luego la multiplicación`, pasosMultF(C,D));
           res = paso(`Al final la suma: ${opT(p1)} + ${opTP(p2)}`, suma(p1,p2)); }
         break;
       case 'cuadrado':                                                // A + (B)² × C
         enun = `${opS(A)} + (${frS(B.n,B.d)})<sup>2</sup> × ${opP(C)}`; enunT = `${opT(A)} + (${opT(B)})² × ${opTP(C)}`;
-        primero = `el exponente (${opT(B)})² va antes que la multiplicación y que la suma`;
-        { const p1 = paso(`Primero el exponente (la fracción por sí misma):`, pasosMultF(B,B));
+        primero = `el exponente va antes que la multiplicación y la suma`; error = 'multiplicar la fracción por 2: el exponente 2 es multiplicarla POR SÍ MISMA.';
+        { const p1 = paso(`Primero el exponente (la fracción por sí misma)`, pasosMultF(B,B));
           const p2 = paso(`Luego la multiplicación: ${opT(p1)} × ${opTP(C)}`, pasosMultF(p1,C));
           res = paso(`Al final la suma: ${opT(A)} + ${opTP(p2)}`, suma(A,p2)); }
         break;
       default:                                                        // A − B × (C + D)
         enun = `${opS(A)} − ${opP(B)} × (${opS(C)} + ${opP(D)})`; enunT = `${opT(A)} − ${opTP(B)} × (${opT(C)} + ${opTP(D)})`;
-        primero = `el paréntesis (${opT(C)} + ${opTP(D)}) va primero, después la multiplicación y al final la resta`;
-        { const p1 = paso(`Primero el paréntesis:`, suma(C,D));
+        primero = `paréntesis, luego multiplicación y al final la resta`; error = 'restar primero: el paréntesis, luego la multiplicación y al final la resta.';
+        { const p1 = paso(`Primero el paréntesis`, suma(C,D));
           const p2 = paso(`Luego la multiplicación: ${opT(B)} × ${opTP(p1)}`, pasosMultF(B,p1));
           res = paso(`Al final la resta: ${opT(A)} − ${opTP(p2)}`, resta(A,p2)); }
     }
     return { enunciado:`Simplifica usando el orden de operaciones:<br><b>${enun}</b>`,
       tipo:'frac', respuesta:res, pedirSimple:true, signo:true, ayuda:'Escribe la respuesta como fracción simplificada (puede ser impropia).',
-      explicacion:[`Orden: paréntesis → exponentes → × y ÷ (de izquierda a derecha) → + y −.`,
-        ...pasos, `→ ${tf(res.n,res.d)}`,
-        `TRUCO: marca la operación que va PRIMERO y resuélvela sola en un renglón; después reescribe con ese resultado y sigue. Para dividir voltea solo la fracción de después del ÷; para sumar o restar busca denominador común. Ejemplo con este mismo: en ${enunT} ${primero}.`] };
+      explicacion: receta({ pide:'el valor final, haciendo las operaciones en el orden correcto.',
+        pasos:[{ t:'Recuerda el orden', l:['Paréntesis → exponentes → × y ÷ (de izquierda a derecha) → + y −.', `Aquí: ${primero}.`] }, ...pasos],
+        resp: tf(res.n,res.d), error, ejemplo:`en ${enunT.replace(/<[^>]+>/g, '')}: ${primero}.` }) };
   }
 },
 {
@@ -3094,8 +3087,8 @@ const MODULOS = [
     let A = F(), B = F(), C = F(), D = F();
     const pasos = [];
     let num, den, enun, arribaT, abajoT;
-    const pasoArriba = () => { const p = pasosSumaF(A,B); pasos.push(`Arriba: ${opT(A)} + ${opTP(B)}`, ...p.lineas); return p.res; };
-    const pasoAbajo = n => { const p = pasosSumaF(C, {n:-D.n, d:D.d}); pasos.push(`Abajo: ${opT(C)} − ${opTP(D)} = ${opT(C)} + ${tfP(-D.n,D.d)}`, ...p.lineas); return p.res; };
+    const pasoArriba = () => { const p = pasosSumaF(A,B); pasos.push({ t:`Resuelve lo de ARRIBA: ${opT(A)} + ${opTP(B)}`, l:p.lineas }); return p.res; };
+    const pasoAbajo = () => { const p = pasosSumaF(C, {n:-D.n, d:D.d}); pasos.push({ t:`Resuelve lo de ABAJO: ${opT(C)} − ${opTP(D)}`, l:[`${opT(C)} − ${opTP(D)} = ${opT(C)} + ${tfP(-D.n,D.d)}`, ...p.lineas] }); return p.res; };
     if(pat==='simple'){
       num = A; den = C; enun = fr(frS(A.n,A.d), frS(C.n,C.d)); arribaT = opT(A); abajoT = opT(C);
     } else if(pat==='arriba'){
@@ -3104,24 +3097,24 @@ const MODULOS = [
     } else if(pat==='abajo'){
       den = sub(C,D); while(den.n===0){ D = F(); den = sub(C,D); }
       enun = fr(frS(A.n,A.d), `${frS(C.n,C.d)} − ${frP(D.n,D.d)}`); arribaT = opT(A); abajoT = `(${opT(C)} − ${opTP(D)})`;
-      num = A; den = pasoAbajo(1);
+      num = A; den = pasoAbajo();
     } else {
       den = sub(C,D); while(den.n===0){ D = F(); den = sub(C,D); }
       enun = fr(`${frS(A.n,A.d)} + ${frP(B.n,B.d)}`, `${frS(C.n,C.d)} − ${frP(D.n,D.d)}`); arribaT = `(${opT(A)} + ${opTP(B)})`; abajoT = `(${opT(C)} − ${opTP(D)})`;
-      num = pasoArriba(); den = pasoAbajo(2);
+      num = pasoArriba(); den = pasoAbajo();
     }
     const dv = pasosDivF(num, den);
-    pasos.push(`Dividir: ${opT(num)} ÷ ${opTP(den)}`, ...dv.lineas);
     const r = dv.res;
     const enunciado = pat==='verbal'
       ? `La suma de ${frS(A.n,A.d)} y ${frP(B.n,B.d)} se va a dividir por la diferencia entre ${frS(C.n,C.d)} y ${frP(D.n,D.d)}. Escribe la expresión como fracción compleja y simplifícala.`
       : `Simplifica la fracción compleja:<br><b style="font-size:1.15em">${enun}</b>`;
     return { enunciado, tipo:'frac', respuesta:{n:r.n, d:r.d}, pedirSimple:true, signo:true, ayuda:'Escribe la respuesta como fracción simplificada (puede ser impropia).',
-      explicacion:[pat==='verbal'
-          ? `Se traduce: "suma" arriba y "diferencia" abajo → ${arribaT} / ${abajoT}`
-          : `La raya larga es una división: ${arribaT} ÷ ${abajoT}`,
-        ...pasos, `→ ${tf(r.n,r.d)}`,
-        `TRUCO: la raya larga es un ÷. Resuelve arriba, resuelve abajo, y al final divide (voltea la de abajo). Ejemplo con este mismo: ${arribaT} ÷ ${abajoT} → arriba queda ${opT(num)}, abajo queda ${opT(den)}, y ${opT(num)} ÷ ${opTP(den)} se convierte en ${opT(num)} × ${opTP(recipF(den))} = ${tf(r.n,r.d)}.`] };
+      explicacion: receta({ pide:'una sola fracción simplificada.',
+        pasos:[{ t: pat==='verbal' ? 'Traduce la frase' : 'La raya larga es una división (÷)', l:[pat==='verbal' ? `"suma" va arriba y "diferencia" abajo → ${cb(arribaT + ' ÷ ' + abajoT)}` : `${arribaT} ÷ ${abajoT}`] },
+          ...pasos,
+          { t:`Divide: ${opT(num)} ÷ ${opTP(den)}`, l: dv.lineas }],
+        resp: tf(r.n,r.d), error:'dividir sin resolver antes lo de arriba y lo de abajo: primero cada pedazo se vuelve UNA fracción.',
+        ejemplo:`arriba queda ${opT(num)}, abajo queda ${opT(den)}, y ${opT(num)} × ${opTP(recipF(den))} = ${tf(r.n,r.d)}.` }) };
   }
 },
 /* ── CAPÍTULO 4: Repaso y Autoevaluación — ejercicios EXACTOS del E-Book (pág. 249-251) ── */
@@ -3349,12 +3342,11 @@ const MODULOS = [
     const signoT = f => `${f.n<0 ? '−' : '+'} ${fr(Math.abs(f.n), f.d)}`;           // "+ 2/3" / "− 2/3" en el enunciado
     const signoTt = f => `${f.n<0 ? '−' : '+'} ${tf(Math.abs(f.n), f.d)}`;
     const opuesto = f => ({n:-f.n, d:f.d});
-    const pasos = []; let enun, sol, truco;
-    // paso de multiplicar ambos lados por el recíproco del coeficiente (k·L = c)
+    const pasos = []; let enun, sol, comp, error, ejemplo;
+    // multiplicar ambos lados por el recíproco del coeficiente (k·L = c)
     const pasoRecip = (k, c) => {
-      const rec = recipF(k);
-      pasos.push(diagAmbosLados(`(${tf(k.n,k.d)})${L}`, opT(c), `× ${tf(rec.n,rec.d)}`, L, `${tf(rec.n,rec.d)} × ${opTP(c)}`));
-      const p = pasosMultF(rec, c); pasos.push(...p.lineas);
+      const rec = recipF(k), p = pasosMultF(rec, c);
+      pasos.push({ t:'Multiplica los DOS lados por el recíproco (la fracción volteada)', l:[`El recíproco de ${tf(k.n,k.d)} es ${tf(rec.n,rec.d)}.`, diagAmbosLados(`(${tf(k.n,k.d)})${L}`, opT(c), `× ${tf(rec.n,rec.d)}`, L, `${tf(rec.n,rec.d)} × ${opTP(c)}`), ...p.lineas] });
       return p.res;
     };
     if(tipo==='suma'){
@@ -3362,45 +3354,50 @@ const MODULOS = [
       sol = addF(b, opuesto(a));
       if(sol.n===0) return this.gen(nv);
       enun = `${L} ${signoT(a)} = ${frS(b.n,b.d)}`;
-      pasos.push(diagAmbosLados(`${L} ${signoTt(a)}`, tf(b.n,b.d), `${a.n<0?'+':'−'} ${tf(Math.abs(a.n),a.d)}`, L, `${tf(b.n,b.d)} ${a.n<0?'+':'−'} ${tf(Math.abs(a.n),a.d)}`));
-      const p = pasosSumaF(b, opuesto(a)); pasos.push(...p.lineas);
-      pasos.push(`${L} = ${tf(sol.n,sol.d)}`,
-        `Verificación: ${tfP(sol.n,sol.d)} ${signoTt(a)} = ${tf(addF(sol,a).n, addF(sol,a).d)} = ${tf(b.n,b.d)} ✓ Cierto`);
-      truco = `TRUCO: lo que está SUMANDO a la letra se quita sumando su opuesto en los dos lados (es lo mismo que "pasarlo al otro lado con el signo cambiado"). Ejemplo con este mismo: ${L} ${signoTt(a)} = ${tf(b.n,b.d)} → ${L} = ${tf(b.n,b.d)} ${a.n<0?'+':'−'} ${tf(Math.abs(a.n),a.d)} = ${tf(sol.n,sol.d)}.`;
+      pasos.push({ t:`Mira qué le hacen a la ${L}`, l:[`Le están ${a.n<0 ? cb('restando') : cb('sumando')} ${tf(Math.abs(a.n), a.d)}.`] });
+      const p = pasosSumaF(b, opuesto(a));
+      pasos.push({ t:'Haz lo contrario en los DOS lados', l:[diagAmbosLados(`${L} ${signoTt(a)}`, tf(b.n,b.d), `${a.n<0?'+':'−'} ${tf(Math.abs(a.n),a.d)}`, L, `${tf(b.n,b.d)} ${a.n<0?'+':'−'} ${tf(Math.abs(a.n),a.d)}`)] },
+        { t:'Haz la cuenta del lado derecho', l:p.lineas }, { t:'Escribe la respuesta', l:[`${L} = ${cb(tf(sol.n,sol.d))}`] });
+      comp = `${tfP(sol.n,sol.d)} ${signoTt(a)} = ${tf(addF(sol,a).n, addF(sol,a).d)} = ${tf(b.n,b.d)} ✓`;
+      error = `${a.n<0 ? 'restar' : 'sumar'} en vez de hacer lo contrario: lo que suma se quita RESTANDO, y lo que resta se quita SUMANDO.`;
+      ejemplo = `${L} ${signoTt(a)} = ${tf(b.n,b.d)} → ${L} = ${tf(b.n,b.d)} ${a.n<0?'+':'−'} ${tf(Math.abs(a.n),a.d)} = ${tf(sol.n,sol.d)}.`;
     } else if(tipo==='mult'){
       const k = F(); let x = F(); if(nv!=='facil' && Math.random()<0.3) x = {n:R(1,9)*(Math.random()<neg?-1:1), d:1};
       const c = multF([k,x]); const cF = {n:c.n, d:c.d}; sol = x;
       const vuelta = Math.random()<0.3;
       enun = vuelta ? `${opS(cF)} = ${frS(k.n,k.d)}${L}` : `${frS(k.n,k.d)}${L} = ${opS(cF)}`;
-      if(vuelta) pasos.push(`Intercambia los lados de la ecuación para que la ${L} quede a la izquierda: (${tf(k.n,k.d)})${L} = ${opT(cF)}.`);
+      if(vuelta) pasos.push({ t:`Pon la ${L} a la izquierda`, l:[`Se intercambian los lados: (${tf(k.n,k.d)})${L} = ${opT(cF)}.`] });
+      pasos.push({ t:`Mira qué le hacen a la ${L}`, l:[`La ${L} está ${cb('multiplicada por ' + tf(k.n,k.d))}.`] });
       const r = pasoRecip(k, cF);
-      pasos.push(`${L} = ${tf(r.n,r.d)}`,
-        `Verificación: ${tfP(k.n,k.d)} × ${opTP(sol)} = ${opT(cF)} ✓ Cierto`);
-      truco = `TRUCO: cuando la letra está MULTIPLICADA por una fracción, voltea esa fracción y multiplica los dos lados por ella — así la fracción se "cancela" y la letra queda sola. Ejemplo con este mismo: el coeficiente es ${tf(k.n,k.d)}, se multiplica por ${tf(recipF(k).n,recipF(k).d)} y queda ${L} = ${tf(sol.n,sol.d)}.`;
+      pasos.push({ t:'Escribe la respuesta', l:[`${L} = ${cb(tf(r.n,r.d))}`] });
+      comp = `${tfP(k.n,k.d)} × ${opTP(sol)} = ${opT(cF)} ✓`;
+      error = `dividir entre el número de arriba solamente: hay que multiplicar por la fracción COMPLETA volteada (${tf(recipF(k).n,recipF(k).d)}).`;
+      ejemplo = `el coeficiente es ${tf(k.n,k.d)}, se multiplica por ${tf(recipF(k).n,recipF(k).d)} y queda ${L} = ${tf(sol.n,sol.d)}.`;
     } else {
       const k = F(), x = F(), cc = F();
       const kx = multF([k,x]); const d = addF({n:kx.n,d:kx.d}, cc); sol = x;
       if(d.n===0) return this.gen(nv);
       enun = `${frS(k.n,k.d)}${L} ${signoT(cc)} = ${opS(d)}`;
-      pasos.push(diagAmbosLados(`(${tf(k.n,k.d)})${L} ${signoTt(cc)}`, opT(d), `${cc.n<0?'+':'−'} ${tf(Math.abs(cc.n),cc.d)}`, `(${tf(k.n,k.d)})${L}`, `${opT(d)} ${cc.n<0?'+':'−'} ${tf(Math.abs(cc.n),cc.d)}`));
-      const p = pasosSumaF(d, opuesto(cc)); pasos.push(...p.lineas);
-      pasos.push(`Queda: (${tf(k.n,k.d)})${L} = ${opT(p.res)}`);
+      const p = pasosSumaF(d, opuesto(cc));
+      pasos.push({ t:`Mira qué le hacen a la ${L}`, l:[`La ${L} está ${cb('multiplicada por ' + tf(k.n,k.d))} y después le ${cc.n<0 ? cb('restan') : cb('suman')} ${tf(Math.abs(cc.n),cc.d)}.`] },
+        { t:`Quita primero lo que suma o resta (el ${signoTt(cc)})`, l:[diagAmbosLados(`(${tf(k.n,k.d)})${L} ${signoTt(cc)}`, opT(d), `${cc.n<0?'+':'−'} ${tf(Math.abs(cc.n),cc.d)}`, `(${tf(k.n,k.d)})${L}`, `${opT(d)} ${cc.n<0?'+':'−'} ${tf(Math.abs(cc.n),cc.d)}`), ...p.lineas, `Queda: (${tf(k.n,k.d)})${L} = ${cb(opT(p.res))}`] });
       const r = pasoRecip(k, p.res);
-      pasos.push(`${L} = ${tf(r.n,r.d)}`,
-        `Verificación: ${tfP(k.n,k.d)} × ${tfP(sol.n,sol.d)} = ${tf(kx.n,kx.d)}; ${tf(kx.n,kx.d)} ${signoTt(cc)} = ${opT(d)} ✓ Cierto`);
-      truco = `TRUCO: en ecuaciones del tipo ax + b = c el orden es SIEMPRE el mismo: primero quitas lo que suma o resta (sumando el opuesto) y después lo que multiplica (multiplicando por el recíproco). Ejemplo con este mismo: primero se quita el ${signoTt(cc)}, queda (${tf(k.n,k.d)})${L} = ${opT(p.res)}, y luego se multiplica por ${tf(recipF(k).n,recipF(k).d)} → ${L} = ${tf(sol.n,sol.d)}.`;
+      pasos.push({ t:'Escribe la respuesta', l:[`${L} = ${cb(tf(r.n,r.d))}`] });
+      comp = `${tfP(k.n,k.d)} × ${tfP(sol.n,sol.d)} = ${tf(kx.n,kx.d)}; ${tf(kx.n,kx.d)} ${signoTt(cc)} = ${opT(d)} ✓`;
+      error = 'quitar primero el número que multiplica: se quita primero lo que suma o resta, y de último lo que multiplica.';
+      ejemplo = `se quita el ${signoTt(cc)}, queda (${tf(k.n,k.d)})${L} = ${opT(p.res)}, y × ${tf(recipF(k).n,recipF(k).d)} → ${L} = ${tf(sol.n,sol.d)}.`;
     }
     return { enunciado:`${pick(['Resuelve la ecuación y verifica la respuesta:','Resuelve la ecuación:',`Resuelve para ${L}:`])}<br><b>${enun}</b>`,
       tipo:'frac', respuesta:{n:sol.n, d:sol.d}, pedirSimple:true, signo:true,
       ayuda:`${L} = ___ (si sale un entero, escríbelo con denominador 1; puede quedar como fracción impropia)`,
-      explicacion:[...pasos, `→ ${L} = ${tf(sol.n,sol.d)}`, truco] };
+      explicacion: receta({ pide:`el valor de ${L} (y comprobar que sirve).`, pasos, resp:`${L} = ${tf(sol.n,sol.d)}`, comp, error, ejemplo }) };
   }
 },
 {
   id:'proporciones', nombre:'Proporciones (cierta o falsa, término que falta)', secciones:['5.1'],
   gen(nv){
     const tipo = pick(nv==='facil' ? ['cf','falta','falta'] : nv==='medio' ? ['cf','falta','falta','expr'] : ['cf','falta','expr','expr']);
-    const TR = `TRUCO: en una proporción los productos CRUZADOS siempre son iguales (el de arriba de un lado por el de abajo del otro). Con eso se revisa si es cierta, y se halla el término que falta: productos cruzados → ecuación → se despeja.`;
+    const errCruz = 'multiplicar en paralelo (arriba con arriba): en una proporción se multiplica en X, en cruz.';
     if(tipo==='cf'){
       const a = R(2,12), b = R(2,15), k = R(2, porNivel(nv,4,6,9));
       let c = a*k, d = b*k;
@@ -3408,11 +3405,11 @@ const MODULOS = [
       const p1 = a*d, p2 = b*c, es = p1===p2;
       return { enunciado:`Determina si la proporción es cierta o falsa:<br><b>${fr(a,b)} = ${fr(c,d)}</b>`,
         tipo:'opciones', opciones:['Cierta','Falsa'], respuesta: es ? 'Cierta' : 'Falsa',
-        explicacion:[diagCruzados(a, b, c, d),
-          `${a} × ${d} = ${p1}`, `${b} × ${c} = ${p2}`,
-          es ? `Los productos cruzados son iguales (${p1} = ${p2}) → la proporción es cierta.` : `Los productos cruzados son distintos (${p1} ≠ ${p2}) → la proporción es falsa.`,
-          `→ ${es ? 'Cierta' : 'Falsa'}`,
-          `${TR} Ejemplo con este mismo: ${a} × ${d} = ${p1} y ${b} × ${c} = ${p2} → ${es ? 'iguales, cierta' : 'distintos, falsa'}.`] };
+        explicacion: receta({ pide:'si las dos fracciones valen lo mismo (si es una proporción cierta).',
+          pasos:[{ t:'Multiplica en cruz (en X)', l:[diagCruzados(a, b, c, d)] },
+            { t:'Haz las dos multiplicaciones', l:[porPedazos(a, d), porPedazos(b, c)] },
+            { t:'Compara los dos resultados', l:[es ? `${p1} = ${p2}: son iguales → ${cb('Cierta')}` : `${p1} ≠ ${p2}: son distintos → ${cb('Falsa')}`] }],
+          resp: es ? 'Cierta' : 'Falsa', error:errCruz, ejemplo:`${a} × ${d} = ${p1} y ${b} × ${c} = ${p2} → ${es ? 'iguales, cierta' : 'distintos, falsa'}.` }) };
     }
     if(tipo==='falta'){
       // A/B = C/D con uno de los cuatro desconocido
@@ -3427,14 +3424,16 @@ const MODULOS = [
       const S = V.map((v,i) => i===u ? 'x' : String(v));
       const H = V.map((v,i) => i===u ? '<i>x</i>' : String(v));
       const izq = `${S[0]} × ${S[3]}`, der = `${S[1]} × ${S[2]}`;
-      const pasos = [diagCruzados(S[0], S[1], S[2], S[3]), `Se igualan los productos cruzados: ${izq} = ${der}`,
-        `${coef}x = ${prod} (${sinX[0]} × ${sinX[1]} = ${prod})`,
-        `Se divide ambos lados por ${coef}: x = ${tf(prod,coef)}`];
-      if(x.d !== coef || x.n !== prod) pasos.push(explSimplif(prod, coef));
-      pasos.push(...lineaMixto(x), `→ x = ${tMix(x)}`);
+      const lasti = [diagAmbosLados(`${coef}x`, prod, `÷ ${coef}`, 'x', `${prod} ÷ ${coef}`), `x = ${tf(prod,coef)}`];
+      if(x.d !== coef || x.n !== prod) lasti.push(explSimplif(prod, coef));
+      const pasos = [{ t:'Multiplica en cruz (en X)', l:[diagCruzados(S[0], S[1], S[2], S[3]), `Los productos cruzados son iguales: ${izq} = ${der}`] },
+        { t:'Haz la multiplicación que no tiene x', l:[porPedazos(sinX[0], sinX[1]), `${coef}x = ${cb(prod)}`] },
+        { t:`Divide los DOS lados entre ${coef} (el número que acompaña a la x)`, l:lasti }];
+      const mx = lineaMixto(x); if(mx.length) pasos.push({ t:'Pásalo a número mixto', l:mx });
       return { enunciado:`${pick(['Resuelve la proporción:','Halla el término que falta:'])}<br><b>${fr(H[0],H[1])} = ${fr(H[2],H[3])}</b>`,
         ...respPos(x), ayuda: x.d===1 ? '' : 'Si no sale entero, escríbelo como número mixto (o fracción si es menor que 1).',
-        explicacion:[...pasos, `${TR} Ejemplo con este mismo: ${izq} = ${der} → ${coef}x = ${prod} → x = ${tMix(x)}.`] };
+        explicacion: receta({ pide:'el número que falta para que la proporción sea cierta.', pasos, resp:`x = ${tMix(x)}`,
+          comp:'pon tu x y multiplica en cruz: los dos productos tienen que dar igual.', error:errCruz, ejemplo:`${izq} = ${der} → ${coef}x = ${prod} → x = ${tMix(x)}.` }) };
     }
     // (a·x ± k)/b = c/d → d(a·x ± k) = b·c
     const a = nv==='dificil' && Math.random()<0.5 ? R(2,3) : 1;
@@ -3443,19 +3442,19 @@ const MODULOS = [
     const ax = a===1 ? 'x' : `${a}x`;
     const numH = `${ax} ${k<0?'−':'+'} ${Math.abs(k)}`;
     const sg = dk<0 ? '−' : '+', sgInv = dk<0 ? '+' : '−', izq = `${d*a}x ${sg} ${Math.abs(dk)}`;
-    const pasos = [diagCruzados(numH, b, c, d), `Productos cruzados: ${d}(${numH}) = ${b} × ${c}`,
-      diagDistribuir(d, ax, k<0?'−':'+', Math.abs(k), `${d*a}x`, Math.abs(dk)),
-      `Lado derecho: ${b} × ${c} = ${bc}`,
-      `La ecuación queda: ${izq} = ${bc}   (el ${bc} es lo que vale TODO el lado izquierdo, no la x)`,
-      diagAmbosLados(izq, bc, `${sgInv} ${Math.abs(dk)}`, `${d*a}x`, `${bc} ${sgInv} ${Math.abs(dk)}`),
-      `${d*a}x = ${bc-dk}`,
-      diagAmbosLados(`${d*a}x`, bc-dk, `÷ ${d*a}`, 'x', `${bc-dk} ÷ ${d*a}`),
-      `x = ${tf(bc-dk, d*a)}`];
-    if(x.d !== d*a || x.n !== bc-dk) pasos.push(explSimplif(bc-dk, d*a));
+    const fin = [diagAmbosLados(`${d*a}x`, bc-dk, `÷ ${d*a}`, 'x', `${bc-dk} ÷ ${d*a}`), `x = ${tf(bc-dk, d*a)}`];
+    if(x.d !== d*a || x.n !== bc-dk) fin.push(explSimplif(bc-dk, d*a));
     return { enunciado:`Resuelve la proporción:<br><b>${fr(numH, b)} = ${fr(c, d)}</b>`,
       tipo:'frac', respuesta:{n:x.n, d:x.d}, pedirSimple:true, signo:true,
       ayuda:'x = ___ (si sale un entero, escríbelo con denominador 1)',
-      explicacion:[...pasos, `→ x = ${opT(x)}`, `${TR} Ejemplo con este mismo: ${d}(${numH}) = ${bc} → ${d*a}x = ${bc-dk} → x = ${opT(x)}.`] };
+      explicacion: receta({ pide:'el valor de x en la proporción.',
+        pasos:[{ t:'Multiplica en cruz (en X)', l:[diagCruzados(numH, b, c, d), `${d}(${numH}) = ${b} × ${c}`] },
+          { t:'Reparte el número de afuera del paréntesis', l:[diagDistribuir(d, ax, k<0?'−':'+', Math.abs(k), `${d*a}x`, Math.abs(dk))] },
+          { t:'Haz la multiplicación del lado derecho', l:[`${b} × ${c} = ${cb(bc)}`, `La ecuación queda: ${izq} = ${bc}`, `El ${bc} es lo que vale TODO el lado izquierdo, no la x.`] },
+          { t:`Quita el número que acompaña a la x (${sg} ${Math.abs(dk)})`, l:[diagAmbosLados(izq, bc, `${sgInv} ${Math.abs(dk)}`, `${d*a}x`, `${bc} ${sgInv} ${Math.abs(dk)}`), `${d*a}x = ${cb(bc-dk)}`] },
+          { t:`Divide los DOS lados entre ${d*a}`, l:fin }],
+        resp:`x = ${opT(x)}`, comp:'pon tu x y multiplica en cruz: los dos productos tienen que dar igual.', error:errCruz,
+        ejemplo:`${d}(${numH}) = ${bc} → ${d*a}x = ${bc-dk} → x = ${opT(x)}.` }) };
   }
 },
 {
@@ -3491,11 +3490,15 @@ const MODULOS = [
     const r = pasosSumaVarias(c.ts.map(f => ({n:f.n, d:f.d})));
     if(r.res.n <= 0) return this.gen(nv);
     const ec = c.ts.map((f,i) => (i===0 ? '' : f.n<0 ? ' − ' : ' + ') + tMix({n:Math.abs(f.n), d:f.d})).join('');
+    const mx = lineaMixto(r.res);
     return { enunciado:c.enun, ...respPos(r.res), ayuda:`Respuesta en ${c.u}.`,
-      explicacion:[`Paso 1 — sea x ${c.sea}.`, `Paso 2 — se traduce el problema a una ecuación (${c.lee}): x = ${ec}`,
-        `Paso 3 — se resuelve:`, ...lineasImpropias(c.ts.map(f => ({n:Math.abs(f.n), d:f.d}))), ...r.lineas, ...lineaMixto(r.res),
-        `Paso 4 — ¿hace sentido? Sí: x = ${tMix(r.res)} ${c.u}.`, `→ ${tMix(r.res)} ${c.u}`,
-        `TRUCO: traduce la historia a UNA sola cuenta — lo que se entrega, se usa, se corta o se rebaja se RESTA; lo que se recoge o se junta se SUMA. En resta es más fácil trabajar todo como fracciones impropias con el mismo denominador. Ejemplo con este mismo: x = ${ec} = ${tMix(r.res)}.`] };
+      explicacion: receta({ pide:`${c.sea}.`,
+        pasos:[{ t:'Ponle x a lo que te preguntan', l:[`x = ${c.sea}`] },
+          { t:'Traduce el cuento a una cuenta', l:[`${c.lee}`, `x = ${cb(ec)}`] },
+          ...lineasAPasos([...lineasImpropias(c.ts.map(f => ({n:Math.abs(f.n), d:f.d}))), ...r.lineas]),
+          ...(mx.length ? [{ t:'Pásalo a número mixto', l:mx }] : []),
+          { t:'Revisa que tenga sentido', l:[`x = ${cb(tMix(r.res) + ' ' + c.u)}: es una cantidad razonable para el problema.`] }],
+        resp:`${tMix(r.res)} ${c.u}`, error:'sumar lo que se entrega o se usa: lo que sale se RESTA y lo que entra se SUMA.', ejemplo:`x = ${ec} = ${tMix(r.res)}.` }) };
   }
 },
 {
@@ -3515,35 +3518,40 @@ const MODULOS = [
     else { u = 'millas'; enun = `El doctor de Roberto le recomendó que camine por las mañanas. Durante ${k} días caminó ${yJ(lista.map(v=>v+' millas'))}. Halla el promedio de millas que Roberto caminó por día.`; }
     const S = pasosSumaVarias(xs);
     const D = pasosMultF(S.res, {n:1, d:k});
-    const r = D.res;
+    const r = D.res, mx = lineaMixto(r);
     return { enunciado:enun, ...respPos(r), ayuda: u ? `Respuesta en ${u}.` : '',
-      explicacion:[`El promedio se halla en dos pasos: Paso 1, se suman todos los números; Paso 2, la suma se divide por la cantidad de números (aquí hay ${k}).`,
-        `Paso 1 — la suma: ${listaT.join(' + ')}`, ...lineasImpropias(xs), ...S.lineas,
-        `Paso 2 — se divide la suma por ${k}. Dividir por ${k} es multiplicar por ${tf(1,k)}:`, ...D.lineas, ...lineaMixto(r),
-        `→ ${tMix(r)}${u ? ' '+u : ''}`,
-        `TRUCO: el promedio de fracciones se hace IGUAL que el de enteros — suma todo y divide por cuántos son. El truco está en la división: ÷ ${k} es × ${tf(1,k)}, o sea que el ${k} pasa a multiplicar el denominador. Ejemplo con este mismo: la suma da ${tf(S.res.n,S.res.d)}, y ${tf(S.res.n,S.res.d)} ÷ ${k} = ${tf(S.res.n, S.res.d*k)}${S.res.d*k!==r.d ? ` = ${tf(r.n,r.d)}` : ''}.`] };
+      explicacion: receta({ pide:'el promedio: la suma de todos dividida entre cuántos son.',
+        pasos:[{ t:'Suma todos los números', l:[`${listaT.join(' + ')}`] },
+          ...lineasAPasos([...lineasImpropias(xs), ...S.lineas]),
+          { t:`Cuenta cuántos son y divide la suma entre ${k}`, l:[`Hay ${cb(k)} números. Dividir entre ${k} es multiplicar por ${tf(1,k)}.`, ...D.lineas] },
+          ...(mx.length ? [{ t:'Pásalo a número mixto', l:mx }] : [])],
+        resp:`${tMix(r)}${u ? ' ' + u : ''}`, comp:`${tMix(r)} × ${k} = ${tMix(S.res)}, la suma de antes ✓`,
+        error:`dividir entre otro número: se divide entre CUÁNTOS números hay (${k}).`, ejemplo:`la suma da ${tf(S.res.n,S.res.d)}, y ${tf(S.res.n,S.res.d)} ÷ ${k} = ${tf(r.n,r.d)}.` }) };
   }
 },
 {
   id:'de-multiplicar', nombre:'Traducir "de" a multiplicación', secciones:['5.2'],
   gen(nv){
     const tipo = pick(nv==='facil' ? ['valor','valor','fraccion','entero'] : nv==='medio' ? ['valor','fraccion','entero','descuento','resto'] : ['fraccion','entero','descuento','resto','valor']);
-    const TR = `TRUCO: la palabra "de" significa MULTIPLICAR: (fracción) de (entero) = (parte). Si te dan la fracción y el entero, multiplicas; si te dan la parte y el entero, divides parte ÷ entero; si te dan la fracción y la parte, la ecuación (fracción)·x = parte se resuelve multiplicando por el recíproco.`;
+    const regla = 'La palabra "de" significa MULTIPLICAR: (fracción) de (entero) = (parte).';
     if(tipo==='valor'){
       if(Math.random()<0.35){
         const p = pick([10,15,20,25,30,40,60,65,75,80,90]), g = mcd(p,100), base = 100/g, W = base*R(3, porNivel(nv,20,60,120));
         const f = Fq(p,100), r = p*W/100;
         return { enunciado:`Halla el valor según se indica:<br><b>${p}% de ${miles(W)}</b>`, tipo:'num', respuesta:r,
-          explicacion:[`"%" significa "de cada 100": ${p}% = ${tf(p,100)}.`, explSimplif(p,100), `"de" significa multiplicar: ${tf(f.n,f.d)} × ${miles(W)}`,
-            `Primero se divide por el denominador: ${miles(W)} ÷ ${f.d} = ${miles(W/f.d)}`, `Luego se multiplica por el numerador: ${miles(W/f.d)} × ${f.n} = ${miles(r)}`, `→ ${miles(r)}`,
-            `${TR} Ejemplo con este mismo: ${p}% de ${miles(W)} = ${tf(f.n,f.d)} × ${miles(W)} = ${miles(r)}.`] };
+          explicacion: receta({ pide:`el ${p}% de ${miles(W)}.`,
+            pasos:[{ t:'Pasa el porcentaje a fracción', l:[`"%" significa "de cada 100": ${p}% = ${cb(tf(p,100))}`, explSimplif(p,100) || ''] },
+              { t:'"de" significa multiplicar', l:[`${tf(f.n,f.d)} × ${miles(W)}`] },
+              { t:'Divide entre el denominador y luego multiplica por el numerador', l:[`${miles(W)} ÷ ${f.d} = ${miles(W/f.d)}`, `${miles(W/f.d)} × ${f.n} = ${cb(miles(r))}`] }],
+            resp:miles(r), error:`multiplicar ${p} × ${miles(W)}: el % es una fracción sobre 100.`, ejemplo:`${p}% de ${miles(W)} = ${tf(f.n,f.d)} × ${miles(W)} = ${miles(r)}.` }) };
       }
       const d = pick([3,4,5,6,7,8,9]), n = pick([1,2,3,4,5,6,7,8].filter(v => v<d && mcd(v,d)===1));
       const q = R(3, porNivel(nv,30,150,400)), W = d*q, r = n*q;
       return { enunciado:`Halla el valor según se indica:<br><b>${fracPal(n,d)} de ${miles(W)}</b>`, tipo:'num', respuesta:r,
-        explicacion:[`"${fracPal(n,d)}" es la fracción ${tf(n,d)}, y "de" significa multiplicar: ${tf(n,d)} × ${miles(W)}`,
-          `Primero se divide por el denominador: ${miles(W)} ÷ ${d} = ${miles(q)}`, `Luego se multiplica por el numerador: ${miles(q)} × ${n} = ${miles(r)}`, `→ ${miles(r)}`,
-          `${TR} Ejemplo con este mismo: ${tf(n,d)} de ${miles(W)} → ${miles(W)} ÷ ${d} = ${miles(q)}, × ${n} = ${miles(r)}.`] };
+        explicacion: receta({ pide:`${fracPal(n,d).toLowerCase()} de ${miles(W)}.`,
+          pasos:[{ t:'Escribe la fracción y cambia "de" por ×', l:[`"${fracPal(n,d)}" = ${cb(tf(n,d))}`, `${tf(n,d)} × ${miles(W)}`] },
+            { t:'Divide entre el denominador y luego multiplica por el numerador', l:[`${miles(W)} ÷ ${d} = ${miles(q)}`, `${miles(q)} × ${n} = ${cb(miles(r))}`] }],
+          resp:miles(r), comp:`${miles(r)} ÷ ${n} × ${d} = ${miles(W)} ✓`, error:`dividir entre el numerador: se divide entre el denominador (${d}) y se multiplica por el numerador (${n}).`, ejemplo:`${miles(W)} ÷ ${d} = ${miles(q)}, × ${n} = ${miles(r)}.` }) };
     }
     if(tipo==='fraccion'){
       const f = Fq(R(1,8), R(9,12)); const esc = pick([10,20,25,50,100,150]);
@@ -3558,14 +3566,13 @@ const MODULOS = [
       const cs = pick(nv==='facil' ? casos.slice(0,3) : casos);
       const r = Fq(cs.parte, cs.todo);
       const pasos = [];
-      if(cs.suma) pasos.push(`El total de la clase es ${p} + ${T-p} = ${T} estudiantes.`);
-      else if(cs.c) pasos.push(`Los que NO están infectados son ${miles(T)} − ${miles(p)} = ${miles(T-p)}.`);
-      pasos.push(`Fracción = parte ÷ entero = ${tf(cs.parte, cs.todo)}`, ...pasosFcm([cs.parte, cs.todo]), explSimplif(cs.parte, cs.todo));
-      const trad = `Se traduce: (qué fracción) de (el total) es (la parte) → x · ${miles(cs.todo)} = ${miles(cs.parte)}, o sea x = ${tf(cs.parte,cs.todo)}.`;
-      pasos.splice(cs.suma || cs.c ? 1 : 0, 0, trad);
+      if(cs.suma) pasos.push({ t:'Halla el total de la clase', l:[`${p} + ${T-p} = ${cb(T)} estudiantes`] });
+      else if(cs.c) pasos.push({ t:'Halla la parte que te piden (los que NO)', l:[`${miles(T)} − ${miles(p)} = ${cb(miles(T-p))}`] });
+      pasos.push({ t:'Escribe parte sobre el total', l:[`(qué fracción) de (el total) es (la parte): x · ${miles(cs.todo)} = ${miles(cs.parte)}, o sea x = ${cb(tf(cs.parte, cs.todo))}`] }, pasoSimplif(cs.parte, cs.todo));
       return { enunciado:cs.t, tipo:'frac', respuesta:{n:r.n, d:r.d}, pedirSimple:true,
-        explicacion:[...pasos, `→ ${tf(r.n,r.d)}`,
-          `${TR} Ejemplo con este mismo: ${tf(cs.parte,cs.todo)} simplificada es ${tf(r.n,r.d)}.`] };
+        explicacion: receta({ pide:'la fracción (parte sobre el total), simplificada.', pasos, resp:tf(r.n,r.d),
+          comp:`${tf(r.n,r.d)} de ${miles(cs.todo)} = ${miles(cs.parte)} ✓`, error:`poner el total arriba: la parte va arriba y el total abajo${cs.c ? '; y recuerda que aquí piden los que NO' : ''}.`,
+          ejemplo:`${tf(cs.parte,cs.todo)} simplificada es ${tf(r.n,r.d)}.` }) };
     }
     if(tipo==='entero'){
       const casos = [
@@ -3581,26 +3588,24 @@ const MODULOS = [
       const c = pick(casos)();
       const din = c.u==='$';
       return { enunciado:c.t, tipo:'num', respuesta:c.x, ayuda: din ? 'Respuesta en dólares (solo el número).' : `Respuesta en ${c.u}.`,
-        explicacion:[`Paso 1 — sea x ${din ? 'la cantidad total (el entero)' : 'el total'}.`,
-          ...(c.pct ? [`${c.pct}`] : []),
-          `Paso 2 — (fracción) de (entero) = (parte): ${tf(c.n,c.d)} · x = ${miles(c.P)}`,
-          `Paso 3 — se multiplican ambos lados por el recíproco de ${tf(c.n,c.d)}, que es ${tf(c.d,c.n)}: x = ${miles(c.P)} × ${tf(c.d,c.n)}`,
-          `${miles(c.P)} ÷ ${c.n} = ${miles(c.P/c.n)}, y ${miles(c.P/c.n)} × ${c.d} = ${miles(c.x)}`,
-          `Paso 4 — verificación: ${tf(c.n,c.d)} × ${miles(c.x)} = ${miles(c.P)} ✓ Cierto`,
-          `→ ${din ? '$' : ''}${miles(c.x)}${din ? '' : ' '+c.u}`,
-          `${TR} Ejemplo con este mismo: ${tf(c.n,c.d)} · x = ${miles(c.P)} → x = ${miles(c.P)} × ${tf(c.d,c.n)} = ${miles(c.x)}.`] };
+        explicacion: receta({ pide:'el total (el entero).',
+          pasos:[{ t:'Ponle x al total', l:[`x = ${din ? 'la cantidad total (el entero)' : 'el total'}`, ...(c.pct ? [c.pct] : [])] },
+            { t:'Escribe la ecuación: (fracción) de (entero) = (parte)', l:[cb(`${tf(c.n,c.d)} · x = ${miles(c.P)}`)] },
+            { t:'Multiplica los DOS lados por el recíproco (la fracción volteada)', l:[`El recíproco de ${tf(c.n,c.d)} es ${tf(c.d,c.n)}: x = ${miles(c.P)} × ${tf(c.d,c.n)}`, `${miles(c.P)} ÷ ${c.n} = ${miles(c.P/c.n)}, y ${miles(c.P/c.n)} × ${c.d} = ${cb(miles(c.x))}`] }],
+          resp:`${din ? '$' : ''}${miles(c.x)}${din ? '' : ' ' + c.u}`, comp:`${tf(c.n,c.d)} × ${miles(c.x)} = ${miles(c.P)} ✓`,
+          error:`multiplicar ${miles(c.P)} por ${tf(c.n,c.d)}: eso daría la parte de la parte. Hay que multiplicar por la volteada (${tf(c.d,c.n)}).`, ejemplo:`${tf(c.n,c.d)} · x = ${miles(c.P)} → x = ${miles(c.P)} × ${tf(c.d,c.n)} = ${miles(c.x)}.` }) };
     }
     if(tipo==='descuento'){
       const d = pick([3,4,5]), n = pick([1,2].filter(v=>v<d)), q = R(5,40), x = d*q, P = (d-n)*q;
       const art = pick([['ropa deportiva','Un par de pantalones está marcado'],['trajes para caballeros','Un traje tiene un precio especial'],['zapatos','Un par de zapatos está marcado']]);
       return { enunciado:`Una tienda anuncia un "descuento" de ${fr(n,d)} del precio original en ${art[0]}. ${art[1]} en $${P}. ¿Cuál es el precio original?`, tipo:'num', respuesta:x, ayuda:'Respuesta en dólares (solo el número).',
-        explicacion:[`Paso 1 — sea x el precio original. El descuento es ${tf(n,d)} de x.`,
-          `Paso 2 — precio de venta = precio original − descuento: ${P} = x − ${tf(n,d)}x`,
-          `x − ${tf(n,d)}x = (1 − ${tf(n,d)})x = (${tf(d,d)} − ${tf(n,d)})x = ${tf(d-n,d)}x`,
-          `Paso 3 — ${tf(d-n,d)}x = ${P} → se multiplican ambos lados por ${tf(d,d-n)}: x = ${P} × ${tf(d,d-n)}`,
-          `${P} ÷ ${d-n} = ${q}, y ${q} × ${d} = ${x}`,
-          `Paso 4 — verificación: ${x} − ${tf(n,d)} × ${x} = ${x} − ${n*q} = ${P} ✓ Cierto`, `→ $${x}`,
-          `${TR} Ejemplo con este mismo: si el descuento es ${tf(n,d)}, lo que se paga es ${tf(d-n,d)} del precio original, así que ${tf(d-n,d)}x = ${P} → x = ${x}.`] };
+        explicacion: receta({ pide:'el precio original (antes del descuento).',
+          pasos:[{ t:'Ponle x al precio original', l:[`x = el precio original`, `El descuento es ${tf(n,d)} de x.`] },
+            { t:'Precio de venta = precio original − descuento', l:[cb(`${P} = x − ${tf(n,d)}x`)] },
+            { t:'Junta las x', l:[`x − ${tf(n,d)}x = (1 − ${tf(n,d)})x = (${tf(d,d)} − ${tf(n,d)})x = ${cb(tf(d-n,d) + 'x')}`, `Queda: ${tf(d-n,d)}x = ${P}`] },
+            { t:'Multiplica los DOS lados por el recíproco', l:[`El recíproco de ${tf(d-n,d)} es ${tf(d,d-n)}: x = ${P} × ${tf(d,d-n)}`, `${P} ÷ ${d-n} = ${q}, y ${q} × ${d} = ${cb(x)}`] }],
+          resp:`$${x}`, comp:`${x} − ${tf(n,d)} × ${x} = ${x} − ${n*q} = ${P} ✓`, error:`restar el descuento al precio de venta: el precio de venta ($${P}) YA tiene el descuento; hay que encontrar el original.`,
+          ejemplo:`si el descuento es ${tf(n,d)}, se paga ${tf(d-n,d)} del original: ${tf(d-n,d)}x = ${P} → x = ${x}.` }) };
     }
     // resto: testamento
     const opciones = [[2,7],[1,5],[1,4],[1,6],[1,8],[1,3],[2,9],[1,10]];
@@ -3610,16 +3615,16 @@ const MODULOS = [
     const R2 = pasosSumaF({n:1,d:1}, {n:-S.res.n, d:S.res.d});
     return { enunciado:`Juan hizo su testamento indicando que desea que ${fr(fs[0].n,fs[0].d)} de su propiedad sean para su hijo mayor, ${fr(fs[1].n,fs[1].d)} para su hijo menor, ${fr(fs[2].n,fs[2].d)} para su hija y el resto para su esposa. ¿Qué fracción de la propiedad le dejó Juan a su esposa?<br><small>(Ayuda: comienza con la propiedad entera = 1)</small>`,
       tipo:'frac', respuesta:{n:rest.n, d:rest.d}, pedirSimple:true,
-      explicacion:[`Paso 1 — lo que se reparte a los hijos: ${fs.map(f=>tf(f.n,f.d)).join(' + ')}`, ...S.lineas,
-        `Paso 2 — el resto es la propiedad entera (1) menos eso: 1 − ${tf(S.res.n,S.res.d)}`, ...R2.lineas, `→ ${tf(rest.n,rest.d)}`,
-        `${TR} Ejemplo con este mismo: "el resto" siempre es 1 − (lo repartido) = 1 − ${tf(S.res.n,S.res.d)} = ${tf(rest.n,rest.d)}.`] };
+      explicacion: receta({ pide:'la fracción de la propiedad que le queda a la esposa.',
+        pasos:[{ t:'Suma lo que se reparte a los hijos', l:[fs.map(f=>tf(f.n,f.d)).join(' + '), ...S.lineas] },
+          { t:'El resto es la propiedad entera (1) menos eso', l:[`1 − ${tf(S.res.n,S.res.d)}`, ...R2.lineas] }],
+        resp:tf(rest.n,rest.d), comp:`${tf(S.res.n,S.res.d)} + ${tf(rest.n,rest.d)} = 1 ✓`, error:'olvidar que la propiedad entera es 1: "el resto" es 1 menos lo repartido.', ejemplo:`1 − ${tf(S.res.n,S.res.d)} = ${tf(rest.n,rest.d)}.` }) };
   }
 },
 {
   id:'razon-unitaria-prop', nombre:'Razones unitarias y problemas de proporciones', secciones:['5.2'],
   gen(nv){
     const tipo = pick(nv==='facil' ? ['unit','unit','prop'] : nv==='medio' ? ['unit','unitFr','prop','prop'] : ['unitFr','prop','prop','prop']);
-    const TR = `TRUCO: razón unitaria = cuánto le toca a UNO → se divide. Problema de proporción → tabla con Caso I y Caso II, cada fila con la misma unidad, y productos cruzados.`;
     if(tipo==='unit'){
       const casos = [
         () => { const k = R(4,9), q = R(150,450); return { t:`Si los boletos de avión para una familia de ${k} cuestan $${miles(k*q)}, ¿cuál es el costo por persona?`, a:k*q, b:k, r:q, ua:'$', ub:'personas', res:`$${q} por persona` }; },
@@ -3628,9 +3633,10 @@ const MODULOS = [
       ];
       const c = pick(casos)();
       return { enunciado:c.t, tipo:'num', respuesta:c.r,
-        explicacion:[`Paso 1 — se escribe la razón con la información dada: ${miles(c.a)} ${c.ua} / ${c.b} ${c.ub}`,
-          `Paso 2 — se cambia a razón unitaria (denominador 1) dividiendo: ${miles(c.a)} ÷ ${c.b} = ${c.r}`, `→ ${c.res}`,
-          `${TR} Ejemplo con este mismo: ${miles(c.a)} ÷ ${c.b} = ${c.r}.`] };
+        explicacion: receta({ pide:`cuánto le toca a UNO (${c.res.replace(/^\$?\d+ /, '')}).`,
+          pasos:[{ t:'Escribe la razón con lo que te dan', l:[`${cb(miles(c.a) + ' ' + c.ua)} entre ${cb(c.b + ' ' + c.ub)}`] },
+            { t:'Divide para que abajo quede 1', l:[`${miles(c.a)} ÷ ${c.b} = ${cb(c.r)} (porque ${c.b} × ${c.r} = ${miles(c.a)})`] }],
+          resp:c.res, comp:`${c.r} × ${c.b} = ${miles(c.a)} ✓`, error:`dividir al revés (${c.b} ÷ ${miles(c.a)}): se divide el total entre cuántos son.`, ejemplo:`${miles(c.a)} ÷ ${c.b} = ${c.r}.` }) };
     }
     if(tipo==='unitFr'){
       const casos = [
@@ -3641,10 +3647,14 @@ const MODULOS = [
       const c = pick(casos)();
       const D = pasosMultF({n:c.tot.n, d:c.tot.d}, {n:1, d:c.k});
       if(D.res.d===1) return this.gen(nv);
+      const mx = lineaMixto(D.res);
       return { enunciado:c.t, ...respPos(D.res), ayuda:`Respuesta en ${c.u}.`,
-        explicacion:[`Se busca cuánto le toca a UNO, así que se divide: ${tMix(c.tot)} ÷ ${c.k}`, ...lineasImpropias([c.tot]),
-          `Dividir por ${c.k} es multiplicar por ${tf(1,c.k)}:`, ...D.lineas, ...lineaMixto(D.res), `→ ${tMix(D.res)} ${c.u}`,
-          `${TR} Ejemplo con este mismo: ${tMix(c.tot)} ÷ ${c.k} = ${tMix(D.res)}.`] };
+        explicacion: receta({ pide:`cuánto le toca a UNO: se divide entre ${c.k}.`,
+          pasos:[{ t:'Escribe la división', l:[`${tMix(c.tot)} ÷ ${c.k}`] },
+            ...(esMixto(c.tot) ? [{ t:'Pasa el mixto a fracción impropia', l:[explImpropia(c.tot)] }] : []),
+            { t:`Dividir entre ${c.k} es multiplicar por ${tf(1,c.k)}`, l:D.lineas },
+            ...(mx.length ? [{ t:'Pásalo a número mixto', l:mx }] : [])],
+          resp:`${tMix(D.res)} ${c.u}`, comp:`${tMix(D.res)} × ${c.k} = ${tMix(c.tot)} ✓`, error:`multiplicar por ${c.k}: para saber cuánto toca a UNO se DIVIDE.`, ejemplo:`${tMix(c.tot)} ÷ ${c.k} = ${tMix(D.res)}.` }) };
     }
     // proporción con tabla Caso I / Caso II:  A1/A2 = B1/x  →  x = A2·B1 / A1
     const casos = [
@@ -3659,21 +3669,23 @@ const MODULOS = [
     const pm = f => esMixto(f) ? `(${tMix(f)})` : tMix(f);
     // con enteros se escribe la cuenta directa ("30 × 151 = 4530"), sin el "/1" de las fracciones
     const enteros = [c.A1, c.A2, c.B1].every(f => f.d===1);
-    const num = enteros ? { res:{n:c.A2.n*c.B1.n, d:1}, lineas:[`${c.A2.n} × ${c.B1.n} = ${c.A2.n*c.B1.n}`] } : pasosMultF(c.A2, c.B1);
+    const num = enteros ? { res:{n:c.A2.n*c.B1.n, d:1}, lineas:[porPedazos(c.A2.n, c.B1.n)] } : pasosMultF(c.A2, c.B1);
     const div = enteros
       ? { res:Fq(num.res.n, c.A1.n), lineas:[`x = ${num.res.n} ÷ ${c.A1.n} = ${tf(num.res.n, c.A1.n)}`, ...(mcd(num.res.n, c.A1.n)>1 ? [explSimplif(num.res.n, c.A1.n)] : [])] }
       : pasosDivF(num.res, c.A1);
-    const x = div.res;
+    const x = div.res, mx = lineaMixto(x), imp = [c.A1, c.A2, c.B1].filter(esMixto);
     return { enunciado:c.t, ...respPos(x), ayuda:`Respuesta en ${c.u}${x.d===1 ? '' : ' (como número mixto si no sale entero)'}.`,
-      explicacion:[`Paso 1 — sea x lo que se busca (${c.u}).`,
-        `Paso 2 — tabla: ${c.f1}: Caso I = ${tMix(c.A1)}, Caso II = ${tMix(c.B1)}. ${c.f2}: Caso I = ${tMix(c.A2)}, Caso II = x.`,
-        `Paso 3 — la proporción sale directo de la tabla (arriba ${c.f1.toLowerCase()}, abajo ${c.f2.toLowerCase()} en los dos lados): ${pm(c.A1)}/${pm(c.A2)} = ${pm(c.B1)}/x`,
-        `Paso 4 — productos cruzados: ${pm(c.A1)} · x = ${pm(c.A2)} · ${pm(c.B1)}`,
-        ...lineasImpropias([c.A1, c.A2, c.B1].filter(esMixto)),
-        `Lado derecho:`, ...num.lineas,
-        `Se despeja x dividiendo por ${tMix(c.A1)}:`, ...div.lineas, ...lineaMixto(x),
-        `→ ${tMix(x)} ${c.u}`,
-        `${TR} Ejemplo con este mismo: ${tMix(c.A1)} · x = ${tMix(c.A2)} · ${tMix(c.B1)} → x = ${tMix(x)}.`] };
+      explicacion: receta({ pide:`${c.u} (lo que se busca), con una proporción.`,
+        pasos:[{ t:'Ponle x a lo que te preguntan', l:[`x = ${c.u}`] },
+          { t:'Arma la tabla (Caso I y Caso II, cada fila con la misma unidad)', l:[`${c.f1}: Caso I = ${tMix(c.A1)}, Caso II = ${tMix(c.B1)}`, `${c.f2}: Caso I = ${tMix(c.A2)}, Caso II = x`] },
+          { t:'Arma la proporción con la tabla', l:[`Arriba ${c.f1.toLowerCase()}, abajo ${c.f2.toLowerCase()}, en los dos lados: ${cb(`${pm(c.A1)}/${pm(c.A2)} = ${pm(c.B1)}/x`)}`] },
+          { t:'Multiplica en cruz', l:[`${pm(c.A1)} · x = ${pm(c.A2)} · ${pm(c.B1)}`] },
+          ...(imp.length ? [{ t:'Pasa los mixtos a fracción impropia', l: imp.map(f => explImpropia(f)) }] : []),
+          { t:'Haz la multiplicación del lado derecho', l:num.lineas },
+          { t:`Despeja x: divide los DOS lados entre ${tMix(c.A1)}`, l:div.lineas },
+          ...(mx.length ? [{ t:'Pásalo a número mixto', l:mx }] : [])],
+        resp:`${tMix(x)} ${c.u}`, comp:'pon tu x en la proporción y multiplica en cruz: los dos productos tienen que dar igual.',
+        error:'poner las unidades en distinto orden en cada lado: cada fila de la tabla lleva la misma unidad (arriba una, abajo la otra).', ejemplo:`${tMix(c.A1)} · x = ${tMix(c.A2)} · ${tMix(c.B1)} → x = ${tMix(x)}.` }) };
   }
 },
 {
@@ -3694,7 +3706,7 @@ const MODULOS = [
       formula = 'A = l × a'; sust = `A = ${t(l)} × ${t(a)}`; unid = u+'²'; pasos.push(formula, sust); r = mult([l,a]); }
     else if(tipo==='perim-rect'){ const l = M(3,12), a = M(1,6); enun = `Halla el perímetro de un rectángulo que mide ${h(l)} ${u} de largo y ${h(a)} ${u} de ancho.`;
       formula = 'P = 2l + 2a'; sust = `P = 2(${t(l)}) + 2(${t(a)})`; pasos.push(formula, sust);
-      const p1 = pasosMultF({n:2,d:1}, l), p2 = pasosMultF({n:2,d:1}, a); pasos.push(...lineasImpropias([l,a]), ...p1.lineas, ...p2.lineas);
+      const p1 = pasosMultF({n:2,d:1}, l), p2 = pasosMultF({n:2,d:1}, a); pasos.push(...lineasImpropias([l,a]), '▸ Haz 2 × el largo', ...p1.lineas, '▸ Haz 2 × el ancho', ...p2.lineas);
       const s = pasosSumaVarias([p1.res, p2.res]); pasos.push(...s.lineas); r = s.res; }
     else if(tipo==='perim-cuad' || tipo==='area-cuad'){ const s0 = M(2,9);
       if(tipo==='perim-cuad'){ enun = `Halla el perímetro de un cuadrado si un lado mide ${h(s0)} ${u}.`; formula = 'P = 4 × lado'; sust = `P = 4 × ${t(s0)}`; pasos.push(formula, sust); r = mult([{n:4,d:1}, s0]); }
@@ -3705,11 +3717,11 @@ const MODULOS = [
       formula = 'A = b × h'; sust = `A = ${t(b)} × ${t(hh)}`; unid = u+'²'; pasos.push(formula, sust); r = mult([b,hh]); }
     else if(tipo==='altura-paral'){ const b = M(3,10), hh = M(1,6); const A = multF([b,hh]); const Af = {n:A.n,d:A.d};
       enun = `El paralelogramo tiene base de ${h(b)} ${u} y área de ${h(Af)} ${u}². Halla su altura.`;
-      formula = 'A = b × h'; sust = `${t(Af)} = ${t(b)} × h`; pasos.push(formula, sust, `Para despejar h se divide el área por la base: h = ${t(Af)} ÷ ${t(b)}`, ...lineasImpropias([Af,b]));
+      formula = 'A = b × h'; sust = `${t(Af)} = ${t(b)} × h`; pasos.push(formula, sust, `▸ Despeja h: divide el área entre la base`, `h = ${t(Af)} ÷ ${t(b)}`, ...lineasImpropias([Af,b]));
       const d = pasosDivF(Af, b); pasos.push(...d.lineas); r = d.res; }
     else if(tipo==='area-trap'){ const b1 = M(4,10), b2 = M(2,7), hh = M(2,6); enun = `Halla el área de un trapecio cuyas bases paralelas miden ${h(b1)} ${u} y ${h(b2)} ${u}, y su altura es ${h(hh)} ${u}.`;
-      formula = 'A = ½ (b₁ + b₂) × h'; sust = `A = ${tf(1,2)} (${t(b1)} + ${t(b2)}) × ${t(hh)}`; unid = u+'²'; pasos.push(formula, sust, 'Primero lo del paréntesis:', ...lineasImpropias([b1,b2]));
-      const s = pasosSumaVarias([b1,b2]); pasos.push(...s.lineas, `Ahora: ${tf(1,2)} × ${tf(s.res.n,s.res.d)} × ${t(hh)}`); r = mult([{n:1,d:2}, s.res, hh]); }
+      formula = 'A = ½ (b₁ + b₂) × h'; sust = `A = ${tf(1,2)} (${t(b1)} + ${t(b2)}) × ${t(hh)}`; unid = u+'²'; pasos.push(formula, sust, '▸ Primero lo del paréntesis (suma las bases)', ...lineasImpropias([b1,b2]));
+      const s = pasosSumaVarias([b1,b2]); pasos.push(...s.lineas, '▸ Ahora multiplica', `${tf(1,2)} × ${tf(s.res.n,s.res.d)} × ${t(hh)}`); r = mult([{n:1,d:2}, s.res, hh]); }
     else if(tipo==='vol-caja'){ const l = M(2,8), a = M(1,5), hh = M(1,5); enun = `Halla el volumen de un sólido rectangular cuyo largo es ${h(l)} ${u}, ancho ${h(a)} ${u} y altura ${h(hh)} ${u}.`;
       formula = 'V = l × a × h'; sust = `V = ${t(l)} × ${t(a)} × ${t(hh)}`; unid = u+'³'; pasos.push(formula, sust); r = mult([l,a,hh]); }
     else if(tipo==='vol-cubo'){ const s0 = M(1,5); enun = `Halla el volumen de un cubo cuya arista mide ${h(s0)} ${u}.`;
@@ -3717,25 +3729,27 @@ const MODULOS = [
     else if(tipo==='sup-caja'){ const l = M(2,6), a = M(1,4), hh = M(1,4); enun = `Halla el área de superficie de una caja rectangular de ${h(l)} ${u} por ${h(a)} ${u} por ${h(hh)} ${u}.`;
       formula = 'S = 2(l × a) + 2(a × h) + 2(h × l)'; sust = `S = 2(${t(l)} × ${t(a)}) + 2(${t(a)} × ${t(hh)}) + 2(${t(hh)} × ${t(l)})`; unid = u+'²';
       pasos.push(formula, sust, ...lineasImpropias([l,a,hh]));
-      const ca = pasosMultVarias([{n:2,d:1}, l, a]), cb = pasosMultVarias([{n:2,d:1}, a, hh]), cc = pasosMultVarias([{n:2,d:1}, hh, l]);
-      pasos.push('Cara de arriba y de abajo:', ...ca.lineas, 'Frente y atrás:', ...cb.lineas, 'Los dos lados:', ...cc.lineas, 'Se suman las tres:');
-      const s = pasosSumaVarias([ca.res, cb.res, cc.res]); pasos.push(...s.lineas); r = s.res; }
+      const ca = pasosMultVarias([{n:2,d:1}, l, a]), cb2 = pasosMultVarias([{n:2,d:1}, a, hh]), cc = pasosMultVarias([{n:2,d:1}, hh, l]);
+      pasos.push('▸ Cara de arriba y de abajo', ...ca.lineas, '▸ Frente y atrás', ...cb2.lineas, '▸ Los dos lados', ...cc.lineas);
+      const s = pasosSumaVarias([ca.res, cb2.res, cc.res]); pasos.push(...s.lineas); r = s.res; }
     else if(tipo==='sup-cubo'){ const s0 = M(1,6); enun = `Halla el área de superficie de un cubo cuya arista mide ${h(s0)} ${u}.`;
       formula = 'S = 6 × s²'; sust = `S = 6 × ${t(s0)} × ${t(s0)}`; unid = u+'²'; pasos.push(formula, sust); r = mult([{n:6,d:1}, s0, s0]); }
     else if(tipo==='largo-rect'){ const a = M(1,5), l = M(3,10); const A = multF([l,a]); const Af = {n:A.n,d:A.d};
       enun = `Halla el largo de un rectángulo que tiene ancho de ${h(a)} ${u} y área de ${h(Af)} ${u}².`;
-      formula = 'A = l × a'; sust = `${t(Af)} = l × ${t(a)}`; pasos.push(formula, sust, `Para despejar l se divide el área por el ancho: l = ${t(Af)} ÷ ${t(a)}`, ...lineasImpropias([Af,a]));
+      formula = 'A = l × a'; sust = `${t(Af)} = l × ${t(a)}`; pasos.push(formula, sust, `▸ Despeja l: divide el área entre el ancho`, `l = ${t(Af)} ÷ ${t(a)}`, ...lineasImpropias([Af,a]));
       const d = pasosDivF(Af, a); pasos.push(...d.lineas); r = d.res; }
     else { const a = M(10,40), l = M(20,60); const P = addF(multF([{n:2,d:1},l]), multF([{n:2,d:1},a]));
       enun = `El perímetro de un rectángulo es ${h(P)} ${u} y su ancho es ${h(a)} ${u}. ¿Cuál es su largo?`;
       formula = 'P = 2l + 2a'; sust = `${t(P)} = 2l + 2(${t(a)})`; pasos.push(formula, sust, ...lineasImpropias([P,a]));
-      const dos = pasosMultF({n:2,d:1}, a); pasos.push(...dos.lineas, `Se resta ${t(dos.res)} en ambos lados: 2l = ${t(P)} − ${t(dos.res)}`);
-      const res = pasosSumaF(P, {n:-dos.res.n, d:dos.res.d}); pasos.push(...res.lineas, `Se divide por 2: l = ${tf(res.res.n,res.res.d)} ÷ 2`);
+      const dos = pasosMultF({n:2,d:1}, a); pasos.push('▸ Haz 2 × el ancho', ...dos.lineas, `▸ Quita ese ${t(dos.res)} en los DOS lados`, `2l = ${t(P)} − ${t(dos.res)}`);
+      const res = pasosSumaF(P, {n:-dos.res.n, d:dos.res.d}); pasos.push(...res.lineas, `▸ Divide entre 2`, `l = ${tf(res.res.n,res.res.d)} ÷ 2`);
       const d = pasosDivF(res.res, {n:2,d:1}); pasos.push(...d.lineas); r = d.res; }
-    pasos.push(...lineaMixto(r));
+    const mx = lineaMixto(r);
     return { enunciado:enun, ...respPos(r), ayuda:`Respuesta en ${unid}${r.d===1 ? '' : ' (como número mixto si es mayor que 1)'}.`,
-      explicacion:[`Fórmula y sustitución:`, ...pasos, `→ ${tMix(r)} ${unid}`,
-        `TRUCO: escribe primero la fórmula, sustituye, y pasa TODOS los números mixtos a fracciones impropias antes de multiplicar (nunca multipliques entero con entero y fracción con fracción por separado). Al final vuelve a número mixto. Ejemplo con este mismo: ${sust} → ${tMix(r)} ${unid}.`] };
+      explicacion: receta({ pide:`${/volumen/.test(enun) ? 'el volumen' : /superficie/.test(enun) ? 'el área de superficie' : /área/.test(enun) ? 'el área' : /perímetro/.test(enun) ? 'el perímetro' : 'la medida que falta'} (${unid}).`,
+        pasos:[{ t:'Escribe la fórmula', l:[formula] }, { t:'Pon los números en la fórmula', l:[sust] }, ...lineasAPasos(pasos.slice(2)), ...(mx.length ? [{ t:'Pásalo a número mixto', l:mx }] : [])],
+        resp:`${tMix(r)} ${unid}`, error:'multiplicar entero con entero y fracción con fracción por separado: primero se pasan TODOS los mixtos a fracción impropia.',
+        ejemplo:`${sust} = ${tMix(r)} ${unid}.` }) };
   }
 },
 {
@@ -3744,7 +3758,7 @@ const MODULOS = [
     const uid = Math.random().toString(36).slice(2,8);
     const u = pick(['cm','pulg','pies','m']);
     const tipo = pick(nv==='facil' ? ['dos','dos','foto'] : ['dos','una','foto']);
-    const TR = `TRUCO: en figuras semejantes los lados correspondientes son proporcionales — escribe (lado de la grande)/(lado de la pequeña) = (otro lado de la grande)/(su pareja en la pequeña) y resuelve con productos cruzados. Primero identifica bien qué lado corresponde con cuál (mismo lugar en las dos figuras).`;
+    const errS = 'emparejar mal los lados: cada lado de la figura grande se empareja con el lado que está en el MISMO lugar en la pequeña.';
     if(tipo==='dos'){
       let a, b, c, k;
       do { a = R(3,8); b = R(3,10); c = R(3,10); } while(a+b<=c+2 || a+c<=b+2 || b+c<=a+2);   // margen de 2: nada de triángulos casi aplastados
@@ -3752,32 +3766,43 @@ const MODULOS = [
       const A = a*k, x = b*k, y = c*k;
       return { enunciado:`Los dos triángulos son semejantes (el grande es una ampliación del pequeño). Halla los lados que faltan, x y y.${svgSemejantes([`${a} ${u}`, `${b} ${u}`, `${c} ${u}`], [`${A} ${u}`, 'x', 'y'], [a,b,c], uid)}`,
         tipo:'angulo2', etiquetas:['x','y'], respuesta:{a:x, b:y},
-        explicacion:[`Los lados correspondientes están en el mismo lugar: la base ${a} ↔ ${A}, el lado derecho ${b} ↔ x, el lado izquierdo ${c} ↔ y.`,
-          `Proporción para x: ${A}/${a} = x/${b} → productos cruzados: ${a}x = ${A} × ${b} = ${A*b} → x = ${A*b} ÷ ${a} = ${x}`,
-          `Proporción para y: ${A}/${a} = y/${c} → productos cruzados: ${a}y = ${A} × ${c} = ${A*c} → y = ${A*c} ÷ ${a} = ${y}`,
-          `→ x = ${x} ${u}, y = ${y} ${u}`,
-          `${TR} Ejemplo con este mismo: ${A} ÷ ${a} = ${k}, así que la figura grande es ${k} veces la pequeña: x = ${b} × ${k} = ${x} y y = ${c} × ${k} = ${y}.`] };
+        explicacion: receta({ pide:'los lados x y y de la figura grande.',
+          pasos:[{ t:'Empareja los lados correspondientes (el mismo lugar en las dos figuras)', l:[`base ${a} ↔ ${A}`, `lado derecho ${b} ↔ x`, `lado izquierdo ${c} ↔ y`] },
+            { t:'Proporción para x y productos cruzados', l:[`${A}/${a} = x/${b}`, `${a}x = ${A} × ${b} = ${cb(A*b)}`, `x = ${A*b} ÷ ${a} = ${cb(x)}`] },
+            { t:'Proporción para y y productos cruzados', l:[`${A}/${a} = y/${c}`, `${a}y = ${A} × ${c} = ${cb(A*c)}`, `y = ${A*c} ÷ ${a} = ${cb(y)}`] }],
+          resp:`x = ${x} ${u}, y = ${y} ${u}`, comp:`${A} ÷ ${a} = ${k}: la grande es ${k} veces la pequeña; ${b} × ${k} = ${x} y ${c} × ${k} = ${y} ✓`, error:errS, ejemplo:`${A} ÷ ${a} = ${k}, x = ${b} × ${k} = ${x} y y = ${c} × ${k} = ${y}.` }) };
     }
     if(tipo==='una'){
       const dm = [2,3,4];
       const a = mixR(1,4,dm), b = mixR(1,5,dm), A = {n:R(5,15), d:1};
-      const num = pasosMultF(A, b), div = pasosDivF(num.res, a), x = div.res;
+      const num = pasosMultF(A, b), div = pasosDivF(num.res, a), x = div.res, mx = lineaMixto(x);
       return { enunciado:`Las siguientes figuras son semejantes. En la pequeña, dos lados correspondientes miden ${hMix(a)} ${u} y ${hMix(b)} ${u}. En la ampliación, el lado que corresponde a ${hMix(a)} ${u} mide ${A.n} ${u}. Halla la medida x del lado que corresponde a ${hMix(b)} ${u}.`,
         ...respPos(x), ayuda:`Respuesta en ${u}${x.d===1 ? '' : ' (como número mixto si es mayor que 1)'}.`,
-        explicacion:[`Paso 1 — sea x el lado que falta.`, `Paso 2 — proporción de lados correspondientes: (${tMix(a)})/(${tMix(b)}) = ${A.n}/x`,
-          `Paso 3 — productos cruzados: (${tMix(a)}) · x = (${tMix(b)}) · ${A.n}`, ...lineasImpropias([a,b]), ...num.lineas,
-          `Se despeja x dividiendo por ${tMix(a)}:`, ...div.lineas, ...lineaMixto(x), `→ x = ${tMix(x)} ${u}`,
-          `${TR} Ejemplo con este mismo: ${tMix(a)} · x = ${tMix(b)} · ${A.n} → x = ${tMix(x)}.`] };
+        explicacion: receta({ pide:`la medida x del lado que corresponde a ${tMix(b)} ${u}.`,
+          pasos:[{ t:'Ponle x al lado que falta', l:[`x = el lado que corresponde a ${tMix(b)} ${u}`] },
+            { t:'Arma la proporción de lados correspondientes', l:[cb(`(${tMix(a)})/(${tMix(b)}) = ${A.n}/x`)] },
+            { t:'Multiplica en cruz', l:[`(${tMix(a)}) · x = (${tMix(b)}) · ${A.n}`] },
+            ...(esMixto(a) || esMixto(b) ? [{ t:'Pasa los mixtos a fracción impropia', l:[a,b].filter(esMixto).map(f => explImpropia(f)) }] : []),
+            { t:'Haz la multiplicación del lado derecho', l:num.lineas },
+            { t:`Despeja x: divide los DOS lados entre ${tMix(a)}`, l:div.lineas },
+            ...(mx.length ? [{ t:'Pásalo a número mixto', l:mx }] : [])],
+          resp:`x = ${tMix(x)} ${u}`, comp:'pon tu x en la proporción y multiplica en cruz: los dos productos tienen que dar igual.', error:errS,
+          ejemplo:`${tMix(a)} · x = ${tMix(b)} · ${A.n} → x = ${tMix(x)}.` }) };
     }
     const W = mixR(3,8,[2,4]), H2 = {n:R(10,24), d:1};
     let H; do { H = mixR(2,6,[2,4]); } while(H.n*W.d === W.n*H.d);          // foto cuadrada = pregunta trivial
-    const num = pasosMultF(W, H2), div = pasosDivF(num.res, H), x = div.res;
+    const num = pasosMultF(W, H2), div = pasosDivF(num.res, H), x = div.res, mx = lineaMixto(x);
     return { enunciado:`Una fotografía que mide ${hMix(W)} pulgadas de ancho y ${hMix(H)} pulgadas de alto se quiere ampliar de modo que el alto sea de ${H2.n} pulgadas. ¿Cuál será el ancho de la ampliación?`,
       ...respPos(x), ayuda:`Respuesta en pulgadas${x.d===1 ? '' : ' (como número mixto)'}.`,
-      explicacion:[`La foto y la ampliación son figuras semejantes: ancho/alto es la misma razón en las dos.`,
-        `Proporción: (${tMix(W)})/(${tMix(H)}) = x/${H2.n}`, `Productos cruzados: (${tMix(H)}) · x = (${tMix(W)}) · ${H2.n}`, ...lineasImpropias([W,H]), ...num.lineas,
-        `Se despeja x dividiendo por ${tMix(H)}:`, ...div.lineas, ...lineaMixto(x), `→ ${tMix(x)} pulgadas`,
-        `${TR} Ejemplo con este mismo: ${tMix(H)} · x = ${tMix(W)} · ${H2.n} → x = ${tMix(x)}.`] };
+      explicacion: receta({ pide:'el ancho de la ampliación.',
+        pasos:[{ t:'La foto y la ampliación son semejantes: ancho/alto es la misma razón', l:[cb(`(${tMix(W)})/(${tMix(H)}) = x/${H2.n}`)] },
+          { t:'Multiplica en cruz', l:[`(${tMix(H)}) · x = (${tMix(W)}) · ${H2.n}`] },
+          { t:'Pasa los mixtos a fracción impropia', l:[W,H].filter(esMixto).map(f => explImpropia(f)) },
+          { t:'Haz la multiplicación del lado derecho', l:num.lineas },
+          { t:`Despeja x: divide los DOS lados entre ${tMix(H)}`, l:div.lineas },
+          ...(mx.length ? [{ t:'Pásalo a número mixto', l:mx }] : [])],
+        resp:`${tMix(x)} pulgadas`, comp:'pon tu x en la proporción y multiplica en cruz: los dos productos tienen que dar igual.', error:'poner el ancho de la foto con el alto de la ampliación al revés: ancho con ancho, alto con alto.',
+        ejemplo:`${tMix(H)} · x = ${tMix(W)} · ${H2.n} → x = ${tMix(x)}.` }) };
   }
 },
 {
@@ -6576,7 +6601,7 @@ const _ERR_SVG = { volt:'voltear la primera fracción (o las dos): se voltea SOL
   mult:'olvidar simplificar al final, o los signos (dos negativos dan positivo).' };
 const _tipoSvg = l => { const t = l.replace(/<svg[\s\S]*?<\/svg>/g, ''); for(const [re, k] of _TIPO_SVG) if(re.test(t)) return k; return ''; };
 // títulos para las frases que más se repiten (el cuerpo es la línea entera)
-const _REGLAS_TIT = [[/^El \d+: (está|no está) en todos/, 'Escoge los primos que están en TODOS (con las MENOS veces)'], [/^\d+ = \d+[²³⁴⁵⁶⁷⁸⁹]?( × \d+[²³⁴⁵⁶⁷⁸⁹]?)*$/, 'Factoriza cada número'],
+const _REGLAS_TIT = [[/^[Ss]e (dividen|multiplican) ambos lados|^[Ss]e (suma|resta) .*(AMBOS|ambos) lados/, 'Haz lo contrario en los DOS lados'], [/^El \d+: (está|no está) en todos/, 'Escoge los primos que están en TODOS (con las MENOS veces)'], [/^\d+ = \d+[²³⁴⁵⁶⁷⁸⁹]?( × \d+[²³⁴⁵⁶⁷⁸⁹]?)*$/, 'Factoriza cada número'],
   [/ya tienen el mismo de abajo|el de abajo es el mismo|MISMO denominador/, 'Suma los de arriba (el de abajo se queda igual)'],
   [/Los números están en el mismo orden|Los factores siguen en el mismo orden|^La propiedad (conmutativa|asociativa)/, 'Mira qué cambió entre los dos lados del ='],
   [/ya tiene el denominador común/, 'Esa fracción ya tiene el denominador común (se queda igual)'], [/dividir entre \d+ es multiplicar por/, 'Dividir es multiplicar por el opuesto'], [/es .* volteada \(su recíproco\)/, 'Comprueba con el recíproco'], [/^Para restar una fracción de/, 'Parte el entero en pedazos iguales'],
@@ -6606,7 +6631,9 @@ function _titulo2(l){
   if(plana.length <= 70 && /[=÷×+−\-]/.test(plana) && /\d/.test(plana) && !/ (se|es|el|la|los|las|que|de|del|para|porque) /.test(plana)) return { t:'Haz la cuenta', b:l };
   if(plana.length <= 70) return { t:mayus(limpia(l)), b:'' };
   const f = /^(.+?[.!?])\s+(.+)$/.exec(l); if(f && f[1].length <= 90) return { t:limpia(f[1]), b:f[2] };
-  return { t:'', b:l };
+  // sin título claro: las primeras palabras de la línea hacen de título (la línea completa se queda abajo)
+  const ini = plana.slice(0, 62).replace(/\s+\S*$/, '').replace(/[,;:(\s]+$/, '');
+  return { t: ini.length >= 12 ? mayus(ini) + '…' : '', b:l };
 }
 // "Qué te piden": la instrucción del enunciado (o su pregunta), sin el rótulo del libro ni las fracciones
 function _pideDe(enun){
@@ -6629,7 +6656,7 @@ function aReceta(lista, enun){
     if(i === fin) return;
     if(!comp && /^(Comprobación|Verificación)/.test(l)){ comp = l.replace(/^(Comprobación|Verificación)\s*:?\s*/, ''); return; }
     if(typeof l === 'string' && l.startsWith('▸ ')){ L.push(`§paso|Paso ${++n} — ${l.slice(2)}`); prevK = ''; marcado = true; return; }
-    if(marcado && !/^([a-z]\.|[IVX]+\.) /.test(l)){ if(l.startsWith('<svg')){ const k = _tipoSvg(l); if(k) kinds.push(k); } L.push(l); return; }
+    if(marcado && !/^([a-z]\.|[IVX]+\.) /.test(l) && !/:\s*$/.test(l) && !/^(Se despeja|Ahora|Luego|Primero|Por último|Productos|Proporción|Tabla|Fórmula|Verificación|Comprobación|Paso \d|Dividir:|Lado)/.test(l)){ if(l.startsWith('<svg')){ const k = _tipoSvg(l); if(k) kinds.push(k); } L.push(l); return; }
     marcado = false;
     const dib = l.startsWith('<svg');
     if(dib){ const k = _tipoSvg(l); if(k) kinds.push(k);
@@ -6669,7 +6696,7 @@ function explReceta(lista){
     return `<div class="truco"><b>${r ? 'RECETA PARA EL EXAMEN' : 'TRUCO PARA QUE SEA MÁS FÁCIL'}</b>${r ? t.replace(/ (\d+\)) /g, '<br>$1 ').replace(/ (Ejemplo con este mismo:)/, '<br>$1') : t}</div>`; }).join('');
   return `<div class="receta" id="${id}">` +
     (pide ? `<div class="rPide"><b>Qué te piden:</b> ${pide}</div>` : '') +
-    grupos.map((p, i) => `<div class="rPaso${i ? ' oculto' : ''}"><div class="rTit">${p.t}</div>${p.l.map(x => `<div class="rLin">${x}</div>`).join('')}</div>`).join('') +
+    grupos.map((p, i) => `<div class="rPaso${i ? ' oculto' : ''}"><div class="rTit">${p.t}</div>${p.l.map(x => typeof x === 'string' && x.startsWith('▸ ') ? `<div class="rSub">${x.slice(2)}</div>` : `<div class="rLin">${x}</div>`).join('')}</div>`).join('') +
     `<div class="rPaso rFinal oculto">${fin.join('')}${memo}</div>` +
     `<div class="rBtns"><button type="button" class="btn amar chico" onclick="rSig('${id}')">Siguiente paso ▶</button><button type="button" class="btn sec chico" onclick="rTodo('${id}')">Ver todo</button></div></div>`;
 }
