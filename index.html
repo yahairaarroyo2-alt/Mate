@@ -723,6 +723,10 @@ function diagFrac(tokens, flechas){
 const _tx = s => ({ t:'x', s });
 // dibujo + una línea corta debajo que dice POR QUÉ (para quien parte de cero)
 const _nota = (svg, t) => svg + `<div class="dgNota">${t}</div>`;
+// recíproco: la fracción se voltea (flecha)
+const diagRec = (n, d, rn, rd) => _nota(diagFrac([_fT(n, d), _op('→'), _fT(rn, rd)], [{ de:[0,'n'], a:[2,'n'], txt:'se voltea' }]), `Lo de arriba (${Math.abs(n)}) pasa abajo y lo de abajo (${d}) pasa arriba. El signo se queda.`);
+// impropia → mixto: se divide el de arriba entre el de abajo
+const diagAMixto = (imp, d, e, n) => _nota(diagFrac([_fT(imp, d), _op('='), { t:'m', e:String(e), n:n, d:d }], [{ de:[0,'n'], a:[2,'e'], txt:`${imp} ÷ ${d}` }]), `${imp} ÷ ${d} da ${e} (el entero) y sobran ${n}: ese ${n} va arriba de la fracción. El de abajo se queda igual.`);
 // línea de 0° a 90° (c) o a 180° (s): el ángulo desde el 0 y una flecha a lo que le falta
 function diagAngulo(a, modo){
   const id = 'dg' + (++_dgId), tope = modo === 'c' ? 90 : 180, X = v => 20 + v/tope*280, xa = X(a), y = 70;
@@ -775,7 +779,7 @@ function pasosSumaF(a, b){
   const r = sumarF([a, b]), lineas = [];
   if(a.d === b.d) lineas.push(`${opTP(a)} + ${opTP(b)} = ${opT({n:r.tot, d:r.m})}`);
   else {
-    lineas.push(`MCM de ${a.d} y ${b.d} = ${r.m}   (el número más chico que está en la tabla del ${a.d} y en la del ${b.d})`);
+    lineas.push(`Los de abajo (${a.d} y ${b.d}) son distintos, y para sumar deben ser iguales. Se busca el MCM: el número más chico que está en la tabla del ${a.d} y en la del ${b.d} → ${r.m}`);
     if(r.m !== a.d) lineas.push(diagConvertir(a, r.nums[0], r.m));
     if(r.m !== b.d) lineas.push(diagConvertir(b, r.nums[1], r.m));
     lineas.push(`${tf(r.nums[0], r.m)} + ${tfP(r.nums[1], r.m)} = ${opT({n:r.tot, d:r.m})}`);
@@ -830,7 +834,7 @@ function lineasImpropias(fs){
 function pasosSumaVarias(ts){
   const lineas = [], m = ts.reduce((a,f) => mcm(a,f.d), 1);
   if(ts.some(f => f.d !== m)){
-    lineas.push(`MCM de ${[...new Set(ts.map(f=>f.d))].join(', ')} = ${m}   (el número más chico que está en la tabla de todos)`);
+    { const ds = [...new Set(ts.map(f=>f.d))]; lineas.push(`Los de abajo (${ds.join(', ')}) son distintos, y para sumar deben ser iguales. Se busca el MCM de ${ds.join(', ')}: el número más chico que está en la tabla del ${ds.join(', del ').replace(/, del ([0-9]+)$/, ' y del $1')} → ${m}`); }
     ts.forEach(f => { if(f.d !== m) lineas.push(diagConvertir(f, f.n*(m/f.d), m)); });
   }
   const nums = ts.map(f => f.n*(m/f.d)), tot = nums.reduce((a,b)=>a+b, 0);
@@ -961,6 +965,38 @@ function txtMono(f){
 }
 const voltearMono = f => mono(f.n<0 ? -f.d : f.d, Math.abs(f.n), f.b, f.a);
 const lineaVoltear = f => `Dividir entre una fracción es multiplicar por esa fracción VOLTEADA (lo de arriba pasa abajo y lo de abajo pasa arriba). Se voltea SOLO la segunda: ${txtMono(f)} → ${txtMono(voltearMono(f))}.`;
+// dividir: la segunda fracción se voltea (con flecha)
+function diagVolteoMono(f){
+  const v = voltearMono(f), s = m => { const an = Math.abs(m.n), la = _letras(m.a), lb = _letras(m.b);
+    return { t:'f', n:(m.n<0 ? '−' : '') + (an===1 && la ? la : an + la), d:m.d===1 && lb ? lb : m.d + lb }; };
+  return _nota(diagFrac([s(f), _op('→'), s(v)], [{ de:[0,'n'], a:[2,'n'], txt:'se voltea' }]),
+    `Dividir entre una fracción es multiplicar por ella dada vuelta: lo de arriba pasa abajo y lo de abajo pasa arriba. Aquí ${txtMono(f)} queda ${txtMono(v)}.`);
+}
+// letras de arriba y de abajo escritas una por una: las iguales se tachan de a pares (flecha) y los números se simplifican (÷)
+function diagTachar(up, dn, letras, P, Q, g, n2, d2, neg){
+  const id = 'dg' + (++_dgId), cw = 24, yT = 44, yL = 66, yB = 104, OR = '#e8a23a';
+  const nw = Math.max(String(P).length, String(Q).length)*11 + 16; let x = 8, s = '';
+  const txt = (cx, y, t, col, bold) => `<text x="${cx}" y="${y}" text-anchor="middle"${col ? ` fill="${col}"` : ''}${bold ? ' font-weight="700"' : ''}>${t}</text>`;
+  const slash = (cx, y) => `<line x1="${cx - 7}" x2="${cx + 7}" y1="${y + 3}" y2="${y - 17}" stroke="${OR}" stroke-width="2"/>`;
+  const cn = x + nw/2; s += txt(cn, yT, P) + txt(cn, yB, Q);
+  if(g > 1) s += slash(cn, yT) + slash(cn, yB) + txt(cn, yT - 22, n2, OR, 1) + txt(cn, yB + 24, d2, OR, 1) + txt(cn + 17, yT - 22, `÷ ${g}`, OR, 1).replace('text-anchor="middle"', 'text-anchor="start" font-size="12"');
+  x += nw + 10;
+  letras.forEach(l => { const u = up[l]||0, d = dn[l]||0, m = Math.min(u, d), k = Math.max(u, d);
+    for(let i = 0; i < k; i++){ const cx = x + i*cw + cw/2;
+      if(i < u) s += txt(cx, yT, l); if(i < d) s += txt(cx, yB, l);
+      if(i < m) s += slash(cx, yT) + slash(cx, yB) + `<path d="M${cx} ${yT + 8} L${cx} ${yB - 22}" stroke="${OR}" stroke-width="1.8" fill="none" marker-end="url(#${id})"/>`; }
+    x += k*cw + 8; });
+  const xr = x; s = `<line x1="4" x2="${xr}" y1="${yL}" y2="${yL}" stroke="currentColor" stroke-width="1.6"/>` + s;
+  const fl = m => Object.keys(m).sort().map(l => l + supE(m[l])).join('');
+  const ru = {}, rd = {}; letras.forEach(l => { const u = up[l]||0, d = dn[l]||0; if(u>d) ru[l] = u-d; if(d>u) rd[l] = d-u; });
+  const lu = fl(ru), ld = fl(rd), num = (neg ? '−' : '') + (lu ? (n2===1 ? '' : n2) + lu : n2), den = ld ? (d2===1 ? '' : d2) + ld : d2;
+  const rw = Math.max(String(num).length, String(den).length)*11 + 16, cr = xr + 28 + rw/2;
+  s += txt(xr + 14, yL + 6, '=');
+  s += den === 1 ? txt(cr, yL + 6, num) : txt(cr, yT, num) + `<line x1="${cr - rw/2}" x2="${cr + rw/2}" y1="${yL}" y2="${yL}" stroke="currentColor" stroke-width="1.6"/>` + txt(cr, yB, den);
+  const W = Math.round(cr + rw/2 + 8);
+  return _nota(`<svg viewBox="0 0 ${W} 134" style="width:100%;max-width:${Math.min(Math.round(W*1.25), 400)}px;height:auto;display:block;margin:4px 0" xmlns="http://www.w3.org/2000/svg"><defs><marker id="${id}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="${OR}"/></marker></defs><g font-size="19" fill="currentColor" font-family="inherit">${s}</g></svg>`,
+    'Cada letra de arriba se junta con la MISMA letra de abajo (flecha) y las dos se tachan: es dividir entre ella misma, que da 1. Las que no tienen pareja se quedan donde estaban.');
+}
 // multiplicación de fracciones con letras, desglosada: signo, números, letras una por una, qué se tacha
 function pasosLetras(fs){
   const up = {}, dn = {}, upN = [], dnN = []; let P = 1, Q = 1, negs = 0;
@@ -975,6 +1011,7 @@ function pasosLetras(fs){
   lin.push(`Números: arriba ${upN.join(' × ') || 1} = ${P}; abajo ${dnN.join(' × ') || 1} = ${Q}. ` +
     (g>1 ? `Se simplifica ${P}/${Q}: arriba y abajo se dividen entre ${g} → ${n2}${d2===1 ? '' : '/'+d2}.` : `${P}/${Q} ya no se puede simplificar.`));
   lin.push(`Letras: un exponente solo dice cuántas veces se multiplica la letra (x² = x · x). Escritas una por una, arriba hay: ${todas(up)}. Abajo hay: ${todas(dn)}.`);
+  lin.push(diagTachar(up, dn, letras, P, Q, g, n2, d2, negs%2 === 1));
   const ru = {}, rd = {};
   letras.forEach(l => { const u = up[l]||0, d = dn[l]||0, m = Math.min(u,d);
     if(u>d) ru[l] = u-d; if(d>u) rd[l] = d-u;
@@ -1323,8 +1360,8 @@ function explComparar(a,b){
   const na = a.n*ka, nb = b.n*kb, s = cmpSigno(na,nb);
   return [`No se pueden comparar directamente dos fracciones con denominadores distintos — primero hay que convertirlas para que tengan el MISMO denominador.`,
     `El denominador común más chico es el MCM de ${a.d} y ${b.d}: MCM(${a.d}, ${b.d}) = ${m}. (En tu examen a este número le dicen "MCD" — mínimo común denominador.)`,
-    `${a.n}/${a.d} → se multiplica arriba y abajo por ${ka} (porque ${a.d}×${ka}=${m}) → ${na}/${m}`,
-    `${b.n}/${b.d} → se multiplica arriba y abajo por ${kb} (porque ${b.d}×${kb}=${m}) → ${nb}/${m}`,
+    ka > 1 ? diagConvertir(a, na, m) : `${a.n}/${a.d} ya tiene el denominador ${m}, se queda igual.`,
+    kb > 1 ? diagConvertir(b, nb, m) : `${b.n}/${b.d} ya tiene el denominador ${m}, se queda igual.`,
     `Con el mismo denominador, ya se pueden comparar solo los numeradores: ${na} ${s} ${nb}`,
     `→ ${a.n}/${a.d} ${s} ${b.n}/${b.d}`,
     `TRUCO: cuando son SOLO DOS fracciones, ni busques el MCM — multiplica en cruz: numerador de una por denominador de la otra, en los dos sentidos, y gana el lado más grande. Ejemplo con estas mismas: ${a.n} × ${b.d} = ${a.n*b.d} contra ${b.n} × ${a.d} = ${b.n*a.d}; como ${a.n*b.d} ${s} ${b.n*a.d}, queda ${a.n}/${a.d} ${s} ${b.n}/${b.d} — lo mismo que por el camino largo, en dos multiplicaciones.`];
@@ -1810,6 +1847,7 @@ const MODULOS = [
         tipo:'opciones', opciones: shuffle([correcta,mal1,mal2,mal3]), respuesta: correcta,
         explicacion:[`La propiedad distributiva dice que cuando un número multiplica a una resta (o suma) entre paréntesis, se reparte a CADA término de adentro por separado — no solo al primero.`,
           `${c} multiplica a todo (${d}${letraY} − ${e}${letraZ}): se reparte como ${c} × ${d}${letraY} y ${c} × ${e}${letraZ}.`,
+          diagDistribuir(c, `${d}${letraY}`, '−', `${e}${letraZ}`, `${c*d}${letraY}`, `${c*e}${letraZ}`),
           `${c} × ${d}${letraY} = ${c*d}${letraY}, y ${c} × ${e}${letraZ} = ${c*e}${letraZ}`,
           `→ ${correcta}`,
           `TRUCO: dibuja una flechita del número de afuera hacia CADA término de adentro del paréntesis, uno por uno — así no se te olvida repartirlo al segundo (el error más común es multiplicar solo el primer término y dejar el segundo tal cual). El signo de adentro (aquí el −) se queda igual, no se voltea. Ejemplo con este mismo: ${expr} → ${c}×${d}${letraY} y ${c}×${e}${letraZ} → ${correcta}.`] };
@@ -2414,14 +2452,14 @@ const MODULOS = [
       enunciado:`Halla el numerador que falta:<br>${fr(n,d)} = ${fr('?', d*k)}`, tipo:'num', respuesta: n*k,
       explicacion:[`Dos fracciones son "equivalentes" cuando representan la misma cantidad aunque se vean diferentes — se construyen multiplicando (o dividiendo) arriba Y abajo por el mismo número, que es lo mismo que multiplicar por 1 (como ${k}/${k}: cualquier número sobre sí mismo vale 1, así que no cambia la cantidad, solo cómo se ve).`,
         `Comparamos los denominadores para hallar por cuánto se multiplicó: ${d*k} ÷ ${d} = ${k}. Ese ${k} es el "factor de conversión".`,
-        `Lo que se le hace al denominador hay que hacérselo también al numerador: ${n} × ${k} = ${n*k}`,
+        `Lo que se le hace al denominador hay que hacérselo también al numerador: ${n} × ${k} = ${n*k}`, diagConvertir({n, d}, n*k, d*k),
         `→ ${n}/${d} = ${n*k}/${d*k}`,
         `TRUCO: busca siempre el lado que está COMPLETO (aquí, los denominadores) y pregúntate por cuánto se multiplicó; ese mismo número va al otro lado, sin pensar más. Ejemplo con este mismo: ${d} × ${k} = ${d*k}, entonces arriba ${n} × ${k} = ${n*k}. Y para comprobar, multiplica en cruz: ${n} × ${d*k} y ${n*k} × ${d} dan ${n*(d*k)} las dos.`] };
     return {
       enunciado:`Halla el denominador que falta:<br>${fr(n,d)} = ${fr(n*k, '?')}`, tipo:'num', respuesta: d*k,
       explicacion:[`Dos fracciones son "equivalentes" cuando representan la misma cantidad aunque se vean diferentes — se construyen multiplicando (o dividiendo) arriba Y abajo por el mismo número, que es lo mismo que multiplicar por 1 (como ${k}/${k}: cualquier número sobre sí mismo vale 1, así que no cambia la cantidad, solo cómo se ve).`,
         `Esta vez comparamos los numeradores para hallar el factor de conversión: ${n*k} ÷ ${n} = ${k}.`,
-        `Lo que se le hace al numerador hay que hacérselo también al denominador: ${d} × ${k} = ${d*k}`,
+        `Lo que se le hace al numerador hay que hacérselo también al denominador: ${d} × ${k} = ${d*k}`, diagConvertir({n, d}, n*k, d*k),
         `→ ${n}/${d} = ${n*k}/${d*k}`,
         `TRUCO: da igual si lo que falta está arriba o abajo, el método es el mismo: mira el lado COMPLETO (aquí los numeradores), averigua por cuánto se multiplicó y hazle eso mismo al otro lado. Ejemplo con este mismo: ${n} × ${k} = ${n*k}, entonces abajo ${d} × ${k} = ${d*k}. Comprobación en cruz: ${n} × ${d*k} y ${n*k} × ${d} dan ${n*(d*k)} las dos.`] };
   }
@@ -2443,7 +2481,7 @@ const MODULOS = [
         `Ese número es el FCM (factor común mayor): el número más grande que divide exacto tanto al numerador como al denominador. (En tu examen, "MCD" es otra cosa — mínimo común denominador — así que para esto se dice FCM.)`,
         `${n} = ${fmtFactores(factorizar(n))} y ${d} = ${fmtFactores(factorizar(d))}`,
         `FCM(${n}, ${d}) = ${mcd(n,d)}`,
-        `Se divide cada parte entre ese FCM: ${n} ÷ ${mcd(n,d)} = ${bn}, y ${d} ÷ ${mcd(n,d)} = ${bd}`,
+        `Se divide cada parte entre ese FCM: ${n} ÷ ${mcd(n,d)} = ${bn}, y ${d} ÷ ${mcd(n,d)} = ${bd}`, explSimplif(n, d),
         `→ ${n}/${d} = ${bn}/${bd}, y ya no se puede simplificar más`,
         `TRUCO: si no ves el FCM de un golpe, no lo busques: ve bajando de a poquito. Mientras arriba y abajo sean pares, divide entre 2 y repite; después entre 3 si los dos suman múltiplo de 3; después entre 5 si los dos terminan en 0 o 5. Llegas al mismo resultado sin calcular ningún FCM, y terminaste cuando ya no queda ningún número que divida a los dos. Ejemplo con este mismo: ${(()=>{ let x=n, y=d; const pasos=[`${x}/${y}`]; for(let p=2; p<=y; p++){ while(x%p===0 && y%p===0){ x/=p; y/=p; pasos.push(`entre ${p} → ${x}/${y}`); } } return pasos.join(', '); })()}.`] };
   }
@@ -2498,7 +2536,7 @@ const MODULOS = [
       tipo:'orden', opciones: fs, respuesta: orden.map(o=>o.i),
       explicacion:[`Para ordenar fracciones con denominadores distintos, primero se convierten todas al mismo denominador — así se pueden comparar directamente los numeradores.`,
         `Denominador común: MCM(${fs.map(f=>f.d).join(', ')}) = ${m}. (En tu examen le dicen "MCD" — mínimo común denominador.)`,
-        ...conv.map(c=>`${c.f.n}/${c.f.d} → ${c.v}/${m}`),
+        ...conv.map(c => c.f.d === m ? `${c.f.n}/${c.f.d} ya tiene el denominador ${m}, se queda igual.` : diagConvertir(c.f, c.v, m)),
         `Ya con el mismo denominador, ordenamos los numeradores de ${asc?'menor a mayor':'mayor a menor'}: ${orden.map(o=>o.v).join(' , ')}`,
         `→ ${orden.map(o=>`${o.f.n}/${o.f.d}`).join(' , ')}`,
         `TRUCO: antes de sacar cuentas, compara cada fracción contra 1/2 — mira si el numerador llega a la mitad del denominador o no. Las que no llegan son las chiquitas y las que la pasan son las grandes; muchas veces eso ya deja el orden casi armado y solo hay que decidir entre dos. Ejemplo con estas mismas: ${fs.map(f=>`${f.n}/${f.d} ${f.n*2<f.d?'no llega a la mitad':f.n*2>f.d?'pasa la mitad':'es justo la mitad'}`).join(', ')}. Para las que queden parejas, ahí sí busca el denominador común o multiplica en cruz.`] };
@@ -2528,7 +2566,7 @@ const MODULOS = [
       explicacion:[`Un "número mixto" combina un entero con una fracción, como ${e} ${n}/${d}. Una fracción "impropia" es la que tiene el numerador más grande que el denominador — es la misma cantidad, escrita de otra forma.`,
         `Se multiplica el entero por el denominador: ${e} × ${d} = ${e*d} (así se cuenta cuántas partes de tamaño 1/${d} hay en los ${e} enteros completos).`,
         `Se le suma el numerador de la fracción: ${e*d} + ${n} = ${imp}`,
-        `El denominador se queda exactamente igual.`, `→ ${e} ${n}/${d} = ${imp}/${d}`,
+        `El denominador se queda exactamente igual.`, explImpropia({n:imp, d}), `→ ${e} ${n}/${d} = ${imp}/${d}`,
         `TRUCO: hazlo en círculo, de abajo hacia arriba: el de abajo multiplica al entero, y a eso le sumas el de arriba. El denominador no se toca nunca. Ejemplo con este mismo: ${d} × ${e} = ${e*d}, y ${e*d} + ${n} = ${imp} → ${imp}/${d}. Comprobación rápida: ${imp} tiene que ser MAYOR que ${d}; si te hubiera quedado más chico, multiplicaste o sumaste al revés.`] };
     return {
       enunciado:`Cambia la fracción impropia ${fr(imp,d)} a un número mixto.`,
@@ -2536,7 +2574,7 @@ const MODULOS = [
       explicacion:[`Una fracción "impropia" (numerador mayor que el denominador) se puede reescribir como número mixto: un entero más una fracción más pequeña.`,
         `Se divide el numerador entre el denominador: ${imp} ÷ ${d}`,
         `${d} × ${e} = ${e*d}, y sobran ${imp} − ${e*d} = ${n} (ese sobrante es el residuo de la división).`,
-        `El cociente (${e}) se convierte en la parte entera, y el residuo (${n}) es el nuevo numerador — el denominador no cambia.`,
+        `El cociente (${e}) se convierte en la parte entera, y el residuo (${n}) es el nuevo numerador — el denominador no cambia.`, diagAMixto(imp, d, e, n),
         `→ ${imp}/${d} = ${e} ${n}/${d}`,
         `TRUCO: es una división de toda la vida, la de la casita: el cociente sale afuera como entero y el residuo se queda arriba. Ejemplo con este mismo: ${imp} ÷ ${d} da ${e} y sobran ${n} → ${e} ${n}/${d}. Comprobación instantánea: ${n} tiene que ser menor que ${d}; si te queda igual o mayor, es que todavía cabía otro entero.`] };
   }
@@ -2552,7 +2590,7 @@ const MODULOS = [
         tipo:'frac', respuesta:{n:sn3,d:sd3}, pedirSimple:true, ayuda:'El orden importa: niñas primero, arriba.',
         explicacion:[`Primero hay que hallar cuántos son niños: si hay ${total} estudiantes en total y ${ninas} son niñas, los niños son ${total} − ${ninas} = ${ninos}.`,
           `La razón de niñas a niños es ${ninas}/${ninos} (niñas primero, arriba, porque así lo pide el enunciado).`,
-          `Se simplifica dividiendo entre el FCM: ${ninas} ÷ ${g3} = ${sn3}, y ${ninos} ÷ ${g3} = ${sd3}`,
+          `Se simplifica dividiendo entre el FCM: ${ninas} ÷ ${g3} = ${sn3}, y ${ninos} ÷ ${g3} = ${sd3}`, explSimplif(ninas, ninos),
           `→ ${sn3} : ${sd3}`,
           `TRUCO: cuando te dan el TOTAL y una de las partes, la otra parte siempre es total menos esa parte — no lo olvides antes de escribir la razón. Ejemplo con este mismo: ${total} − ${ninas} = ${ninos} niños, y la razón simplificada es ${sn3} : ${sd3}.`] };
     }
@@ -2577,7 +2615,7 @@ const MODULOS = [
       return { enunciado:`Un salón tiene <b>${a2} ${items[0]}</b> y <b>${b2} ${items[1]}</b>. ¿Cuál de las siguientes es la razón de ${items[0]} a ${items[1]}, en su forma más simple?`,
         tipo:'opciones', opciones: shuffle([correcta, ...malas]), respuesta: correcta,
         explicacion:[`La razón de ${items[0]} a ${items[1]} se escribe con ${items[0]} PRIMERO (arriba): ${a2}/${b2}.`,
-          `Se simplifica dividiendo entre el FCM: ${a2} ÷ ${mcd(a2,b2)} = ${sn2}, y ${b2} ÷ ${mcd(a2,b2)} = ${sd2}`,
+          `Se simplifica dividiendo entre el FCM: ${a2} ÷ ${mcd(a2,b2)} = ${sn2}, y ${b2} ÷ ${mcd(a2,b2)} = ${sd2}`, explSimplif(a2, b2),
           `→ ${correcta}`,
           `TRUCO: descarta primero las opciones con el orden invertido (${items[1]} antes que ${items[0]}) y las que no están simplificadas — casi siempre eso ya te deja una sola opción. Ejemplo con esta misma: ${a2} : ${b2} simplificado es ${sn2} : ${sd2}, con ${items[0]} arriba → ${correcta}.`] };
     }
@@ -2597,7 +2635,7 @@ const MODULOS = [
         `"La razón de ${a} a ${b}" se escribe ${a}/${b}.`,
         `Igual que cualquier fracción, se simplifica dividiendo arriba y abajo entre el FCM de los dos números:`,
         ...explFcm([a,b]).slice(0,-1),
-        `${a} ÷ ${mcd(a,b)} = ${sn}, y ${b} ÷ ${mcd(a,b)} = ${sd}`,
+        `${a} ÷ ${mcd(a,b)} = ${sn}, y ${b} ÷ ${mcd(a,b)} = ${sd}`, explSimplif(a, b),
         `→ la razón simplificada es ${sn} : ${sd}`,
         `TRUCO: subraya en el enunciado las dos cosas que se comparan ANTES de calcular nada, en el orden en que aparecen: la primera va arriba y la segunda abajo. Cambiar el orden da otra respuesta distinta. Ejemplo con este mismo: ${a} a ${b} se escribe ${a}/${b}, que simplificado es ${sn} : ${sd}; al revés sería ${sd} : ${sn}, que ya no responde lo que preguntaban. Simplificar no cambia la razón: ${a} a ${b} y ${sn} a ${sd} significan lo mismo.`] };
   }
@@ -2634,7 +2672,7 @@ const MODULOS = [
         explicacion:[`Una tasa se escribe como fracción igual que una razón: lo primero arriba (${c.x}) y lo segundo abajo (${c.y}): ${a}/${b}.`,
           `Se simplifica dividiendo arriba y abajo entre el FCM de los dos números:`,
           ...explFcm([a,b]).slice(0,-1),
-          `${a} ÷ ${mcd(a,b)} = ${sn}, ${b} ÷ ${mcd(a,b)} = ${sd}`,
+          `${a} ÷ ${mcd(a,b)} = ${sn}, ${b} ÷ ${mcd(a,b)} = ${sd}`, explSimplif(a, b),
           `→ ${sn}/${sd}, es decir, ${sn} ${c.x} por cada ${sd} ${c.y}`,
           `TRUCO: la diferencia entre razón y tasa es solo que la tasa lleva UNIDADES distintas (${c.x} y ${c.y}), y esas unidades se quedan escritas en la respuesta; la aritmética es la misma: primero arriba, segundo abajo, y simplifica.`] };
     }
@@ -2645,7 +2683,7 @@ const MODULOS = [
         explicacion:[`"Por ciento" significa "por cada 100": ${p}% = ${p}/100.`,
           `Se simplifica dividiendo arriba y abajo entre el FCM de los dos números:`,
           ...explFcm([p,100]).slice(0,-1),
-          `${p} ÷ ${mcd(p,100)} = ${sn}, 100 ÷ ${mcd(p,100)} = ${sd}`,
+          `${p} ÷ ${mcd(p,100)} = ${sn}, 100 ÷ ${mcd(p,100)} = ${sd}`, explSimplif(p, 100),
           `→ ${p}% = ${sn}/${sd}`,
           `TRUCO: el símbolo % es una fracción con 100 abajo, sin excepción. Escribe el número sobre 100 y simplifica como cualquier fracción: si termina en 0 divide entre 10 primero; si termina en 5, entre 5; y recuerda los fijos: 25% = 1/4, 50% = 1/2, 75% = 3/4, 20% = 1/5, 10% = 1/10.`] };
     }
@@ -2654,7 +2692,7 @@ const MODULOS = [
     const k = 100/d;
     return { enunciado:`Escribe ${fr(n,d)} como porciento.`, tipo:'num', respuesta:n*k, ayuda:'Escribe solo el número, sin el símbolo %.',
       explicacion:[`Un porciento es una fracción con denominador 100, así que hay que convertir ${n}/${d} a una fracción equivalente con 100 abajo.`,
-        `100 ÷ ${d} = ${k}, así que se multiplica arriba y abajo por ${k}: ${n}/${d} = ${n*k}/100.`,
+        `100 ÷ ${d} = ${k}: para que abajo quede 100, el ${d} se multiplica por ${k}.`, diagConvertir({n, d}, n*k, 100),
         `→ ${n}/${d} = ${n*k}%`,
         `TRUCO: pregúntate "¿por cuánto multiplico el de abajo para llegar a 100?" y multiplica el de arriba por ese mismo número: ese resultado ya ES el porciento. Si el denominador no divide a 100 exacto, entonces divide arriba entre abajo y multiplica por 100 (${n} ÷ ${d} = ${n/d}, × 100 = ${n*k}).`] };
   }
@@ -2921,7 +2959,7 @@ const MODULOS = [
       let k = R(2, porNivel(nv,12,30,99)); if(nv!=='facil' && Math.random()<0.4) k = -k;
       return { enunciado:`Escribe el recíproco de <b>${mm(k)}</b>.`, tipo:'frac', respuesta:{n: k<0?-1:1, d:Math.abs(k)}, pedirSimple:true, signo:k<0,
         explicacion:[`Un entero se escribe como fracción con denominador 1: ${mm(k)} = ${tf(k,1)}.`,
-          `Se voltea: ${tf(k,1)} → ${tf(k<0?-1:1, Math.abs(k))}${k<0 ? ' (el signo se conserva)' : ''}.`,
+          `Se voltea: ${tf(k,1)} → ${tf(k<0?-1:1, Math.abs(k))}${k<0 ? ' (el signo se conserva)' : ''}.`, diagRec(k, 1, k<0?-1:1, Math.abs(k)),
           `Comprobación: ${k<0?`(${mm(k)})`:k} × ${tfP(k<0?-1:1,Math.abs(k))} = ${Math.abs(k)}/${Math.abs(k)} = 1 ✓ (un número por su recíproco siempre da 1).`, `→ ${tf(k<0?-1:1, Math.abs(k))}`, TR + ` Ejemplo con este mismo: ${mm(k)} es ${tf(k,1)}, volteado queda ${tf(k<0?-1:1,Math.abs(k))}.`] };
     }
     const d = R(2, porNivel(nv,9,15,30)); let n = R(1, porNivel(nv,9,15,30)); if(n===d) n++;
@@ -2934,14 +2972,14 @@ const MODULOS = [
       return { enunciado: izq ? `Completa: <b>1 ÷ ${frP(rn,dd)} = ___</b>` : `Completa: <b>${fr(1, frS(rn,dd))} = ___</b>`,
         tipo:'frac', respuesta:rec, pedirSimple:true, signo:s<0, ayuda: rec.d===1 ? 'Si sale un entero, escríbelo con denominador 1.' : '',
         explicacion:[`${izq ? `1 ÷ (número)` : `1 sobre (número)`} es, por definición, el recíproco de ese número.`,
-          `El recíproco de ${tf(rn,dd)} se obtiene volteando la fracción: ${tf(rec.n,rec.d)}${s<0?' (el signo se queda)':''}.`,
+          `El recíproco de ${tf(rn,dd)} se obtiene volteando la fracción: ${tf(rec.n,rec.d)}${s<0?' (el signo se queda)':''}.`, diagRec(rn, dd, rec.n, rec.d),
           `Comprobación: ${tfP(rn,dd)} × ${tfP(rec.n,rec.d)} = ${n*dd}/${n*dd} = 1 ✓.`, `→ ${tf(rec.n,rec.d)}`, TR + ` Ejemplo con este mismo: ${tf(rn,dd)} volteado es ${tf(rec.n,rec.d)}.`] };
     }
     const rn = s*n;
     return { enunciado:`Escribe el recíproco de <b>${frS(rn,dd)}</b>.`, tipo:'frac', respuesta:rec, pedirSimple:true, signo:s<0,
       ayuda: rec.d===1 ? 'Si sale un entero, escríbelo con denominador 1.' : '',
       explicacion:[`El recíproco (inverso multiplicativo) de una fracción se obtiene intercambiando numerador y denominador.`,
-        `${tf(rn,dd)} → ${tf(rec.n,rec.d)}${s<0 ? ' — el signo negativo se conserva, un número y su recíproco tienen el mismo signo' : ''}.`,
+        `${tf(rn,dd)} → ${tf(rec.n,rec.d)}${s<0 ? ' — el signo negativo se conserva, un número y su recíproco tienen el mismo signo' : ''}.`, diagRec(rn, dd, rec.n, rec.d),
         `Comprobación: ${tfP(rn,dd)} × ${tfP(rec.n,rec.d)} = ${n*dd}/${n*dd} = 1 ✓.`, `→ ${tf(rec.n,rec.d)}`, TR + ` Ejemplo con este mismo: ${tf(rn,dd)} volteado es ${tf(rec.n,rec.d)} — el ${Math.abs(rn)} bajó y el ${dd} subió${s<0?', y el menos se quedó':''}.`] };
   }
 },
@@ -3146,7 +3184,7 @@ const MODULOS = [
       () => { const f1 = mono(-25,7,{},{x:1}), div = mono(32,14,{x:1},{}), f2 = voltearMono(div), r = pasosLetras([f1, f2]);
         return ejVarios5(k(20), `Divide y reduce a su forma más simple:<br><b>${vx(25,'−7x')} ÷ ${vx('32x',14)}</b>`, [cE('Respuesta', r.ex)],
           ['I. El signo de abajo se pasa arriba: 25/(−7x) = −25/(7x). Un solo negativo da igual en qué parte de la fracción esté.',
-           `II. ${lineaVoltear(div)}`, `III. Ahora se multiplica: ${txtMono(f1)} × ${txtMono(f2)}`, ...r.lineas],
+           `II. ${lineaVoltear(div)}`, diagVolteoMono(div), `III. Ahora se multiplica: ${txtMono(f1)} × ${txtMono(f2)}`, ...r.lineas],
           `${TRUCO_DIV4_L} Ejemplo con este mismo: abajo hay una x de la primera fracción y otra de la fracción volteada → x · x = x², y queda −25/(16x²).`); },
       () => uno5(k(21), `Efectúa las operaciones indicadas:<br><b>${fr(5,6)} · ${fr(3,10)} ÷ ${fr(15,'−4')}</b>`, respQ(C(-1,15)),
         ['Multiplicación y división van de izquierda a derecha. Primero 5/6 × 3/10:', ...pasosMultF(C(5,6), C(3,10)).lineas,
@@ -3157,11 +3195,11 @@ const MODULOS = [
         `${TR_DIV4} Ejemplo con este mismo: 105/32 × 2/5 = 21/16 = 1 5/16.`, 'Si es mayor que 1, escríbelo como número mixto.'),
       () => { const f1 = mono(8,5,{a:2,x:1},{y:2}), div = mono(4,15,{a:1},{x:1,y:1}), f2 = voltearMono(div), f3 = mono(11,2,{y:3},{a:1,x:2}), r = pasosLetras([f1, f2, f3]);
         return ejVarios5(k(23), `Efectúa las operaciones indicadas:<br><b>${vx('8a<sup>2</sup>x','5y<sup>2</sup>')} ÷ ${vx('4a','15xy')} · ${vx('11y<sup>3</sup>','2ax<sup>2</sup>')}</b>`, [cE('Respuesta', r.ex)],
-          [`I. ${lineaVoltear(div)}`, `II. Ahora todo es multiplicación: ${txtMono(f1)} × ${txtMono(f2)} × ${txtMono(f3)}`, ...r.lineas],
+          [`I. ${lineaVoltear(div)}`, diagVolteoMono(div), `II. Ahora todo es multiplicación: ${txtMono(f1)} × ${txtMono(f2)} × ${txtMono(f3)}`, ...r.lineas],
           `${TRUCO_DIV4_L} Ejemplo con este mismo: la y de abajo (y²) se tacha con dos de las cuatro y de arriba y sobran y · y = y²; la a y la x se cancelan por completo → 33y².`); },
       () => { const f1 = mono(5,8,{y:1,a:2},{a:1,y:1}), f2 = mono(24,10,{},{a:1}), div = mono(16,9,{y:2},{a:1}), f3 = voltearMono(div), r = pasosLetras([f1, f2, f3]);
         return ejVarios5(k(24), `Efectúa las operaciones indicadas:<br><b>${vx('5ya<sup>2</sup>','8ay')} · ${vx(24,'10a')} ÷ ${vx('16y<sup>2</sup>','9a')}</b>`, [cE('Respuesta', r.ex)],
-          [`I. ${lineaVoltear(div)}`, `II. Ahora todo es multiplicación: ${txtMono(f1)} × ${txtMono(f2)} × ${txtMono(f3)}`, ...r.lineas],
+          [`I. ${lineaVoltear(div)}`, diagVolteoMono(div), `II. Ahora todo es multiplicación: ${txtMono(f1)} × ${txtMono(f2)} × ${txtMono(f3)}`, ...r.lineas],
           `${TRUCO_DIV4_L} Ejemplo con este mismo: arriba hay 3 a y abajo 2 a → sobra una a arriba; arriba hay 1 y y abajo 3 y → sobran 2 y abajo → 27a/(32y²).`); },
       () => { const a1 = pasosDivF(C(5,6),C(3,4)), a2 = pasosMultF(C(4,5),C(25,16)), a3 = pasosSumaF(a1.res, a2.res);
         const b1 = pasosMultF(C(5,2),C(16,5)), b2 = pasosDivF(b1.res,C(3,4)), b3 = pasosSumaF(b2.res,C(7,10));
@@ -3193,10 +3231,10 @@ const MODULOS = [
         const da = mono(8,9,{},{x:1}), ra = pasosLetras([mono(4,3,{},{x:1}), voltearMono(da)]);
         const dc = mono(5,4,{x:1},{}), rc = pasosLetras([mono(5,8,{x:1}), voltearMono(dc)]);
         return partes(28, `Simplifica las siguientes fracciones complejas.<br>(a) <b style="font-size:1.1em">${fr(vx(4,'3x'), vx(8,'9x'))}</b><br>(b) <b style="font-size:1.1em">${fr(`${fr(1,3)} − 2`, `${fr(1,3)} + 2`)}</b><br>(c) <b style="font-size:1.1em">${fr(`${vx('7x',8)} − ${vx('x',4)}`, `x + ${vx('x',4)}`)}</b><br>(d) <b style="font-size:1.1em">${fr(`−${mixS(3,4,5)}`, `${fr(3,4)} + ${fr(1,5)}`)}</b>`,
-          [{ campo:cQ('(a)', C(3,2)), lineas:['a. La raya larga es una división: lo de arriba entre lo de abajo → 4/(3x) ÷ 8/(9x).', lineaVoltear(da), `Ahora se multiplica: ${txtMono(mono(4,3,{},{x:1}))} × ${txtMono(voltearMono(da))}`, ...ra.lineas] },
+          [{ campo:cQ('(a)', C(3,2)), lineas:['a. La raya larga es una división: lo de arriba entre lo de abajo → 4/(3x) ÷ 8/(9x).', lineaVoltear(da), diagVolteoMono(da), `Ahora se multiplica: ${txtMono(mono(4,3,{},{x:1}))} × ${txtMono(voltearMono(da))}`, ...ra.lineas] },
            { campo:cQ('(b)', b3.res), lineas:['b. Arriba: 1/3 − 2', ...sin1(b1.lineas), 'Abajo: 1/3 + 2', ...sin1(b2.lineas), 'Arriba ÷ abajo:', ...b3.lineas] },
            { campo:cQ('(c)', C(1,2)), lineas:['c. Arriba: 7x/8 − x/4. El MCM de 8 y 4 es 8, y x/4 = 2x/8 (arriba y abajo por 2).', '7x/8 − 2x/8: son términos semejantes (los dos llevan x), así que solo se restan los números que acompañan a la x: 7 − 2 = 5 → 5x/8',
-              'Abajo: x + x/4. La x sola es x = 4x/4, y 4x/4 + x/4: 4 + 1 = 5 → 5x/4', 'La raya larga es una división: 5x/8 ÷ 5x/4', lineaVoltear(dc), `Ahora se multiplica: ${txtMono(mono(5,8,{x:1}))} × ${txtMono(voltearMono(dc))}`, ...rc.lineas] },
+              'Abajo: x + x/4. La x sola es x = 4x/4, y 4x/4 + x/4: 4 + 1 = 5 → 5x/4', 'La raya larga es una división: 5x/8 ÷ 5x/4', lineaVoltear(dc), diagVolteoMono(dc), `Ahora se multiplica: ${txtMono(mono(5,8,{x:1}))} × ${txtMono(voltearMono(dc))}`, ...rc.lineas] },
            { campo:cQ('(d)', d2.res), lineas:['d. Arriba: −3 4/5 = −19/5', 'Abajo: 3/4 + 1/5', ...d1.lineas, 'Arriba ÷ abajo:', ...sin1(d2.lineas)] }],
           `TRUCO: si la misma letra queda arriba y abajo, se tacha y la respuesta es solo un número. Ejemplo con este mismo: en (a) 36x/(24x): la x de arriba se tacha con la x de abajo y queda 36/24 = 3/2.`); },
       () => { const s1 = pasosSumaF(C(5,7),C(-7,3)), s2 = pasosSumaF(C(-9,4),C(7,8)), s3 = pasosDivF(s1.res,s2.res);
@@ -3233,7 +3271,7 @@ const MODULOS = [
         'TRUCO: entero menos entero, y la fracción se queda igual. Ejemplo con este mismo: 7 3/8 − 4 = 3 3/8.', 'Escríbelo como número mixto.'),
       () => { const f1 = mono(5,1,{x:1},{y:2}), div = mono(15,1,{x:2},{y:3}), f2 = voltearMono(div), r = pasosLetras([f1, f2]);
         return ejVarios5(k(6), `Divide: <b>${vx('5x','y<sup>2</sup>')} ÷ ${vx('15x<sup>2</sup>','y<sup>3</sup>')}</b>`, [cE('Respuesta', r.ex)],
-          [`I. ${lineaVoltear(div)}`, `II. Ahora se multiplica: ${txtMono(f1)} × ${txtMono(f2)}`, ...r.lineas],
+          [`I. ${lineaVoltear(div)}`, diagVolteoMono(div), `II. Ahora se multiplica: ${txtMono(f1)} × ${txtMono(f2)}`, ...r.lineas],
           `${TRUCO_DIV4_L} Ejemplo con este mismo: arriba hay y · y · y y abajo y · y → sobra una y arriba; arriba una x y abajo x · x → sobra una x abajo → y/(3x).`); },
       () => { const p1 = pasosDivF(C(7,6),C(5,3)), p2 = pasosMultF(p1.res,C(5,14)), p3 = pasosDivF(p2.res,C(1,2));
         return uno5(k(7), `Simplifica: <b>${fr(7,6)} ÷ ${fr(5,3)} · ${fr(5,14)} ÷ (${fr(1,2)})</b>`, respQ(p3.res),
