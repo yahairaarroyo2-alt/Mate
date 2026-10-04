@@ -223,8 +223,12 @@
   .receta .rSub{font-weight:600;font-size:.92rem;margin-top:8px;opacity:.95}
   .receta .rFin{font-size:.95rem;margin-top:7px}
   .receta .oculto{display:none}
-  .receta .rBtns{display:flex;gap:8px;margin-top:4px}
+  .receta .rNav{margin-top:6px}
+  .receta .rBtns{display:flex;gap:8px}
   .receta .rBtns .btn{flex:1}
+  .receta .rBtns .btn:disabled{opacity:.35;cursor:default}
+  .receta .rPie{display:flex;align-items:center;justify-content:space-between;margin-top:6px;font-size:.85rem;opacity:.85}
+  .receta .rModo{background:none;border:0;color:var(--texto);text-decoration:underline;font-family:inherit;font-size:.85rem;cursor:pointer;padding:6px 2px}
   .cambia{color:#e8a23a;font-weight:700}
   /* atajo para resolverlo más rápido — sale del <ol> y se pinta aparte (ver explPasos) */
   .truco{background:var(--superficie);border-left:4px solid var(--acento);border-radius:8px;
@@ -6725,18 +6729,25 @@ function explReceta(lista){
     (pide ? `<div class="rPide"><b>Qué te piden:</b> ${pide}</div>` : '') +
     grupos.map((p, i) => `<div class="rPaso${i ? ' oculto' : ''}"><div class="rTit">${p.t}</div>${p.l.map(x => typeof x === 'string' && x.startsWith('▸ ') ? `<div class="rSub">${x.slice(2)}</div>` : `<div class="rLin">${x}</div>`).join('')}</div>`).join('') +
     `<div class="rPaso rFinal oculto">${fin.join('')}${memo}</div>` +
-    `<div class="rBtns"><button type="button" class="btn amar chico" onclick="rSig('${id}')">Siguiente paso ▶</button><button type="button" class="btn sec chico" onclick="rTodo('${id}')">Ver todo</button></div></div>`;
+    `<div class="rNav"><div class="rBtns"><button type="button" class="btn sec chico rAnt" onclick="rAnt('${id}')" disabled>◀ Anterior</button><button type="button" class="btn amar chico rSig" onclick="rSig('${id}')">Siguiente paso ▶</button></div>` +
+    `<div class="rPie"><span class="rPag">Paso 1 de ${grupos.length + 1}</span><button type="button" class="rModo" onclick="rModo('${id}')">Ver todo</button></div></div></div>`;
 }
-function rSig(id){
-  const c = document.getElementById(id); if(!c) return;
-  const sig = c.querySelector('.rPaso.oculto'); if(sig){ sig.classList.remove('oculto'); sig.scrollIntoView({ behavior:'smooth', block:'nearest' }); }
-  if(!c.querySelector('.rPaso.oculto')) c.querySelector('.rBtns')?.remove();
+// la explicación cambia de PÁGINA: se ve un solo paso a la vez (no se va alargando); "Ver todo" los muestra todos
+function _rVer(c, i){
+  const ps = c.querySelectorAll('.rPaso'); i = Math.max(0, Math.min(ps.length - 1, i)); c.dataset.i = i; c.dataset.modo = 'pag';
+  ps.forEach((p, k) => p.classList.toggle('oculto', k !== i));
+  const pd = c.querySelector('.rPide'); if(pd) pd.classList.toggle('oculto', i !== 0);
+  c.querySelector('.rAnt').disabled = i === 0; c.querySelector('.rSig').disabled = i === ps.length - 1;
+  c.querySelector('.rPag').textContent = i === ps.length - 1 ? 'Resultado' : `Paso ${i + 1} de ${ps.length}`;
+  c.querySelector('.rModo').textContent = 'Ver todo';
+  c.querySelector('.rBtns').style.display = '';
 }
-function rTodo(id){
-  const c = document.getElementById(id); if(!c) return;
-  c.querySelectorAll('.rPaso.oculto').forEach(p => p.classList.remove('oculto'));
-  c.querySelector('.rBtns')?.remove();
-}
+function rSig(id){ const c = document.getElementById(id); if(!c) return; _rVer(c, (+c.dataset.i || 0) + 1); c.scrollIntoView({ behavior:'smooth', block:'nearest' }); }
+function rAnt(id){ const c = document.getElementById(id); if(!c) return; _rVer(c, (+c.dataset.i || 0) - 1); c.scrollIntoView({ behavior:'smooth', block:'nearest' }); }
+function rTodo(id){ const c = document.getElementById(id); if(!c) return;
+  c.dataset.modo = 'todo'; c.querySelectorAll('.rPaso, .rPide').forEach(p => p.classList.remove('oculto'));
+  c.querySelector('.rBtns').style.display = 'none'; c.querySelector('.rPag').textContent = 'Todos los pasos'; c.querySelector('.rModo').textContent = 'Ver por pasos'; }
+function rModo(id){ const c = document.getElementById(id); if(!c) return; if(c.dataset.modo === 'todo') _rVer(c, 0); else rTodo(id); }
 function explPasos(lista, sinNumeros){ return _sinNotasRepetidas(_explPasos(lista, sinNumeros)); }
 function _explPasos(lista, sinNumeros){
   if(lista.some(l => typeof l === 'string' && l.startsWith('§'))) return explReceta(lista);
@@ -6757,7 +6768,17 @@ function _explPasos(lista, sinNumeros){
     trucos.map(t=>`<div class="truco"><b>TRUCO PARA QUE SEA MÁS FÁCIL</b>${t}</div>`).join('');
 }
 
+// botón para esconder "Tu proceso", la casilla de respuesta y el aviso (¡Correcto!) y ver mejor la explicación
+function toggleRespuesta(){
+  const btn = $('btnOcultarResp'); if(!btn) return;
+  const ocultar = btn.dataset.oculto !== '1'; btn.dataset.oculto = ocultar ? '1' : '';
+  ['zonaProceso', 'zonaEntrada'].forEach(id => { const e = $(id); if(e) e.style.display = ocultar ? 'none' : ''; });
+  const fb = document.querySelector('#zonaFb .fb'); if(fb) fb.style.display = ocultar ? 'none' : '';
+  btn.textContent = ocultar ? '▼ Mostrar mi respuesta' : '▲ Ocultar mi respuesta (para ver mejor la explicación)';
+  btn.scrollIntoView({ block:'nearest' });
+}
 const explHTML = () => `
+  <button type="button" id="btnOcultarResp" class="btn sec chico" style="margin-bottom:10px" onclick="toggleRespuesta()">▲ Ocultar mi respuesta (para ver mejor la explicación)</button>
   <div class="expl"><h3>Por qué</h3>${explPasos(ejActual.explicacion, ejActual.sinNumeros)}</div>`;
 
 function saltarEjercicio(){
