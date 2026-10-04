@@ -174,7 +174,8 @@
   .mixIn .campo{width:80px}
   .multiIn{display:grid;gap:8px}
   .procesoCaja{margin-bottom:12px}
-  .procesoTit{font-weight:700;margin-bottom:6px}
+  .procesoTit{font-weight:700;margin-bottom:6px;display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+  .procesoOcultar{flex:none;background:none;border:0;color:var(--texto);text-decoration:underline;font-family:inherit;font-size:.85rem;cursor:pointer;padding:4px 2px;white-space:nowrap}
   .procesoTit small{font-weight:400;opacity:.7}
   .dgNota{font-size:.92em;opacity:.85;margin:0 0 10px;line-height:1.35}
   .pasoFila{display:flex;align-items:center;gap:8px;margin-bottom:8px}
@@ -5838,9 +5839,15 @@ function quitarFraccion(x){ const fr = x.closest('.pfr'), sig = fr.nextElementSi
 function procesoHTML(){
   const guardados = ((respondido || vioExpl) && ultimoProceso) ? ultimoProceso.split('\n') : [];
   const n = Math.max(3, guardados.length);
-  return `<div class="procesoCaja"><div class="procesoTit">Tu proceso <small>(opcional) — un paso en cada línea; con <b>a/b</b> escribes una fracción</small></div>
-    <div id="listaPasos">${Array.from({length:n}, (_, i) => pasoFilaHTML(i, guardados[i] || '')).join('')}</div>
-    <button type="button" class="btn sec chico" onclick="agregarPaso()">+ Agregar paso</button></div>`;
+  return `<div class="procesoCaja"><div class="procesoTit"><span>Tu proceso</span>
+      <button type="button" id="btnOcultarProceso" class="procesoOcultar" onclick="toggleProceso()">▲ Ocultar</button></div>
+    <div id="cuerpoProceso"><div id="listaPasos">${Array.from({length:n}, (_, i) => pasoFilaHTML(i, guardados[i] || '')).join('')}</div>
+    <button type="button" class="btn sec chico" onclick="agregarPaso()">+ Agregar paso</button></div></div>`;
+}
+// esconde / muestra solo la caja de "Tu proceso" (lo que escribiste se queda guardado)
+function toggleProceso(){
+  const c = $('cuerpoProceso'), b = $('btnOcultarProceso'); if(!c || !b) return;
+  const ocultar = c.style.display !== 'none'; c.style.display = ocultar ? 'none' : ''; b.textContent = ocultar ? '▼ Mostrar' : '▲ Ocultar';
 }
 function agregarPaso(){ const l = $('listaPasos'), i = l.children.length; l.insertAdjacentHTML('beforeend', pasoFilaHTML(i, '')); $('inP' + i).focus(); }
 const leerProceso = () => [...document.querySelectorAll('#listaPasos .pasoPartes')].map(fila => [...fila.children].map(x => {
@@ -6433,7 +6440,7 @@ function pintarEjercicio(){
         <button class="btn sec chico" onclick="verExplicacion()">Ver explicación</button>
       </div>
     </div>
-    <div class="card" style="padding:14px 20px">
+    <div class="card" id="cardProgreso" style="padding:14px 20px">
       <div class="racha">
         <div><b>${sesionTotal - sesionHechos}/${sesionTotal}</b><span>te faltan</span></div>
         <div><b>${racha.actual}</b><span>racha actual</span></div>
@@ -6768,17 +6775,17 @@ function _explPasos(lista, sinNumeros){
     trucos.map(t=>`<div class="truco"><b>TRUCO PARA QUE SEA MÁS FÁCIL</b>${t}</div>`).join('');
 }
 
-// botón para esconder "Tu proceso", la casilla de respuesta y el aviso (¡Correcto!) y ver mejor la explicación
+// botón para esconder la casilla de respuesta, el aviso (¡Correcto!) y el progreso, y ver mejor la explicación ("Tu proceso" tiene su propio botón)
 function toggleRespuesta(){
   const btn = $('btnOcultarResp'); if(!btn) return;
   const ocultar = btn.dataset.oculto !== '1'; btn.dataset.oculto = ocultar ? '1' : '';
-  ['zonaProceso', 'zonaEntrada'].forEach(id => { const e = $(id); if(e) e.style.display = ocultar ? 'none' : ''; });
+  ['zonaEntrada', 'cardProgreso'].forEach(id => { const e = $(id); if(e) e.style.display = ocultar ? 'none' : ''; });   // cardProgreso = te faltan / racha / agrupar / repetir
   const fb = document.querySelector('#zonaFb .fb'); if(fb) fb.style.display = ocultar ? 'none' : '';
-  btn.textContent = ocultar ? '▼ Mostrar mi respuesta' : '▲ Ocultar mi respuesta (para ver mejor la explicación)';
+  btn.textContent = ocultar ? '▼ Mostrar mi respuesta y mi progreso' : '▲ Ocultar mi respuesta y mi progreso (para ver mejor la explicación)';
   btn.scrollIntoView({ block:'nearest' });
 }
 const explHTML = () => `
-  <button type="button" id="btnOcultarResp" class="btn sec chico" style="margin-bottom:10px" onclick="toggleRespuesta()">▲ Ocultar mi respuesta (para ver mejor la explicación)</button>
+  <button type="button" id="btnOcultarResp" class="btn sec chico" style="margin-bottom:10px" onclick="toggleRespuesta()">▲ Ocultar mi respuesta y mi progreso (para ver mejor la explicación)</button>
   <div class="expl"><h3>Por qué</h3>${explPasos(ejActual.explicacion, ejActual.sinNumeros)}</div>`;
 
 function saltarEjercicio(){
