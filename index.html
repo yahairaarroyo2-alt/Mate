@@ -185,9 +185,12 @@
   .pasoPartes .pt{flex:1 1 90px;min-width:70px}
   .pfr{position:relative;display:inline-flex;flex-direction:column;align-items:center;gap:3px;padding:2px 0}
   .pasoFila .pfr .campo{flex:none;width:68px;padding:7px 6px;font-size:1rem;text-align:center}
+  .pfa{position:relative;display:inline-flex;flex-direction:column;align-items:center;padding:4px 0;max-width:100%}
+  .pfaFila{display:flex;align-items:center;gap:6px}
+  .pfaFila b{font-size:1.2rem}
   .pbarra{display:block;width:100%;height:2px;background:var(--titulo);border-radius:2px}
   .pfrX{position:absolute;top:-9px;right:-9px;width:22px;height:22px;padding:0;border-radius:50%;border:0;background:rgba(255,255,255,.25);color:var(--texto);font-size:.9rem;line-height:1;cursor:pointer}
-  .pasoFrBtn{flex:none;width:46px;height:46px;border-radius:14px;border:1.5px solid rgba(255,255,255,.3);background:rgba(255,255,255,.12);color:var(--muted);font-weight:700;font-size:.82rem;font-family:inherit;cursor:pointer}
+  .pasoFrBtn{flex:none;width:52px;height:46px;border-radius:14px;border:1.5px solid rgba(255,255,255,.3);background:rgba(255,255,255,.12);color:var(--muted);font-weight:700;font-size:.62rem;padding:0;font-family:inherit;cursor:pointer}
   .multiFila{display:flex;align-items:center;gap:10px}
   .multiFila > span{min-width:96px;font-weight:700}
   .multiFila .campo{flex:1;min-width:0;margin:0}
@@ -5821,19 +5824,28 @@ const attrEsc = s => escHtml(s).replace(/"/g, '&quot;');
 // cada paso es una fila de pedazos: cajas de texto y, si hace falta, fracciones con arriba y abajo (botón a/b).
 // Se guardan como una línea de texto; la fracción va como ⟦arriba|abajo⟧ para poder volver a dibujarla.
 const _ptHTML = (v, id, ph) => `<input class="campo pt"${id ? ` id="${id}"` : ''} autocomplete="off" autocapitalize="off"${ph ? ` placeholder="${ph}"` : ''} value="${attrEsc(v)}">`;
-const _frHTML = (n, d) => `<span class="pfr"><button type="button" class="pfrX" onclick="quitarFraccion(this)" aria-label="Quitar la fracción">×</button><input class="campo pn" autocomplete="off" autocapitalize="off" placeholder="arriba" value="${attrEsc(n)}"><i class="pbarra"></i><input class="campo pd" autocomplete="off" autocapitalize="off" placeholder="abajo" value="${attrEsc(d)}"></span>`;
+const _frHTML = (n, d, x = true) => `<span class="pfr">${x ? `<button type="button" class="pfrX" onclick="quitarFraccion(this)" aria-label="Quitar la fracción">×</button>` : ''}<input class="campo pn" autocomplete="off" autocapitalize="off" placeholder="arriba" value="${attrEsc(n)}"><i class="pbarra"></i><input class="campo pd" autocomplete="off" autocapitalize="off" placeholder="abajo" value="${attrEsc(d)}"></span>`;
+// igualdad de fracciones a/b = c/d (botón de cada paso)
+const _faHTML = (a, b, c, d, k) => `<span class="pfa"><button type="button" class="pfrX" onclick="quitarFraccion(this)" aria-label="Quitar la fracción con flechas">×</button>
+  <span class="pfaFila">${_frHTML(a, b, false)}<b>=</b>${_frHTML(c, d, false)}</span></span>`;
+const _RX_PARTE = /⟦([^|⟧]*)\|([^⟧]*)⟧|⟪([^|⟫]*)\|([^|⟫]*)\|([^|⟫]*)\|([^|⟫]*)\|([^⟫]*)⟫/g;
 function pasoFilaHTML(i, v){
-  const t = String(v || '').split(/⟦([^|⟧]*)\|([^⟧]*)⟧/);       // [texto, arriba, abajo, texto, …]
-  let h = _ptHTML(t[0], 'inP' + i, `Paso ${i+1}`);
-  for(let k = 1; k < t.length; k += 3) h += _frHTML(t[k], t[k+1]) + _ptHTML(t[k+2] || '', '', '');
-  return `<div class="pasoFila"><span>${i+1}</span><div class="pasoPartes">${h}</div><button type="button" class="pasoFrBtn" onclick="agregarFraccion(this)" aria-label="Agregar una fracción (arriba y abajo)" title="Agregar una fracción">a/b</button></div>`;
+  v = String(v || ''); let h = '', ult = 0, m;
+  _RX_PARTE.lastIndex = 0;
+  while((m = _RX_PARTE.exec(v))){
+    h += (ult === 0 && !h) ? _ptHTML(v.slice(0, m.index), 'inP' + i, `Paso ${i+1}`) : _ptHTML(v.slice(ult, m.index), '', '');
+    h += m[1] !== undefined ? _frHTML(m[1], m[2]) : _faHTML(m[3], m[4], m[5], m[6], m[7]);
+    ult = m.index + m[0].length;
+  }
+  h += h ? _ptHTML(v.slice(ult), '', '') : _ptHTML(v, 'inP' + i, `Paso ${i+1}`);
+  return `<div class="pasoFila"><span>${i+1}</span><div class="pasoPartes">${h}</div><button type="button" class="pasoFrBtn" onclick="agregarFraccion(this, true)" aria-label="Agregar dos fracciones iguales (a/b = c/d)" title="Dos fracciones con = en medio">a/b=c/d</button></div>`;
 }
-function agregarFraccion(btn){
+function agregarFraccion(btn, flechas){
   const partes = btn.closest('.pasoFila').querySelector('.pasoPartes');
-  partes.insertAdjacentHTML('beforeend', _frHTML('', '') + _ptHTML('', '', ''));
-  const fr = partes.querySelectorAll('.pfr'); fr[fr.length - 1].querySelector('.pn').focus();
+  partes.insertAdjacentHTML('beforeend', (flechas ? _faHTML('', '', '', '', '') : _frHTML('', '')) + _ptHTML('', '', ''));
+  partes.lastElementChild.previousElementSibling.querySelector('.pn').focus();
 }
-function quitarFraccion(x){ const fr = x.closest('.pfr'), sig = fr.nextElementSibling, prev = fr.previousElementSibling;
+function quitarFraccion(x){ const fr = x.closest('.pfa, .pfr'), sig = fr.nextElementSibling, prev = fr.previousElementSibling;
   if(sig && prev && sig.classList.contains('pt') && prev.classList.contains('pt')){ prev.value = (prev.value + ' ' + sig.value).trim(); sig.remove(); }
   const foco = prev || fr.parentNode.firstElementChild; fr.remove(); if(foco && foco.focus) foco.focus(); }
 function procesoHTML(){
@@ -5853,6 +5865,8 @@ function agregarPaso(){ const l = $('listaPasos'), i = l.children.length; l.inse
 const leerProceso = () => [...document.querySelectorAll('#listaPasos .pasoPartes')].map(fila => [...fila.children].map(x => {
     if(x.classList.contains('pt')) return x.value.trim();
     if(x.classList.contains('pfr')){ const n = x.querySelector('.pn').value.trim(), d = x.querySelector('.pd').value.trim(); return (n || d) ? `⟦${n}|${d}⟧` : ''; }
+    if(x.classList.contains('pfa')){ const v = [...x.querySelectorAll('.pn, .pd')].map(i => i.value.trim().replace(/[|⟫]/g, ''));   // n1, d1, n2, d2 en orden de la pantalla
+      return v.some(Boolean) ? `⟪${v.join('|')}|⟫` : ''; }
     return ''; }).filter(Boolean).join(' ')).filter(Boolean).join('\n');
 
 /* ---------- retomar donde quedó (mate_sesion_v1) ---------- */
