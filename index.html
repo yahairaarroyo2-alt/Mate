@@ -252,6 +252,109 @@
   .aiTema{padding:10px 0;border-top:1px solid var(--gris2)}
   .aiTema span{display:block;font-size:.88rem;color:var(--titulo2);margin:2px 0 8px}
   .aiTema .btn{margin:0}
+  /* Chat de IA (burbuja AI → hoja tipo chat). Mismo motor que Fit-F/Fit-M. --aiborde = borde suave de claro/noche */
+  :root{--aiborde:rgba(0,0,0,.14)}
+  body.night{--aiborde:rgba(255,255,255,.16)}
+    /* Chat de IA ("Adaptar el entreno de hoy"): en la portada solo se ve la burbuja AI; al tocarla se abre una hoja tipo chat */
+    .aic-bubble { position:absolute; top:12px; right:12px; z-index:2; display:inline-flex; align-items:center; justify-content:center; padding:5px 13px; border-radius:999px; border:1px solid color-mix(in srgb, #1565c0 28%, transparent); background:color-mix(in srgb, #1565c0 12%, transparent); color:#000; font-size:10.5px; font-weight:900; letter-spacing:.8px; font-family:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent; transition:transform .15s; }
+    .aic-bubble:active { transform:scale(.94); }
+    .aic-bubble.est { position:static; flex-shrink:0; margin-left:auto; }
+    .aic-bubble.ancho { width:100%; margin-left:0; padding:13px; border-radius:18px; font-size:1rem; }
+    .modal-5w-card .aic-bubble.ancho { padding:12px; border-radius:14px; font-size:14px; }
+    .aic-mark { display:inline-flex; align-items:center; padding:1px 7px; margin-right:5px; border-radius:999px; border:1px solid color-mix(in srgb, #1565c0 28%, transparent); background:color-mix(in srgb, #1565c0 12%, transparent); color:#000; font-size:9px; font-weight:900; letter-spacing:.6px; vertical-align:1px; }
+    body.night .aic-mark { color:#fff; background:rgba(100,160,255,.12); border-color:rgba(100,160,255,.24); }
+    .aic-mark.ext { border-color:color-mix(in srgb, #6a1b9a 28%, transparent); background:color-mix(in srgb, #6a1b9a 12%, transparent); }
+    body.night .aic-mark.ext { background:rgba(190,140,255,.14); border-color:rgba(190,140,255,.3); }
+    .aic-actw { position:relative; margin-top:10px; }
+    .aic-actw .aic-act { margin-top:0; }
+    .aic-tit { display:block; padding:0 60px; }   /* solo el título deja sitio al botón Editar (arriba a la derecha); la lista de abajo usa todo el ancho y nada se empuja */
+    .aic-edit { position:absolute; top:7px; right:8px; padding:3px 11px; border-radius:999px; border:1px solid var(--aic-bd); background:rgba(255,255,255,.75); color:#16161a; font-size:11px; font-weight:800; font-family:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    body.night .aic-edit { background:rgba(255,255,255,.14); color:#fff; }
+    /* mismo borde, fondo y sombra interior que la barra de escribir del chat (.aic-in input) */
+    .aic-edrow { padding:14px; border-radius:20px; border:1.5px solid rgba(0,0,0,.2); background:rgba(0,0,0,.05); box-shadow:inset 0 1px 3px rgba(0,0,0,.08); display:flex; flex-direction:column; gap:8px; }
+    body.night .aic-edrow { border-color:rgba(255,255,255,.22); background:rgba(255,255,255,.08); box-shadow:inset 0 1px 3px rgba(0,0,0,.35); }
+    .aic-cancel { flex:1; margin:0; padding:12px 16px; border-radius:22px; border:1.5px solid rgba(0,0,0,.2); background:rgba(0,0,0,.05); color:var(--texto); font-size:14px; font-weight:800; font-family:inherit; cursor:pointer; box-shadow:inset 0 1px 3px rgba(0,0,0,.08); -webkit-tap-highlight-color:transparent; }
+    .aic-cancel:active { transform:scale(.98); }
+    body.night .aic-cancel { border-color:rgba(255,255,255,.22); background:rgba(255,255,255,.08); box-shadow:inset 0 1px 3px rgba(0,0,0,.35); color:#fff; }
+    .aic-edrow label { display:flex; flex-direction:column; gap:3px; font-size:11px; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:.4px; }
+    .aic-edrow select { width:100%; padding:11px 14px; border-radius:16px; border:1.5px solid rgba(0,0,0,.2); background:rgba(255,255,255,.55); color:var(--texto); font-size:14px; font-weight:600; font-family:inherit; text-transform:none; letter-spacing:0; }
+    body.night .aic-edrow select { border-color:rgba(255,255,255,.22); background:rgba(255,255,255,.08); color:#fff; }
+    .aic-edtop { display:flex; align-items:center; justify-content:space-between; font-size:13px; font-weight:800; color:var(--texto); }
+    .aic-edtop button { background:none; border:none; color:var(--muted); font-size:12px; font-weight:700; font-family:inherit; cursor:pointer; padding:4px 2px; }
+    .aic-in { position:relative; }
+    .aic-fmenu { position:absolute; left:12px; bottom:62px; z-index:3; display:flex; flex-direction:column; padding:6px; border-radius:16px; border:1.5px solid var(--aiborde); background:rgba(250,250,252,.99); box-shadow:0 8px 28px rgba(0,0,0,.22); }
+    body.night .aic-fmenu { background:rgba(44,44,48,.99); }
+    /* misma receta que la burbuja AI (aicCrece/aicAchica): el menú nace EXACTO en la caja del botón de la cámara y se achica de vuelta ahí */
+    @keyframes aicMenuAbre { 0% { opacity:0; clip-path:inset(0 round var(--rx) / 50%); transform:translate(var(--tx0), var(--ty0)) scale(var(--gsx), var(--gsy)); } 20% { opacity:1; } 60% { clip-path:inset(0 round 16px); } 100% { clip-path:inset(0 round 16px); transform:translate(0, 0) scale(1, 1); } }
+    @keyframes aicMenuCierra { 0% { opacity:1; clip-path:inset(0 round 16px); transform:translate(0, 0) scale(1, 1); } 75% { opacity:1; animation-timing-function:linear; } 100% { opacity:0; clip-path:inset(0 round var(--rx) / 50%); transform:translate(var(--tx0), var(--ty0)) scale(var(--gsx), var(--gsy)); } }
+    .aic-fmenu.abre { transform-origin:0 0; animation:aicMenuAbre .38s cubic-bezier(.8,0,.2,1); }
+    .aic-fmenu.cierra { transform-origin:0 0; animation:aicMenuCierra .3s cubic-bezier(.8,0,.2,1) forwards; pointer-events:none; }
+    .aic-fmenu button { display:flex; align-items:center; gap:10px; padding:11px 16px; border:none; background:none; color:var(--texto); font-size:14px; font-weight:700; font-family:inherit; text-align:left; cursor:pointer; border-radius:10px; white-space:nowrap; }
+    .aic-fmenu button:active { background:var(--aic-bg); }
+    .aic-bubble.compacto { padding:10px; border-radius:18px; font-size:14px; }
+    .aic-bubble.osc { color:#fff; background:rgba(255,255,255,.12); border-color:rgba(255,255,255,.3); }
+    .aic-bubble.on::after { content:''; position:absolute; top:1px; right:3px; width:6px; height:6px; border-radius:50%; background:#2f6fdb; }
+    body.night .aic-bubble { color:#fff; background:rgba(100,160,255,.12); border-color:rgba(100,160,255,.24); }
+    body.night .aic-bubble.on::after { background:#7fb2ff; }
+    body.aic-open { overflow:hidden; }
+    /* UN solo azul para todo el chat (sugerencias, tu mensaje, Aplicar el plan y enviar): si lo cambias, cámbialo aquí */
+    .aic-ov { --aic-bg:rgba(21,101,192,.07); --aic-bd:rgba(21,101,192,.3); --aic-sh:inset 0 1px 3px rgba(0,0,0,.08); }
+    body.night .aic-ov { --aic-bg:rgba(100,160,255,.1); --aic-bd:rgba(100,160,255,.32); --aic-sh:inset 0 1px 3px rgba(0,0,0,.35); }
+    .aic-ov { position:fixed; inset:0; z-index:1300; display:flex; align-items:flex-end; background:rgba(0,0,0,0); visibility:hidden; pointer-events:none; transition:background .3s; }
+    .aic-ov.show { background:rgba(0,0,0,.4); visibility:visible; pointer-events:auto; transition:background .3s, visibility 0s; }
+    .aic-ov.cerrando { visibility:visible; }
+    @keyframes aicCrece { 0% { opacity:0; clip-path:inset(0 round var(--rx) / 50%); transform:translate(var(--tx0), var(--ty0)) scale(var(--gsx), var(--gsy)); } 15% { opacity:1; } 60% { clip-path:inset(0 round 24px 24px 0 0); } 100% { clip-path:inset(0 round 24px 24px 0 0); transform:translate(0, 0) scale(1, 1); } }
+    @keyframes aicAchica { 0% { opacity:1; clip-path:inset(0 round 24px 24px 0 0); transform:translate(0, 0) scale(1, 1); } 85% { opacity:1; animation-timing-function:linear; } 100% { opacity:0; clip-path:inset(0 round var(--rx) / 50%); transform:translate(var(--tx0), var(--ty0)) scale(var(--gsx), var(--gsy)); } }
+    .aic-sheet.crece { transform-origin:0 0; animation:aicCrece .6s cubic-bezier(.8,0,.2,1); }
+    .aic-sheet.achica { transform-origin:0 0; animation:aicAchica .5s cubic-bezier(.8,0,.2,1) forwards; }
+    .aic-sheet { width:100%; max-width:560px; margin:0 auto; height:min(86dvh,720px); display:flex; flex-direction:column; background:rgba(248,248,250,.98); border-radius:24px 24px 0 0; border:1px solid var(--aiborde); border-bottom:none; box-shadow:0 -8px 40px rgba(0,0,0,.2); transform:translateY(24px); transition:transform .25s cubic-bezier(.32,.72,.36,1); }
+    .aic-ov.show .aic-sheet { transform:translateY(0); }
+    body.night .aic-sheet { background:rgba(28,28,30,.98); }
+    .aic-head { display:flex; align-items:center; gap:8px; padding:14px 14px 12px; border-bottom:1px solid var(--aiborde); }
+    .aic-titulo { flex:1; font-size:15px; font-weight:800; color:var(--texto); }
+    .aic-nuevo { background:none; border:none; color:var(--muted); font-size:12.5px; font-weight:700; font-family:inherit; cursor:pointer; padding:6px 4px; }
+    .aic-x { background:none; border:none; color:var(--muted); font-size:18px; cursor:pointer; padding:4px 6px; line-height:1; }
+    .aic-msgs { flex:1; overflow-y:auto; padding:14px; display:flex; flex-direction:column; gap:10px; }
+    .aic-m { max-width:88%; padding:10px 13px; border-radius:16px; font-size:13.5px; line-height:1.45; color:var(--texto); white-space:pre-wrap; }
+    .aic-m.ia { align-self:flex-start; background:rgba(0,0,0,.05); border-bottom-left-radius:5px; }
+    .aic-m.yo { align-self:flex-end; background:var(--aic-bg); border:1.5px solid var(--aic-bd); color:var(--texto); border-bottom-right-radius:5px; }
+    body.night .aic-m.ia { background:rgba(255,255,255,.08); }
+    body.night .aic-m.yo { color:#fff; }
+    .aic-chips { display:flex; flex-wrap:wrap; gap:8px; }
+    .aic-chip { padding:9px 15px; border-radius:999px; border:1.5px solid var(--aic-bd); background:var(--aic-bg); color:var(--texto); font-size:12.5px; font-weight:800; font-family:inherit; cursor:pointer; box-shadow:var(--aic-sh); transition:transform .12s; -webkit-tap-highlight-color:transparent; }
+    .aic-chip:active { transform:scale(.95); }
+    body.night .aic-chip { color:#fff; }
+    .aic-plan { margin-top:9px; padding-top:9px; border-top:1px solid rgba(128,128,128,.25); font-size:12px; line-height:1.4; white-space:normal; }
+    .aic-ej { margin-top:4px; }
+    .aic-nota { margin-top:8px; font-size:11px; color:var(--muted); white-space:normal; }
+    .aic-act { display:block; margin-top:10px; width:100%; padding:10px; border-radius:12px; border:1.5px solid var(--aic-bd); background:var(--aic-bg); color:var(--texto); font-size:13px; font-weight:800; font-family:inherit; cursor:pointer; box-shadow:var(--aic-sh); -webkit-tap-highlight-color:transparent; }
+    .aic-act:active { transform:scale(.98); }
+    .aic-act.sec { background:transparent; border:1.5px solid var(--aiborde); color:var(--texto); box-shadow:none; }
+    .aic-act small { white-space:pre-line; display:block; margin-top:2px; font-size:11px; font-weight:600; opacity:.8; }
+    .aic-nota-ia { font-size:11px; margin-top:3px; line-height:1.35; color:var(--texto); }
+    .aic-nota-ia b { color:#2f6fdb; }
+    body.night .aic-nota-ia b { color:#7fb2ff; }
+    body.night .aic-act { color:#fff; }
+    body.night .aic-act.sec { background:transparent; border-color:rgba(255,255,255,.2); box-shadow:none; }
+    .aic-puntos i { display:inline-block; width:7px; height:7px; margin:0 2px; border-radius:50%; background:var(--muted); animation:aicPunto 1.2s infinite ease-in-out; }
+    .aic-puntos i:nth-child(2) { animation-delay:.18s; } .aic-puntos i:nth-child(3) { animation-delay:.36s; }
+    @keyframes aicPunto { 0%,80%,100% { opacity:.25; transform:translateY(0); } 40% { opacity:1; transform:translateY(-3px); } }
+    .aic-in { display:flex; align-items:center; gap:8px; padding:10px 12px calc(10px + env(safe-area-inset-bottom)); border-top:1px solid var(--aiborde); }
+    .aic-in input { flex:1; min-width:0; padding:12px 16px; border-radius:22px; border:1.5px solid rgba(0,0,0,.2); background:rgba(0,0,0,.05); color:var(--texto); font-size:14px; font-family:inherit; outline:none; box-shadow:inset 0 1px 3px rgba(0,0,0,.08); transition:border-color .15s, background .15s; }
+    .aic-in input::placeholder { color:var(--muted); opacity:.9; }
+    .aic-in input:focus { border-color:rgba(0,0,0,.45); background:rgba(0,0,0,.07); }
+    body.night .aic-in input { border-color:rgba(255,255,255,.22); background:rgba(255,255,255,.08); box-shadow:inset 0 1px 3px rgba(0,0,0,.35); }
+    body.night .aic-in input:focus { border-color:rgba(255,255,255,.5); background:rgba(255,255,255,.12); }
+    .aic-mic, .aic-send { flex-shrink:0; width:42px; height:42px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; font-family:inherit; }
+    .aic-mic { border:1.5px solid rgba(0,0,0,.2); background:rgba(0,0,0,.05); color:var(--texto); }
+    .aic-mic.on { border-color:var(--aic-bd); background:var(--aic-bg); }
+    .aic-fotol { font-size:11px; font-weight:700; opacity:.7; margin-bottom:2px; }
+    body.night .aic-mic { border-color:rgba(255,255,255,.22); background:rgba(255,255,255,.08); }
+    .aic-send { border:1.5px solid var(--aic-bd); background:var(--aic-bg); color:var(--texto); box-shadow:var(--aic-sh); }
+    body.night .aic-send { color:#fff; }
+    /* Botones de IA: --bg es transparente en este tema, así que fondo y letra van fijos (claro: oscuro/blanco; noche: blanco/oscuro) */
+    [style*="background:#1a1a2e;color:#fff;"] { background:#1a1a2e; color:#fff; }
+    body.night [style*="background:#1a1a2e;color:#fff;"] { background:#fff !important; color:#16161a !important; }
   /* stats */
   .barra-ext{height:10px;background:var(--gris);border-radius:6px;overflow:hidden;margin-top:5px}
   .barra-int{height:100%;border-radius:6px;background:var(--verde);transition:width .4s}
@@ -6269,10 +6372,9 @@ function pantallaIA(){
     </div>
     ${tiene ? `<div class="card">
       <h2>Qué hace la IA aquí</h2>
-      <div class="nota" style="margin:0 0 8px"><b>Revisar mi proceso</b> y <b>Foto de mi cuaderno</b> (en cada ejercicio): te dice en qué paso te equivocaste.</div>
-      <div class="nota" style="margin:0 0 8px"><b>Explícamelo de otra forma</b> (debajo de la explicación).</div>
-      <div class="nota" style="margin:0 0 8px"><b>Foto de mi tarea</b> (en Practicar): te dice qué tema es y te da una pista.</div>
-      <div class="nota" style="margin:0 0 8px"><b>Plan de repaso</b> (en Progreso) y <b>comentario de tu ronda</b> (al terminarla).</div>
+      <div class="nota" style="margin:0 0 8px">Toca la burbuja <b>AI</b> y se abre un chat. <b>En cada ejercicio</b>: revisa tu proceso (también con una foto de tu cuaderno), te lo explica de otra forma o te da una pista.</div>
+      <div class="nota" style="margin:0 0 8px"><b>Foto de mi tarea</b> (en Inicio): te dice qué tema es y te da una pista, no la solución.</div>
+      <div class="nota" style="margin:0 0 8px"><b>Plan de repaso</b> (en Progreso) y <b>tu ronda</b> (al terminarla): chatea con tus datos reales.</div>
       <div class="nota" style="margin:0">La IA solo explica: nunca decide si tu respuesta está bien, eso lo hace la app. Pedir ayuda a la IA antes de contestar cuenta como ver la explicación, y ese ejercicio no suma a tus estadísticas. Puede equivocarse: úsala como apoyo.</div>
     </div>` : ''}`;
 }
@@ -6319,227 +6421,454 @@ const _aiTutor = () => 'Eres una tutora paciente de «' + MATERIAS[materia].nomb
 const _aiRepintar = fn => { if(_pantallaActual === fn) fn(); };
 const _aiCerrarBtn = (fn, extra) => `<div style="display:flex;justify-content:flex-end;gap:14px">${extra || ''}<button type="button" class="aiCerrar" style="margin:2px 0 0" onclick="${fn}">Cerrar</button></div>`;
 
-/* ---------- IA en el ejercicio: revisar mi proceso / foto del cuaderno / otra forma ---------- */
-let _aiEj = {};   // respuestas de IA del ejercicio en pantalla: { rev, otra } — se vacía en cada pintarEjercicio, así una respuesta tardía de un ejercicio anterior se descarta sola
-const _AI_SCHEMA_REV = { type: 'OBJECT', properties: { paso: { type: 'INTEGER' }, queFallo: { type: 'STRING' }, comoCorregirlo: { type: 'STRING' } }, required: ['paso', 'queFallo', 'comoCorregirlo'] };
-function aiBoxHTML(){
-  if(!getAiKey()) return '';
-  return `<div class="aiFila">
-      <button type="button" class="btn sec chico" onclick="aiPedirRevision()">Revisar mi proceso${AI_B}</button>
-      <label class="btn sec chico">Foto de mi cuaderno${AI_B}<input type="file" accept="image/*" style="display:none" onchange="aiPedirRevision(this)"></label>
-    </div><div id="aiRev"></div>`;
+/* ---------- IA: burbuja AI → chat (una conversación por función) ---------- */
+// aviso corto (no había uno en Mate)
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.textContent = msg; t.setAttribute('role', 'status');
+  t.style.cssText = 'position:fixed;left:50%;bottom:90px;transform:translateX(-50%);max-width:86vw;padding:10px 16px;border-radius:14px;background:rgba(30,30,34,.94);color:#fff;font-size:.9rem;z-index:1400;text-align:center';
+  document.body.appendChild(t); setTimeout(() => t.remove(), 2600);
 }
-function aiPedirRevision(inp){
-  const file = inp && inp.files && inp.files[0];
-  if(inp) inp.value = '';
-  if(inp && !file) return;
-  // ayuda de la IA antes de contestar = ver la explicación: se avisa antes de que cuente
-  if(!respondido && !vioExpl) return confirmarAccion('Pedir ayuda a la IA cuenta como ver la explicación: este ejercicio ya no sumará a tus estadísticas. ¿Seguir?', () => _aiRevisar(file));
-  _aiRevisar(file);
+// Dictado por voz del navegador (Web Speech API) — no usa la IA ni la clave.
+// Android Chrome y Safari lo traen; donde no existe, el botón no se muestra.
+const _MIC_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v5"/></svg>';
+function _dictadoDisponible() {
+  return !!(window.SpeechRecognition || window.webkitSpeechRecognition);
 }
-async function _aiRevisar(file){
-  if(!ejActual) return;
-  const revelada = respondido || !!document.querySelector('#zonaFb .expl');   // ¿ya vio la respuesta? si no, la IA no la revela
-  if(!respondido && !vioExpl){ vioExpl = true; ultimoProceso = leerProceso(); guardarSesion(); }
-  const proceso = _aiProcesoTxt(leerProceso() || ultimoProceso || '');
-  let ent = respondido ? ultimaEntrada : null;
-  if(!respondido){ try{ ent = leerEntrada(ejActual); }catch(e){ ent = null; } }
-  const slot = { cargando: true }; _aiEj.rev = slot; _aiPintar('rev');
-  const ej = ejActual, d = _aiEjTxt(ej), pasos = proceso ? proceso.split('\n') : [];
-  try{
-    const extra = file ? [{ inline_data: { mime_type: 'image/jpeg', data: '' } }] : [];
-    if(file){ const img = await _imgParaIA(file, 1600); extra[0].inline_data = { mime_type: img.mime, data: img.data }; }
-    const res = await _aiJSON(_aiTutor() +
-      'EJERCICIO:\n' + d.enunciado + '\n\nRESPUESTA CORRECTA (verificada por la app):\n' + d.correcta +
-      '\n\nEXPLICACIÓN OFICIAL DE LA APP:\n' + d.oficial +
-      '\n\nLO QUE ESCRIBIÓ LA ESTUDIANTE:\nRespuesta: ' + _aiRespTxt(ej, ent) +
-      '\nProceso (un paso por línea):\n' + (pasos.length ? pasos.map((p, i) => (i + 1) + ') ' + p).join('\n') : '(no escribió proceso)') + '\n\n' +
-      (file ? 'Además manda la foto de su cuaderno: léela como su proceso. Si no se entiende, dilo en queFallo y deja paso en 0.\n\n' : '') +
-      (revelada
-        ? 'TAREA: compara su proceso con la explicación oficial y ubica el PRIMER paso donde se aparta (en "paso" pon su número de línea; 0 si no hay error, si no se puede ubicar o si usaste la foto). ' +
-          'Si su respuesta es la correcta y el proceso está bien, felicítala en una frase y di qué hizo bien. Si no escribió proceso y falló, di el error más probable que lleva a la respuesta que dio. ' +
-          'En queFallo explica qué salió mal y por qué (máximo 3 oraciones); en comoCorregirlo dile cómo hacerlo bien (máximo 2 oraciones).'
-        : 'TAREA: ELLA TODAVÍA NO HA CONTESTADO. NO reveles la respuesta final ni el resultado. Mira lo que lleva escrito: dile si los pasos van bien y cuál sería el siguiente paso, sin hacerlo por ella. ' +
-          'Si no ha escrito nada, dile con qué empezar. En "paso" pon el número de línea con un error si lo ves (0 si no hay o si usaste la foto). ' +
-          'En queFallo di cómo va (máximo 3 oraciones); en comoCorregirlo, el siguiente paso o la corrección (máximo 2 oraciones).'),
-      _AI_SCHEMA_REV, extra);
-    const qf = String(res.queFallo || '').trim().slice(0, 700), cc = String(res.comoCorregirlo || '').trim().slice(0, 500);
-    if(!qf) throw new Error('La IA no respondió bien — inténtalo de nuevo');
-    let paso = Number.isInteger(res.paso) ? res.paso : 0;
-    if(file || paso < 1 || paso > pasos.length) paso = 0;   // el número de paso solo vale si existe esa línea
-    if(_aiEj.rev !== slot) return;   // la cerró, o ya pasó a otro ejercicio, mientras la IA pensaba
-    _aiEj.rev = { ok: true, paso, qf, cc, foto: !!file, revelada };
-  }catch(e){
-    if(_aiEj.rev !== slot) return;
-    _aiEj.rev = { error: e.message || 'No se pudo' };
+// Dictado tipo INTERRUPTOR: un toque en el micrófono empieza a escuchar (el texto va apareciendo en el campo) y otro toque en el mismo
+// micrófono lo apaga. Al apagarse, si se entendió algo, llama onText(texto). Si se corta solo (silencio) mientras sigue encendido, se
+// vuelve a encender; otro micrófono encendido se apaga. El botón `btnId` se pinta mientras escucha.
+let _dictando = null;   // { rec, btnId, activo, sinCb, dicho }
+function _dictarParar(sinCb) {   // apagar el que esté escuchando (sinCb = no llamar onText: se va a enviar o cerrar por otro lado)
+  const d = _dictando; if (!d) return;
+  d.activo = false; if (sinCb) d.sinCb = true;
+  try { d.rec.stop(); } catch (e) {}
+}
+function _dictar(inputId, btnId, onText) {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const inp = document.getElementById(inputId), btn = document.getElementById(btnId);
+  if (!SR || !inp) return;
+  if (_dictando && _dictando.btnId === btnId) { _dictarParar(); return; }   // segundo toque: apagar
+  if (_dictando) _dictarParar(true);                                          // otro micrófono encendido: se apaga
+  const st = { rec: null, btnId, activo: true, sinCb: false, dicho: false };
+  _dictando = st;
+  const base = inp.value.trim() ? inp.value.trim() + ' ' : '';   // lo que ya estaba escrito se conserva
+  let finales = '', t0 = 0;
+  const bgAntes = btn ? btn.style.background : '', phAntes = inp.placeholder;
+  if (btn) { btn.style.background = 'rgba(74,222,128,.35)'; btn.setAttribute('aria-pressed', 'true'); }
+  inp.placeholder = 'Te escucho… toca el micrófono para terminar';
+  const cerrar = () => {
+    if (btn && btn.isConnected) { btn.style.background = bgAntes; btn.setAttribute('aria-pressed', 'false'); }
+    if (inp.isConnected) inp.placeholder = phAntes; // cada campo vuelve a SU texto de ayuda
+    if (_dictando === st) _dictando = null;
+    const txt = inp.value.trim();
+    if (st.dicho && !st.sinCb && onText && txt) onText(txt);
+  };
+  const arrancar = () => {
+    const rec = new SR();
+    st.rec = rec; t0 = Date.now();
+    rec.lang = 'es-US';
+    rec.continuous = true;
+    rec.interimResults = true;
+    rec.maxAlternatives = 1;
+    rec.onresult = e => {
+      let prov = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const t = e.results[i][0].transcript;
+        if (e.results[i].isFinal) finales += (finales ? ' ' : '') + t.trim(); else prov += t;
+      }
+      const txt = (base + finales + (prov ? (finales ? ' ' : '') + prov.trim() : '')).trim();
+      if (txt) { inp.value = txt; st.dicho = true; }
+    };
+    rec.onerror = e => {
+      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') { st.activo = false; showToast('Permite el micrófono para dictar'); }
+      else if (e.error !== 'no-speech' && e.error !== 'aborted') { st.activo = false; showToast('No se pudo dictar'); }
+    };
+    rec.onend = () => {
+      // se cortó solo (silencio) pero sigue encendido: se vuelve a encender (si no falló al instante, para no quedar en un ciclo)
+      if (st.activo && Date.now() - t0 > 800) { try { arrancar(); return; } catch (e) {} }
+      cerrar();
+    };
+    try { rec.start(); } catch (e) { cerrar(); }
+  };
+  arrancar();
+}
+const _AI_FLECHA_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>';
+// Misma receta que "Empezar entrenamiento" (translate + scale desde la esquina + clip-path de píldora, ver growFromRectPoint): la hoja nace
+// EXACTO en la caja de la burbuja AI y se achica de vuelta ahí. --tx0/--ty0 = esquina, --gsx/--gsy = escala, --rx = radio de la píldora.
+function _aiChatOrigen(sheet, bub) {
+  sheet.style.transition = 'none'; sheet.style.transform = 'none'; // se mide la hoja en reposo
+  const br = bub.getBoundingClientRect(), sr = sheet.getBoundingClientRect();
+  const gsx = br.width / sr.width, gsy = br.height / sr.height;
+  sheet.style.setProperty('--tx0', (br.left - sr.left) + 'px');   // la esquina de la hoja encogida cae exacto en la esquina de la burbuja
+  sheet.style.setProperty('--ty0', (br.top - sr.top) + 'px');
+  sheet.style.setProperty('--gsx', gsx);
+  sheet.style.setProperty('--gsy', gsy);
+  sheet.style.setProperty('--rx', (br.height / 2 / gsx) + 'px'); // radio horizontal para que, ya encogida, termine en la píldora de la burbuja
+}
+function _aiChatLimpiarAnim(sheet) {
+  sheet.classList.remove('crece', 'achica');
+  sheet.style.transition = ''; sheet.style.transform = ''; sheet.style.transformOrigin = '';
+}
+const _aiSinAnimacion = () => window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+// Cada función es una entrada de _AIG (titulo, saludo, chips, enviar…). enviar(q, previos, ctx, img) → { texto, acciones? }. La IA solo conversa,
+// compara y sugiere: lo que hace algo (practicar un tema) es un botón de acción; nunca decide si una respuesta está bien ni toca stats/errores/racha.
+let _aiGenMsgs = {};   // clave → mensajes { rol:'yo', texto, foto? } | { rol:'ia', texto, acciones } | { rol:'ia', cargando } | { rol:'ia', error, q, img }
+let _aiGen = null;     // { f, id, clave, ctx } del chat abierto (o el último abierto)
+let _aiGenChips = [];  // chips visibles ahora, para aiGenChip(j)
+let _aiEjN = 0;        // sube en cada ejercicio que se pinta: el chat del ejercicio es de UNO solo (clave 'ej:N')
+let _aiRondaId = 0;    // sube al terminar cada ronda: un chat por ronda
+// Ayuda de IA ANTES de contestar = "ver la explicación" (decisión de la usuaria): se avisa antes de que cuente y se marca vioExpl
+function aiEjAbrir(f, btn, id) {
+  if (!ejActual) return;
+  if (!respondido && !vioExpl) return confirmarAccion('Pedir ayuda a la IA cuenta como ver la explicación: este ejercicio ya no sumará a tus estadísticas. ¿Seguir?',
+    () => { vioExpl = true; ultimoProceso = leerProceso(); guardarSesion(); aiGenAbrir(f, btn, id); });
+  aiGenAbrir(f, btn, id);
+}
+const _aiMateria = () => MODULOS.filter(m => m.clase === materia);
+const _AIG = {
+  ej: {
+    titulo: 'Ayuda con este ejercicio', aria: 'Pedirle ayuda a la IA con este ejercicio', ph: 'Ej: no entiendo el paso 2', foto: true, fotoMax: 1600, abrir: 'aiEjAbrir',
+    saludo: 'Pregúntame lo que quieras de este ejercicio: puedo revisar tu proceso (también con una foto de tu cuaderno), explicártelo de otra forma o darte una pista. Yo no decido si tu respuesta está bien: eso lo hace la app.',
+    chips: ['Revisa mi proceso', 'Explícamelo de otra forma', 'Dame una pista'],
+    seguir: ['Otra explicación distinta', '¿Y qué hago ahora?', 'Dímelo más simple'],
+    clave: (id, ctx) => 'ej:' + ctx.n, ctx: () => ejActual ? { ej: ejActual, n: _aiEjN } : null,
+    async enviar(q, previos, ctx, img) {
+      if (ejActual !== ctx.ej) throw new Error('Ese ejercicio ya cambió — abre la ayuda del ejercicio nuevo');
+      const ej = ctx.ej, d = _aiEjTxt(ej);
+      const revelada = respondido || !!document.querySelector('#zonaFb .expl');   // ¿ya vio la respuesta? si no, la IA no la revela
+      const proceso = _aiProcesoTxt(leerProceso() || ultimoProceso || '');
+      let ent = respondido ? ultimaEntrada : null;
+      if (!respondido) { try { ent = leerEntrada(ej); } catch (e) { ent = null; } }
+      const pasos = proceso ? proceso.split('\n') : [];
+      const res = await _aiJSON(_aiTutor() +
+        'EJERCICIO:\n' + d.enunciado + '\n\nRESPUESTA CORRECTA (verificada por la app):\n' + d.correcta +
+        '\n\nEXPLICACIÓN OFICIAL DE LA APP:\n' + d.oficial +
+        '\n\nLO QUE ESCRIBIÓ LA ESTUDIANTE:\nRespuesta: ' + _aiRespTxt(ej, ent) +
+        '\nProceso (un paso por línea):\n' + (pasos.length ? pasos.map((p, i) => (i + 1) + ') ' + p).join('\n') : '(no escribió proceso)') + '\n\n' +
+        (img ? 'Además manda la foto de su cuaderno: léela como su proceso. Si no se entiende, dilo y deja "paso" en 0.\n\n' : '') +
+        'SU ÚLTIMO MENSAJE: ' + JSON.stringify(q) + '\n' +
+        (previos.length ? 'CONVERSACIÓN ANTERIOR (lo que dice ahora es lo que manda): ' + JSON.stringify(previos) + '\n' : '') + '\n' +
+        'QUÉ HACER SEGÚN SU MENSAJE: si pide revisar su proceso, compáralo con la explicación oficial y ubica el PRIMER paso donde se aparta (en "paso" pon el número de su línea; 0 si no hay error, si no se puede ubicar o si usaste la foto); ' +
+        'si su proceso y su respuesta están bien, felicítala en una frase. Si pide otra forma de explicar, explícaselo con palabras más simples, con una imagen mental o una analogía cotidiana corta, usando SOLO los números y datos de este ejercicio ' +
+        '(no inventes un ejemplo con otros números ni hagas cuentas nuevas) y distinta a lo que ya dijiste. Si pide una pista, da solo el primer paso o la idea, nunca la solución. Si es otra pregunta de este ejercicio, contéstala. ' +
+        'Máximo 6 oraciones. "paso" es 0 si no aplica.' +
+        (revelada ? '' : ' ELLA TODAVÍA NO HA CONTESTADO: NO reveles la respuesta final ni el resultado; si revisas su proceso, dile si los pasos van bien y cuál sería el siguiente, sin hacerlo por ella.'),
+        { type: 'OBJECT', properties: { respuesta: { type: 'STRING' }, paso: { type: 'INTEGER' } }, required: ['respuesta', 'paso'] },
+        img ? [{ inline_data: { mime_type: img.mime, data: img.data } }] : undefined);
+      const resp = String(res.respuesta || '').trim().slice(0, 900);
+      if (!resp) throw new Error('La IA no respondió bien — inténtalo de nuevo');
+      let paso = Number.isInteger(res.paso) ? res.paso : 0;
+      if (img || paso < 1 || paso > pasos.length) paso = 0;   // el número de paso solo vale si existe esa línea
+      return { texto: (paso ? 'Paso ' + paso + ': ' : '') + resp +
+        (img ? '\n\nLa IA puede leer mal una foto: revisa que lo que dice sea lo que escribiste.' : '') +
+        (!revelada && !previos.length ? '\n\nEste ejercicio ya no cuenta para las estadísticas.' : '') };
+    }
+  },
+  tarea: {
+    titulo: 'Foto de mi tarea', aria: 'Mandarle a la IA la foto de un problema de tu tarea', ph: 'Ej: no sé cómo empezar', foto: true, fotoMax: 1600,
+    saludo: 'Mándame la foto de un problema de tu tarea o de tu libro (toca la cámara). Te digo qué problema es y de qué tema, y te doy una pista para empezar: no la solución.',
+    chips: [], seguir: ['Dame otra pista', 'No entiendo la pista'],
+    clave: () => 'tarea:' + materia, ctx: () => ({ materia }),
+    async enviar(q, previos, ctx, img) {
+      if (!img && !previos.length) return { texto: 'Mándame la foto del problema (el botón de la cámara, abajo a la izquierda) y lo miro.' };
+      const ms = MODULOS.filter(m => m.clase === ctx.materia), ids = new Set(ms.map(m => m.id));
+      const res = await _aiJSON(_aiTutor().replace(/ La app ya calcula[\s\S]*$/, ' ') +
+        'La estudiante te manda la FOTO de un problema de su tarea o libro (puede traer también su intento) y conversa contigo sobre él. Su último mensaje: ' + JSON.stringify(q) + '. ' +
+        (previos.length ? 'CONVERSACIÓN ANTERIOR (lo que dice ahora es lo que manda): ' + JSON.stringify(previos) + '. ' : '') +
+        'En "respuesta": si es la primera foto, di qué problema es y qué te piden (una o dos frases) y, si en la foto se ve un intento suyo con un error, dónde está; si es una pregunta de seguimiento, contéstala. ' +
+        'En "pista" pon solo el PRIMER paso o la idea para empezar (NO des la solución final ni el resultado; máximo 2 oraciones; "" si no aplica). ' +
+        'En "tema" pon el id EXACTO del tema de la lista que más se parece, o "" si ninguno encaja o el problema no es de esta materia. Si la foto no se entiende, dilo en "respuesta" y deja lo demás vacío.\n\n' +
+        'TEMAS DE ESTA MATERIA (id: nombre):\n' + ms.map(m => m.id + ': ' + m.nombre).join('\n'),
+        { type: 'OBJECT', properties: { respuesta: { type: 'STRING' }, tema: { type: 'STRING' }, pista: { type: 'STRING' } }, required: ['respuesta', 'tema', 'pista'] },
+        img ? [{ inline_data: { mime_type: img.mime, data: img.data } }] : undefined);
+      const resp = String(res.respuesta || '').trim().slice(0, 600);
+      if (!resp) throw new Error('La IA no respondió bien — inténtalo de nuevo');
+      const tema = ids.has(res.tema) ? res.tema : '', pista = String(res.pista || '').trim().slice(0, 400);
+      return { texto: resp + (pista ? '\n\nPista: ' + pista : '') + (img ? '\n\nLa IA puede equivocarse, sobre todo con las cuentas: úsala solo como pista.' : ''),
+        acciones: tema ? [{ label: 'Practicar este tema: ' + MOD_POR_ID[tema].nombre, cierra: true, fn: () => practicarTema(tema) }] : [] };
+    }
+  },
+  plan: {
+    titulo: 'Plan de repaso', aria: 'Pedirle a la IA tu plan de repaso', ph: 'Ej: ¿qué repaso primero?',
+    saludo: 'Miro tus aciertos y fallos reales y te digo qué repasar hoy. Pregúntame lo que quieras de tu progreso.',
+    chips: ['Arma mi plan de hoy', '¿Qué tema repaso primero?', '¿En qué fallo más?'], seguir: ['¿Por qué ese tema?', 'Dame un plan más corto'],
+    clave: () => 'plan:' + materia, ctx: () => ({ materia }),
+    async enviar(q, previos, ctx) {
+      const ms = MODULOS.filter(m => m.clase === ctx.materia), ids = new Set(ms.map(m => m.id));
+      const datos = ms.map(m => { const s = stats[m.id], n = s ? s.ok + s.fallo : 0; return { id: m.id, tema: m.nombre, aciertos: s ? s.ok : 0, fallos: s ? s.fallo : 0, porciento: n ? pct(s) : null }; });
+      const errs = {}; erroresMateria().forEach(e => { errs[e.modId] = (errs[e.modId] || 0) + 1; });
+      const res = await _aiJSON(_aiTutor().replace(/ La app ya calcula[\s\S]*$/, ' ') +
+        'Conversas con ella sobre su repaso. Su último mensaje: ' + JSON.stringify(q) + '. ' +
+        (previos.length ? 'CONVERSACIÓN ANTERIOR (lo que dice ahora es lo que manda): ' + JSON.stringify(previos) + '. ' : '') +
+        'Si pide su plan o qué repasar: elige de 1 a 3 temas de la lista en "temas" (usa el id EXACTO): prioriza los de menor porcentaje con al menos 3 ejercicios, los que más aparecen en sus errores guardados y, si tiene grupos de examen, los de ahí; ' +
+        'en cada motivo cita números reales (por ejemplo "vas al 40% en 12 ejercicios"); en "respuesta" 2 o 3 frases sobre cómo va y cómo practicar hoy. Si es solo una pregunta, contéstala en "respuesta" (máximo 4 frases) y deja "temas" vacío. No inventes datos que no estén abajo.\n\n' +
+        'TEMAS (porciento null = todavía sin practicar):\n' + JSON.stringify(datos) + '\n\nERRORES GUARDADOS (cuántos por id de tema):\n' + JSON.stringify(errs) +
+        '\n\nDÍAS PRACTICADOS (últimos 14, de más viejo a más nuevo):\n' + JSON.stringify(_historialUltimosDias(14).map(x => x.n)) +
+        '\n\nGRUPOS DE EXAMEN GUARDADOS:\n' + JSON.stringify(gruposMateria().map(g => ({ nombre: g.nombre, temas: g.mods.map(id => MOD_POR_ID[id] ? MOD_POR_ID[id].nombre : id) }))),
+        { type: 'OBJECT', properties: { respuesta: { type: 'STRING' }, temas: { type: 'ARRAY', items: { type: 'OBJECT', properties: { id: { type: 'STRING' }, motivo: { type: 'STRING' } }, required: ['id', 'motivo'] } } }, required: ['respuesta', 'temas'] });
+      const vistos = new Set(), temas = [];
+      (res.temas || []).forEach(t => { if (t && ids.has(t.id) && !vistos.has(t.id) && temas.length < 3) { vistos.add(t.id); temas.push({ id: t.id, motivo: String(t.motivo || '').slice(0, 220) }); } });
+      const resp = String(res.respuesta || '').trim().slice(0, 700);
+      if (!resp && !temas.length) throw new Error('La IA no respondió bien — inténtalo de nuevo');
+      return { texto: resp + (temas.length ? '\n\n' + temas.map(t => '• ' + MOD_POR_ID[t.id].nombre + ' — ' + t.motivo).join('\n') : ''),
+        acciones: temas.map(t => ({ label: 'Practicar: ' + MOD_POR_ID[t.id].nombre, cierra: true, fn: () => practicarTema(t.id) })) };
+    }
+  },
+  ronda: {
+    titulo: 'Mi ronda', aria: 'Pedirle a la IA un comentario de tu ronda', ph: 'Ej: ¿qué repaso ahora?',
+    saludo: 'Miro tu ronda con tus datos reales: qué hiciste bien, qué patrón ves en lo que fallaste y qué hacer ahora.',
+    chips: ['Comenta mi ronda', '¿Qué fallé?', '¿Qué repaso ahora?'], seguir: ['¿Por qué fallé esos?', 'Dame un consejo'],
+    clave: () => 'ronda:' + _aiRondaId, ctx: () => sesionHechos >= 3 ? { total: sesionHechos, ok: sesionCorrectos } : null,
+    async enviar(q, previos, ctx) {
+      const fallos = sesionFallos.slice(0, 10).map(f => ({ tema: f.nombre, enunciado: _aiTxt(f.ej.enunciado).slice(0, 220), respuestaCorrecta: _aiTxt(fmtRespuesta(f.ej)).slice(0, 120) }));
+      const temas = {}; sesionFallos.forEach(f => { const s = stats[f.modId]; if (s) temas[f.nombre] = { porcientoHistorico: pct(s), ejercicios: s.ok + s.fallo }; });
+      const res = await _aiJSON(_aiTutor().replace(/ La app ya calcula[\s\S]*$/, ' ') +
+        'Conversas con ella sobre la ronda que acaba de terminar. Su último mensaje: ' + JSON.stringify(q) + '. ' +
+        (previos.length ? 'CONVERSACIÓN ANTERIOR (lo que dice ahora es lo que manda): ' + JSON.stringify(previos) + '. ' : '') +
+        'Contesta con los datos REALES de abajo, en máximo 5 frases: qué hizo bien, qué patrón ves en lo que falló (solo si hay evidencia en los datos; si no, no inventes la causa) y qué hacer ahora.\n\n' +
+        'RONDA: acertó ' + ctx.ok + ' de ' + ctx.total + '\n\nFALLOS DE ESTA RONDA:\n' + JSON.stringify(fallos) + '\n\nSU PORCENTAJE HISTÓRICO EN ESOS TEMAS:\n' + JSON.stringify(temas),
+        { type: 'OBJECT', properties: { respuesta: { type: 'STRING' } }, required: ['respuesta'] });
+      const resp = String(res.respuesta || '').trim().slice(0, 900);
+      if (!resp) throw new Error('La IA no respondió bien — inténtalo de nuevo');
+      return { texto: resp };
+    }
   }
-  _aiPintar('rev');
+};
+// La burbuja "AI" de cada pantalla. cls: 'est' = en el flujo (no flotante), 'osc' = sobre fondo oscuro. id: contexto (p. ej. "d-i").
+function _aiGenBurbuja(f, id, cls) {
+  if (!getAiKey()) return '';
+  const cfg = _AIG[f];
+  return `<button type="button" class="aic-bubble ${cls || 'est'}" data-aig="${f}" onclick="${cfg.abrir || 'aiGenAbrir'}('${f}', this, '${id || ''}')" aria-label="${cfg.aria}" title="${cfg.titulo}">AI</button>`;
 }
-// "Explícamelo de otra forma": solo aparece con la explicación a la vista (ya contó como verla)
-const _aiOtraBtn = () => `<button type="button" class="btn sec chico" style="margin:0 0 10px" onclick="aiOtraForma()">Explícamelo de otra forma${AI_B}</button>`;
-async function aiOtraForma(){
-  if(!ejActual) return;
-  const previos = (_aiEj.otra && _aiEj.otra.textos) || [];
-  const slot = { cargando: true, textos: previos }; _aiEj.otra = slot; _aiPintar('otra');
-  const d = _aiEjTxt(ejActual);
-  try{
-    const res = await _aiJSON(_aiTutor() +
-      'EJERCICIO:\n' + d.enunciado + '\n\nRESPUESTA CORRECTA (verificada por la app):\n' + d.correcta +
-      '\n\nEXPLICACIÓN OFICIAL DE LA APP:\n' + d.oficial + '\n\n' +
-      'TAREA: la estudiante ya leyó esa explicación y no la entendió. Explícasela DE OTRA FORMA: palabras más simples, como si no supiera nada del tema, con una imagen mental o una analogía cotidiana corta. ' +
-      'Usa SOLO los números y datos de este ejercicio: no inventes un ejemplo con otros números ni hagas cuentas nuevas. Máximo 110 palabras.' +
-      (previos.length ? '\n\nYa le diste estas explicaciones; esta vez usa un enfoque distinto:\n' + previos.map((t, i) => (i + 1) + ') ' + t).join('\n') : ''),
-      { type: 'OBJECT', properties: { explicacion: { type: 'STRING' } }, required: ['explicacion'] });
-    const t = String(res.explicacion || '').trim().slice(0, 900);
-    if(t.length < 20) throw new Error('La IA no respondió bien — inténtalo de nuevo');
-    if(_aiEj.otra !== slot) return;
-    _aiEj.otra = { ok: true, textos: [...previos, t] };
-  }catch(e){
-    if(_aiEj.otra !== slot) return;
-    _aiEj.otra = { error: e.message || 'No se pudo', textos: previos };
+function aiGenAbrir(f, btn, id) {
+  if (!getAiKey()) return;
+  const cfg = _AIG[f], ctx = cfg.ctx(id || '');
+  if (!ctx) return;
+  _aiGen = { f, id: id || '', clave: cfg.clave(id || '', ctx), ctx };
+  if (!_aiGenMsgs[_aiGen.clave]) _aiGenMsgs[_aiGen.clave] = [];
+  let ov = document.getElementById('aiGenOv');
+  if (!ov) {
+    ov = document.createElement('div');
+    ov.id = 'aiGenOv'; ov.className = 'aic-ov';
+    ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true');
+    ov.onclick = e => { if (e.target === ov) aiGenCerrar(); else if (!e.target.closest('#aigFoto') && !e.target.closest('#aigFotoMenu')) aiGenMenuFoto(false); };
+    ov.innerHTML = `<div class="aic-sheet">
+      <div class="aic-head">
+        <div class="aic-titulo" id="aigTitulo"></div><span class="ai-badge ai-inline">AI</span>
+        <button type="button" class="aic-nuevo" onclick="aiGenNuevo()">Nueva</button>
+        <button type="button" class="aic-x" aria-label="Cerrar" onclick="aiGenCerrar()">✕</button>
+      </div>
+      <div class="aic-msgs" id="aigMsgs" aria-live="polite"></div>
+      <div class="aic-in">
+        <input id="aigInput" type="text" aria-label="Escribe tu mensaje" autocomplete="off" onkeydown="if(event.key==='Enter')aiGenEnviar()">
+        <button type="button" id="aigFoto" class="aic-mic" aria-label="Adjuntar una foto" aria-haspopup="true" style="display:none;" onclick="aiGenMenuFoto()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h3l2-3h6l2 3h3v13H4z"/><circle cx="12" cy="13" r="4"/></svg></button>
+        <div id="aigFotoMenu" class="aic-fmenu" style="display:none;" role="menu">
+          <button type="button" role="menuitem" onclick="aiGenMenuFoto(false);document.getElementById('aigInCam').click()">Tomar foto</button>
+          <button type="button" role="menuitem" onclick="aiGenMenuFoto(false);document.getElementById('aigInGal').click()">Elegir de la galería</button>
+        </div>
+        <input id="aigInCam" type="file" accept="image/*" capture="environment" onchange="aiGenFoto(this)" style="display:none">
+        <input id="aigInGal" type="file" accept="image/*" onchange="aiGenFoto(this)" style="display:none">
+        ${_dictadoDisponible() ? `<button type="button" id="aigMic" class="aic-mic" aria-label="Dictar" onclick="_dictar('aigInput','aigMic',()=>aiGenEnviar())">${_MIC_SVG}</button>` : ''}
+        <button type="button" class="aic-send" aria-label="Enviar" onclick="aiGenEnviar()">${_AI_FLECHA_SVG}</button>
+      </div>
+    </div>`;
+    document.body.appendChild(ov);
   }
-  _aiPintar('otra');
+  document.getElementById('aigTitulo').textContent = cfg.titulo;
+  aiGenMenuFoto(false);
+  ov.style.zIndex = cfg.z || '';   // el escáner (z 2000) queda encima del chat normal (z 1300)
+  document.getElementById('aigFoto').style.display = cfg.foto ? 'flex' : 'none';
+  _aiGenImg = null; _aiGenFotoUI();
+  ov.setAttribute('aria-label', cfg.titulo + ' con IA');
+  const inp = document.getElementById('aigInput');
+  inp.placeholder = cfg.ph; inp.value = '';
+  _aiGenRender();
+  const sheet = ov.querySelector('.aic-sheet');
+  ov.classList.remove('cerrando');
+  _aiChatLimpiarAnim(sheet);
+  if (btn && !_aiSinAnimacion()) {
+    ov.classList.add('show'); // visible: ahora se puede medir
+    _aiChatOrigen(sheet, btn);
+    void sheet.offsetWidth;
+    sheet.classList.add('crece');
+    let listo = false;
+    const fin = () => { if (listo) return; listo = true; _aiChatLimpiarAnim(sheet); };
+    sheet.addEventListener('animationend', e => { if (e.target === sheet) fin(); });
+    setTimeout(fin, 800); // por si el navegador no avisa que terminó (pestaña en segundo plano)
+  } else {
+    requestAnimationFrame(() => ov.classList.add('show'));
+  }
+  document.body.classList.add('aic-open');
+  if (window.innerWidth > 640) inp.focus(); // en el teléfono no se abre el teclado solo: taparía las sugerencias
 }
-function aiCerrar(kind){ _aiEj[kind] = null; _aiPintar(kind); }
-function _aiPintar(kind){
-  const el = $(kind === 'rev' ? 'aiRev' : 'aiOtra'); if(!el) return;
-  const s = _aiEj[kind], cer = `aiCerrar('${kind}')`;
-  if(!s){ el.innerHTML = kind === 'otra' ? _aiOtraBtn() : ''; return; }
-  const caja = c => `<div class="aiCaja ai-tagged">${c}</div>`;
-  if(s.cargando) return el.innerHTML = caja(`<p>${kind === 'rev' ? 'La IA está mirando tu proceso…' : 'La IA está pensando otra forma de explicarlo…'}</p>${_aiCerrarBtn(cer)}`);
-  if(s.error) return el.innerHTML = caja(`<p>${escHtml(s.error)}</p>${_aiCerrarBtn(cer)}`);
-  if(kind === 'otra') return el.innerHTML = caja(`<p>${escHtml(s.textos[s.textos.length - 1])}</p>` +
-    _aiCerrarBtn(cer, `<button type="button" class="aiCerrar" style="margin:2px 0 0" onclick="aiOtraForma()">Otra explicación distinta</button>`));
-  el.innerHTML = caja(
-    (s.paso ? `<p><b>Paso ${s.paso}:</b> ${escHtml(s.qf)}</p>` : `<p>${escHtml(s.qf)}</p>`) +
-    (s.cc ? `<p>${s.paso ? '<b>Cómo corregirlo:</b> ' : ''}${escHtml(s.cc)}</p>` : '') +
-    (s.foto ? `<p style="color:var(--muted);font-size:.85rem">La IA puede leer mal una foto: revisa que lo que dice sea lo que escribiste.</p>` : '') +
-    (!s.revelada ? `<p style="color:var(--muted);font-size:.85rem">Este ejercicio ya no cuenta para las estadísticas.</p>` : '') +
-    _aiCerrarBtn(cer));
+// instantaneo = true cuando un botón de acción abre otra pantalla encima (no hay burbuja a donde achicarse)
+function aiGenCerrar(instantaneo) {
+  _dictarParar(true);
+  const ov = document.getElementById('aiGenOv');
+  document.body.classList.remove('aic-open');
+  if (!ov || !ov.classList.contains('show')) return;
+  const sheet = ov.querySelector('.aic-sheet');
+  const bub = !instantaneo && _aiGen ? document.querySelector(`[data-aig="${_aiGen.f}"]`) : null; // se busca de nuevo: la pantalla pudo repintarse
+  if (bub && sheet && !_aiSinAnimacion()) {
+    _aiChatOrigen(sheet, bub);
+    ov.classList.add('cerrando');
+    sheet.classList.remove('crece'); void sheet.offsetWidth;
+    sheet.classList.add('achica');
+    ov.classList.remove('show'); // el fondo se aclara a la vez que la hoja se achica
+    let listo = false;
+    const fin = () => { if (listo) return; listo = true; ov.classList.remove('cerrando'); _aiChatLimpiarAnim(sheet); };
+    sheet.addEventListener('animationend', e => { if (e.target === sheet) fin(); });
+    setTimeout(fin, 700);
+  } else {
+    ov.classList.remove('show');
+  }
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.getElementById('aiGenOv')?.classList.contains('show')) aiGenCerrar(); });
+function _aiGenRender() {
+  const box = document.getElementById('aigMsgs'); if (!box || !_aiGen) return;
+  const g = _aiGen, cfg = _AIG[g.f], msgs = _aiGenMsgs[g.clave] || [];
+  const chips = lista => { _aiGenChips = lista; return `<div class="aic-chips">${lista.map((t, j) => `<button type="button" class="aic-chip" onclick="aiGenChip(${j})">${escHtml(t)}</button>`).join('')}</div>`; };
+  let h = `<div class="aic-m ia">${escHtml(typeof cfg.saludo === 'function' ? cfg.saludo(g.ctx) : cfg.saludo)}</div>`;
+  if (!msgs.length) h += chips(cfg.chips);
+  msgs.forEach((m, k) => {
+    if (m.rol === 'yo') h += `<div class="aic-m yo">${m.foto ? '<div class="aic-fotol">Foto adjunta</div>' : ''}${escHtml(m.texto)}</div>`;
+    else if (m.cargando) h += `<div class="aic-m ia"><span class="aic-puntos" aria-label="La IA está pensando"><i></i><i></i><i></i></span></div>`;
+    else if (m.error) h += `<div class="aic-m ia">${escHtml(m.error)}<button type="button" class="aic-act sec" onclick="aiGenReintentar()">Reintentar</button></div>`;
+    else h += `<div class="aic-m ia">${escHtml(_aiGenTxt(m))}${(m.acciones || []).map((a, j) => {
+      if (a.activo && !a.activo()) return '';
+      const lab = typeof a.label === 'function' ? a.label() : a.label, sub = typeof a.sub === 'function' ? a.sub() : a.sub;
+      const btn = `<button type="button" class="aic-act" onclick="aiGenAccion(${k},${j})">${a.editar ? `<span class="aic-tit">${escHtml(lab)}</span>` : escHtml(lab)}${sub ? `<small>${escHtml(sub)}</small>` : ''}</button>`;
+      return a.editar ? `<div class="aic-actw">${btn}<button type="button" class="aic-edit" onclick="aiGenEditar(${k},${j})" aria-label="Editar lo que se va a anotar">Editar</button></div>` : btn;
+    }).join('')}</div>`;
+  });
+  const ult = msgs[msgs.length - 1];
+  if (ult && ult.rol === 'ia' && !ult.cargando && !ult.error) h += chips(cfg.seguir);   // seguimientos tocables, como en un chat
+  box.innerHTML = h;
+  box.scrollTop = box.scrollHeight;
+}
+// El texto de una respuesta: fijo, o calculado en cada pintado (textoFn) cuando algo del mensaje se puede editar
+function _aiGenTxt(m) { return m.textoFn ? m.textoFn() : m.texto; }
+function aiGenChip(j) { if (_aiGenChips[j]) aiGenEnviar(_aiGenChips[j]); }
+function aiGenAccion(k, j) {
+  const g = _aiGen; if (!g) return;
+  const m = (_aiGenMsgs[g.clave] || [])[k], a = m && m.acciones && m.acciones[j];
+  if (!a || (a.activo && !a.activo())) return;
+  if (a.cierra) aiGenCerrar(true);
+  a.fn();
+  _aiGenRender();
+}
+// "Editar" en una acción: abre el editor de esa acción (a.editar) sin ejecutarla
+function aiGenEditar(k, j) {
+  const g = _aiGen; if (!g) return;
+  const m = (_aiGenMsgs[g.clave] || [])[k], a = m && m.acciones && m.acciones[j];
+  if (a && a.editar) a.editar();
+}
+function aiGenNuevo() {
+  const g = _aiGen; if (!g) return;
+  _aiGenMsgs[g.clave] = [];   // una respuesta tardía de la conversación vieja se descarta (enviar compara el arreglo)
+  const cfg = _AIG[g.f]; if (cfg.nueva) cfg.nueva(g.ctx);
+  const inp = document.getElementById('aigInput'); if (inp) inp.value = '';
+  _aiGenImg = null; _aiGenFotoUI();
+  _aiGenRender();
+}
+function aiGenReintentar() {
+  const g = _aiGen; if (!g) return;
+  const msgs = _aiGenMsgs[g.clave] || [], ult = msgs[msgs.length - 1];
+  if (!ult || !ult.error) return;
+  msgs.splice(-2, 2);   // quita el error y su pregunta; aiGenEnviar la vuelve a poner
+  if (ult.img) { _aiGenImg = ult.img; _aiGenFotoUI(); }   // y la foto, si la había
+  aiGenEnviar(ult.q);
+}
+// Foto pendiente de enviar en el chat que la admite (cfg.foto): { mime, data } ya achicada con _imgParaIA
+let _aiGenImg = null;
+function _aiGenFotoUI() {
+  const f = document.getElementById('aigFoto'), inp = document.getElementById('aigInput');
+  if (f) f.classList.toggle('on', !!_aiGenImg);
+  if (inp && _aiGen) inp.placeholder = _aiGenImg ? 'Foto lista — escribe algo o toca enviar' : _AIG[_aiGen.f].ph;
+}
+// Menú de la cámara: "Tomar foto" (abre la cámara) o "Elegir de la galería". aiGenMenuFoto(false) lo cierra; sin argumento alterna.
+// Abre y cierra con la animación de la burbuja AI (_aiChatOrigen mide la caja del botón); sin animación si el sistema pide menos movimiento.
+function aiGenMenuFoto(abrir) {
+  const m = document.getElementById('aigFotoMenu'), btn = document.getElementById('aigFoto'); if (!m) return;
+  const abierto = m.style.display !== 'none' && !m.classList.contains('cierra');
+  const ver = abrir === undefined ? !abierto : abrir;
+  if (ver === abierto) return;
+  clearTimeout(m._t);
+  const limpiar = () => { m.classList.remove('abre', 'cierra'); m.style.transition = ''; m.style.transform = ''; m.style.transformOrigin = ''; };
+  if (ver) {
+    limpiar(); m.style.display = 'flex';
+    if (btn) { const w = m.offsetWidth, tope = m.parentElement.clientWidth - w - 8; m.style.left = Math.max(8, Math.min(btn.offsetLeft - 6, tope)) + 'px'; }   // justo encima de la cámara, sin salirse de la pantalla
+    if (btn && !_aiSinAnimacion()) {
+      _aiChatOrigen(m, btn); void m.offsetWidth; m.classList.add('abre');
+      m._t = setTimeout(limpiar, 450);
+    }
+  } else if (btn && !_aiSinAnimacion() && m.style.display !== 'none') {
+    limpiar(); _aiChatOrigen(m, btn); void m.offsetWidth; m.classList.add('cierra');
+    m._t = setTimeout(() => { limpiar(); m.style.display = 'none'; }, 330);
+  } else { limpiar(); m.style.display = 'none'; }
+}
+async function aiGenFoto(input) {
+  const file = input.files && input.files[0];
+  input.value = '';   // para poder elegir la misma foto otra vez
+  if (!file || !_aiGen) return;
+  const cfg = _AIG[_aiGen.f], clave = _aiGen.clave;
+  try {
+    const img = await _imgParaIA(file, cfg.fotoMax);
+    if (!_aiGen || _aiGen.clave !== clave) return;   // cambió de chat mientras se achicaba
+    _aiGenImg = img; _aiGenFotoUI();
+  } catch (e) { showToast('No se pudo leer la foto'); }
+}
+async function aiGenEnviar(texto) {
+  _dictarParar(true);   // si el micrófono seguía encendido, se apaga (el texto ya está en el campo)
+  const g = _aiGen; if (!g) return;
+  const msgs = _aiGenMsgs[g.clave];
+  if (!msgs || msgs.some(m => m.cargando)) return; // una a la vez
+  const inp = document.getElementById('aigInput');
+  const img = _aiGenImg;
+  let q = (typeof texto === 'string' ? texto : (inp && inp.value || '')).trim().slice(0, 300);
+  if (!q && !img) { if (inp) inp.focus(); return; }
+  if (!q) q = 'Mira la foto.';
+  if (inp) inp.value = '';
+  _aiGenImg = null; _aiGenFotoUI();
+  // lo que se dijo antes (sin errores ni "pensando"), para que "¿y por qué?" se entienda
+  const previos = msgs.filter(m => !m.cargando && !m.error).slice(-8).map(m => ({ quien: m.rol === 'yo' ? 'estudiante' : 'tutora', texto: _aiGenTxt(m) }));
+  msgs.push({ rol: 'yo', texto: q, foto: !!img }, { rol: 'ia', cargando: true });
+  const pos = msgs.length - 1;
+  _aiGenRender();
+  let resp, efecto = null;
+  try {
+    const r = await _AIG[g.f].enviar(q, previos, g.ctx, img);
+    resp = { rol: 'ia', texto: r.texto, textoFn: r.textoFn, acciones: r.acciones || [] };
+    efecto = r.efecto || null;
+  } catch (e) {
+    resp = { rol: 'ia', error: e.message, q, img };
+  }
+  if (_aiGenMsgs[g.clave] !== msgs) return;   // empezó una conversación nueva mientras la IA pensaba
+  msgs[pos] = resp;
+  if (efecto) efecto();
+  if (_aiGen && _aiGen.clave === g.clave) _aiGenRender();   // si abrió otro chat mientras tanto, este queda guardado y se ve al volver
 }
 
-/* ---------- IA: plan de repaso (Progreso) ---------- */
-let _aiPlan = null;   // { materia, cargando | error | resumen, temas:[{id,motivo}], consejo }
-function _aiPlanHTML(total){
-  if(!getAiKey() || total < 5) return '';
-  const p = _aiPlan && _aiPlan.materia === materia ? _aiPlan : null;
-  if(!p) return `<div class="card"><h2>Plan de repaso</h2>
-    <p style="margin-bottom:12px">La IA mira tus aciertos y fallos y te dice qué repasar hoy.</p>
-    <button class="btn amar chico" style="margin-bottom:0" onclick="aiPlanRepaso()">Armar mi plan${AI_B}</button></div>`;
-  let cuerpo;
-  if(p.cargando) cuerpo = '<p>La IA está revisando tu progreso…</p>';
-  else if(p.error) cuerpo = `<p>${escHtml(p.error)}</p>`;
-  else cuerpo = `<p>${escHtml(p.resumen)}</p>` +
-    p.temas.map(t => `<div class="aiTema"><b>${escHtml(MOD_POR_ID[t.id].nombre)}</b><span>${escHtml(t.motivo)}</span>
-      <button class="btn sec chico" onclick="practicarTema('${t.id}')">Practicar este tema</button></div>`).join('') +
-    (p.consejo ? `<p style="margin-top:8px">${escHtml(p.consejo)}</p>` : '');
-  return `<div class="card ai-tagged"><h2>Plan de repaso</h2>${cuerpo}${_aiCerrarBtn('aiCerrarPlan()')}</div>`;
+// Dónde se ve cada burbuja
+function aiBoxHTML() {   // en el ejercicio, debajo de la respuesta
+  if (!getAiKey()) return '';
+  return '<div style="display:flex;justify-content:flex-end;margin-top:12px">' + _aiGenBurbuja('ej', '', 'est') + '</div>';
 }
-function aiCerrarPlan(){ _aiPlan = null; _aiRepintar(pantallaStats); }
-async function aiPlanRepaso(){
-  const slot = _aiPlan = { materia, cargando: true }; _aiRepintar(pantallaStats);
-  const ms = MODULOS.filter(m => m.clase === materia), ids = new Set(ms.map(m => m.id));
-  const datos = ms.map(m => { const s = stats[m.id], n = s ? s.ok + s.fallo : 0; return { id: m.id, tema: m.nombre, aciertos: s ? s.ok : 0, fallos: s ? s.fallo : 0, porciento: n ? pct(s) : null }; });
-  const errs = {}; erroresMateria().forEach(e => { errs[e.modId] = (errs[e.modId] || 0) + 1; });
-  try{
-    const res = await _aiJSON(_aiTutor().replace(/ La app ya calcula[\s\S]*$/, '') +
-      'Con los datos REALES de abajo arma su plan de repaso para HOY. Elige de 1 a 3 temas de la lista (usa el id EXACTO): prioriza los de menor porcentaje con al menos 3 ejercicios, ' +
-      'los que más aparecen en sus errores guardados y, si tiene grupos de examen, los de ahí. En cada motivo cita números reales (por ejemplo "vas al 40% en 12 ejercicios"). ' +
-      'resumen: 2 o 3 frases sobre cómo va. consejo: una frase sobre cómo practicar hoy. No inventes datos que no estén abajo.\n\n' +
-      'TEMAS (porciento null = todavía sin practicar):\n' + JSON.stringify(datos) +
-      '\n\nERRORES GUARDADOS (cuántos por id de tema):\n' + JSON.stringify(errs) +
-      '\n\nDÍAS PRACTICADOS (últimos 14, de más viejo a más nuevo):\n' + JSON.stringify(_historialUltimosDias(14).map(x => x.n)) +
-      '\n\nGRUPOS DE EXAMEN GUARDADOS:\n' + JSON.stringify(gruposMateria().map(g => ({ nombre: g.nombre, temas: g.mods.map(id => MOD_POR_ID[id] ? MOD_POR_ID[id].nombre : id) }))),
-      { type: 'OBJECT', properties: { resumen: { type: 'STRING' }, temas: { type: 'ARRAY', items: { type: 'OBJECT', properties: { id: { type: 'STRING' }, motivo: { type: 'STRING' } }, required: ['id', 'motivo'] } }, consejo: { type: 'STRING' } }, required: ['resumen', 'temas', 'consejo'] });
-    const vistos = new Set(), temas = [];
-    (res.temas || []).forEach(t => { if(t && ids.has(t.id) && !vistos.has(t.id) && temas.length < 3){ vistos.add(t.id); temas.push({ id: t.id, motivo: String(t.motivo || '').slice(0, 220) }); } });
-    const resumen = String(res.resumen || '').trim().slice(0, 600);
-    if(!resumen && !temas.length) throw new Error('La IA no respondió bien — inténtalo de nuevo');
-    if(_aiPlan !== slot) return;
-    _aiPlan = { materia, resumen, temas, consejo: String(res.consejo || '').trim().slice(0, 300) };
-  }catch(e){
-    if(_aiPlan !== slot) return;
-    _aiPlan = { materia, error: e.message || 'No se pudo' };
-  }
-  _aiRepintar(pantallaStats);
+const _aiOtraBtn = () => '<div style="display:flex;justify-content:flex-end;margin:0 0 10px">' + _aiGenBurbuja('ej', '', 'est') + '</div>';   // debajo de la explicación (mismo chat del ejercicio)
+function _aiPlanHTML(total) {   // Progreso
+  if (!getAiKey() || total < 5) return '';
+  return '<div class="card"><h2>Plan de repaso</h2><p style="margin-bottom:12px">La IA mira tus aciertos y fallos y te dice qué repasar hoy.</p>' +
+    '<div style="display:flex;justify-content:flex-end">' + _aiGenBurbuja('plan', '', 'est') + '</div></div>';
 }
-
-/* ---------- IA: comentario al terminar la ronda ---------- */
-let _aiRonda = null;   // { cargando } | { error } | { comentario, consejo }
-function _aiRondaHTML(){
-  if(!getAiKey() || sesionHechos < 3) return '';
-  const r = _aiRonda;
-  if(!r) return `<button class="btn amar" style="margin-top:14px" onclick="aiComentarRonda()">Comentario de la IA sobre mi ronda${AI_B}</button>`;
-  const cuerpo = r.cargando ? '<p>La IA está mirando tu ronda…</p>' : r.error ? `<p>${escHtml(r.error)}</p>`
-    : `<p>${escHtml(r.comentario)}</p>${r.consejo ? `<p>${escHtml(r.consejo)}</p>` : ''}`;
-  return `<div class="aiCaja ai-tagged" style="text-align:left;margin-top:14px">${cuerpo}${_aiCerrarBtn('aiCerrarRonda()')}</div>`;
+function _aiRondaHTML() {   // al terminar la ronda
+  if (!getAiKey() || sesionHechos < 3) return '';
+  return '<div style="margin-top:14px">' + _aiGenBurbuja('ronda', '', 'est ancho') + '</div>';
 }
-function _aiRondaPintar(){ const el = $('aiRonda'); if(el) el.innerHTML = _aiRondaHTML(); }
-function aiCerrarRonda(){ _aiRonda = null; _aiRondaPintar(); }
-async function aiComentarRonda(){
-  const slot = _aiRonda = { cargando: true }; _aiRondaPintar();
-  const total = sesionHechos, ok = sesionCorrectos;
-  const fallos = sesionFallos.slice(0, 10).map(f => ({ tema: f.nombre, enunciado: _aiTxt(f.ej.enunciado).slice(0, 220), respuestaCorrecta: _aiTxt(fmtRespuesta(f.ej)).slice(0, 120) }));
-  const temas = {}; sesionFallos.forEach(f => { const s = stats[f.modId]; if(s) temas[f.nombre] = { porcientoHistorico: pct(s), ejercicios: s.ok + s.fallo }; });
-  try{
-    const res = await _aiJSON(_aiTutor().replace(/ La app ya calcula[\s\S]*$/, '') +
-      'Comenta la ronda que acaba de terminar con los datos REALES de abajo: qué hizo bien, qué patrón ves en lo que falló (solo si hay evidencia en los datos; si no, no inventes la causa) y qué hacer ahora. ' +
-      'comentario: máximo 4 frases. consejo: una frase.\n\n' +
-      'RONDA: acertó ' + ok + ' de ' + total + '\n\nFALLOS DE ESTA RONDA:\n' + JSON.stringify(fallos) + '\n\nSU PORCENTAJE HISTÓRICO EN ESOS TEMAS:\n' + JSON.stringify(temas),
-      { type: 'OBJECT', properties: { comentario: { type: 'STRING' }, consejo: { type: 'STRING' } }, required: ['comentario', 'consejo'] });
-    const comentario = String(res.comentario || '').trim().slice(0, 700);
-    if(!comentario) throw new Error('La IA no respondió bien — inténtalo de nuevo');
-    if(_aiRonda !== slot) return;
-    _aiRonda = { comentario, consejo: String(res.consejo || '').trim().slice(0, 300) };
-  }catch(e){
-    if(_aiRonda !== slot) return;
-    _aiRonda = { error: e.message || 'No se pudo' };
-  }
-  _aiRondaPintar();
-}
-
-/* ---------- IA: foto de mi tarea (Practicar) ---------- */
-let _aiTarea = null;   // { cargando } | { error } | { queEs, tema, pista, errorIntento }
-function aiTareaHTML(){
-  if(!getAiKey()) return '';
-  const t = _aiTarea;
-  if(!t) return `<div class="card" style="padding:14px 16px"><label class="btn sec chico" style="margin:0;cursor:pointer">Foto de mi tarea${AI_B}
-    <small>te digo qué tema es y te doy una pista, no la solución</small>
-    <input type="file" accept="image/*" style="display:none" onchange="aiFotoTarea(this)"></label></div>`;
-  const cuerpo = t.cargando ? '<p>La IA está mirando tu foto…</p>' : t.error ? `<p>${escHtml(t.error)}</p>`
-    : `<p><b>${escHtml(t.queEs)}</b></p>` +
-      (t.tema ? `<p>Tema: <b>${escHtml(MOD_POR_ID[t.tema].nombre)}</b></p>` : '') +
-      (t.pista ? `<p><b>Pista:</b> ${escHtml(t.pista)}</p>` : '') +
-      (t.errorIntento ? `<p><b>En tu intento:</b> ${escHtml(t.errorIntento)}</p>` : '') +
-      `<p style="color:var(--muted);font-size:.85rem">La IA puede equivocarse, sobre todo con las cuentas: úsala solo como pista.</p>` +
-      (t.tema ? `<button class="btn amar chico" onclick="practicarTema('${t.tema}')">Practicar este tema</button>` : '');
-  return `<div class="aiCaja ai-tagged" style="margin:0 0 14px">${cuerpo}${_aiCerrarBtn('aiCerrarTarea()')}</div>`;
-}
-function aiCerrarTarea(){ _aiTarea = null; _aiRepintar(pantallaInicio); }
-async function aiFotoTarea(inp){
-  const file = inp.files && inp.files[0]; inp.value = '';
-  if(!file) return;
-  const slot = _aiTarea = { cargando: true }; _aiRepintar(pantallaInicio);
-  const ms = MODULOS.filter(m => m.clase === materia), ids = new Set(ms.map(m => m.id));
-  try{
-    const img = await _imgParaIA(file, 1600);
-    const res = await _aiJSON(_aiTutor().replace(/ La app ya calcula[\s\S]*$/, ' ') +
-      'La estudiante te manda la FOTO de un problema de su tarea o libro (puede traer también su intento). Dime: queEs (una o dos frases: qué problema es y qué te piden), ' +
-      'tema (el id EXACTO del tema de la lista que más se parece, o "" si ninguno encaja o el problema no es de esta materia), ' +
-      'pista (solo el PRIMER paso o la idea para empezar: NO des la solución final ni el resultado; máximo 2 oraciones) y ' +
-      'errorIntento (si en la foto se ve un intento suyo con un error, dónde está; si no hay intento o no hay error, ""). ' +
-      'Si la foto no se entiende, dilo en queEs y deja el resto vacío.\n\nTEMAS DE ESTA MATERIA (id: nombre):\n' + ms.map(m => m.id + ': ' + m.nombre).join('\n'),
-      { type: 'OBJECT', properties: { queEs: { type: 'STRING' }, tema: { type: 'STRING' }, pista: { type: 'STRING' }, errorIntento: { type: 'STRING' } }, required: ['queEs', 'tema', 'pista', 'errorIntento'] },
-      [{ inline_data: { mime_type: img.mime, data: img.data } }]);
-    const queEs = String(res.queEs || '').trim().slice(0, 400);
-    if(!queEs) throw new Error('La IA no respondió bien — inténtalo de nuevo');
-    if(_aiTarea !== slot) return;
-    _aiTarea = { queEs, tema: ids.has(res.tema) ? res.tema : '', pista: String(res.pista || '').trim().slice(0, 400), errorIntento: String(res.errorIntento || '').trim().slice(0, 400) };
-  }catch(e){
-    if(_aiTarea !== slot) return;
-    _aiTarea = { error: e.message || 'No se pudo' };
-  }
-  _aiRepintar(pantallaInicio);
+function aiTareaHTML() {   // Inicio
+  if (!getAiKey()) return '';
+  return '<div class="card" style="padding:14px 16px;display:flex;align-items:center;gap:12px"><div style="flex:1"><b>Foto de mi tarea</b>' +
+    '<div style="font-size:.85rem;color:var(--muted)">te digo qué tema es y te doy una pista, no la solución</div></div>' + _aiGenBurbuja('tarea', '', 'est') + '</div>';
 }
 
 /* ---------- inicio ---------- */
@@ -6864,7 +7193,7 @@ function entradaHTML(ej){
 
 function pintarEjercicio(){
   _barra(null);
-  _aiEj = {};   // las respuestas de IA son de UN ejercicio: al pintar otro se vacían (y una respuesta tardía se descarta)
+  _aiEjN++;   // el chat de IA es de UN ejercicio: al pintar otro empieza uno nuevo
   main.innerHTML = `
     <button class="back" onclick="ir('inicio')">← Inicio</button>
     <div class="card">
@@ -6902,7 +7231,7 @@ function pintarEjercicio(){
 function pantallaRondaCompleta(){
   _barra(null);
   borrarSesion();
-  _aiRonda = null;
+  _aiRondaId++;
   const total = sesionHechos, ok = sesionCorrectos, pct_ = total ? Math.round(ok/total*100) : 0;
   const seguirArg = esTemaFijo ? `'${modActual.id}'` : capFijo ? capFijo : 'undefined';
   // agrupa los fallos por tema para el resumen, ej. "Reglas de signos (2), Fracciones (1)"
@@ -6936,7 +7265,7 @@ function _pintarSiguienteRepasoRonda(){
   const item = colaRepasoRonda[0];
   modActual = MOD_POR_ID[item.modId] || { id:item.modId, nombre:'Repaso' };
   ejActual = item.ej;
-  respondido = false; vioExpl = false; ordenSel = []; ultimoProceso = ''; calcHist = []; _aiEj = {};
+  respondido = false; vioExpl = false; ordenSel = []; ultimoProceso = ''; calcHist = []; _aiEjN++;
   _barra(null);
   main.innerHTML = `
     <button class="back" onclick="ir('inicio')">← Inicio</button>
@@ -7280,7 +7609,7 @@ function _pintarSiguienteError(){
   _errorActual = item;
   modActual = MOD_POR_ID[item.modId] || { id:item.modId, nombre:'Repaso' };
   ejActual = item.ej;
-  respondido = false; vioExpl = false; ordenSel = []; ultimoProceso = ''; calcHist = []; _aiEj = {};
+  respondido = false; vioExpl = false; ordenSel = []; ultimoProceso = ''; calcHist = []; _aiEjN++;
   main.innerHTML = `
     <button class="back" onclick="ir('inicio')">← Inicio</button>
     <div class="card">

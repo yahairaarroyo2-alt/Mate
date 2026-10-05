@@ -397,20 +397,11 @@ cupo gratis separado del de Fit-F/Fit-M). Sin clave no se dibuja ningún botón 
   respuesta está bien (eso es `verificar()`) y NUNCA toca `stats`/`errores`/racha. El prompt le da la
   respuesta correcta y la explicación oficial del código (`_aiEjTxt`) y le prohíbe recalcular o inventar.
   Todo lo que devuelve se valida (número de paso dentro del rango, ids de tema contra `MODULOS` de la materia).
-- **Ayuda de IA ANTES de contestar = "ver la explicación"** (decisión de la usuaria): `aiPedirRevision` pide
-  confirmación y `_aiRevisar` pone `vioExpl = true` (el ejercicio no suma a stats). En ese caso el prompt
-  NO revela la respuesta final y el ejercicio sigue abierto. Después de contestar o de "Ver explicación" ya
-  no hay nada que descalificar. "Explícamelo de otra forma" solo aparece dentro de `explHTML()` (explicación visible).
-- Funciones: "Revisar mi proceso" y "Foto de mi cuaderno" (`aiBoxHTML` en `#zonaIA`, solo en la práctica normal,
-  no en examen ni en los repasos), "Explícamelo de otra forma" (`aiOtraForma`), "Plan de repaso"
-  (`_aiPlanHTML`/`aiPlanRepaso`, en Progreso con ≥5 ejercicios), comentario de la ronda (`_aiRondaHTML`/`aiComentarRonda`,
-  en `pantallaRondaCompleta`), "Foto de mi tarea" (`aiTareaHTML`/`aiFotoTarea`, en Inicio: identifica el tema y da
-  una pista, NO la solución). Todo corre solo al tocar un botón (Mate se usa mucho: no gastar cupo solo).
-- Estado: `_aiEj` (se vacía en cada ejercicio, así una respuesta tardía de otro ejercicio se descarta sola), `_aiPlan`,
-  `_aiRonda`, `_aiTarea`; cada petición guarda su `slot` y descarta el resultado si ya no es el vigente.
-  `ultimaEntrada` guarda lo que respondió (va en `mate_sesion_v1`) para poder revisarlo.
-- Estética: etiqueta "AI" azul suave (`.ai-tagged` en la esquina de las tarjetas, `.aiB` dentro de botones) y botón
-  "Cerrar" en cada respuesta, igual que Fit-F/Fit-M. Si agregas otra pantalla con IA, ponle las dos cosas.
+- **Burbuja AI + chat (2026-10-05, mismo motor que Fit-F/Fit-M):** ninguna función de IA tiene caja de texto ni botón con etiqueta: la pantalla dibuja una burbuja `AI` (`_aiGenBurbuja(f, id, cls)`; `est` en el flujo, `ancho` del tamaño de un botón) y al tocarla se abre una hoja tipo chat (`#aiGenOv`, `.aic-*`, animación desde la burbuja) con escribir, **micrófono interruptor** (`_dictar`: un toque escucha, otro apaga), **cámara con menú "Tomar foto" / "Elegir de la galería"** (`aiGenMenuFoto`, solo en los chats con `foto:true`), sugerencias y "Nueva". Una entrada por función en `_AIG` (`titulo/aria/ph/saludo/chips/seguir/clave/ctx/enviar`, y `abrir` para un abridor propio); `enviar(q, previos, ctx, img)` devuelve `{ texto, acciones? }`. Un chat por función+contexto en memoria (`_aiGenMsgs`); una respuesta tardía de un chat vaciado se descarta. Los botones de acción (`acciones`) son lo único que hace algo (`practicarTema`, con `cierra:true` para cerrar el chat antes).
+- Los 4 chats: **`ej`** (ayuda con ESTE ejercicio: revisar proceso con o sin foto del cuaderno, explicar de otra forma, pista; burbuja en `aiBoxHTML`/`#zonaIA` y otra bajo la explicación, `_aiOtraBtn`; clave `ej:N` con `_aiEjN`, que sube en cada `pintarEjercicio`/repaso, y si el ejercicio cambió mientras el chat estaba abierto `enviar` avisa), **`tarea`** (foto de un problema de tarea → qué es, tema y pista, NUNCA la solución; botón "Practicar este tema"; `aiTareaHTML` en Inicio), **`plan`** (plan de repaso con tus datos; botones "Practicar: tema" con ids validados contra `MODULOS`; `_aiPlanHTML` en Progreso con ≥5 ejercicios) y **`ronda`** (comentario de la ronda; `_aiRondaHTML` en `pantallaRondaCompleta`, ≥3 ejercicios; clave `ronda:N` con `_aiRondaId`). Todo corre solo al tocar la burbuja y enviar (Mate se usa mucho: no gastar cupo solo).
+- **Ayuda de IA ANTES de contestar = "ver la explicación"** (decisión de la usuaria): `aiEjAbrir` (el `abrir` del chat `ej`) pide confirmación al tocar la burbuja y pone `vioExpl = true` (el ejercicio no suma a stats). Si todavía no contestó ni vio la respuesta (`revelada` falso), el prompt NO revela la respuesta final y el ejercicio sigue abierto. Después de contestar o de "Ver explicación" ya no hay nada que descalificar.
+- `ultimaEntrada` guarda lo que respondió (va en `mate_sesion_v1`) para poder revisarlo. `showToast` es un aviso corto propio del motor (Mate no tenía).
+- Estética: la etiqueta `.ai-tagged`/`.aiB` ya no se usa en las funciones (queda el CSS). Si agregas otra función de IA: una entrada en `_AIG` + `_aiGenBurbuja('f')` en su pantalla. Si cambias algo del motor, espeja Fit-F/Fit-M (y Facturas).
 - En World Culture/Circuitos el contenido sale de las presentaciones del profesor: el prompt dice "no agregues datos externos".
 
 ## Convenciones
