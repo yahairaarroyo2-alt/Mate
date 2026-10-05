@@ -383,6 +383,36 @@ ahora también la calculadora — estaba en 50, por debajo de la barra; se subi�
 agregas otro elemento `position:fixed`, revisa que su z-index quede por encima de 400 o se
 va a ver tapado por la barra en cualquier pantalla donde esté visible.
 
+## IA con Gemini (2026-10-04) — opcional, solo si hay clave
+
+La clave de la usuaria (Ajustes → Inteligencia artificial, `pantallaIA`) vive en `localStorage` bajo
+`ai_gemini_key_v1`, **sin prefijo `mate_` a propósito**: `exportarRespaldo()` solo guarda `mate_*` y la
+sync solo manda claves concretas, así que la clave nunca va al .json ni a Firestore. **No la agregues
+a ninguno de los dos.** Es una clave PROPIA de Mate (proyecto de Google "Mate Practica Matematicas",
+cupo gratis separado del de Fit-F/Fit-M). Sin clave no se dibuja ningún botón de IA.
+
+- Núcleo (junto antes de `pantallaInicio`): `getAiKey`/`saveAiKey`/`clearAiKey`, `_aiJSON(prompt, schema, extraParts)`
+  (mismo de Fit: `AI_MODELS` del mejor al peor, salta 10 min el que falla), `_imgParaIA`.
+- **Principio:** la IA solo EXPLICA, COMPARA y SUGIERE. NUNCA genera ejercicios, NUNCA decide si una
+  respuesta está bien (eso es `verificar()`) y NUNCA toca `stats`/`errores`/racha. El prompt le da la
+  respuesta correcta y la explicación oficial del código (`_aiEjTxt`) y le prohíbe recalcular o inventar.
+  Todo lo que devuelve se valida (número de paso dentro del rango, ids de tema contra `MODULOS` de la materia).
+- **Ayuda de IA ANTES de contestar = "ver la explicación"** (decisión de la usuaria): `aiPedirRevision` pide
+  confirmación y `_aiRevisar` pone `vioExpl = true` (el ejercicio no suma a stats). En ese caso el prompt
+  NO revela la respuesta final y el ejercicio sigue abierto. Después de contestar o de "Ver explicación" ya
+  no hay nada que descalificar. "Explícamelo de otra forma" solo aparece dentro de `explHTML()` (explicación visible).
+- Funciones: "Revisar mi proceso" y "Foto de mi cuaderno" (`aiBoxHTML` en `#zonaIA`, solo en la práctica normal,
+  no en examen ni en los repasos), "Explícamelo de otra forma" (`aiOtraForma`), "Plan de repaso"
+  (`_aiPlanHTML`/`aiPlanRepaso`, en Progreso con ≥5 ejercicios), comentario de la ronda (`_aiRondaHTML`/`aiComentarRonda`,
+  en `pantallaRondaCompleta`), "Foto de mi tarea" (`aiTareaHTML`/`aiFotoTarea`, en Inicio: identifica el tema y da
+  una pista, NO la solución). Todo corre solo al tocar un botón (Mate se usa mucho: no gastar cupo solo).
+- Estado: `_aiEj` (se vacía en cada ejercicio, así una respuesta tardía de otro ejercicio se descarta sola), `_aiPlan`,
+  `_aiRonda`, `_aiTarea`; cada petición guarda su `slot` y descarta el resultado si ya no es el vigente.
+  `ultimaEntrada` guarda lo que respondió (va en `mate_sesion_v1`) para poder revisarlo.
+- Estética: etiqueta "AI" azul suave (`.ai-tagged` en la esquina de las tarjetas, `.aiB` dentro de botones) y botón
+  "Cerrar" en cada respuesta, igual que Fit-F/Fit-M. Si agregas otra pantalla con IA, ponle las dos cosas.
+- En World Culture/Circuitos el contenido sale de las presentaciones del profesor: el prompt dice "no agregues datos externos".
+
 ## Convenciones
 
 - Español, tono directo y alentador, sin emoji decorativo salvo 🔥 (racha) — mismo criterio

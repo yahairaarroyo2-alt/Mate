@@ -238,6 +238,20 @@
   .truco{background:var(--superficie);border-left:4px solid var(--acento);border-radius:8px;
     padding:9px 12px;margin-top:11px;font-size:.9rem;line-height:1.5}
   .truco b{display:block;color:var(--titulo2);font-size:.8rem;letter-spacing:.3px;margin-bottom:2px}
+  /* IA (Gemini): etiqueta "AI" azul suave en la esquina de lo que usa IA (.ai-tagged), mini-etiqueta dentro de los botones (.aiB) y tarjeta de respuesta (.aiCaja) */
+  .ai-tagged{position:relative}
+  .ai-tagged::after{content:'AI';position:absolute;top:var(--ai-top,8px);right:10px;font-size:10px;font-weight:900;letter-spacing:.8px;line-height:1;padding:3px 7px;border-radius:8px;background:rgba(21,101,192,.12);border:1px solid rgba(21,101,192,.22);color:#000;pointer-events:none}
+  .aiB{display:inline-block;margin-left:6px;vertical-align:middle;font-size:10px;font-weight:900;letter-spacing:.8px;line-height:1;padding:3px 7px;border-radius:8px;background:rgba(21,101,192,.12);border:1px solid rgba(21,101,192,.22);color:#000}
+  body.night .ai-tagged::after, body.night .aiB{color:#fff;background:rgba(100,160,255,.12);border-color:rgba(100,160,255,.24)}
+  .aiCaja{background:var(--superficie);border:var(--lg-border);border-radius:14px;padding:30px 14px 8px;margin:10px 0;font-size:.93rem;line-height:1.5;color:var(--texto)}
+  .aiCaja b{color:var(--titulo)}
+  .aiCaja p{margin:0 0 8px}
+  .aiCerrar{display:block;margin:2px 0 0 auto;background:none;border:none;color:var(--muted);font-weight:700;font-size:.82rem;font-family:inherit;cursor:pointer;padding:6px 0}
+  .aiFila{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .aiFila .btn{flex:1;min-width:140px;margin:0;cursor:pointer;text-align:center}
+  .aiTema{padding:10px 0;border-top:1px solid var(--gris2)}
+  .aiTema span{display:block;font-size:.88rem;color:var(--titulo2);margin:2px 0 8px}
+  .aiTema .btn{margin:0}
   /* stats */
   .barra-ext{height:10px;background:var(--gris);border-radius:6px;overflow:hidden;margin-top:5px}
   .barra-int{height:100%;border-radius:6px;background:var(--verde);transition:width .4s}
@@ -5818,6 +5832,7 @@ function _programarRepeticion(){
 }
 let ultimoFeedback = null;// resultado de verificar() del último responder(), para poder retomarlo
 let ultimoProceso = '';   // lo que el usuario escribió en "Tu proceso" antes de responder (un paso por línea)
+let ultimaEntrada = null; // lo que respondió (ent de responder()), para que la IA pueda revisarlo después
 // "Tu proceso": una caja por paso, opcional, en todos los ejercicios. Va FUERA de #zonaEntrada
 // para que la calculadora no escriba ahí y no se ponga opaca al contestar.
 const attrEsc = s => escHtml(s).replace(/"/g, '&quot;');
@@ -5872,7 +5887,7 @@ const leerProceso = () => [...document.querySelectorAll('#listaPasos .pasoPartes
 /* ---------- retomar donde quedó (mate_sesion_v1) ---------- */
 function guardarSesion(){
   guardar('mate_sesion_v1', { modId: modActual.id, esTemaFijo, capFijo, sesionHechos, sesionCorrectos,
-    sesionCola, sesionPendientes, sesionFallos, temasEjemploVisto, sesionTotal, ejActual, respondido, vioExpl, ordenSel, ultimoFeedback, ultimoProceso });
+    sesionCola, sesionPendientes, sesionFallos, temasEjemploVisto, sesionTotal, ejActual, respondido, vioExpl, ordenSel, ultimoFeedback, ultimoProceso, ultimaEntrada });
 }
 const borrarSesion = () => { try{ localStorage.removeItem('mate_sesion_v1'); }catch(e){} };
 function restaurarSesion(){
@@ -5887,6 +5902,7 @@ function restaurarSesion(){
   ejActual = s.ejActual; respondido = s.respondido; vioExpl = s.vioExpl;
   ordenSel = s.ordenSel || []; ultimoFeedback = s.ultimoFeedback || null;
   ultimoProceso = s.ultimoProceso || '';
+  ultimaEntrada = s.ultimaEntrada === undefined ? null : s.ultimaEntrada;
   pintarEjercicio();
   if(respondido && ultimoFeedback) mostrarFb(ultimoFeedback, false);   // ya contestó de verdad
   else if(vioExpl) _pintarVistaExplicacion();                          // solo vio la explicación, sigue pudiendo responder
@@ -6124,8 +6140,406 @@ function ir(pantalla, arg, continuar){
   if(pantalla === 'elegir')   return pantallaElegirTemas();
   if(pantalla === 'grupos')   return pantallaGrupos();
   if(pantalla === 'sync')     return pantallaSync();
+  if(pantalla === 'ia')       return pantallaIA();
   if(pantalla === 'examen')   return iniciarExamen();
   if(pantalla === 'errores')  return pantallaErrores();
+}
+
+/* ══════════════════════════════════════════════════════════
+   IA (Gemini) — OPCIONAL. Sin clave no se dibuja ningún botón de IA y la app queda igual.
+   La IA solo EXPLICA, COMPARA y SUGIERE: nunca genera ejercicios, nunca decide si una respuesta
+   está bien (eso es verificar()) y nunca toca stats/errores/racha. Todo lo que devuelve se valida
+   aquí (ids de tema, número de paso). Cualquier ayuda de IA ANTES de contestar marca vioExpl:
+   cuenta como "ver la explicación". Solo corre cuando se toca un botón (nada se gasta solo).
+   ══════════════════════════════════════════════════════════ */
+// SIN prefijo mate_ a propósito: exportarRespaldo() solo guarda mate_*, y la sync solo manda
+// claves concretas — así la clave de la usuaria no va al .json ni a Firestore.
+const AI_KEY_STORAGE = 'ai_gemini_key_v1';
+const getAiKey = () => { try{ return localStorage.getItem(AI_KEY_STORAGE) || ''; }catch(e){ return ''; } };
+const AI_B = '<span class="aiB">AI</span>';   // mini-etiqueta dentro de los botones
+// Del mejor al más básico: _aiJSON baja al siguiente si uno no está disponible. Con la clave
+// gratis el Pro da 429 y los Flash 503 seguido; casi siempre responde Flash-Lite.
+const AI_MODELS = ['gemini-3.1-pro-preview', 'gemini-3.8-flash', 'gemini-3.7-flash', 'gemini-3.5-flash-lite'];
+const AI_SKIP_MS = 10 * 60 * 1000;   // un modelo que falló se salta 10 min (solo en memoria)
+const _aiSkipUntil = {};
+async function saveAiKey(){
+  const inp = $('aiKeyInput'), key = (inp && inp.value || '').trim();
+  if(!key){ if(inp) inp.focus(); return; }
+  const btn = $('aiKeyBtn'); if(btn){ btn.disabled = true; btn.textContent = 'Probando…'; }
+  let ok = null;   // null = sin señal para probarla
+  try{
+    // listar modelos no gasta cuota de generación
+    const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=1', { headers:{ 'x-goog-api-key': key }, signal: AbortSignal.timeout(8000) });
+    ok = r.ok;
+  }catch(e){}
+  const volver = () => { if(btn){ btn.disabled = false; btn.textContent = 'Guardar'; } };
+  if(ok === false){ $('zonaIAmsg').innerHTML = '<div class="fb mal">Esa clave no funciona — revísala.</div>'; return volver(); }
+  try{ localStorage.setItem(AI_KEY_STORAGE, key); }
+  catch(e){ $('zonaIAmsg').innerHTML = '<div class="fb mal">No se pudo guardar la clave en este aparato.</div>'; return volver(); }
+  pantallaIA();
+  if(ok === null) $('zonaIAmsg').innerHTML = '<div class="fb medio">Clave guardada. Se probará cuando haya señal.</div>';
+}
+function clearAiKey(){
+  confirmarAccion('¿Quitar la clave de IA? Los botones de IA se apagan en este aparato hasta que la pegues otra vez.', () => {
+    try{ localStorage.removeItem(AI_KEY_STORAGE); }catch(e){}
+    pantallaIA();
+  });
+}
+// Una llamada a Gemini que devuelve JSON con la forma de `schema` (la API lo garantiza con
+// responseSchema). Lanza un Error cuyo message es un aviso listo para mostrar.
+async function _aiJSON(prompt, schema, extraParts){
+  const key = getAiKey();
+  if(!key) throw new Error('Primero pega tu clave en Ajustes → Inteligencia artificial');
+  const body = JSON.stringify({
+    contents: [{ parts: [{ text: prompt }, ...(extraParts || [])] }],
+    generationConfig: { responseMimeType: 'application/json', responseSchema: schema }
+  });
+  let r;
+  const now = Date.now();
+  const disponibles = AI_MODELS.filter(m => !(_aiSkipUntil[m] > now));
+  const lista = disponibles.length ? disponibles : AI_MODELS;   // si todos están en pausa, se prueban igual
+  let reintentado = false;
+  for(let i = 0; i < lista.length; i++){
+    const model = lista[i], ultimo = i === lista.length - 1;
+    try{
+      // 10 s por modelo (un 503 saturado llegó a tardar 13 s); el último espera 30 s
+      r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+        method: 'POST',
+        headers: { 'x-goog-api-key': key, 'Content-Type': 'application/json' },
+        body,
+        signal: AbortSignal.timeout(ultimo ? 30000 : 10000)
+      });
+    }catch(e){
+      if(e.name === 'TimeoutError'){
+        if(!ultimo){ _aiSkipUntil[model] = now + AI_SKIP_MS; continue; }
+        throw new Error('La IA tardó demasiado — inténtalo de nuevo');
+      }
+      throw new Error('Sin señal — inténtalo cuando tengas internet');
+    }
+    // el último no tiene a cuál pasar: un 500/503 suele ser un pico de un segundo, se reintenta una vez
+    if(ultimo && [500, 503].includes(r.status) && !reintentado){ reintentado = true; i--; await new Promise(ok => setTimeout(ok, 1500)); continue; }
+    if(![404, 429, 500, 503].includes(r.status)) break;
+    _aiSkipUntil[model] = now + AI_SKIP_MS;
+  }
+  if(r.status === 429) throw new Error('Llegaste al límite gratis de la IA por hoy');
+  if(!r.ok){
+    // un 400 también sale por una foto que Google no puede leer — solo es culpa de la clave si el mensaje lo dice
+    const err = await r.json().catch(() => ({}));
+    const msg = JSON.stringify(err.error || {});
+    if(r.status === 401 || r.status === 403 || /API.?key|API_KEY/i.test(msg)) throw new Error('La clave de IA no funciona — revísala en Ajustes');
+    throw new Error(r.status === 400 ? 'La IA no pudo con eso — prueba con otra foto o texto' : 'La IA no respondió — inténtalo de nuevo');
+  }
+  const d = await r.json();
+  const txt = (d.candidates?.[0]?.content?.parts || []).filter(p => !p.thought).map(p => p.text || '').join('');
+  try{ return JSON.parse(txt); }
+  catch(e){ throw new Error('La IA no respondió bien — inténtalo de nuevo'); }
+}
+// Foto → { mime, data } en base64, achicada (una foto del teléfono pesa varios MB). Fondo blanco:
+// un PNG transparente pasado a JPEG sale con fondo NEGRO y la letra negra desaparece.
+async function _imgParaIA(file, max){
+  max = max || 1024;
+  try{
+    const bmp = await createImageBitmap(file);
+    const k = Math.min(1, max / Math.max(bmp.width, bmp.height));
+    const c = document.createElement('canvas');
+    c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
+    ctx.drawImage(bmp, 0, 0, c.width, c.height);
+    return { mime: 'image/jpeg', data: c.toDataURL('image/jpeg', 0.82).split(',')[1] };
+  }catch(e){
+    const data = await new Promise((ok, fail) => { const fr = new FileReader(); fr.onload = () => ok(String(fr.result).split(',')[1]); fr.onerror = fail; fr.readAsDataURL(file); });
+    return { mime: file.type || 'image/jpeg', data };
+  }
+}
+function pantallaIA(){
+  _barra('ajustes');
+  const tiene = !!getAiKey();
+  main.innerHTML = `
+    <button class="back" onclick="ir('ajustes')">← Ajustes</button>
+    <div class="card">
+      <h2>Inteligencia artificial</h2>
+      <p style="font-size:.93rem;color:var(--muted);margin-bottom:12px">Opcional y gratis. Pega tu clave de Google (Gemini) y aparecen los botones de IA. La clave se queda solo en este aparato: no va al respaldo ni a la sincronización.</p>
+      ${tiene ? `<div class="fb ok">IA conectada</div>
+        <button class="btn sec" onclick="clearAiKey()">Quitar la clave</button>`
+      : `<input class="campo" id="aiKeyInput" type="password" autocomplete="off" autocapitalize="off" placeholder="Pega tu clave aquí">
+        <button class="btn amar" id="aiKeyBtn" style="margin-top:10px" onclick="saveAiKey()">Guardar</button>`}
+      <div id="zonaIAmsg"></div>
+      ${tiene ? '' : `<div class="nota">La sacas en <b>aistudio.google.com/apikey</b> con tu cuenta de Google → "Crear clave de API".</div>`}
+    </div>
+    ${tiene ? `<div class="card">
+      <h2>Qué hace la IA aquí</h2>
+      <div class="nota" style="margin:0 0 8px"><b>Revisar mi proceso</b> y <b>Foto de mi cuaderno</b> (en cada ejercicio): te dice en qué paso te equivocaste.</div>
+      <div class="nota" style="margin:0 0 8px"><b>Explícamelo de otra forma</b> (debajo de la explicación).</div>
+      <div class="nota" style="margin:0 0 8px"><b>Foto de mi tarea</b> (en Practicar): te dice qué tema es y te da una pista.</div>
+      <div class="nota" style="margin:0 0 8px"><b>Plan de repaso</b> (en Progreso) y <b>comentario de tu ronda</b> (al terminarla).</div>
+      <div class="nota" style="margin:0">La IA solo explica: nunca decide si tu respuesta está bien, eso lo hace la app. Pedir ayuda a la IA antes de contestar cuenta como ver la explicación, y ese ejercicio no suma a tus estadísticas. Puede equivocarse: úsala como apoyo.</div>
+    </div>` : ''}`;
+}
+
+/* ---------- IA: textos que se le mandan (sin HTML, sin dibujos) ---------- */
+const _aiTxt = h => String(h == null ? '' : h).replace(/<svg[\s\S]*?<\/svg>/g, ' ').replace(/<br\s*\/?>/g, '\n').replace(/<[^>]+>/g, ' ')
+  .replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').replace(/[ \t]+/g, ' ').replace(/\n\s+/g, '\n').trim();
+// la explicación (con sus marcas §paso|…) en texto plano
+function _aiExplTxt(lista){
+  const rot = { paso:'', resp:'Respuesta: ', comp:'Comprobación: ', error:'Error común: ', pide:'Qué te piden: ' };
+  return (lista || []).map(l => typeof l === 'string' ? _aiTxt(l.replace(/^§(\w+)\|/, (m, k) => rot[k] !== undefined ? rot[k] : '')) : '').filter(Boolean).join('\n').slice(0, 5000);
+}
+// lo que ella escribió en "Tu proceso": las fracciones ⟦arriba|abajo⟧ y a/b = c/d pasan a texto
+const _aiProcesoTxt = s => String(s || '').replace(/⟪([^|⟫]*)\|([^|⟫]*)\|([^|⟫]*)\|([^|⟫]*)\|[^⟫]*⟫/g, '($1)/($2) = ($3)/($4)').replace(/⟦([^|⟧]*)\|([^⟧]*)⟧/g, '($1)/($2)');
+// su respuesta, según el tipo de ejercicio
+function _aiRespTxt(ej, ent){
+  try{
+    if(ent == null || ent === '') return '(no respondió)';
+    const plano = typeof ent === 'object' ? Object.values(ent).map(v => typeof v === 'object' ? JSON.stringify(v) : v).join('') : String(ent);
+    if(!/[\p{L}\p{N}]/u.test(plano)) return '(no respondió todavía)';   // casillas vacías: ["",""] / {a:"",b:""}
+    switch(ej.tipo){
+      case 'sino': return ent ? 'Sí' : 'No';
+      case 'cmp': case 'opciones': case 'num': case 'texto': return _aiTxt(ent);
+      case 'frac': return `${ent.n}/${ent.d}`;
+      case 'mixto': return `${ent.e} ${ent.n}/${ent.d}`;
+      case 'orden': return ent.map(i => _aiTxt(_ordenTexto(ej.opciones[i]))).join(' , ');
+      case 'angulo2': return `${ent.a}, ${ent.b}`;
+      case 'basexp': return `Base = ${ent.b}, Exponente = ${ent.e}, Valor = ${ent.v}`;
+      case 'coefvar': return `Coeficiente = ${ent.coef}, Variable = ${ent.variable}`;
+      case 'multi': return ej.campos.map((c, i) => `${c.et}: ${ent[i]}${c.fs && ent.f && ent.f[i] ? ' (fórmula escrita: ' + ent.f[i] + ')' : ''}`).join('; ');
+    }
+  }catch(e){}
+  return _aiTxt(JSON.stringify(ent));
+}
+const _aiEjTxt = ej => ({
+  enunciado: _aiTxt(ej.enunciado) + (/<svg/.test(String(ej.enunciado)) ? '\n(El ejercicio trae un dibujo que no puedes ver.)' : ''),
+  correcta: _aiTxt(fmtRespuesta(ej)),
+  oficial: _aiExplTxt(ej.explicacion)
+});
+const _aiTutor = () => 'Eres una tutora paciente de «' + MATERIAS[materia].nombre + '» para una estudiante universitaria que practica en una app. ' +
+  'Hablas en español, tuteando, claro, directo y alentador, sin emojis ni markdown. La app ya calcula y verifica las respuestas: ' +
+  'tú NO decides qué es correcto, NO recalcules de nuevo ni discutas la respuesta correcta que se te da. ' +
+  'Usa SOLO los datos del ejercicio y de la explicación oficial; no agregues datos externos ni inventes. Si no estás segura de algo, dilo.\n\n';
+const _aiRepintar = fn => { if(_pantallaActual === fn) fn(); };
+const _aiCerrarBtn = (fn, extra) => `<div style="display:flex;justify-content:flex-end;gap:14px">${extra || ''}<button type="button" class="aiCerrar" style="margin:2px 0 0" onclick="${fn}">Cerrar</button></div>`;
+
+/* ---------- IA en el ejercicio: revisar mi proceso / foto del cuaderno / otra forma ---------- */
+let _aiEj = {};   // respuestas de IA del ejercicio en pantalla: { rev, otra } — se vacía en cada pintarEjercicio, así una respuesta tardía de un ejercicio anterior se descarta sola
+const _AI_SCHEMA_REV = { type: 'OBJECT', properties: { paso: { type: 'INTEGER' }, queFallo: { type: 'STRING' }, comoCorregirlo: { type: 'STRING' } }, required: ['paso', 'queFallo', 'comoCorregirlo'] };
+function aiBoxHTML(){
+  if(!getAiKey()) return '';
+  return `<div class="aiFila">
+      <button type="button" class="btn sec chico" onclick="aiPedirRevision()">Revisar mi proceso${AI_B}</button>
+      <label class="btn sec chico">Foto de mi cuaderno${AI_B}<input type="file" accept="image/*" style="display:none" onchange="aiPedirRevision(this)"></label>
+    </div><div id="aiRev"></div>`;
+}
+function aiPedirRevision(inp){
+  const file = inp && inp.files && inp.files[0];
+  if(inp) inp.value = '';
+  if(inp && !file) return;
+  // ayuda de la IA antes de contestar = ver la explicación: se avisa antes de que cuente
+  if(!respondido && !vioExpl) return confirmarAccion('Pedir ayuda a la IA cuenta como ver la explicación: este ejercicio ya no sumará a tus estadísticas. ¿Seguir?', () => _aiRevisar(file));
+  _aiRevisar(file);
+}
+async function _aiRevisar(file){
+  if(!ejActual) return;
+  const revelada = respondido || !!document.querySelector('#zonaFb .expl');   // ¿ya vio la respuesta? si no, la IA no la revela
+  if(!respondido && !vioExpl){ vioExpl = true; ultimoProceso = leerProceso(); guardarSesion(); }
+  const proceso = _aiProcesoTxt(leerProceso() || ultimoProceso || '');
+  let ent = respondido ? ultimaEntrada : null;
+  if(!respondido){ try{ ent = leerEntrada(ejActual); }catch(e){ ent = null; } }
+  const slot = { cargando: true }; _aiEj.rev = slot; _aiPintar('rev');
+  const ej = ejActual, d = _aiEjTxt(ej), pasos = proceso ? proceso.split('\n') : [];
+  try{
+    const extra = file ? [{ inline_data: { mime_type: 'image/jpeg', data: '' } }] : [];
+    if(file){ const img = await _imgParaIA(file, 1600); extra[0].inline_data = { mime_type: img.mime, data: img.data }; }
+    const res = await _aiJSON(_aiTutor() +
+      'EJERCICIO:\n' + d.enunciado + '\n\nRESPUESTA CORRECTA (verificada por la app):\n' + d.correcta +
+      '\n\nEXPLICACIÓN OFICIAL DE LA APP:\n' + d.oficial +
+      '\n\nLO QUE ESCRIBIÓ LA ESTUDIANTE:\nRespuesta: ' + _aiRespTxt(ej, ent) +
+      '\nProceso (un paso por línea):\n' + (pasos.length ? pasos.map((p, i) => (i + 1) + ') ' + p).join('\n') : '(no escribió proceso)') + '\n\n' +
+      (file ? 'Además manda la foto de su cuaderno: léela como su proceso. Si no se entiende, dilo en queFallo y deja paso en 0.\n\n' : '') +
+      (revelada
+        ? 'TAREA: compara su proceso con la explicación oficial y ubica el PRIMER paso donde se aparta (en "paso" pon su número de línea; 0 si no hay error, si no se puede ubicar o si usaste la foto). ' +
+          'Si su respuesta es la correcta y el proceso está bien, felicítala en una frase y di qué hizo bien. Si no escribió proceso y falló, di el error más probable que lleva a la respuesta que dio. ' +
+          'En queFallo explica qué salió mal y por qué (máximo 3 oraciones); en comoCorregirlo dile cómo hacerlo bien (máximo 2 oraciones).'
+        : 'TAREA: ELLA TODAVÍA NO HA CONTESTADO. NO reveles la respuesta final ni el resultado. Mira lo que lleva escrito: dile si los pasos van bien y cuál sería el siguiente paso, sin hacerlo por ella. ' +
+          'Si no ha escrito nada, dile con qué empezar. En "paso" pon el número de línea con un error si lo ves (0 si no hay o si usaste la foto). ' +
+          'En queFallo di cómo va (máximo 3 oraciones); en comoCorregirlo, el siguiente paso o la corrección (máximo 2 oraciones).'),
+      _AI_SCHEMA_REV, extra);
+    const qf = String(res.queFallo || '').trim().slice(0, 700), cc = String(res.comoCorregirlo || '').trim().slice(0, 500);
+    if(!qf) throw new Error('La IA no respondió bien — inténtalo de nuevo');
+    let paso = Number.isInteger(res.paso) ? res.paso : 0;
+    if(file || paso < 1 || paso > pasos.length) paso = 0;   // el número de paso solo vale si existe esa línea
+    if(_aiEj.rev !== slot) return;   // la cerró, o ya pasó a otro ejercicio, mientras la IA pensaba
+    _aiEj.rev = { ok: true, paso, qf, cc, foto: !!file, revelada };
+  }catch(e){
+    if(_aiEj.rev !== slot) return;
+    _aiEj.rev = { error: e.message || 'No se pudo' };
+  }
+  _aiPintar('rev');
+}
+// "Explícamelo de otra forma": solo aparece con la explicación a la vista (ya contó como verla)
+const _aiOtraBtn = () => `<button type="button" class="btn sec chico" style="margin:0 0 10px" onclick="aiOtraForma()">Explícamelo de otra forma${AI_B}</button>`;
+async function aiOtraForma(){
+  if(!ejActual) return;
+  const previos = (_aiEj.otra && _aiEj.otra.textos) || [];
+  const slot = { cargando: true, textos: previos }; _aiEj.otra = slot; _aiPintar('otra');
+  const d = _aiEjTxt(ejActual);
+  try{
+    const res = await _aiJSON(_aiTutor() +
+      'EJERCICIO:\n' + d.enunciado + '\n\nRESPUESTA CORRECTA (verificada por la app):\n' + d.correcta +
+      '\n\nEXPLICACIÓN OFICIAL DE LA APP:\n' + d.oficial + '\n\n' +
+      'TAREA: la estudiante ya leyó esa explicación y no la entendió. Explícasela DE OTRA FORMA: palabras más simples, como si no supiera nada del tema, con una imagen mental o una analogía cotidiana corta. ' +
+      'Usa SOLO los números y datos de este ejercicio: no inventes un ejemplo con otros números ni hagas cuentas nuevas. Máximo 110 palabras.' +
+      (previos.length ? '\n\nYa le diste estas explicaciones; esta vez usa un enfoque distinto:\n' + previos.map((t, i) => (i + 1) + ') ' + t).join('\n') : ''),
+      { type: 'OBJECT', properties: { explicacion: { type: 'STRING' } }, required: ['explicacion'] });
+    const t = String(res.explicacion || '').trim().slice(0, 900);
+    if(t.length < 20) throw new Error('La IA no respondió bien — inténtalo de nuevo');
+    if(_aiEj.otra !== slot) return;
+    _aiEj.otra = { ok: true, textos: [...previos, t] };
+  }catch(e){
+    if(_aiEj.otra !== slot) return;
+    _aiEj.otra = { error: e.message || 'No se pudo', textos: previos };
+  }
+  _aiPintar('otra');
+}
+function aiCerrar(kind){ _aiEj[kind] = null; _aiPintar(kind); }
+function _aiPintar(kind){
+  const el = $(kind === 'rev' ? 'aiRev' : 'aiOtra'); if(!el) return;
+  const s = _aiEj[kind], cer = `aiCerrar('${kind}')`;
+  if(!s){ el.innerHTML = kind === 'otra' ? _aiOtraBtn() : ''; return; }
+  const caja = c => `<div class="aiCaja ai-tagged">${c}</div>`;
+  if(s.cargando) return el.innerHTML = caja(`<p>${kind === 'rev' ? 'La IA está mirando tu proceso…' : 'La IA está pensando otra forma de explicarlo…'}</p>${_aiCerrarBtn(cer)}`);
+  if(s.error) return el.innerHTML = caja(`<p>${escHtml(s.error)}</p>${_aiCerrarBtn(cer)}`);
+  if(kind === 'otra') return el.innerHTML = caja(`<p>${escHtml(s.textos[s.textos.length - 1])}</p>` +
+    _aiCerrarBtn(cer, `<button type="button" class="aiCerrar" style="margin:2px 0 0" onclick="aiOtraForma()">Otra explicación distinta</button>`));
+  el.innerHTML = caja(
+    (s.paso ? `<p><b>Paso ${s.paso}:</b> ${escHtml(s.qf)}</p>` : `<p>${escHtml(s.qf)}</p>`) +
+    (s.cc ? `<p>${s.paso ? '<b>Cómo corregirlo:</b> ' : ''}${escHtml(s.cc)}</p>` : '') +
+    (s.foto ? `<p style="color:var(--muted);font-size:.85rem">La IA puede leer mal una foto: revisa que lo que dice sea lo que escribiste.</p>` : '') +
+    (!s.revelada ? `<p style="color:var(--muted);font-size:.85rem">Este ejercicio ya no cuenta para las estadísticas.</p>` : '') +
+    _aiCerrarBtn(cer));
+}
+
+/* ---------- IA: plan de repaso (Progreso) ---------- */
+let _aiPlan = null;   // { materia, cargando | error | resumen, temas:[{id,motivo}], consejo }
+function _aiPlanHTML(total){
+  if(!getAiKey() || total < 5) return '';
+  const p = _aiPlan && _aiPlan.materia === materia ? _aiPlan : null;
+  if(!p) return `<div class="card"><h2>Plan de repaso</h2>
+    <p style="margin-bottom:12px">La IA mira tus aciertos y fallos y te dice qué repasar hoy.</p>
+    <button class="btn amar chico" style="margin-bottom:0" onclick="aiPlanRepaso()">Armar mi plan${AI_B}</button></div>`;
+  let cuerpo;
+  if(p.cargando) cuerpo = '<p>La IA está revisando tu progreso…</p>';
+  else if(p.error) cuerpo = `<p>${escHtml(p.error)}</p>`;
+  else cuerpo = `<p>${escHtml(p.resumen)}</p>` +
+    p.temas.map(t => `<div class="aiTema"><b>${escHtml(MOD_POR_ID[t.id].nombre)}</b><span>${escHtml(t.motivo)}</span>
+      <button class="btn sec chico" onclick="practicarTema('${t.id}')">Practicar este tema</button></div>`).join('') +
+    (p.consejo ? `<p style="margin-top:8px">${escHtml(p.consejo)}</p>` : '');
+  return `<div class="card ai-tagged"><h2>Plan de repaso</h2>${cuerpo}${_aiCerrarBtn('aiCerrarPlan()')}</div>`;
+}
+function aiCerrarPlan(){ _aiPlan = null; _aiRepintar(pantallaStats); }
+async function aiPlanRepaso(){
+  const slot = _aiPlan = { materia, cargando: true }; _aiRepintar(pantallaStats);
+  const ms = MODULOS.filter(m => m.clase === materia), ids = new Set(ms.map(m => m.id));
+  const datos = ms.map(m => { const s = stats[m.id], n = s ? s.ok + s.fallo : 0; return { id: m.id, tema: m.nombre, aciertos: s ? s.ok : 0, fallos: s ? s.fallo : 0, porciento: n ? pct(s) : null }; });
+  const errs = {}; erroresMateria().forEach(e => { errs[e.modId] = (errs[e.modId] || 0) + 1; });
+  try{
+    const res = await _aiJSON(_aiTutor().replace(/ La app ya calcula[\s\S]*$/, '') +
+      'Con los datos REALES de abajo arma su plan de repaso para HOY. Elige de 1 a 3 temas de la lista (usa el id EXACTO): prioriza los de menor porcentaje con al menos 3 ejercicios, ' +
+      'los que más aparecen en sus errores guardados y, si tiene grupos de examen, los de ahí. En cada motivo cita números reales (por ejemplo "vas al 40% en 12 ejercicios"). ' +
+      'resumen: 2 o 3 frases sobre cómo va. consejo: una frase sobre cómo practicar hoy. No inventes datos que no estén abajo.\n\n' +
+      'TEMAS (porciento null = todavía sin practicar):\n' + JSON.stringify(datos) +
+      '\n\nERRORES GUARDADOS (cuántos por id de tema):\n' + JSON.stringify(errs) +
+      '\n\nDÍAS PRACTICADOS (últimos 14, de más viejo a más nuevo):\n' + JSON.stringify(_historialUltimosDias(14).map(x => x.n)) +
+      '\n\nGRUPOS DE EXAMEN GUARDADOS:\n' + JSON.stringify(gruposMateria().map(g => ({ nombre: g.nombre, temas: g.mods.map(id => MOD_POR_ID[id] ? MOD_POR_ID[id].nombre : id) }))),
+      { type: 'OBJECT', properties: { resumen: { type: 'STRING' }, temas: { type: 'ARRAY', items: { type: 'OBJECT', properties: { id: { type: 'STRING' }, motivo: { type: 'STRING' } }, required: ['id', 'motivo'] } }, consejo: { type: 'STRING' } }, required: ['resumen', 'temas', 'consejo'] });
+    const vistos = new Set(), temas = [];
+    (res.temas || []).forEach(t => { if(t && ids.has(t.id) && !vistos.has(t.id) && temas.length < 3){ vistos.add(t.id); temas.push({ id: t.id, motivo: String(t.motivo || '').slice(0, 220) }); } });
+    const resumen = String(res.resumen || '').trim().slice(0, 600);
+    if(!resumen && !temas.length) throw new Error('La IA no respondió bien — inténtalo de nuevo');
+    if(_aiPlan !== slot) return;
+    _aiPlan = { materia, resumen, temas, consejo: String(res.consejo || '').trim().slice(0, 300) };
+  }catch(e){
+    if(_aiPlan !== slot) return;
+    _aiPlan = { materia, error: e.message || 'No se pudo' };
+  }
+  _aiRepintar(pantallaStats);
+}
+
+/* ---------- IA: comentario al terminar la ronda ---------- */
+let _aiRonda = null;   // { cargando } | { error } | { comentario, consejo }
+function _aiRondaHTML(){
+  if(!getAiKey() || sesionHechos < 3) return '';
+  const r = _aiRonda;
+  if(!r) return `<button class="btn amar" style="margin-top:14px" onclick="aiComentarRonda()">Comentario de la IA sobre mi ronda${AI_B}</button>`;
+  const cuerpo = r.cargando ? '<p>La IA está mirando tu ronda…</p>' : r.error ? `<p>${escHtml(r.error)}</p>`
+    : `<p>${escHtml(r.comentario)}</p>${r.consejo ? `<p>${escHtml(r.consejo)}</p>` : ''}`;
+  return `<div class="aiCaja ai-tagged" style="text-align:left;margin-top:14px">${cuerpo}${_aiCerrarBtn('aiCerrarRonda()')}</div>`;
+}
+function _aiRondaPintar(){ const el = $('aiRonda'); if(el) el.innerHTML = _aiRondaHTML(); }
+function aiCerrarRonda(){ _aiRonda = null; _aiRondaPintar(); }
+async function aiComentarRonda(){
+  const slot = _aiRonda = { cargando: true }; _aiRondaPintar();
+  const total = sesionHechos, ok = sesionCorrectos;
+  const fallos = sesionFallos.slice(0, 10).map(f => ({ tema: f.nombre, enunciado: _aiTxt(f.ej.enunciado).slice(0, 220), respuestaCorrecta: _aiTxt(fmtRespuesta(f.ej)).slice(0, 120) }));
+  const temas = {}; sesionFallos.forEach(f => { const s = stats[f.modId]; if(s) temas[f.nombre] = { porcientoHistorico: pct(s), ejercicios: s.ok + s.fallo }; });
+  try{
+    const res = await _aiJSON(_aiTutor().replace(/ La app ya calcula[\s\S]*$/, '') +
+      'Comenta la ronda que acaba de terminar con los datos REALES de abajo: qué hizo bien, qué patrón ves en lo que falló (solo si hay evidencia en los datos; si no, no inventes la causa) y qué hacer ahora. ' +
+      'comentario: máximo 4 frases. consejo: una frase.\n\n' +
+      'RONDA: acertó ' + ok + ' de ' + total + '\n\nFALLOS DE ESTA RONDA:\n' + JSON.stringify(fallos) + '\n\nSU PORCENTAJE HISTÓRICO EN ESOS TEMAS:\n' + JSON.stringify(temas),
+      { type: 'OBJECT', properties: { comentario: { type: 'STRING' }, consejo: { type: 'STRING' } }, required: ['comentario', 'consejo'] });
+    const comentario = String(res.comentario || '').trim().slice(0, 700);
+    if(!comentario) throw new Error('La IA no respondió bien — inténtalo de nuevo');
+    if(_aiRonda !== slot) return;
+    _aiRonda = { comentario, consejo: String(res.consejo || '').trim().slice(0, 300) };
+  }catch(e){
+    if(_aiRonda !== slot) return;
+    _aiRonda = { error: e.message || 'No se pudo' };
+  }
+  _aiRondaPintar();
+}
+
+/* ---------- IA: foto de mi tarea (Practicar) ---------- */
+let _aiTarea = null;   // { cargando } | { error } | { queEs, tema, pista, errorIntento }
+function aiTareaHTML(){
+  if(!getAiKey()) return '';
+  const t = _aiTarea;
+  if(!t) return `<div class="card" style="padding:14px 16px"><label class="btn sec chico" style="margin:0;cursor:pointer">Foto de mi tarea${AI_B}
+    <small>te digo qué tema es y te doy una pista, no la solución</small>
+    <input type="file" accept="image/*" style="display:none" onchange="aiFotoTarea(this)"></label></div>`;
+  const cuerpo = t.cargando ? '<p>La IA está mirando tu foto…</p>' : t.error ? `<p>${escHtml(t.error)}</p>`
+    : `<p><b>${escHtml(t.queEs)}</b></p>` +
+      (t.tema ? `<p>Tema: <b>${escHtml(MOD_POR_ID[t.tema].nombre)}</b></p>` : '') +
+      (t.pista ? `<p><b>Pista:</b> ${escHtml(t.pista)}</p>` : '') +
+      (t.errorIntento ? `<p><b>En tu intento:</b> ${escHtml(t.errorIntento)}</p>` : '') +
+      `<p style="color:var(--muted);font-size:.85rem">La IA puede equivocarse, sobre todo con las cuentas: úsala solo como pista.</p>` +
+      (t.tema ? `<button class="btn amar chico" onclick="practicarTema('${t.tema}')">Practicar este tema</button>` : '');
+  return `<div class="aiCaja ai-tagged" style="margin:0 0 14px">${cuerpo}${_aiCerrarBtn('aiCerrarTarea()')}</div>`;
+}
+function aiCerrarTarea(){ _aiTarea = null; _aiRepintar(pantallaInicio); }
+async function aiFotoTarea(inp){
+  const file = inp.files && inp.files[0]; inp.value = '';
+  if(!file) return;
+  const slot = _aiTarea = { cargando: true }; _aiRepintar(pantallaInicio);
+  const ms = MODULOS.filter(m => m.clase === materia), ids = new Set(ms.map(m => m.id));
+  try{
+    const img = await _imgParaIA(file, 1600);
+    const res = await _aiJSON(_aiTutor().replace(/ La app ya calcula[\s\S]*$/, ' ') +
+      'La estudiante te manda la FOTO de un problema de su tarea o libro (puede traer también su intento). Dime: queEs (una o dos frases: qué problema es y qué te piden), ' +
+      'tema (el id EXACTO del tema de la lista que más se parece, o "" si ninguno encaja o el problema no es de esta materia), ' +
+      'pista (solo el PRIMER paso o la idea para empezar: NO des la solución final ni el resultado; máximo 2 oraciones) y ' +
+      'errorIntento (si en la foto se ve un intento suyo con un error, dónde está; si no hay intento o no hay error, ""). ' +
+      'Si la foto no se entiende, dilo en queEs y deja el resto vacío.\n\nTEMAS DE ESTA MATERIA (id: nombre):\n' + ms.map(m => m.id + ': ' + m.nombre).join('\n'),
+      { type: 'OBJECT', properties: { queEs: { type: 'STRING' }, tema: { type: 'STRING' }, pista: { type: 'STRING' }, errorIntento: { type: 'STRING' } }, required: ['queEs', 'tema', 'pista', 'errorIntento'] },
+      [{ inline_data: { mime_type: img.mime, data: img.data } }]);
+    const queEs = String(res.queEs || '').trim().slice(0, 400);
+    if(!queEs) throw new Error('La IA no respondió bien — inténtalo de nuevo');
+    if(_aiTarea !== slot) return;
+    _aiTarea = { queEs, tema: ids.has(res.tema) ? res.tema : '', pista: String(res.pista || '').trim().slice(0, 400), errorIntento: String(res.errorIntento || '').trim().slice(0, 400) };
+  }catch(e){
+    if(_aiTarea !== slot) return;
+    _aiTarea = { error: e.message || 'No se pudo' };
+  }
+  _aiRepintar(pantallaInicio);
 }
 
 /* ---------- inicio ---------- */
@@ -6154,7 +6568,8 @@ function pantallaInicio(){
         <button class="btn sec chico" onclick="menuGrupos(event)">Grupos de examen<span class="flechita">▾</span></button>
         <button class="btn sec chico" onclick="ir('errores')">Repasar mis errores${erroresMateria().length?` (${erroresMateria().length})`:''}</button>
       </div>
-    </div>`;
+    </div>
+    ${aiTareaHTML()}`;
 }
 
 /* ---------- temas: tema suelto, elegir para mezclar, grupos de examen ---------- */
@@ -6202,6 +6617,14 @@ function pantallaAjustes(){
     <div class="ajCard">
       <button class="ajRow" onclick="ir('tema')">
         <div style="flex:1"><div class="ajTitulo">Tema</div><div class="ajSub">${_MODO_TEMA_ETIQUETA[getTemaModo()]}</div></div>
+        <span class="ajChevron">›</span>
+      </button>
+    </div>
+
+    <h3>Inteligencia artificial</h3>
+    <div class="ajCard">
+      <button class="ajRow" onclick="ir('ia')">
+        <div style="flex:1"><div class="ajTitulo">Inteligencia artificial</div><div class="ajSub">${getAiKey() ? 'Conectada' : 'Pega tu clave de Gemini (gratis) para activarla'}</div></div>
         <span class="ajChevron">›</span>
       </button>
     </div>
@@ -6441,6 +6864,7 @@ function entradaHTML(ej){
 
 function pintarEjercicio(){
   _barra(null);
+  _aiEj = {};   // las respuestas de IA son de UN ejercicio: al pintar otro se vacían (y una respuesta tardía se descarta)
   main.innerHTML = `
     <button class="back" onclick="ir('inicio')">← Inicio</button>
     <div class="card">
@@ -6448,6 +6872,7 @@ function pintarEjercicio(){
       <div class="enunciado">${ejActual.enunciado}</div>
       <div id="zonaProceso">${procesoHTML()}</div>
       <div id="zonaEntrada">${entradaHTML(ejActual)}</div>
+      <div id="zonaIA">${aiBoxHTML()}</div>
       <div id="zonaFb"></div>
       <div class="row" id="accionesPre">
         <button class="btn sec chico" onclick="saltarEjercicio()">Saltar</button>
@@ -6477,6 +6902,7 @@ function pintarEjercicio(){
 function pantallaRondaCompleta(){
   _barra(null);
   borrarSesion();
+  _aiRonda = null;
   const total = sesionHechos, ok = sesionCorrectos, pct_ = total ? Math.round(ok/total*100) : 0;
   const seguirArg = esTemaFijo ? `'${modActual.id}'` : capFijo ? capFijo : 'undefined';
   // agrupa los fallos por tema para el resumen, ej. "Reglas de signos (2), Fracciones (1)"
@@ -6492,6 +6918,7 @@ function pantallaRondaCompleta(){
         <div class="nota" style="margin-top:8px">Fallaste en: ${listaFallos}</div>
         <button class="btn amar" style="margin-top:14px" onclick="_repasarFallosRonda()">Repetir las que fallé (${sesionFallos.length})</button>
       ` : ''}
+      <div id="aiRonda">${_aiRondaHTML()}</div>
       <button class="btn ${sesionFallos.length?'sec':'amar'}" style="margin-top:10px" onclick="ir('practica',${seguirArg})">Seguir practicando</button>
       <button class="btn sec" onclick="ir('inicio')">Volver a inicio</button>
     </div>`;
@@ -6509,7 +6936,7 @@ function _pintarSiguienteRepasoRonda(){
   const item = colaRepasoRonda[0];
   modActual = MOD_POR_ID[item.modId] || { id:item.modId, nombre:'Repaso' };
   ejActual = item.ej;
-  respondido = false; vioExpl = false; ordenSel = []; ultimoProceso = ''; calcHist = [];
+  respondido = false; vioExpl = false; ordenSel = []; ultimoProceso = ''; calcHist = []; _aiEj = {};
   _barra(null);
   main.innerHTML = `
     <button class="back" onclick="ir('inicio')">← Inicio</button>
@@ -6578,6 +7005,7 @@ function responder(valor){
   respondido = true;
   ultimoFeedback = res;
   ultimoProceso = leerProceso();
+  ultimaEntrada = ent;
   if(modoErrores){
     // acierto → sale de la lista. Fallo → se manda al final en vez de quedarse en el frente,
     // o "Siguiente ejercicio" volvía a mostrar EXACTAMENTE la misma pregunta que acabas de fallar.
@@ -6800,7 +7228,8 @@ function toggleRespuesta(){
 }
 const explHTML = () => `
   <button type="button" id="btnOcultarResp" class="btn sec chico" style="margin-bottom:10px" onclick="toggleRespuesta()">▲ Ocultar mi respuesta y mi progreso (para ver mejor la explicación)</button>
-  <div class="expl"><h3>Por qué</h3>${explPasos(ejActual.explicacion, ejActual.sinNumeros)}</div>`;
+  <div class="expl"><h3>Por qué</h3>${explPasos(ejActual.explicacion, ejActual.sinNumeros)}</div>
+  ${getAiKey() ? '<div id="aiOtra">' + _aiOtraBtn() + '</div>' : ''}`;
 
 function saltarEjercicio(){
   if(respondido) return;
@@ -6851,7 +7280,7 @@ function _pintarSiguienteError(){
   _errorActual = item;
   modActual = MOD_POR_ID[item.modId] || { id:item.modId, nombre:'Repaso' };
   ejActual = item.ej;
-  respondido = false; vioExpl = false; ordenSel = []; ultimoProceso = ''; calcHist = [];
+  respondido = false; vioExpl = false; ordenSel = []; ultimoProceso = ''; calcHist = []; _aiEj = {};
   main.innerHTML = `
     <button class="back" onclick="ir('inicio')">← Inicio</button>
     <div class="card">
@@ -6998,6 +7427,7 @@ function pantallaStats(){
       <p style="margin-bottom:12px">Vas al <b>${pct(stats[flojo.id])}%</b> en <b>${flojo.nombre}</b>. Es el que más te conviene repasar.</p>
       <button class="btn amar" onclick="practicarTema('${flojo.id}')">Practicar ${flojo.nombre}</button>
     </div>` : ''}
+    ${_aiPlanHTML(total)}
     ${examenes.length ? `<div class="card">
       <h2>Exámenes</h2>
       ${examenes.slice(0,5).map(e => `<div class="stat"><div class="lbl"><span>${e.fecha}</span>
