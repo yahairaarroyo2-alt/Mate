@@ -1,7 +1,8 @@
 // Service Worker — caché offline. App de un solo archivo, sin timers/notificaciones
 // que cachear (a diferencia de Fit-F/Fit-M), así que esto es mucho más simple que
 // esos sw.js: solo cachear los assets propios y servir la app sin conexión.
-const CACHE = 'mate-v119';
+const CACHE = 'mate-v120';
+const CACHE_FOTOS = 'mate-fotos-ayudante-v1';   // si cambias una foto de ayudante/, sube este número
 const ASSETS = [
   './',
   './index.html',
@@ -23,7 +24,7 @@ self.addEventListener('install', e => {
 
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys().then(keys =>
-    Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
+    Promise.all(keys.filter(k => k !== CACHE && k !== CACHE_FOTOS).map(k => caches.delete(k)))
   ));
   self.clients.claim();
 });
@@ -66,11 +67,13 @@ self.addEventListener('fetch', e => {
     );
     return;
   }
-  // Resto de assets: caché primero, red solo si falta.
+  // Resto de assets: caché primero, red solo si falta. Las fotos de "Repaso de ayudante"
+  // (~6 MB) van a su propia caché, que NO se borra al subir de versión: no se bajan otra vez.
+  const cache = url.includes('/ayudante/') ? CACHE_FOTOS : CACHE;
   e.respondWith(
     caches.match(e.request).then(cached => cached || fetch(e.request).then(res => {
       if (res && res.status === 200) {
-        e.waitUntil(caches.open(CACHE).then(c => c.put(e.request, res.clone())).catch(() => {}));
+        e.waitUntil(caches.open(cache).then(c => c.put(e.request, res.clone())).catch(() => {}));
       }
       return res;
     }))
