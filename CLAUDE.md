@@ -404,6 +404,14 @@ cupo gratis separado del de Fit-F/Fit-M). Sin clave no se dibuja ningún botón 
 - Estética: la etiqueta `.ai-tagged`/`.aiB` ya no se usa en las funciones (queda el CSS). Si agregas otra función de IA: una entrada en `_AIG` + `_aiGenBurbuja('f')` en su pantalla. Si cambias algo del motor, espeja Fit-F/Fit-M (y Facturas).
 - En World Culture/Circuitos el contenido sale de las presentaciones del profesor: el prompt dice "no agregues datos externos".
 
+## Temas de preguntas fijas (`banco`)
+
+Un módulo con `banco: N` es un banco fijo de preguntas: la ronda de ese tema trae las N (no 20) y no
+muestra la pantalla de "Ejemplo". Si además tiene `nuevaRonda()`, las saca EN ORDEN y cada ronda empieza
+por la 1 (lo usa `educo-dep-exacto`: las 30 preguntas exactas de la práctica del Examen Departamental de
+EducoSoft, banco `DEP_EXACTO`; `restaurarSesion` sigue desde `ejActual.__n`). El tipo `mixto` acepta
+negativos con `signo:true` (botón ±): −2 2/7 vale −(2 + 2/7).
+
 ## Repaso de ayudante (2026-10-05) — materia `ayud`
 
 Pasada desde la app suelta `Proyectos/estudio-ayudante.html` (examen de Ayudante de Perito

@@ -1379,6 +1379,228 @@ const svgTrianguloLados = (a, b, c, u) => `<svg viewBox="0 0 220 120" style="wid
   <polygon points="30,95 190,95 95,25" fill="none" stroke="currentColor" stroke-width="2"/>
   <g fill="currentColor" font-size="13" font-weight="700"><text x="110" y="113" text-anchor="middle">${a} ${u}</text><text x="52" y="52" text-anchor="end">${b} ${u}</text><text x="154" y="52" text-anchor="start">${c} ${u}</text></g></svg>`;
 const NUMW = ['','un','dos','tres','cuatro','cinco','seis','siete','ocho','nueve','diez'];
+// ── Examen Departamental (práctica de EducoSoft): las 30 preguntas EXACTAS, en orden (módulo educo-dep-exacto) ──
+// la casita de la pregunta 7: cuadrado + techo en triángulo cuyos lados se pasan un poco de las esquinas
+const svgCasita = () => `<svg viewBox="0 0 200 170" style="width:100%;max-width:200px;height:auto;color:var(--texto);display:block;margin:10px auto 0;background:#fff;border-radius:6px" xmlns="http://www.w3.org/2000/svg">
+  <g fill="none" stroke="#1d3fd6" stroke-width="2"><rect x="55" y="75" width="90" height="80"/><path d="M100 18 L41 92 M100 18 L159 92"/></g></svg>`;
+// varios valores en casillas (como EducoSoft); la explicación es una receta y el TRUCO propio va al final
+const _multiDep = (enun, campos, expl, truco) => ({ enunciado:enun, tipo:'multi', campos:campos.map(({r, ...c}) => c), respuesta:campos.map(c => c.r), sinNumeros:true, explicacion:[...expl, truco] });
+const DEP_EXACTO = [
+  // 1. Resta de números con signo
+  C => ({ enunciado:'Resta: <b>83 − (−31)</b>', tipo:'opciones', opciones:['−114','114','−52','52',NING], respuesta:'114',
+    explicacion: receta({ pide:'el resultado de 83 menos (−31).',
+      pasos:[{ t:'"Menos menos" se vuelve MÁS', l:['Restar un número negativo es SUMAR su opuesto:', `83 − (−31) = 83 ${cb('+')} 31`] },
+        { t:'Suma', l:[cuentaMas(83, 31)] }],
+      resp:'b) 114', comp:'114 − 31 = 83 ✓ (si le quitas lo que sumaste, vuelves al 83)', error:'contestar 52: eso es 83 − 31, olvidando que el 31 era negativo.',
+      ejemplo:'83 − (−31) = 83 + 31 = 114.' }) }),
+  // 2. Completar el enunciado (propiedad distributiva)
+  C => _multiDep('Completa las oraciones siguientes.<br><b>4(6 + 5) = 4( ___ ) + 4( ___ )</b>', [{ et:'Primer espacio', r:6 }, { et:'Segundo espacio', r:5 }],
+    receta({ pide:'los dos números que van dentro de los paréntesis vacíos.',
+      pasos:[{ t:'El de afuera se reparte a cada término de adentro', l:['Es la propiedad DISTRIBUTIVA: a(b + c) = a·b + a·c.', diagDistribuir(4, 6, '+', 5, '4(6)', '4(5)')] },
+        { t:'Copia los de adentro en los espacios', l:[`4(6 + 5) = 4(${cb(6)}) + 4(${cb(5)})`] }],
+      resp:'6 y 5', comp:'4(6 + 5) = 4(11) = 44 y 4(6) + 4(5) = 24 + 20 = 44 ✓', error:'poner 24 y 20 (ya multiplicados): en los espacios van los números de ADENTRO, sin multiplicar.',
+      ejemplo:'4(6 + 5) = 4(6) + 4(5).' }).filter(l => !/^TRUCO:/.test(l)),
+    'TRUCO: el número de afuera se REPITE delante de cada término de adentro, y el signo del medio se queda igual. Ejemplo con este mismo: 4(6 + 5) = 4(6) + 4(5).'),
+  // 3. Exponente con base negativa
+  C => ({ enunciado:'Evalúa <b>(−5)<sup>3</sup></b>.', tipo:'opciones', opciones:['125','−125','−15','243',NING], respuesta:'−125',
+    explicacion: receta({ pide:'multiplicar (−5) por sí mismo 3 veces.',
+      pasos:[{ t:'Escribe la multiplicación', l:['El exponente 3 dice CUÁNTAS VECES se multiplica la base:', '(−5)³ = (−5) × (−5) × (−5)'] },
+        { t:'Multiplica de dos en dos', l:['(−5) × (−5) = 25 (negativo por negativo da positivo)', `25 × (−5) = ${cb('−125')} (positivo por negativo da negativo)`] }],
+      resp:'b) −125', comp:'3 negativos es un número IMPAR de negativos → el resultado es negativo ✓', error:'contestar −15 (multiplicar 5 × 3): el exponente no multiplica a la base, dice cuántas veces se repite.',
+      ejemplo:'(−5)³ = (−5)(−5)(−5) = −125.' }) }),
+  // 4. Forma corta con potencia de 10
+  C => _multiDep('Escribe <b>$620,000,000</b> en forma corta usando una potencia de 10.<br><small>Respuesta: ___ × 10<sup>___</sup></small>',
+    [{ et:'Número delante', r:62 }, { et:'Exponente de 10', r:7 }],
+    receta({ pide:'620,000,000 escrito como (número) × 10 con un exponente.',
+      pasos:[{ t:'Cuenta los ceros del final', l:['620,000,000 → después del 62 hay 7 ceros.'] },
+        { t:'Quita esos ceros: lo que queda va delante', l:[`Queda ${cb(62)}`] },
+        { t:'La cantidad de ceros es el exponente', l:[`7 ceros → 10${sup(7)} = 10,000,000 → ${cb('62 × 10' + sup(7))}`] }],
+      resp:'62 × 10⁷', comp:'62 × 10,000,000 = 620,000,000 ✓', error:'dejar un solo dígito delante (6.2 × 10⁸): en EducoSoft se aceptó 62 × 10⁷, quitando TODOS los ceros del final.',
+      ejemplo:'$620,000,000 = 62 × 10⁷.' }).filter(l => !/^TRUCO:/.test(l)),
+    'TRUCO: el exponente de 10 es la cantidad de ceros que quitas del final. Ejemplo con este mismo: 620,000,000 → quito 7 ceros → 62 × 10⁷.'),
+  // 5. Orden de operaciones
+  C => ({ enunciado:'Efectúa las operaciones indicadas y simplifica.<br><b>−5(4) + 2[6 − 9(−6)<sup>2</sup>]</b>', tipo:'num', respuesta:-656,
+    explicacion: receta({ pide:'un solo número, siguiendo el orden de operaciones.',
+      pasos:[{ t:'Primero el exponente (dentro del corchete)', l:[`(−6)² = (−6)(−6) = ${cb(36)}`, 'Queda: −5(4) + 2[6 − 9(36)]'] },
+        { t:'Después la multiplicación dentro del corchete', l:[`9 × 36 = ${cb(324)}`, 'Queda: −5(4) + 2[6 − 324]'] },
+        { t:'Termina el corchete', l:[`${cuentaMenos(6, 324)}`, 'Queda: −5(4) + 2[−318]'] },
+        { t:'Las multiplicaciones de afuera', l:[`−5 × 4 = ${cb(-20)}`, `2 × (−318) = ${cb(-636)}`, 'Queda: −20 + (−636)'] },
+        { t:'Suma al final', l:[`−20 + (−636): los dos son negativos, se suman y se queda el signo menos → ${cb('−656')}`] }],
+      resp:'−656', comp:'Orden: exponente → multiplicación → resta del corchete → multiplicaciones de afuera → suma ✓', error:'restar 6 − 9 primero (= −3): la multiplicación 9(36) va ANTES que la resta.',
+      ejemplo:'(−6)² = 36 → 9 × 36 = 324 → 6 − 324 = −318 → −20 + 2(−318) = −656.' }) }),
+  // 6. De palabras a símbolos
+  C => ({ enunciado:'Convierte a una expresión algebraica, si <i>x</i> representa el número desconocido: <b>cinco menos que tres veces un número</b>.', tipo:'opciones',
+    opciones:['5 − 3x','3x − 15','15 − 3x','−3x − 5',NING], respuesta:NING,
+    explicacion: receta({ pide:'la expresión con x que dice la frase.',
+      pasos:[{ t:'Traduce la parte con "veces"', l:['"tres veces un número" = 3x'] },
+        { t:'"Menos que" cambia el orden', l:['"cinco menos QUE 3x" quiere decir: a 3x le quitas 5 →', cb('3x − 5')] },
+        { t:'Búscala en las opciones', l:['3x − 5 no está (5 − 3x está al revés) → e) Ninguno de los anteriores'] }],
+      resp:'e) Ninguno de los anteriores (la correcta es 3x − 5)', error:'escoger 5 − 3x: "cinco menos QUE…" empieza por lo que viene después del "que".',
+      ejemplo:'cinco menos que tres veces un número → 3x − 5 → no está → Ninguno.' }) }),
+  // 7. Ángulos agudos y rectos
+  C => _multiDep(`En la siguiente figura, marca todos los ángulos agudos y todos los ángulos rectos.${svgCasita()}`,
+    [{ et:'Número de ángulos agudos', r:5 }, { et:'Número de ángulos rectos', r:4 }],
+    receta({ pide:'cuántos ángulos agudos (menos de 90°) y cuántos rectos (90°, esquina de cuadrado) hay en la casita.',
+      pasos:[{ t:'Los rectos: las esquinas del cuadrado', l:[`El cuadrado tiene 4 esquinas y todas son de 90° → ${cb('4 rectos')}`] },
+        { t:'Los agudos del techo', l:['Arriba, la punta del techo → 1 agudo', 'En cada esquina de arriba del cuadrado, entre el techo y la línea de arriba del cuadrado → 1 agudo a cada lado = 2'] },
+        { t:'Los agudos de los aleros', l:['Las líneas del techo se pasan un poquito del cuadrado: entre ese pedacito y la pared → 1 agudo a cada lado = 2', `Total agudos: 1 + 2 + 2 = ${cb(5)}`] }],
+      resp:'5 agudos y 4 rectos', error:'contar solo los 3 del triángulo del techo: los pedacitos que se pasan del cuadrado forman 2 agudos más con las paredes.',
+      ejemplo:'punta (1) + esquinas de arriba (2) + aleros (2) = 5 agudos; 4 esquinas del cuadrado = 4 rectos.' }).filter(l => !/^TRUCO:/.test(l)),
+    'TRUCO: recorre la figura esquina por esquina y en cada punto donde se juntan líneas mira TODOS los ángulos que se forman, no solo los de adentro. Ejemplo con este mismo: 5 agudos y 4 rectos.'),
+  // 8. Complemento usando el suplemento
+  C => ({ enunciado:'Si el suplemento de un ángulo es <b>140°</b>, entonces halla el complemento de ese ángulo.', tipo:'num', respuesta:50, ayuda:'Respuesta en grados (solo el número).',
+    explicacion: receta({ pide:'el complemento del ángulo (lo que le falta para 90°).',
+      pasos:[{ t:'Primero encuentra el ángulo', l:['El suplemento es lo que le falta al ángulo para llegar a 180°:', `ángulo = 180 − 140 = ${cb('40°')}`] },
+        { t:'Ahora el complemento', l:[`complemento = 90 − 40 = ${cb('50°')}`, _angNota(40, 'cs')] }],
+      resp:'50°', comp:'40 + 140 = 180 ✓ y 40 + 50 = 90 ✓', error:'contestar 40° (el ángulo): te piden su COMPLEMENTO.',
+      ejemplo:'suplemento 140° → ángulo 40° → complemento 50°.' }) }),
+  // 9. Polinomios: P y Q
+  C => ({ enunciado:'¿Cuál de las siguientes aseveraciones es cierta?<br><b>P: La parte variable de 7x<sup>3</sup> es x<sup>3</sup>.<br>Q: La expresión −4x<sup>2</sup> tiene solamente un término.</b>', tipo:'opciones',
+    opciones:['P solamente','Q solamente','Ambos P y Q','Ni P ni Q'], respuesta:'Ambos P y Q',
+    explicacion: receta({ pide:'revisar P y Q por separado.',
+      pasos:[{ t:'Revisa P', l:['En 7x³, el 7 es el coeficiente y la parte variable es la letra con su exponente: x³ → P es ' + cb('CIERTA')] },
+        { t:'Revisa Q', l:['Los términos se separan con + o −. En −4x² no hay ningún + ni − que separe (el − es el signo del número) → 1 término → Q es ' + cb('CIERTA')] }],
+      resp:'c) Ambos P y Q', error:'pensar que el − de −4x² separa dos términos: es el signo del 4, no una resta.',
+      ejemplo:'P cierta y Q cierta → Ambos P y Q.' }) }),
+  // 10. ax + b = c
+  C => ({ enunciado:'Resuelve la ecuación: <b>7x + 7 = 21</b>', tipo:'opciones', opciones:['x = 2','x = 5',`x = ${fr(2,3)}`,'x = 14',NING], respuesta:'x = 2',
+    explicacion: receta({ pide:'el valor de x.',
+      pasos:[{ t:'Quita el 7 que suma (resta 7 en los dos lados)', l:[diagAmbosLados('7x + 7', '21', '− 7', '7x', '21 − 7'), `7x = ${cb(14)}`] },
+        { t:'Divide entre 7 en los dos lados', l:[diagAmbosLados('7x', '14', '÷ 7', 'x', '14 ÷ 7'), `x = ${cb(2)}`] }],
+      resp:'a) x = 2', comp:'7(2) + 7 = 14 + 7 = 21 ✓', error:'contestar x = 14: falta dividir entre 7.',
+      ejemplo:'7x + 7 = 21 → 7x = 14 → x = 2.' }) }),
+  // 11. Perímetro de un triángulo
+  C => ({ enunciado:`Halla el perímetro de la siguiente figura.${svgTrianguloLados(5,4,3,'cm')}`, tipo:'opciones', opciones:['9 cm','13 cm','7 cm','14 cm',NING], respuesta:NING,
+    explicacion: receta({ pide:'cuánto mide todo el borde del triángulo.',
+      pasos:[{ t:'Suma los tres lados', l:[`P = 5 + 4 + 3 = ${cb('12 cm')}`] },
+        { t:'Búscalo en las opciones', l:['12 cm no está → e) Ninguno de los anteriores'] }],
+      resp:'e) Ninguno de los anteriores (el perímetro es 12 cm)', error:'escoger una opción "parecida": si el resultado no está, la respuesta es Ninguno.',
+      ejemplo:'5 + 4 + 3 = 12 cm → no está → Ninguno.' }) }),
+  // 12. Valor numérico
+  C => ({ enunciado:'Halla el valor numérico de:<br><b>(3x + 2)<sup>2</sup> + 7</b> cuando <b>x = 4</b>', tipo:'num', respuesta:203,
+    explicacion: receta({ pide:'cambiar x por 4 y calcular.',
+      pasos:[{ t:'Pon el 4 donde está la x', l:['(3 · 4 + 2)² + 7'] },
+        { t:'Primero lo de adentro del paréntesis', l:[`3 · 4 = 12, y 12 + 2 = ${cb(14)}`] },
+        { t:'Después el exponente', l:[`14² = 14 × 14 = ${cb(196)}`] },
+        { t:'Al final la suma', l:[`196 + 7 = ${cb(203)}`] }],
+      resp:'203', error:'hacer 14 × 2 = 28: el ² es 14 × 14, no por 2.',
+      ejemplo:'(3·4 + 2)² + 7 = 14² + 7 = 196 + 7 = 203.' }) }),
+  // 13. Número que falta dado el promedio
+  C => ({ enunciado:'El promedio de cuatro números es 85. Si tres de los números son 79, 80 y 65, halla el cuarto número.', tipo:'opciones', opciones:['95','87','100','116',NING], respuesta:'116',
+    explicacion: receta({ pide:'el número que falta para que el promedio sea 85.',
+      pasos:[{ t:'Promedio × cuántos son = suma total', l:[`85 × 4 = ${cb(340)}`] },
+        { t:'Suma los que ya tienes', l:[`${sumaLista([79, 80, 65])}`] },
+        { t:'Lo que falta es la diferencia', l:[`340 − 224 = ${cb(116)}`] }],
+      resp:'d) 116', comp:'(79 + 80 + 65 + 116) ÷ 4 = 340 ÷ 4 = 85 ✓', error:'sacar el promedio de los tres (224 ÷ 3): hay que usar la suma TOTAL de los cuatro.',
+      ejemplo:'85 × 4 = 340; 340 − 224 = 116.' }) }),
+  // 14. Divisible por 3
+  C => ({ enunciado:'Determina si el siguiente número es divisible por <b>3</b>.<br><b>225</b>', tipo:'sino', respuesta:true, explicacion: explDivisibilidad(225, 3) }),
+  // 15. Primo o compuesto
+  C => ({ enunciado:'Determina si el siguiente número es primo o compuesto.<br><b>57</b>', tipo:'opciones', opciones:['Número primo','Número Compuesto'], respuesta:'Número Compuesto', explicacion: explPrimo(57) }),
+  // 16. MCM por listado
+  C => ({ enunciado:'Usando el método de listado, halla el MCM de <b>15</b> y <b>45</b>.', tipo:'num', respuesta:45, explicacion: explMcmListado(15, 45) }),
+  // 17. Pizzas (mixto)
+  C => ({ enunciado:`Alan se comió ${fr(19,9)} de una pizza. Convierte esto a un número mixto y úsalo para determinar el número entero mínimo de pizzas que ordenó.`, tipo:'num', respuesta:3,
+    explicacion: receta({ pide:'cuántas pizzas COMPLETAS como mínimo tuvo que ordenar.',
+      pasos:[{ t:'Pasa 19/9 a número mixto', l:[explAMixto(C(19,9))] },
+        { t:'Si sobra algo, hace falta otra pizza completa', l:['2 1/9 es más que 2 pizzas (sobró 1/9 de otra) → 2 + 1 = ' + cb(3)] }],
+      resp:'3 pizzas', error:'contestar 2: con 2 pizzas faltaría el pedacito de 1/9. Aquí se redondea hacia ARRIBA.',
+      ejemplo:'19/9 = 2 1/9 → 3 pizzas.' }) }),
+  // 18. Fracción reducida (novela de Carla)
+  C => ({ enunciado:'Carla quiere terminar una novela lo más pronto posible. Hasta ahora ha leído <b>84</b> páginas. ¿Qué fracción del número de páginas ha leído si hay <b>135</b> páginas en la novela?<br>Reduce la fracción a sus términos más simples.', tipo:'frac', respuesta:{n:28, d:45}, pedirSimple:true,
+    explicacion: receta({ pide:'páginas leídas / páginas totales, simplificada.',
+      pasos:[{ t:'Arma la fracción: lo leído arriba, el total abajo', l:['84/135'] },
+        { t:'Simplifica', l:[explSimplif(84, 135)] }],
+      resp:'28/45', comp:'28 × 3 = 84 y 45 × 3 = 135 ✓', error:'poner el total arriba (135/84): la parte (lo leído) va arriba.',
+      ejemplo:'84/135 ÷ 3 = 28/45.' }) }),
+  // 19. Razón unitaria
+  C => ({ enunciado:'Gabriel tiene 96 barras de dulce para 32 niños. ¿Cuál es la razón unitaria?', tipo:'opciones',
+    opciones:['2 barras de dulce/niño','3 barras de dulce/niño','2.5 barras de dulce/niño','5 barras de dulce/niño',NING], respuesta:'3 barras de dulce/niño',
+    explicacion: receta({ pide:'cuántas barras le tocan a UN niño.',
+      pasos:[{ t:'Divide la primera cantidad entre la segunda', l:[`96 ÷ 32 = ${cb(3)} (porque 32 × 3 = 96)`] }],
+      resp:'b) 3 barras de dulce/niño', comp:'3 × 32 = 96 ✓', error:'dividir al revés (32 ÷ 96): la razón unitaria es lo de UNO, barras entre niños.',
+      ejemplo:'96 ÷ 32 = 3 barras de dulce por niño.' }) }),
+  // 20. Fracción reducida (novela de Alicia)
+  C => ({ enunciado:'Alicia quiere terminar de leer una novela lo más pronto posible. Hasta ahora ha leído <b>168</b> páginas. ¿Qué fracción del número de páginas ha leído si hay <b>294</b> páginas en la novela?<br>Simplifica la fracción a sus términos más simples.', tipo:'frac', respuesta:{n:4, d:7}, pedirSimple:true,
+    explicacion: receta({ pide:'páginas leídas / páginas totales, simplificada.',
+      pasos:[{ t:'Arma la fracción: lo leído arriba, el total abajo', l:['168/294'] },
+        { t:'Simplifica poco a poco', l:['Los dos son pares: ÷ 2 → 84/147', '84 y 147 están en la tabla del 7: ÷ 7 → 12/21', '12 y 21 están en la tabla del 3: ÷ 3 → ' + cb('4/7'), explSimplif(168, 294)] }],
+      resp:'4/7', comp:'4 × 42 = 168 y 7 × 42 = 294 ✓', error:'parar en 84/147 o en 12/21: todavía se pueden simplificar.',
+      ejemplo:'168/294 ÷ 42 = 4/7.' }) }),
+  // 21. Factorización prima
+  C => ({ enunciado:'Escribe la <b>factorización prima</b> de <b>350</b>.', tipo:'texto', respuesta: factorizar(350), explicacion: explFactorizar(350),
+    ayuda:'Puedes escribirlo como <b>2 * 5 * 5 * 7</b> o como <b>2 * 5^2 * 7</b>.' }),
+  // 22. Múltiplo de 5
+  C => ({ enunciado:'Determina si <b>3,620</b> es o no un múltiplo de <b>5</b>.', tipo:'sino', respuesta:true,
+    explicacion: explDivisibilidad(3620, 5, '"Ser múltiplo de" es lo mismo que "ser divisible por": 3,620 SÍ es múltiplo de 5.') }),
+  // 23. Factorizar (FCM con letras)
+  C => ({ enunciado:'Factoriza completamente:<br><b>40r<sup>3</sup>s + 25rs<sup>3</sup></b>', tipo:'opciones',
+    opciones:['5rs(8r² + 5s²)','5rs','5rs(8r² + 5rs²)','(8r³ + 5rs³)',NING], respuesta:'5rs(8r² + 5s²)',
+    explicacion: receta({ pide:'sacar el factor común mayor (FCM) y dejar lo demás en el paréntesis.',
+      pasos:[{ t:'FCM de los números', l:['40 y 25: el número más grande que entra en los dos es ' + cb(5)] },
+        { t:'FCM de cada letra: la MENOR potencia', l:['r: r³ y r¹ → se saca ' + cb('r'), 's: s¹ y s³ → se saca ' + cb('s'), 'FCM = 5rs'] },
+        { t:'Divide cada término entre 5rs', l:['40r³s ÷ 5rs = 8r²', '25rs³ ÷ 5rs = 5s²', `→ ${cb('5rs(8r² + 5s²)')}`] }],
+      resp:'a) 5rs(8r² + 5s²)', comp:'5rs × 8r² = 40r³s y 5rs × 5s² = 25rs³ ✓', error:'escoger 5rs(8r² + 5rs²): al dividir 25rs³ entre 5rs, la r se va completa.',
+      ejemplo:'FCM = 5rs → 5rs(8r² + 5s²).' }) }),
+  // 24. Mixto + fracción propia
+  C => ({ enunciado:`Halla la suma: <b>${mixS(2,1,7)} + ${fr(3,4)}</b>`, tipo:'opciones',
+    opciones:[mixS(2,25,28), mixS(25,1,14), fr(25,28), mixS(28,2,25), NING], respuesta:mixS(2,25,28),
+    explicacion: receta({ pide:'la suma como número mixto.',
+      pasos:[{ t:'Pasa el mixto a fracción impropia', l:[explImpropia(C(15,7))] },
+        { t:'Suma 15/7 + 3/4', l:[...sin1(pasosSumaF(C(15,7), C(3,4)).lineas)] },
+        { t:'Vuelve a número mixto', l:[...lineaMixto(C(81,28))] }],
+      resp:'a) 2 25/28', comp:'2 + 1/7 + 3/4: 1/7 + 3/4 = 4/28 + 21/28 = 25/28 → 2 25/28 ✓', error:'sumar los de abajo (7 + 4): para sumar se busca el MCM, el de abajo no se suma.',
+      ejemplo:'15/7 + 3/4 = 60/28 + 21/28 = 81/28 = 2 25/28.' }) }),
+  // 25. Multiplicar y reducir
+  C => ({ enunciado:`Multiplica y reduce.<br><b>${fr(9,4)} × ${fr(28,45)} × ${fr(18,24)}</b>`, tipo:'frac', respuesta:{n:21, d:20}, pedirSimple:true,
+    explicacion: receta({ pide:'el producto de las tres fracciones, simplificado.',
+      pasos:[{ t:'Multiplica las dos primeras', l:[...sin1(pasosMultF(C(9,4), C(28,45)).lineas)] },
+        { t:'Multiplica el resultado por la tercera', l:[...sin1(pasosMultF(C(7,5), C(18,24)).lineas)] }],
+      resp:'21/20', comp:'21/20 = 1.05 y 9/4 × 28/45 × 18/24 = 2.25 × 0.6222… × 0.75 = 1.05 ✓', error:'dejarla sin reducir (4536/4320): siempre se simplifica al final.',
+      ejemplo:'9/4 × 28/45 = 7/5; 7/5 × 18/24 = 21/20.' }) }),
+  // 26. Orden de operaciones con fracciones
+  C => ({ enunciado:`Simplifica: <b>${fr(1,2)} + ${fr(3,4)} × ${fr(8,9)}</b>`, tipo:'opciones', opciones:[mixS(3,1,6), fr(1,6), mixS(1,1,6), mixS(1,4,9), NING], respuesta:mixS(1,1,6),
+    explicacion: receta({ pide:'un solo número, con la multiplicación primero.',
+      pasos:[{ t:'Primero la multiplicación (va antes que la suma)', l:[...sin1(pasosMultF(C(3,4), C(8,9)).lineas)] },
+        { t:'Después la suma 1/2 + 2/3', l:[...sin1(pasosSumaF(C(1,2), C(2,3)).lineas)] },
+        { t:'Pasa a número mixto', l:[...lineaMixto(C(7,6))] }],
+      resp:'c) 1 1/6', error:'sumar primero 1/2 + 3/4: la multiplicación va ANTES, aunque esté escrita después.',
+      ejemplo:'3/4 × 8/9 = 2/3; 1/2 + 2/3 = 7/6 = 1 1/6.' }) }),
+  // 27. Propiedad de la suma
+  C => ({ enunciado:`Identifica la propiedad de adición de números racionales ilustrada en la siguiente expresión.<br><b>(−${fr(1,8)}) + ${fr(1,8)} = 0</b>`, tipo:'opciones',
+    opciones:['Asociativa','Conmutativa','Identidad','Inverso'], respuesta:'Inverso',
+    explicacion: receta({ pide:'qué propiedad hace que la suma dé 0.',
+      pasos:[{ t:'Mira el resultado', l:['Un número más su OPUESTO (el mismo con el signo cambiado) da 0.'] },
+        { t:'Escoge la propiedad', l:[`−1/8 y 1/8 son opuestos → propiedad del ${cb('Inverso')} (aditivo)`] }],
+      resp:'Inverso', error:'escoger Identidad: Identidad es sumar 0 (a + 0 = a); aquí el 0 es el RESULTADO.',
+      ejemplo:'(−1/8) + 1/8 = 0 → Inverso.' }) }),
+  // 28. Fracción menos entero
+  C => ({ enunciado:`Evalúa:<br><b>${fr(10,14)} − 3</b>`, tipo:'mixto', respuesta:{e:-2, n:2, d:7}, signo:true,
+    ayuda:'Escribe el entero con su signo menos (botón ±) y la fracción aparte: −2 y 2/7.',
+    explicacion: receta({ pide:'el resultado como número mixto.',
+      pasos:[{ t:'Simplifica 10/14', l:[explSimplif(10, 14)] },
+        { t:'Escribe el 3 con el mismo de abajo', l:['3 = 21/7 (3 × 7 = 21)'] },
+        { t:'Resta los de arriba', l:['5/7 − 21/7: el de abajo se queda igual', `Arriba: ${cuentaMenos(5, 21)} → ${cb('−16/7')}`] },
+        { t:'Pasa a número mixto (el signo se queda delante)', l:[explAMixto(C(16,7)), `Con el signo: ${cb('−2 2/7')}`] }],
+      resp:'−2 2/7', comp:'−2 2/7 + 3 = 5/7 = 10/14 ✓', error:'dejarlo positivo: 5/7 es menos que 3, así que el resultado es negativo.',
+      ejemplo:'10/14 = 5/7; 5/7 − 21/7 = −16/7 = −2 2/7.' }) }),
+  // 29. Proporción con x + 3
+  C => ({ enunciado:`Resuelve la proporción.<br><b>${fr('x + 3', 5)} = ${fr(3,4)}</b>`, tipo:'frac', respuesta:{n:3, d:4}, pedirSimple:true, signo:true,
+    ayuda:'x = ___ (si sale un entero, escríbelo con denominador 1)',
+    explicacion: receta({ pide:'el valor de x.',
+      pasos:[{ t:'Productos cruzados', l:[diagCruzados('x + 3', 5, 3, 4), '4(x + 3) = 5 × 3 = 15'] },
+        { t:'Reparte el 4', l:['4x + 12 = 15'] },
+        { t:'Despeja x', l:[diagAmbosLados('4x + 12', '15', '− 12', '4x', '3'), diagAmbosLados('4x', '3', '÷ 4', 'x', '3/4'), `x = ${cb('3/4')}`] }],
+      resp:'x = 3/4', comp:'(3/4 + 3)/5 = (15/4)/5 = 15/20 = 3/4 ✓', error:'multiplicar 4 × x + 3 sin paréntesis (4x + 3): el 4 multiplica a TODO el x + 3.',
+      ejemplo:'4(x + 3) = 15 → 4x = 3 → x = 3/4.' }) }),
+  // 30. Triángulos semejantes
+  C => ({ enunciado:`Dado un par de triángulos semejantes, halla los lados que faltan.${svgRectSem(3,4,5,6,'pulg')}`, tipo:'angulo2', etiquetas:['x','y'], respuesta:{a:8, b:10},
+    explicacion: receta({ pide:'x y y en el triángulo grande.',
+      pasos:[{ t:'Busca el par que tiene los dos números', l:['El lado vertical: 3 pulg en el pequeño ↔ 6 pulg en el grande.', `6 ÷ 3 = ${cb(2)}: el grande es 2 veces el pequeño.`] },
+        { t:'Multiplica los otros lados por 2', l:[`x (corresponde a 4) = 4 × 2 = ${cb('8 pulg')}`, `y (corresponde a 5) = 5 × 2 = ${cb('10 pulg')}`] }],
+      resp:'x = 8 pulg, y = 10 pulg', comp:'3/6 = 4/8 = 5/10 = 1/2 ✓', error:'sumar 3 (3 + 3 = 6, 4 + 3 = 7): en figuras semejantes se MULTIPLICA, no se suma.',
+      ejemplo:'6 ÷ 3 = 2 → x = 4 × 2 = 8, y = 5 × 2 = 10.' }) })
+];
 const optX = f => 'x = ' + (f.d===1 ? mm(f.n) : `${mm(f.n)}/${f.d}`);
 // término de un polinomio: coeficiente, letra y exponente → texto
 const termTxt = (c, v, e, primero) => { const ab = Math.abs(c), cs = (ab===1 && e>0) ? '' : String(ab), cuerpo = cs + (e>0 ? v + supE(e) : '');
@@ -4387,6 +4609,21 @@ const MODULOS = [
   }
 },
 {
+  // Las 30 preguntas EXACTAS de la práctica del Examen Departamental en EducoSoft (intento del 2026-10-01,
+  // "Examen Departamental - Midterm (Practice)", attempt 466981115). Mismos números, mismas opciones a)–e)
+  // en el mismo orden y en el mismo orden de preguntas. Una ronda = las 30, en orden (banco + nuevaRonda).
+  id:'educo-dep-exacto', nombre:'Examen Departamental: las 30 preguntas de tu práctica (exactas)', secciones:['5.9'],
+  banco:30, _sig:0,
+  nuevaRonda(){ this._sig = 0; },
+  gen(){
+    const C = (n,d=1) => ({n,d}), i = this._sig % 30; this._sig++;
+    const ej = DEP_EXACTO[i](C);
+    ej.enunciado = `<small>Pregunta ${i+1} de 30 · práctica del Examen Departamental</small><br>` + ej.enunciado;
+    ej.__n = i;
+    return ej;
+  }
+},
+{
   // Los tipos de ejercicio que salieron en tu práctica del Examen Departamental (caps. 1–5) y que la app aún no tenía.
   // Muchos son de opción múltiple a)–e), como en EducoSoft.
   id:'educo-dep', nombre:'Práctica del Examen Departamental (los tipos de EducoSoft)', secciones:['5.8'],
@@ -5436,7 +5673,9 @@ function verificar(ej, ent){
       if(![e,n,d].every(isFinite) || ent.e==='' || ent.n==='' || ent.d==='') return { ok:false, vacio:true };
       if(d <= 0) return { ok:false, msg:'El denominador tiene que ser mayor que 0.' };
       const Rp = ej.respuesta;
-      if((e*d + n)*Rp.d !== (Rp.e*Rp.d + Rp.n)*d) return { ok:false };
+      // −2 2/7 es −(2 + 2/7): el signo del entero afecta a TODO el número, no solo al entero
+      const neg = /^\s*[-−]/.test(ent.e), val = (neg ? -1 : 1) * (Math.abs(e)*d + n), valR = (Rp.e < 0 ? -1 : 1) * (Math.abs(Rp.e)*Rp.d + Rp.n);
+      if(val*Rp.d !== valR*d) return { ok:false };
       if(n >= d) return { ok:false, incompleto:true,
         msg:'El valor es correcto, pero en un número mixto el numerador tiene que ser menor que el denominador.' };
       if(mcd(n,d) !== 1) return { ok:false, incompleto:true, msg:'Falta simplificar la parte fraccionaria.' };
@@ -5569,7 +5808,8 @@ const SECMAP = {
   '5.5': ['repaso-cap5'],
   '5.6': ['autoeval-cap5'],
   '5.7': ['educo-cap5'],
-  '5.8': ['educo-dep']
+  '5.8': ['educo-dep'],
+  '5.9': ['educo-dep-exacto']
 };
 // EducoSoft está en inglés — las claves van en los dos idiomas
 const CLAVES = {
@@ -6139,6 +6379,7 @@ function restaurarSesion(){
   sesionTotal = s.sesionTotal || sesionCola.length || SESION_TEMA;
   ejActual = s.ejActual; respondido = s.respondido; vioExpl = s.vioExpl;
   ordenSel = s.ordenSel || []; ultimoFeedback = s.ultimoFeedback || null;
+  if(modActual.nuevaRonda && ejActual && ejActual.__n != null) modActual._sig = ejActual.__n + 1;   // las 30 del examen: sigue desde donde ibas
   ultimoProceso = s.ultimoProceso || '';
   ultimaEntrada = s.ultimaEntrada === undefined ? null : s.ultimaEntrada;
   pintarEjercicio();
@@ -7216,6 +7457,7 @@ function nuevoEjercicio(arg, continuar){
     capFijo = typeof arg === 'number' ? arg : null;
     sesionCola = esTemaFijo ? [] : construirCola(capFijo);
     sesionTotal = esTemaFijo ? (MOD_POR_ID[arg].banco || SESION_TEMA) : sesionCola.length;   // banco = temas de preguntas fijas (Repaso de ayudante): una ronda las trae todas
+    if(esTemaFijo && MOD_POR_ID[arg].nuevaRonda) MOD_POR_ID[arg].nuevaRonda();               // las 30 del examen: cada ronda empieza en la pregunta 1
   }
   sesionHechos++;
   sesionPendientes.forEach(p => p.esperar--);
@@ -7234,7 +7476,7 @@ function nuevoEjercicio(arg, continuar){
   }
   ejActual.__mod = modActual.id;
   respondido = false; vioExpl = false; ordenSel = []; ultimoFeedback = null; ultimoProceso = ''; calcHist = [];
-  if(!temasEjemploVisto[modActual.id] && modActual.clase !== 'ayud'){   // Repaso de ayudante son preguntas de memoria: no hay "ejemplo resuelto" que enseñar
+  if(!temasEjemploVisto[modActual.id] && !modActual.banco){   // temas de preguntas fijas (Repaso de ayudante, las 30 del examen): sin "ejemplo resuelto", sería gastar una pregunta
     temasEjemploVisto[modActual.id] = true;
     guardarSesion();
     return _pintarEjemploTema(modActual);
@@ -7279,6 +7521,7 @@ function entradaHTML(ej){
         <button class="btn amar" style="margin-top:12px" onclick="responder()">Comprobar</button>`;
     case 'mixto': return `
         <div class="mixIn">
+          ${ej.signo ? `<button type="button" class="btn sec signo" onclick="toggleSigno('inE')">±</button>` : ''}
           <input class="campo" id="inE" inputmode="numeric" autocomplete="off" placeholder="entero">
           <div class="fracIn" style="margin:0">
             <input class="campo" id="inN" inputmode="numeric" autocomplete="off" placeholder="arriba">
