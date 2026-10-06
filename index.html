@@ -5282,12 +5282,19 @@ function _ayPregunta(id, nombre, sec, preguntas){
   } };
 }
 // foto → nombre
-function _ayFotoMod(id, nombre, sec, fotos, clave, pregunta, dicho, trucoFn){
-  const nombres = fotos.map(f => f[clave]);
-  return { id, nombre, clase:'ayud', secciones:[sec], banco:fotos.length, gen(){
-    const f = _ayElegir(id, fotos);
-    return { enunciado:pregunta + _ayFoto(f.src), tipo:'opciones', opciones:_ayOpciones(f[clave], nombres), respuesta:f[clave],
-      explicacion:[`${dicho(f[clave])}`, `→ ${f[clave]}.`, trucoFn(f[clave])] };
+// foto → nombre: materiales (139) y tipos de conduleto (18) en UN solo tema, una ronda las trae todas.
+// Las opciones salen del mismo grupo de la foto (a un material no le tocan letras de conduleto).
+function _ayFotosTodas(){
+  const id = 'ayud-fotos';
+  const todas = [...AYUD.fotos.map(f => ({ src:f.src, r:f.name, mat:true })), ...AYUD.condQuiz.map(c => ({ src:c.src, r:c.code, mat:false }))];
+  const nomMat = AYUD.fotos.map(f => f.name), nomCond = AYUD.condQuiz.map(c => c.code);
+  return { id, nombre:'Identificar con foto (materiales y conduletos)', clase:'ayud', secciones:['2.3'], banco:todas.length, gen(){
+    const f = _ayElegir(id, todas);
+    return { enunciado:(f.mat ? '¿Qué material eléctrico es este?' : '¿Qué tipo de conduleto es este?') + _ayFoto(f.src),
+      tipo:'opciones', opciones:_ayOpciones(f.r, f.mat ? nomMat : nomCond), respuesta:f.r,
+      explicacion:[f.mat ? `En la foto está: ${f.r}.` : `Es el conduleto tipo ${f.r}.`, `→ ${f.r}.`,
+        f.mat ? `TRUCO: fíjate en la forma y en dónde se conecta, y repasa la Galería de materiales hasta reconocerlo sin leer las opciones. Ejemplo con este mismo: la foto es ${f.r}.`
+              : `TRUCO: cada tipo de conduleto se reconoce por la forma del cuerpo y por dónde tiene las entradas; memoriza la letra junto a su foto en la Galería. Ejemplo con este mismo: es el tipo ${f.r}.`] };
   } };
 }
 MODULOS.push(
@@ -5295,12 +5302,7 @@ MODULOS.push(
   _ayPregunta('ayud-ohm-preguntas', 'Ley de Ohm: preguntas de práctica', '1.2', AYUD.ohm.quiz),
   _ayFicha('ayud-mat-conceptos', 'Materiales: conceptos', '2.1', AYUD.materiales.fc),
   _ayPregunta('ayud-mat-preguntas', 'Materiales: preguntas de práctica', '2.2', [...AYUD.materiales.quiz, ...AYUD.idQuiz]),
-  _ayFotoMod('ayud-mat-fotos', 'Identificar materiales con foto', '2.3', AYUD.fotos, 'name',
-    '¿Qué material eléctrico es este?', n => `En la foto está: ${n}.`,
-    n => `TRUCO: fíjate en la forma y en dónde se conecta, y repasa la Galería de materiales hasta reconocerlo sin leer las opciones. Ejemplo con este mismo: la foto es ${n}.`),
-  _ayFotoMod('ayud-conduletos', 'Identificar conduletos con foto', '2.4', AYUD.condQuiz, 'code',
-    '¿Qué tipo de conduleto es este?', c => `Es el conduleto tipo ${c}.`,
-    c => `TRUCO: cada tipo de conduleto se reconoce por la forma del cuerpo y por dónde tiene las entradas; memoriza la letra junto a su foto en la Galería. Ejemplo con este mismo: es el tipo ${c}.`),
+  _ayFotosTodas(),
   _ayFicha('ayud-leyes-conceptos', 'Las Leyes: conceptos', '3.1', AYUD.leyes.fc),
   _ayPregunta('ayud-leyes-preguntas', 'Las Leyes: preguntas de práctica', '3.2', AYUD.leyes.quiz)
 );
@@ -5350,8 +5352,7 @@ function pantallaAyGaleria(){
       <h3>Tipos de conduletos</h3>
       <p>Memoriza la letra de cada tipo de conduleto:</p>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">${conds}</div>
-      <button class="btn amar" style="margin-top:16px" onclick="ir('practica','ayud-mat-fotos')">Identificar materiales con foto</button>
-      <button class="btn sec" onclick="ir('practica','ayud-conduletos')">Identificar conduletos con foto</button>
+      <button class="btn amar" style="margin-top:16px" onclick="ir('practica','ayud-fotos')">Identificar con foto</button>
     </div>`;
 }
 

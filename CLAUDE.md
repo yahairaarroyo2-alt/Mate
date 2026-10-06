@@ -409,9 +409,9 @@ cupo gratis separado del de Fit-F/Fit-M). Sin clave no se dibuja ningún botón 
 Pasada desde la app suelta `Proyectos/estudio-ayudante.html` (examen de Ayudante de Perito
 Electricista, PR). Es una materia más de `MATERIAS` (caps: 1 Ley de Ohm, 2 Materiales y su uso,
 3 Las Leyes). Todo su código vive en UN bloque de `index.html`, justo antes de
-`MODULOS.forEach(... m.clase = 'mate')`: `const AYUD` (datos), 8 módulos `ayud-*`
+`MODULOS.forEach(... m.clase = 'mate')`: `const AYUD` (datos), 7 módulos `ayud-*`
 (`_ayFicha` = tarjetas pregunta/respuesta → opción múltiple, `_ayPregunta` = preguntas con 4
-opciones, `_ayFotoMod` = foto → nombre) y las pantallas `pantallaAyLeer(k)` /
+opciones, `_ayFotosTodas` = foto → nombre (materiales y conduletos juntos)) y las pantallas `pantallaAyLeer(k)` /
 `pantallaAyGaleria()` (rutas `ir('ayLeer',k)` e `ir('ayGaleria')`; sus botones salen en Inicio
 y Temas vía `ayudMaterialHTML()`, solo con `materia==='ayud'`). Las preguntas con "Todas las
 anteriores" / "Ninguna" / "Ambas" NO se barajan (`_ayBarajar`). Fotos: `ayudante/` (184
