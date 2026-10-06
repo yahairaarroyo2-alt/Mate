@@ -6438,7 +6438,7 @@ async function _aiJSON(prompt, schema, extraParts){
   const now = Date.now();
   const disponibles = AI_MODELS.filter(m => !(_aiSkipUntil[m] > now));
   const lista = disponibles.length ? disponibles : AI_MODELS;   // si todos están en pausa, se prueban igual
-  let reintentado = false;
+  let reintentado = false, redReintentada = false;
   for(let i = 0; i < lista.length; i++){
     const model = lista[i], ultimo = i === lista.length - 1;
     try{
@@ -6454,7 +6454,11 @@ async function _aiJSON(prompt, schema, extraParts){
         if(!ultimo){ _aiSkipUntil[model] = now + AI_SKIP_MS; continue; }
         throw new Error('La IA tardó demasiado — inténtalo de nuevo');
       }
-      throw new Error('Sin señal — inténtalo cuando tengas internet');
+      // Cualquier fallo de red cae aquí, no solo "sin internet": un microcorte al cambiar de wifi a datos
+      // pasa en un segundo. Se reintenta una vez y se prueba el siguiente modelo antes de rendirse.
+      if (!redReintentada) { redReintentada = true; i--; await new Promise(ok => setTimeout(ok, 1200)); continue; }
+      if (!ultimo) continue;
+      throw new Error(navigator.onLine === false ? 'Sin señal — inténtalo cuando tengas internet' : 'No se pudo conectar con la IA — inténtalo de nuevo');
     }
     // el último no tiene a cuál pasar: un 500/503 suele ser un pico de un segundo, se reintenta una vez
     if(ultimo && [500, 503].includes(r.status) && !reintentado){ reintentado = true; i--; await new Promise(ok => setTimeout(ok, 1500)); continue; }
