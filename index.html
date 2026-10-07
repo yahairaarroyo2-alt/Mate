@@ -4623,142 +4623,6 @@ const MODULOS = [
     return ej;
   }
 },
-{
-  // Los tipos de ejercicio que salieron en tu práctica del Examen Departamental (caps. 1–5) y que la app aún no tenía.
-  // Muchos son de opción múltiple a)–e), como en EducoSoft.
-  id:'educo-dep', nombre:'Práctica del Examen Departamental (los tipos de EducoSoft)', secciones:['5.8'],
-  gen(){
-    const C = (n,d=1) => ({n,d});
-    const NOTA_NING = mc => mc.respuesta===NING ? ' (no está entre las opciones → "Ninguno de los anteriores")' : '';
-    const plant = [
-      // ── completar la propiedad distributiva ──
-      () => { const a = R(2,9), b = R(2,9), c = R(2,9), menos = Math.random() < 0.3, op = menos ? '−' : '+', ab = a*b, ac = a*c;
-        return ejVarios5('', `Completa las oraciones siguientes.<br><b>${a}(${b} ${op} ${c}) = ${a}( ___ ) ${op} ${a}( ___ )</b>`, [{ et:'Primer espacio', r:b }, { et:'Segundo espacio', r:c }],
-          [`La propiedad DISTRIBUTIVA dice que un número que multiplica a una ${menos ? 'resta' : 'suma'} entre paréntesis se REPARTE a cada término de adentro: a(b ${op} c) = a·b ${op} a·c.`,
-           diagDistribuir(a, b, op, c, `${a}·${b}`, `${a}·${c}`), `Lo que va en los espacios son los mismos números que estaban dentro del paréntesis: ${b} y ${c}.`,
-           `Comprobación: ${a}(${b} ${op} ${c}) = ${a}(${menos ? b-c : b+c}) = ${menos ? a*(b-c) : a*(b+c)} y ${a}(${b}) ${op} ${a}(${c}) = ${ab} ${op} ${ac} = ${menos ? ab-ac : ab+ac} ✓ Cierto`],
-          `TRUCO: el número de afuera se REPITE multiplicando a cada término de adentro, y el signo del medio se queda igual. Ejemplo con este mismo: ${a}(${b} ${op} ${c}) = ${a}(${b}) ${op} ${a}(${c}).`); },
-      // ── suplemento → complemento (o al revés) ──
-      () => { const ang = R(1,89);
-        if(Math.random() < 0.5){ const S = 180-ang;
-          return { enunciado:`Si el suplemento de un ángulo es <b>${S}°</b>, entonces halla el complemento de ese ángulo.`, tipo:'num', respuesta:90-ang, ayuda:'Respuesta en grados (solo el número).',
-            explicacion:[`Paso 1 — el suplemento es lo que le falta al ángulo para llegar a 180°: ángulo = 180 − ${S} = ${ang}°.`, `Paso 2 — el complemento es lo que le falta al ángulo para llegar a 90°: complemento = 90 − ${ang} = ${90-ang}°.`, _angNota(ang, 'cs'), `→ ${90-ang}°`,
-              `TRUCO: con dos pasos, primero encuentra el ÁNGULO y después pide lo que te preguntan. Complemento → 90 menos el ángulo; suplemento → 180 menos el ángulo (la C va antes que la S, igual que el 90 antes que el 180). Ejemplo con este mismo: ${S}° → ángulo ${ang}° → complemento ${90-ang}°.`] }; }
-        const X = 90-ang;
-        return { enunciado:`Si el complemento de un ángulo es <b>${X}°</b>, entonces halla el suplemento de ese ángulo.`, tipo:'num', respuesta:180-ang, ayuda:'Respuesta en grados (solo el número).',
-          explicacion:[`Paso 1 — el complemento es lo que le falta al ángulo para llegar a 90°: ángulo = 90 − ${X} = ${ang}°.`, `Paso 2 — el suplemento es lo que le falta al ángulo para llegar a 180°: suplemento = 180 − ${ang} = ${180-ang}°.`, _angNota(ang, 'cs'), `→ ${180-ang}°`,
-            `TRUCO: primero encuentra el ÁNGULO y después pide lo que te preguntan. Complemento → 90 menos el ángulo; suplemento → 180 menos el ángulo. Ejemplo con este mismo: ${X}° → ángulo ${ang}° → suplemento ${180-ang}°.`] }; },
-      // ── forma corta con una potencia de 10 (el número de adelante puede tener varias cifras) ──
-      () => { let c; do { c = pick([R(2,9), R(11,99), R(101,999)]); } while(c%10===0);
-        const k = R(3,8), N = c * 10**k, dolar = Math.random() < 0.5;
-        return ejVarios5('', `Escribe <b>${dolar ? '$' : ''}${miles(N)}</b> en forma corta usando una potencia de 10.<br><small>Respuesta: ___ × 10<sup>___</sup>. Quita TODOS los ceros del final: el número que queda va delante y la cantidad de ceros que quitaste es el exponente.</small>`,
-          [{ et:'Número delante', r:c }, { et:'Exponente de 10', r:k }],
-          [`Se cuentan los ceros del final de ${miles(N)}: hay ${k}.`, `Se quitan esos ${k} ceros y queda ${c}.`, `Una potencia de 10 con exponente ${k} es 1 seguido de ${k} ceros: 10<sup>${k}</sup> = ${miles(10**k)}.`, `Comprobación: ${c} × ${miles(10**k)} = ${miles(N)} ✓ Cierto`],
-          `TRUCO: el exponente de 10 es la cantidad de ceros que quitas del final. No te quedes con un solo dígito: se quitan TODOS los ceros y el número de adelante puede tener varias cifras. Ejemplo con este mismo: ${miles(N)} = ${c} × 10<sup>${k}</sup>.`); },
-      // ── aseveraciones P y Q sobre polinomios ──
-      () => { const v = pick(['x','y','a','n']), c = pick([2,3,4,5,6,7,8,9]) * pick([1,1,-1]), e = R(2,5), pOk = Math.random() < 0.5, qOk = Math.random() < 0.5;
-        const t1 = termTxt(c, v, e, true), cLen = R(1,3);
-        const falsaP = pick([`${v}`, `${Math.abs(c)}${v}${supE(e)}`, `${v}${supE(e+1)}`, `${Math.abs(c)}`]);
-        const P = pOk ? `La parte variable de ${t1} es ${v}${supE(e)}.` : `La parte variable de ${t1} es ${falsaP}.`;
-        const m = cLen, exps = m===1 ? [e] : m===2 ? [e,1] : [e,1,0];
-        let poly = ''; for(let i=0;i<m;i++){ const cc = (i===0 ? c : pick([2,3,5,7]) * pick([1,-1])); poly += termTxt(cc, v, exps[i], i===0); }
-        const claim = qOk ? m : pick([1,2,3].filter(z => z !== m)), pal = z => z===1 ? 'un término' : `${NUMW[z]} términos`;
-        const Q = `La expresión ${poly} tiene solamente ${pal(claim)}.`;
-        const resp = pOk && qOk ? 'Ambos P y Q' : pOk ? 'P solamente' : qOk ? 'Q solamente' : 'Ni P ni Q';
-        return { enunciado:`¿Cuál de las siguientes aseveraciones es cierta?<br><b>P: ${P}<br>Q: ${Q}</b>`, tipo:'opciones', opciones:['P solamente','Q solamente','Ambos P y Q','Ni P ni Q'], respuesta:resp,
-          explicacion:[`P — en un término como ${t1}, el número es el COEFICIENTE (${Math.abs(c) === 1 ? '1' : mm(c)}) y la parte variable es la letra con su exponente (${v}${supE(e)}). Entonces P es ${pOk ? 'CIERTA' : 'FALSA'}: la parte variable es ${v}${supE(e)}.`,
-            `Q — los términos se separan con + y −; en ${poly} hay ${m} término${m>1 ? 's' : ''}. Q dice "solamente ${pal(claim)}", así que Q es ${qOk ? 'CIERTA' : 'FALSA'}.`, `→ ${resp}`,
-            `TRUCO: revisa P y Q por separado. Parte variable = la letra con su exponente (sin el número); términos = los pedazos separados por + o −. Ejemplo con este mismo: P es ${pOk ? 'cierta' : 'falsa'} y Q es ${qOk ? 'cierta' : 'falsa'}.`] }; },
-      // ── contar ángulos agudos y rectos en un dibujo ──
-      () => { const nombres = Object.keys(FIGS_ANG), cuantas = pick([1,2,2,3]), sel = Array.from({length:cuantas}, () => pick(nombres)), f = svgFiguras(sel);
-        const A = f.info.reduce((s,i) => s + i.agudos, 0), Rr = f.info.reduce((s,i) => s + i.rectos, 0);
-        return ejVarios5('', `En la siguiente figura, marca todos los ángulos agudos y todos los ángulos rectos. (Cuenta los ángulos de adentro de cada figura.)${f.svg}`, [{ et:'Número de ángulos agudos', r:A }, { et:'Número de ángulos rectos', r:Rr }],
-          [`Un ángulo AGUDO mide menos de 90°; un ángulo RECTO mide exactamente 90° (tiene el cuadradito); un ángulo OBTUSO mide más de 90°.`,
-           ...f.info.map((i, k) => `Figura ${k+1} (${i.nom}): ${i.agudos} agudo${i.agudos===1 ? '' : 's'}, ${i.rectos} recto${i.rectos===1 ? '' : 's'}${i.obtusos ? `, ${i.obtusos} obtuso${i.obtusos===1 ? '' : 's'} (no se cuenta${i.obtusos===1 ? '' : 'n'})` : ''}.`)],
-          `TRUCO: recorre las figuras de izquierda a derecha y cuenta cada esquina: ¿tiene cuadradito? recto; ¿está más cerrado que una esquina de cuadrado? agudo; ¿más abierto? obtuso. Un triángulo siempre tiene 3 ángulos y un cuadrilátero 4. Ejemplo con este mismo: en total ${A} agudos y ${Rr} rectos.`); },
-      // ── MC: resta con números con signo ──
-      () => { const a = R(10,99), b = R(10,99), neg = Math.random() < 0.5, v = neg ? a+b : a-b;
-        const mc = opcionesMC(mm(v), [mm(-v), mm(neg ? a-b : b-a), mm(b-a), mm(-(a+b)), mm(a+b), mm(v+10)]);
-        return { enunciado:`Resta: <b>${a} − ${neg ? `(−${b})` : b}</b>`, tipo:'opciones', opciones:mc.opciones, respuesta:mc.respuesta,
-          explicacion: [...(neg ? [`Restar un número negativo es SUMAR su opuesto: ${a} − (−${b}) = ${a} + ${b}.`, `${a} + ${b} = ${a+b}.`]
-              : [`${a} − ${b}: ${b>a ? `${b} es mayor que ${a}, así que el resultado es NEGATIVO: se resta el más chico del más grande (${b} − ${a} = ${b-a}) y se pone el signo menos.` : `se restan directo, ${a} − ${b} = ${a-b}.`}`]),
-            `→ ${mm(v)}${NOTA_NING(mc)}`, `TRUCO: "menos menos" se vuelve MÁS: a − (−b) = a + b. Y si el que se resta es más grande que el primero, el resultado es negativo. Ejemplo con este mismo: ${a} − ${neg ? `(−${b})` : b} = ${mm(v)}.`] }; },
-      // ── MC: evalúa una potencia con base negativa ──
-      () => { const n = R(2,6), k = R(2,5), v = (-n) ** k, expl = [`(−${n})<sup>${k}</sup> significa multiplicar (−${n}) por sí mismo ${k} veces: ${Array(k).fill(`(−${n})`).join(' × ')}.`, `Cantidad de negativos: ${k}. ${k%2 ? 'Es IMPAR → el resultado es NEGATIVO.' : 'Es PAR → los negativos se cancelan y el resultado es POSITIVO.'}`, `${n}<sup>${k}</sup> = ${n**k}, así que el resultado es ${mm(v)}.`];
-        const mc = opcionesMC(mm(v), [mm(-v), mm(-n*k), mm(n*k), String(n**(k+1)), String(n**(k-1)), mm(-(n**(k-1)))]);
-        return { enunciado:`Evalúa <b>(−${n})<sup>${k}</sup></b>.`, tipo:'opciones', opciones:mc.opciones, respuesta:mc.respuesta,
-          explicacion:[...expl, `→ ${mm(v)}${NOTA_NING(mc)}`, `TRUCO: el exponente dice CUÁNTAS VECES se multiplica la base, no que se multiplique por el exponente. Con base negativa: exponente par → positivo; exponente impar → negativo. Ejemplo con este mismo: (−${n})<sup>${k}</sup> = ${mm(v)}.`] }; },
-      // ── MC: convertir a expresión algebraica ──
-      () => { const n = R(2,5), k = R(2,9), PAL = NUMW, caso = pick(['menosQue','masQue','vecesSuma','diferencia']);
-        let frase, ok, malas;
-        if(caso==='menosQue'){ frase = `${PAL[k]} menos que ${PAL[n]} veces un número`; ok = `${n}x − ${k}`; malas = [`${k} − ${n}x`, `${n}x − ${n*k}`, `−${n}x − ${k}`, `${n}(x − ${k})`, `${k}x − ${n}`]; }
-        else if(caso==='masQue'){ frase = `${PAL[k]} más que ${PAL[n]} veces un número`; ok = `${n}x + ${k}`; malas = [`${n}(x + ${k})`, `${k}x + ${n}`, `${n}x − ${k}`, `${k} − ${n}x`, `x + ${n*k}`]; }
-        else if(caso==='vecesSuma'){ frase = `${PAL[n]} veces la suma de un número y ${PAL[k]}`; ok = `${n}(x + ${k})`; malas = [`${n}x + ${k}`, `x + ${n}${k}`, `${n} + x + ${k}`, `${n}x + ${n}`, `${k}(x + ${n})`]; }
-        else { frase = `la diferencia entre ${PAL[k]} y ${PAL[n]} veces un número`; ok = `${k} − ${n}x`; malas = [`${n}x − ${k}`, `${k}x − ${n}`, `${n}(${k} − x)`, `${n} − ${k}x`, `${k} − x`]; }
-        const mc = opcionesMC(ok, malas);
-        return { enunciado:`Convierte a una expresión algebraica, si <i>x</i> representa el número desconocido: <b>${frase}</b>.`, tipo:'opciones', opciones:mc.opciones, respuesta:mc.respuesta,
-          explicacion:[`Se traduce palabra por palabra: "${PAL[n]} veces un número" es ${n}x.`, caso==='menosQue' ? `"${PAL[k]} menos QUE ${n}x" invierte el orden: se empieza por lo que viene después de "que" → ${n}x − ${k}.` : caso==='masQue' ? `"${PAL[k]} más que ${n}x" → ${n}x + ${k}.` : caso==='vecesSuma' ? `"la suma de un número y ${PAL[k]}" es (x + ${k}), y va entre paréntesis porque TODA la suma se multiplica por ${n}.` : `"la diferencia entre ${PAL[k]} y ${n}x" se resta en ESE orden: ${k} − ${n}x.`,
-            `→ ${ok}${NOTA_NING(mc)}`, `TRUCO: "menos que" y "más que" cambian el orden: "A menos que B" es B − A. "La diferencia entre A y B" sí va en el orden que se dice: A − B. Ejemplo con este mismo: ${frase} → ${ok}.`] }; },
-      // ── MC: ax + b = c ──
-      () => { const a = R(2,9), x = R(1,9), b = R(1,15) * pick([1,-1]), c = a*x + b, mal = f => optX(f);
-        const mc = opcionesMC(optX(C(x)), [mal(Fq(c+b, a)), mal(C(c-b)), mal(Fq(a, c-b)), mal(C(x+1)), mal(C(x-1)), mal(Fq(c, a))]);
-        return { enunciado:`Resuelve la ecuación: <b>${a}x ${b<0 ? '−' : '+'} ${Math.abs(b)} = ${mm(c)}</b>`, tipo:'opciones', opciones:mc.opciones, respuesta:mc.respuesta,
-          explicacion:[diagAmbosLados(`${a}x ${b<0 ? '−' : '+'} ${Math.abs(b)}`, mm(c), `${b<0 ? '+' : '−'} ${Math.abs(b)}`, `${a}x`, `${mm(c)} ${b<0 ? '+' : '−'} ${Math.abs(b)}`), `${a}x = ${c-b}`,
-            diagAmbosLados(`${a}x`, c-b, `÷ ${a}`, 'x', `${c-b} ÷ ${a}`), `x = ${x}`,
-            `Paso 3 — verificación: ${a}(${x}) ${b<0 ? '−' : '+'} ${Math.abs(b)} = ${a*x} ${b<0 ? '−' : '+'} ${Math.abs(b)} = ${mm(c)} ✓ Cierto`, `→ x = ${x}${NOTA_NING(mc)}`,
-            `TRUCO: en ax + b = c el orden es SIEMPRE el mismo: primero quitas b (con la operación contraria) y después divides entre a. Ejemplo con este mismo: ${a}x = ${c-b} → x = ${x}.`] }; },
-      // ── MC: perímetro de un triángulo (a veces la correcta no está) ──
-      () => { const a = R(3,9), b = R(3,9), c = R(3,9), u = pick(['cm','m','pulg']); if(a+b<=c || a+c<=b || b+c<=a) return this.gen();
-        const P = a+b+c, mc = opcionesMC(`${P} ${u}`, [`${P+1} ${u}`, `${P-2} ${u}`, `${a+b} ${u}`, `${P+2} ${u}`, `${a*b*c} ${u}`, `${P-1} ${u}`]);
-        return { enunciado:`Halla el perímetro de la siguiente figura.${svgTrianguloLados(a,b,c,u)}`, tipo:'opciones', opciones:mc.opciones, respuesta:mc.respuesta,
-          explicacion:[`El perímetro es lo que mide TODO el borde: se SUMAN los tres lados.`, `P = ${a} + ${b} + ${c} = ${P} ${u}.`, `→ ${P} ${u}${NOTA_NING(mc)}`,
-            `${TRUCO_PERIM} Ejemplo con este mismo: ${a} + ${b} + ${c} = ${P} ${u}.`] }; },
-      // ── MC: promedio dado, hallar el número que falta ──
-      () => { const n = pick([3,4,5]), A = R(60,95); let conocidos, falta;
-        do { conocidos = Array.from({length:n-1}, () => A + R(-18,18)); falta = n*A - conocidos.reduce((s,v) => s+v, 0); } while(falta < 30 || falta > 150 || falta === A);
-        const lista = conocidos.length>1 ? conocidos.slice(0,-1).join(', ') + ' y ' + conocidos[conocidos.length-1] : String(conocidos[0]), ord = {3:'tercer',4:'cuarto',5:'quinto'}[n], pal = {3:'tres',4:'cuatro',5:'cinco'}[n], pal1 = NUMW[n-1];
-        const suma = conocidos.reduce((s,v) => s+v, 0), mc = opcionesMC(String(falta), [String(A), String(falta+n), String(falta-n), String(Math.round(suma/(n-1))), String(n*A), String(falta+10)]);
-        return { enunciado:`El promedio de ${pal} números es ${A}. Si ${pal1} de los números son ${lista}, halla el ${ord} número.`, tipo:'opciones', opciones:mc.opciones, respuesta:mc.respuesta,
-          explicacion:[`Promedio = (suma de los números) ÷ (cuántos son). Entonces suma de los ${pal} números = promedio × ${n} = ${A} × ${n} = ${A*n}.`, `Los números que ya se conocen suman ${conocidos.join(' + ')} = ${suma}.`, `El que falta es la diferencia: ${A*n} − ${suma} = ${falta}.`, `→ ${falta}${NOTA_NING(mc)}`,
-            `TRUCO: al revés del promedio: promedio × cuántos son = suma total; después restas lo que ya tienes. Ejemplo con este mismo: ${A} × ${n} = ${A*n}, menos ${suma} = ${falta}.`] }; },
-      // ── MC: razón unitaria ──
-      () => { const k = pick([2,3,4,5,6,8]), N = pick([8,12,16,20,24,32,40]), T = k*N, cx = pick([[`Gabriel tiene ${T} barras de dulce para ${N} niños.`, 'barras de dulce/niño'], [`Un auto recorre ${T} millas con ${N} galones de gasolina.`, 'millas/galón'], [`${N} estudiantes pagaron $${T} en total por una excursión.`, 'dólares/estudiante']]);
-        const mc = opcionesMC(`${k} ${cx[1]}`, [`${k-1} ${cx[1]}`, `${k+1} ${cx[1]}`, `${k+2} ${cx[1]}`, `${k*2} ${cx[1]}`, `${k+0.5} ${cx[1]}`, `${k-0.5} ${cx[1]}`]);
-        return { enunciado:`${cx[0]} ¿Cuál es la razón unitaria?`, tipo:'opciones', opciones:mc.opciones, respuesta:mc.respuesta,
-          explicacion:[`La razón unitaria dice cuánto le toca a UNO: se divide la primera cantidad entre la segunda.`, `${T} ÷ ${N} = ${k}`, `→ ${k} ${cx[1]}${NOTA_NING(mc)}`, `${TR_PROP5} Razón unitaria: ${T}/${N} = ${k}/1. Ejemplo con este mismo: ${T} ÷ ${N} = ${k}.`] }; },
-      // ── MC: factorizar completamente (con letras) ──
-      () => { const g = pick([2,3,4,5,6,7]), m1 = pick([2,3,4,5,7,8,9]), m2 = pick([2,3,4,5,7,8,9]), p1 = R(1,4), q1 = R(1,3), p2 = R(1,4), q2 = R(1,3); if(mcd(m1,m2)!==1 || m1===m2 || (p1===p2 && q1===q2)) return this.gen();
-        const u = pick(['r','a','x']), w = pick(['s','b','y']), pm = Math.min(p1,p2), qm = Math.min(q1,q2);
-        const mt = (cf, a, b) => (cf===1 && (a||b) ? '' : String(cf)) + (a ? u + supE(a) : '') + (b ? w + supE(b) : ''), c1 = g*m1, c2 = g*m2;
-        const expr = `${mt(c1,p1,q1)} + ${mt(c2,p2,q2)}`, G = mt(g,pm,qm), ok = `${G}(${mt(m1,p1-pm,q1-qm)} + ${mt(m2,p2-pm,q2-qm)})`;
-        const malas = [`${mt(g,0,0)}(${mt(m1,p1,q1)} + ${mt(m2,p2,q2)})`, `${mt(1,pm,qm)}(${mt(c1,p1-pm,q1-qm)} + ${mt(c2,p2-pm,q2-qm)})`, `${G}(${mt(m1,p1,q1)} + ${mt(m2,p2,q2)})`, `${mt(g,pm,0)}(${mt(m1,p1-pm,q1)} + ${mt(m2,p2-pm,q2)})`, `${mt(g,pm,qm)}`];
-        const mc = opcionesMC(ok, malas);
-        return { enunciado:`Factoriza completamente: <b>${expr}</b>`, tipo:'opciones', opciones:mc.opciones, respuesta:mc.respuesta,
-          explicacion:[`Se busca el FCM (factor común mayor) de los dos términos: de los números y de cada letra.`, `Números: el FCM de ${c1} y ${c2} es ${g}.`, `Letra ${u}: los exponentes son ${p1} y ${p2}; se saca la MENOR potencia → ${u}${supE(pm)}.`,
-            `Letra ${w}: los exponentes son ${q1} y ${q2}; se saca la MENOR → ${w}${supE(qm)}.`, `FCM = ${G}.`, `Adentro del paréntesis va cada término dividido entre el FCM: ${mt(c1,p1,q1)} ÷ ${G} = ${mt(m1,p1-pm,q1-qm)} y ${mt(c2,p2,q2)} ÷ ${G} = ${mt(m2,p2-pm,q2-qm)}.`, `→ ${ok}${NOTA_NING(mc)}`,
-            `TRUCO: comprueba multiplicando: ${G} × (${mt(m1,p1-pm,q1-qm)} + ${mt(m2,p2-pm,q2-qm)}) tiene que devolverte ${expr}. De las letras sacas la MENOR potencia que está en todos los términos. Ejemplo con este mismo: el FCM es ${G}.`] }; },
-      // ── MC: sumar un número mixto y una fracción propia ──
-      () => { const q = pick([2,3,4,5,6,7,8]); let p; do { p = R(1,q-1); } while(mcd(p,q)!==1); const e = R(1,5); let a, b; do { b = pick([2,3,4,5,6,7,8,9]); a = R(1,b-1); } while(mcd(a,b)!==1 || b===q);
-        const s = addF({n:e*q+p, d:q}, {n:a,d:b}), mix = f => esMixto(f) ? hMix(f) : optF(f), ok = mix(s);
-        const ent = Math.floor(s.n/s.d), rf = {n:s.n%s.d, d:s.d};
-        const malas = [mix(Fq(e*q+p + a, q+b)), optF(rf), mixS(e+a, p, q), mixS(ent, (rf.d - rf.n), rf.d), mixS(ent+1, rf.n, rf.d), mixS(ent-1 || 2, rf.n, rf.d), mixS(ent, rf.n, rf.d+1)].filter(z => z && !/NaN|undefined/.test(z));
-        const mc = opcionesMC(ok, malas), ls = pasosSumaF({n:e*q+p, d:q}, {n:a,d:b});
-        return { enunciado:`Halla la suma: <b>${mixS(e,p,q)} + ${fr(a,b)}</b>`, tipo:'opciones', opciones:mc.opciones, respuesta:mc.respuesta,
-          explicacion:[`Primero el número mixto pasa a fracción impropia: ${e} ${p}/${q} → ${e} × ${q} + ${p} = ${e*q+p} → ${tf(e*q+p,q)}.`, ...sin1(ls.lineas), ...lineaMixto(s), `→ ${tMix(s)}${NOTA_NING(mc)}`,
-            `TRUCO: con un mixto y una fracción, pasa el mixto a impropia, busca denominador común y al final vuelve a mixto. Nunca sumes los denominadores. Ejemplo con este mismo: ${tf(e*q+p,q)} + ${tf(a,b)} = ${tf(s.n,s.d)} = ${tMix(s)}.`] }; },
-      // ── MC: orden de operaciones con fracciones ──
-      () => { const a = fracR([2,3,4]), c = fracR([3,4,5,6]), d = fracR([5,6,8,9]); const prod = multF([c,d]), ok = addF(a, {n:prod.n, d:prod.d}), mal1 = multF([addF(a,c), d]);
-        const fm = f => f.d===1 ? mm(f.n) : esMixto(f) ? hMix(f) : frS(f.n, f.d);
-        const malas = [fm(Fq(mal1.n, mal1.d)), fm(Fq(ok.d, ok.n)), fm(addF(a, {n:-prod.n,d:prod.d})), fm(addF(addF(a,c), d)), fm(Fq(ok.n+1, ok.d)), fm(Fq(ok.n+ok.d, ok.d*2))];
-        const mc = opcionesMC(fm(ok), malas);
-        const p1 = pasosMultF(c,d), p2 = pasosSumaF(a, p1.res);
-        return { enunciado:`Simplifica: <b>${fr(a.n,a.d)} + ${fr(c.n,c.d)} × ${fr(d.n,d.d)}</b>`, tipo:'opciones', opciones:mc.opciones, respuesta:mc.respuesta,
-          explicacion:[`Orden de operaciones: la MULTIPLICACIÓN va antes que la suma, aunque la suma esté escrita primero.`, `Paso 1 — ${tf(c.n,c.d)} × ${tf(d.n,d.d)}:`, ...sin1(p1.lineas), `Paso 2 — ahora la suma ${tf(a.n,a.d)} + ${tf(p1.res.n,p1.res.d)}:`, ...sin1(p2.lineas), ...lineaMixto(p2.res), `→ ${tMix(p2.res)}${NOTA_NING(mc)}`,
-            `TRUCO: marca la operación que va PRIMERO (la multiplicación) y resuélvela sola; después reescribe y sigue. Ejemplo con este mismo: ${tf(c.n,c.d)} × ${tf(d.n,d.d)} = ${tf(p1.res.n,p1.res.d)}, y recién después se suma ${tf(a.n,a.d)}.`] }; }
-    ];
-    return pick(plant)();
-  }
-},
 /* ══════════════════════════════════════════════════════════
    WORLD CULTURE I (HUGS 101) — clase:'wc'. Contenido sacado de las 3 presentaciones de
    Blackboard: "Conceptos Básicos" (secciones ['1.x']), "Orígenes del ser humano" (['2.x']),
@@ -5808,7 +5672,6 @@ const SECMAP = {
   '5.5': ['repaso-cap5'],
   '5.6': ['autoeval-cap5'],
   '5.7': ['educo-cap5'],
-  '5.8': ['educo-dep'],
   '5.9': ['educo-dep-exacto']
 };
 // EducoSoft está en inglés — las claves van en los dos idiomas
@@ -5864,7 +5727,7 @@ const CLAVES = {
   'geometria-frac':   ['aplicaciones geométricas','volumen','área de superficie','sólido rectangular','cubo','volume','surface area','paralelogramo','trapecio'],
   'repaso-cap4':      ['repaso del capítulo 4','4.5 ejercicios de repaso'],
   'autoeval-cap4':    ['autoevaluación del capítulo 4','4.6 autoevaluación'],
-  'educo-dep':        ['examen departamental','midterm','departmental'],
+  'educo-dep-exacto': ['examen departamental','midterm','departmental'],
   'educo-cap5':       ['tarea y quiz de 5.1','homework on 5.1','quiz on 5.1'],
   'repaso-cap5':      ['ejercicios de repaso','repaso del capítulo 5','review exercises'],
   'autoeval-cap5':    ['autoevaluación','autoevaluacion','self-test','self test'],
