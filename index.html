@@ -1151,7 +1151,7 @@ function valorExpr(s, env){
   try { const v = expr(); return i===t.length ? v : NaN; } catch(e){ return NaN; }
 }
 // dos expresiones son la misma si dan igual con varios valores de las letras
-const PRUEBA_VARS = [{a:1.7,b:2.3,c:-0.8,m:1.3,x:2.9,y:-1.6},{a:-2.4,b:0.7,c:3.1,m:-0.9,x:1.2,y:2.6},{a:0.6,b:-1.9,c:1.4,m:2.2,x:-3.3,y:0.9}];
+const PRUEBA_VARS = [{a:1.7,b:2.3,c:-0.8,m:1.3,x:2.9,y:-1.6,k:1.9},{a:-2.4,b:0.7,c:3.1,m:-0.9,x:1.2,y:2.6,k:-2.2},{a:0.6,b:-1.9,c:1.4,m:2.2,x:-3.3,y:0.9,k:0.7}];
 const mismaExpr = (s, ref) => PRUEBA_VARS.every(env => { const u = valorExpr(s, env), v = valorExpr(ref, env);
   return isFinite(u) && isFinite(v) && Math.abs(u - v) <= 1e-9 * Math.max(1, Math.abs(v)); });
 const NO_DEF = /^(no(est[aá])?definid[oa]|indefinid[oa]|noexiste)$/;
@@ -1612,6 +1612,238 @@ function toggleSigno(id){
   el.focus();
 }
 
+// ── Práctica 2 del Examen Departamental (intento del 2026-10-07, attempt 466998622): otras 30 exactas ──
+// reloj con las manecillas en el 12 y en el 6 (pregunta 7)
+const svgReloj126 = () => `<svg viewBox="0 0 120 120" style="width:100%;max-width:110px;height:auto;display:block;margin:10px auto 0;background:#fff;border-radius:50%" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="60" cy="60" r="54" fill="#fff" stroke="#555" stroke-width="3"/>${[...Array(12)].map((_, k) => { const a = k*Math.PI/6, c = Math.cos(a), s = Math.sin(a);
+    return `<line x1="${(60 + 46*s).toFixed(1)}" y1="${(60 - 46*c).toFixed(1)}" x2="${(60 + 52*s).toFixed(1)}" y2="${(60 - 52*c).toFixed(1)}" stroke="#555" stroke-width="2"/>`; }).join('')}
+  <g font-size="13" font-weight="700" fill="#333" text-anchor="middle"><text x="60" y="26">12</text><text x="98" y="65">3</text><text x="60" y="104">6</text><text x="22" y="65">9</text></g>
+  <path d="M60 60 L60 14 M60 60 L60 100" stroke="#1d3fd6" stroke-width="3.5" stroke-linecap="round"/><circle cx="60" cy="60" r="4" fill="#1d3fd6"/></svg>`;
+// rectas que se cruzan en O (pregunta 8): AD vertical, EC inclinada, y el rayo OB
+const svgOpuestos = () => `<svg viewBox="0 0 230 150" style="width:100%;max-width:230px;height:auto;display:block;margin:10px auto 0;background:#fff;border-radius:6px" xmlns="http://www.w3.org/2000/svg">
+  <g stroke-width="1.6" fill="none"><path d="M100 8 L100 142" stroke="#5b6bd6"/><path d="M28 118 L205 30" stroke="#5b6bd6"/><path d="M100 70 L158 10" stroke="#d65b5b"/></g>
+  <g fill="#8a1d6b"><circle cx="100" cy="24" r="3"/><circle cx="148" cy="20" r="3"/><circle cx="182" cy="41" r="3"/><circle cx="46" cy="109" r="3"/><circle cx="100" cy="128" r="3"/></g>
+  <g font-size="13" font-weight="700" fill="#8a1d6b"><text x="84" y="28">A</text><text x="154" y="26">B</text><text x="186" y="56">C</text><text x="104" y="86">O</text><text x="40" y="128">E</text><text x="108" y="132">D</text></g></svg>`;
+const svgRect18x15 = () => `<svg viewBox="0 0 200 110" style="width:100%;max-width:200px;height:auto;color:var(--texto);display:block;margin:10px auto 0" xmlns="http://www.w3.org/2000/svg">
+  <rect x="30" y="12" width="110" height="68" fill="none" stroke="#e53935" stroke-width="2"/>
+  <g fill="currentColor" font-size="13" font-weight="700"><text x="146" y="50">15 m</text><text x="85" y="100" text-anchor="middle">18 m</text></g></svg>`;
+const DEP_EXACTO2 = [
+  // 1. (la misma de la práctica 1)
+  C => DEP_EXACTO[0](C),
+  // 2. División con signos (problema verbal)
+  C => _multiDep('Una cierta compañía perdió <b>$358,435</b> durante un periodo de <b>11</b> meses. Si hay <b>19</b> accionistas con un número igual de acciones en esta compañía, determina la pérdida mensual promedio por accionista.<br><small>Entra la respuesta con su signo (una pérdida es negativa). Puedes escribir el $ o no.</small>',
+    [{ et:'Pérdida mensual promedio', r:-32585, din:true }, { et:'Pérdida mensual promedio por accionista', r:-1715, din:true }],
+    receta({ pide:'cuánto se pierde cada mes, y cuánto le toca de esa pérdida a cada accionista.',
+      pasos:[{ t:'Una pérdida es un número NEGATIVO', l:['Perdió $358,435 → −358,435'] },
+        { t:'Pérdida de cada mes: divide entre los 11 meses', l:['−358,435 ÷ 11: negativo entre positivo da negativo', `358,435 ÷ 11 = 32,585 → ${cb('−$32,585')}`] },
+        { t:'Lo de cada accionista: divide entre los 19', l:[`−32,585 ÷ 19 → 32,585 ÷ 19 = 1,715 → ${cb('−$1,715')}`] }],
+      resp:'−$32,585 al mes, y −$1,715 por accionista', comp:'1,715 × 19 = 32,585 y 32,585 × 11 = 358,435 ✓', error:'dejarlo positivo: perder dinero es negativo.',
+      ejemplo:'−358,435 ÷ 11 = −32,585; −32,585 ÷ 19 = −1,715.' }).filter(l => !/^TRUCO:/.test(l)),
+    'TRUCO: divide primero entre los meses y DESPUÉS entre las personas, y no olvides el signo menos de la pérdida. Ejemplo con este mismo: −358,435 ÷ 11 = −32,585 → ÷ 19 = −1,715.'),
+  // 3. Base, exponente y valor
+  C => ({ enunciado:'Identifica la base y el exponente; entonces halla el valor.<br><b>6<sup>2</sup></b>', tipo:'basexp', respuesta:{b:6, e:2, v:36},
+    explicacion: receta({ pide:'la base (el número de abajo), el exponente (el chiquito de arriba) y el valor.',
+      pasos:[{ t:'La base es el número grande, el exponente el chiquito', l:[`Base = ${cb(6)}, exponente = ${cb(2)}`] },
+        { t:'El exponente dice cuántas veces se multiplica la base', l:[`6² = 6 × 6 = ${cb(36)}`] }],
+      resp:'Base 6, exponente 2, valor 36', error:'hacer 6 × 2 = 12: el exponente no multiplica, dice cuántas veces se repite el 6.',
+      ejemplo:'6² = 6 × 6 = 36.' }) }),
+  // 4. Dividir entre una potencia de 10
+  C => ({ enunciado:'<b>27,200 ÷ 10<sup>2</sup></b>', tipo:'num', respuesta:272,
+    explicacion: receta({ pide:'el resultado de dividir 27,200 entre 10².',
+      pasos:[{ t:'10² es 1 con 2 ceros', l:['10² = 10 × 10 = 100'] },
+        { t:'Dividir entre 100 = quitar 2 ceros', l:[`27,200 ÷ 100 = ${cb(272)}`] }],
+      resp:'272', comp:'272 × 100 = 27,200 ✓', error:'quitar solo un cero (2,720): el exponente 2 son DOS ceros.',
+      ejemplo:'27,200 ÷ 10² = 27,200 ÷ 100 = 272.' }) }),
+  // 5. Valor absoluto y orden de operaciones
+  C => ({ enunciado:'Efectúa las operaciones indicadas.<br><b>| 4<sup>2</sup> − 5<sup>2</sup> | − 12 ÷ 12</b>', tipo:'num', respuesta:8,
+    explicacion: receta({ pide:'un solo número, siguiendo el orden de operaciones.',
+      pasos:[{ t:'Los exponentes de adentro de las barras', l:['4² = 16 y 5² = 25 → | 16 − 25 | − 12 ÷ 12'] },
+        { t:'La resta de adentro de las barras', l:[`${cuentaMenos(16, 25)} → | −9 |`] },
+        { t:'El valor absoluto quita el signo', l:[`| −9 | = ${cb(9)}`] },
+        { t:'La división antes que la resta', l:['12 ÷ 12 = 1 → 9 − 1'] },
+        { t:'Al final la resta', l:[`9 − 1 = ${cb(8)}`] }],
+      resp:'8', error:'dejar el −9 negativo: las barras | | lo vuelven positivo.',
+      ejemplo:'|16 − 25| − 1 = 9 − 1 = 8.' }) }),
+  // 6. Frase a expresión
+  C => _multiDep('Convierte a una expresión algebraica y simplifica, asumiendo que la desconocida es <i>y</i>: <b>trece</b> más que <b>seis</b> veces el número.',
+    [{ et:'Expresión', ex:'13+6y', r:'13 + 6y' }],
+    receta({ pide:'la expresión con y que dice la frase.',
+      pasos:[{ t:'"seis veces el número"', l:['= 6y'] },
+        { t:'"trece MÁS que 6y"', l:[`A 6y se le suman 13 → ${cb('13 + 6y')} (o 6y + 13, es lo mismo)`] }],
+      resp:'13 + 6y', error:'escribir 6(y + 13): no hay "la suma de…", así que no va paréntesis.',
+      ejemplo:'trece más que seis veces el número → 13 + 6y.' }).filter(l => !/^TRUCO:/.test(l)),
+    'TRUCO: "más que" suma, y en la suma el orden no importa. "veces" multiplica a la letra. Ejemplo con este mismo: 13 + 6y.'),
+  // 7. Tipo de ángulo en el reloj
+  C => ({ enunciado:`¿Qué tipo de ángulo se muestra entre las manecillas del reloj?${svgReloj126()}`, tipo:'opciones',
+    opciones:['Ángulo agudo','Ángulo recto','Ángulo obtuso','Ángulo llano',NING], respuesta:'Ángulo llano',
+    explicacion: receta({ pide:'el tipo de ángulo que forman las dos manecillas.',
+      pasos:[{ t:'Mira hacia dónde apuntan', l:['Una manecilla apunta al 12 y la otra al 6: forman una línea RECTA.'] },
+        { t:'Una línea recta mide 180°', l:[`180° = ${cb('ángulo llano')}`] }],
+      resp:'d) Ángulo llano', error:'decir recto: recto es una esquina (90°, del 12 al 3); del 12 al 6 es media vuelta, 180°.',
+      ejemplo:'12 y 6 → línea recta → 180° → llano.' }) }),
+  // 8. Ángulos opuestos por el vértice
+  C => ({ enunciado:`En la siguiente figura identifica dos pares de ángulos opuestos por el vértice.${svgOpuestos()}<small>Escribe cada ángulo con sus 3 letras (ej. AOC).</small>`,
+    tipo:'multi', campos:[{ et:'Par 1: ∠', tx:true }, { et:'y ∠', tx:true }, { et:'Par 2: ∠', tx:true }, { et:'y ∠', tx:true }],
+    respuesta:['AOC','DOE','AOE','COD'], pares:[['AOC','DOE'],['AOE','COD']], sinNumeros:true,
+    explicacion: receta({ pide:'dos pares de ángulos que están uno frente al otro donde se cruzan DOS rectas.',
+      pasos:[{ t:'Busca las dos RECTAS que se cruzan en O', l:['A–O–D (la vertical) y E–O–C (la inclinada). El rayo OB no se cuenta: no sigue del otro lado de O.'] },
+        { t:'Primer par: los de arriba-derecha y abajo-izquierda', l:[`${cb('∠AOC')} (de A a C) y ${cb('∠DOE')} (de D a E)`] },
+        { t:'Segundo par: los de arriba-izquierda y abajo-derecha', l:[`${cb('∠AOE')} (de A a E) y ${cb('∠COD')} (de C a D)`] }],
+      resp:'∠AOC y ∠DOE; ∠AOE y ∠COD', error:'usar el rayo OB: un ángulo opuesto por el vértice necesita dos RECTAS completas que se cruzan.',
+      ejemplo:'AOC ↔ DOE y AOE ↔ COD.' }) }),
+  // 9. Simplificar con la distributiva
+  C => _multiDep('Simplifica:<br><b>3(−8k − 6) + 3</b>', [{ et:'Resultado', ex:'-24k-15', r:'−24k − 15' }],
+    receta({ pide:'la expresión sin paréntesis y con los números juntos.',
+      pasos:[{ t:'Reparte el 3 a cada término', l:[diagDistribuir(3, '−8k', '−', '6', '−24k', '18'), '3(−8k) = −24k y 3(−6) = −18 → −24k − 18 + 3'] },
+        { t:'Junta los números solos', l:[`−18 + 3 = ${cb('−15')}`, `→ ${cb('−24k − 15')}`] }],
+      resp:'−24k − 15', error:'multiplicar solo el primero (−24k − 6 + 3): el 3 multiplica a TODOS los de adentro.',
+      ejemplo:'3(−8k − 6) + 3 = −24k − 18 + 3 = −24k − 15.' }).filter(l => !/^TRUCO:/.test(l)),
+    'TRUCO: primero quita el paréntesis repartiendo el número de afuera (con su signo), después junta los números solos. Ejemplo con este mismo: −24k − 18 + 3 = −24k − 15.'),
+  // 10. ax + b = c
+  C => ({ enunciado:'Resuelve la ecuación: <b>5x + 2 = 12</b>', tipo:'opciones', opciones:['x = 2','x = 5',`x = ${fr(2,5)}`,'x = −2',NING], respuesta:'x = 2',
+    explicacion: receta({ pide:'el valor de x.',
+      pasos:[{ t:'Quita el 2 que suma (resta 2 en los dos lados)', l:[diagAmbosLados('5x + 2', '12', '− 2', '5x', '12 − 2'), `5x = ${cb(10)}`] },
+        { t:'Divide entre 5 en los dos lados', l:[diagAmbosLados('5x', '10', '÷ 5', 'x', '10 ÷ 5'), `x = ${cb(2)}`] }],
+      resp:'a) x = 2', comp:'5(2) + 2 = 12 ✓', error:'contestar x = 5 o 2/5: primero se quita el 2 y después se divide 10 ÷ 5.',
+      ejemplo:'5x + 2 = 12 → 5x = 10 → x = 2.' }) }),
+  // 11. Perímetro de un rectángulo
+  C => ({ enunciado:`Halla el perímetro de la siguiente figura rectangular.${svgRect18x15()}`, tipo:'num', respuesta:66, ayuda:'Respuesta en metros (solo el número).',
+    explicacion: receta({ pide:'cuánto mide todo el borde del rectángulo.',
+      pasos:[{ t:'Un rectángulo tiene 2 lados de cada medida', l:['18 m arriba y abajo, 15 m a cada lado'] },
+        { t:'Suma los 4 lados', l:[`18 + 18 + 15 + 15 = ${cb('66 m')}`] }],
+      resp:'66 m', comp:'2 × 18 + 2 × 15 = 36 + 30 = 66 ✓', error:'sumar solo 18 + 15 = 33: el rectángulo tiene CUATRO lados.',
+      ejemplo:'2(18) + 2(15) = 66 m.' }) }),
+  // 12. Valor de un polinomio con x negativa
+  C => ({ enunciado:'Halla el valor de la expresión para el valor dado de <i>x</i>.<br><b>x<sup>3</sup> + 5x<sup>2</sup> + 3x + 1</b> para <b>x = −3</b>', tipo:'num', respuesta:10,
+    explicacion: receta({ pide:'cambiar cada x por (−3) y calcular.',
+      pasos:[{ t:'Pon (−3) con paréntesis', l:['(−3)³ + 5(−3)² + 3(−3) + 1'] },
+        { t:'Las potencias', l:['(−3)³ = (−3)(−3)(−3) = −27 (3 negativos → negativo)', '(−3)² = 9 (2 negativos → positivo)'] },
+        { t:'Las multiplicaciones', l:['5 × 9 = 45 y 3 × (−3) = −9', 'Queda: −27 + 45 − 9 + 1'] },
+        { t:'Suma de izquierda a derecha', l:[`−27 + 45 = 18 → 18 − 9 = 9 → 9 + 1 = ${cb(10)}`] }],
+      resp:'10', error:'hacer (−3)² = −9: con paréntesis, (−3)(−3) da +9.',
+      ejemplo:'−27 + 45 − 9 + 1 = 10.' }) }),
+  // 13. (la misma de la práctica 1)
+  C => DEP_EXACTO[12](C),
+  // 14. Divisible por 10
+  C => ({ enunciado:'Determina si el siguiente número es divisible por <b>10</b>.<br><b>43,792</b>', tipo:'sino', respuesta:false, explicacion: explDivisibilidad(43792, 10) }),
+  // 15. Primo o compuesto
+  C => ({ enunciado:'Indica si el siguiente número es primo o compuesto.<br><b>55</b>', tipo:'opciones', opciones:['Número primo','Número Compuesto'], respuesta:'Número Compuesto', explicacion: explPrimo(55) }),
+  // 16. MCM de tres números
+  C => ({ enunciado:'Halla el MCM de 16, 28 y 90.', tipo:'opciones', opciones:['40,320','5,040','134','504',NING], respuesta:'5,040', explicacion: explMcmFactores([16, 28, 90]) }),
+  // 17. Mixto a impropia
+  C => ({ enunciado:`Cambia el número mixto a una fracción impropia.<br><b>${mixS(4,5,8)}</b>`, tipo:'frac', respuesta:{n:37, d:8},
+    explicacion: receta({ pide:'4 5/8 escrito como una sola fracción.',
+      pasos:[{ t:'Multiplica el entero por el de abajo', l:[`4 × 8 = ${cb(32)}`] },
+        { t:'Súmale el de arriba', l:[`32 + 5 = ${cb(37)}`] },
+        { t:'El de abajo se queda igual', l:[explImpropia(C(37,8))] }],
+      resp:'37/8', comp:'37 ÷ 8 = 4 y sobran 5 → 4 5/8 ✓', error:'multiplicar 4 × 5: el entero se multiplica por el de ABAJO.',
+      ejemplo:'4 × 8 + 5 = 37 → 37/8.' }) }),
+  // 18. Fracción reducida (novela de Carla, otros números)
+  C => ({ enunciado:'Carla quiere terminar una novela lo más pronto posible. Hasta ahora ha leído <b>70</b> páginas. ¿Qué fracción del número de páginas ha leído si hay <b>126</b> páginas en la novela?<br>Reduce la fracción a sus términos más simples.', tipo:'frac', respuesta:{n:5, d:9}, pedirSimple:true,
+    explicacion: receta({ pide:'páginas leídas / páginas totales, simplificada.',
+      pasos:[{ t:'Arma la fracción: lo leído arriba, el total abajo', l:['70/126'] },
+        { t:'Simplifica', l:[explSimplif(70, 126)] }],
+      resp:'5/9', comp:'5 × 14 = 70 y 9 × 14 = 126 ✓', error:'parar en 35/63: todavía se puede dividir entre 7.',
+      ejemplo:'70/126 ÷ 14 = 5/9.' }) }),
+  // 19. Razón niños a niñas
+  C => ({ enunciado:'Escribe la razón: <b>94 niños</b> a <b>14 niñas</b> en términos simples.<br><small>niños arriba, niñas abajo</small>', tipo:'frac', respuesta:{n:47, d:7}, pedirSimple:true,
+    explicacion: receta({ pide:'niños/niñas como fracción simplificada.',
+      pasos:[{ t:'"94 niños A 14 niñas": el primero va arriba', l:['94/14'] },
+        { t:'Simplifica', l:[explSimplif(94, 14)] },
+        { t:'Una razón se deja como fracción', l:['47/7 no se pasa a número mixto: es una comparación, 47 niños por cada 7 niñas'] }],
+      resp:'47/7', comp:'47 × 2 = 94 y 7 × 2 = 14 ✓', error:'pasarla a mixto (6 5/7): una razón se escribe como fracción.',
+      ejemplo:'94/14 ÷ 2 = 47/7.' }) }),
+  // 20. Reducir 48/16
+  C => ({ enunciado:`La fracción ${fr(48,16)} reducida a sus términos más simples es`, tipo:'opciones', opciones:[fr(1,4), fr(24,16), fr(24,8), '3', NING], respuesta:'3',
+    explicacion: receta({ pide:'48/16 en su forma más simple.',
+      pasos:[{ t:'¿Cabe el de abajo exacto en el de arriba?', l:['16 × 3 = 48 → sí, exacto'] },
+        { t:'Simplifica', l:[explSimplif(48, 16), `48/16 = ${cb(3)}`] }],
+      resp:'d) 3', error:'escoger 24/8: es lo mismo, pero NO está en su forma más simple.',
+      ejemplo:'48 ÷ 16 = 3.' }) }),
+  // 21. Factorización prima de 168
+  C => ({ enunciado:'Escribe la <b>factorización prima</b> de <b>168</b>.', tipo:'texto', respuesta: factorizar(168), explicacion: explFactorizar(168),
+    ayuda:'Puedes escribirlo como <b>2 * 2 * 2 * 3 * 7</b> o como <b>2^3 * 3 * 7</b>.' }),
+  // 22. El 5to múltiplo
+  C => ({ enunciado:'¿Cuál de los siguientes números es el 5to múltiplo de 56?', tipo:'opciones', opciones:['250','556','280','61',NING], respuesta:'280',
+    explicacion: receta({ pide:'el quinto número de la tabla del 56.',
+      pasos:[{ t:'El 5to múltiplo es 56 × 5', l:[`56 × 5 → 50 × 5 = 250, y 6 × 5 = 30 → 250 + 30 = ${cb(280)}`] }],
+      resp:'c) 280', comp:'56, 112, 168, 224, 280 → el quinto es 280 ✓', error:'sumar 56 + 5 = 61: múltiplo es MULTIPLICAR.',
+      ejemplo:'56 × 5 = 280.' }) }),
+  // 23. FCM de dos términos
+  C => ({ enunciado:'Factoriza completamente: <b>30a<sup>2</sup>b<sup>3</sup> − 20ab<sup>4</sup></b>', tipo:'opciones',
+    opciones:['10ab³(3a − 2b)','10ab(3ab² − 2b³)','5ab(6ab² − 4b³)','10ab(3a − 2b)',NING], respuesta:'10ab³(3a − 2b)',
+    explicacion: receta({ pide:'sacar el factor común mayor (FCM) y dejar lo demás en el paréntesis.',
+      pasos:[{ t:'FCM de los números', l:['30 y 20: el más grande que entra en los dos es ' + cb(10)] },
+        { t:'FCM de cada letra: la MENOR potencia', l:['a: a² y a¹ → ' + cb('a'), 'b: b³ y b⁴ → ' + cb('b³'), 'FCM = 10ab³'] },
+        { t:'Divide cada término entre 10ab³', l:['30a²b³ ÷ 10ab³ = 3a', '20ab⁴ ÷ 10ab³ = 2b', `→ ${cb('10ab³(3a − 2b)')}`] }],
+      resp:'a) 10ab³(3a − 2b)', comp:'10ab³ × 3a = 30a²b³ y 10ab³ × 2b = 20ab⁴ ✓', error:'escoger 10ab(3ab² − 2b³): ahí sí se puede sacar más b, no está COMPLETA.',
+      ejemplo:'FCM = 10ab³ → 10ab³(3a − 2b).' }) }),
+  // 24. Tres fracciones no semejantes
+  C => ({ enunciado:`Halla la suma: <b>${fr(1,4)} + ${fr(1,2)} + ${fr(2,5)}</b>`, tipo:'opciones', opciones:[mixS(1,1,20), fr(23,20), fr(1,20), fr(4,25), mixS(3,1,20)], respuesta:fr(23,20),
+    explicacion: receta({ pide:'la suma de las tres fracciones.',
+      pasos:[{ t:'Suma con el mismo de abajo', l:[...sin1(pasosSumaVarias([C(1,4), C(1,2), C(2,5)]).lineas)] },
+        { t:'Búscala en las opciones', l:['23/20 está tal cual en la b). (Como mixto sería 1 3/20, que no está.)'] }],
+      resp:'b) 23/20', error:'escoger 1 1/20: 23/20 es 1 3/20, no 1 1/20.',
+      ejemplo:'5/20 + 10/20 + 8/20 = 23/20.' }) }),
+  // 25. Multiplicar y reducir
+  C => ({ enunciado:`Multiplica y reduce.<br><b>${fr(5,8)} × ${fr(2,5)}</b>`, tipo:'frac', respuesta:{n:1, d:4}, pedirSimple:true,
+    explicacion: receta({ pide:'el producto simplificado.',
+      pasos:[{ t:'Multiplica y simplifica', l:[...sin1(pasosMultF(C(5,8), C(2,5)).lineas)] }],
+      resp:'1/4', error:'dejar 10/40 sin reducir.',
+      ejemplo:'5/8 × 2/5 = 10/40 = 1/4.' }) }),
+  // 26. Orden de operaciones con fracciones y signos
+  C => ({ enunciado:`Efectúa las operaciones indicadas:<br><b>${fr(8,15)} ÷ (${frS(-5,9)}) + (${fr(1,2)})<sup>2</sup> × (${frS(-2,7)})</b>`, tipo:'mixto', respuesta:{e:-1, n:11, d:350}, signo:true,
+    explicacion: receta({ pide:'un solo número (como número mixto), con el orden de operaciones.',
+      pasos:[{ t:'Primero el exponente', l:['(1/2)² = 1/2 × 1/2 = 1/4'] },
+        { t:'La división (de izquierda a derecha)', l:[...sin1(pasosDivF(C(8,15), C(-5,9)).lineas)] },
+        { t:'La multiplicación', l:[...sin1(pasosMultF(C(1,4), C(-2,7)).lineas)] },
+        { t:'Al final la suma', l:[...sin1(pasosSumaF(C(-24,25), C(-1,14)).lineas)] },
+        { t:'Pasa a número mixto (el signo se queda delante)', l:[explAMixto(C(361,350)), `Con el signo: ${cb('−1 11/350')}`] }],
+      resp:'−1 11/350', error:'sumar antes de dividir y multiplicar: primero exponente, luego ÷ y ×, al final la suma.',
+      ejemplo:'−24/25 + (−1/14) = −361/350 = −1 11/350.' }) }),
+  // 27. Propiedad de identidad
+  C => ({ enunciado:`Identifica la propiedad de adición de números racionales ilustrada en la siguiente expresión.<br><b>0 + ${fr(1,7)} = ${fr(1,7)}</b>`, tipo:'opciones',
+    opciones:['Asociativa','Conmutativa','Identidad','Inverso'], respuesta:'Identidad',
+    explicacion: receta({ pide:'qué propiedad hace que el número se quede igual.',
+      pasos:[{ t:'Mira qué se suma', l:['Se le suma 0 al 1/7 y el resultado sigue siendo 1/7.'] },
+        { t:'Escoge la propiedad', l:[`Sumar 0 no cambia nada → propiedad de ${cb('Identidad')}`] }],
+      resp:'Identidad', error:'escoger Inverso: Inverso es cuando el RESULTADO es 0 (−1/7 + 1/7 = 0).',
+      ejemplo:'0 + 1/7 = 1/7 → Identidad.' }) }),
+  // 28. Restar fracciones
+  C => ({ enunciado:`Resta: <b>${fr(17,6)} − ${fr(7,9)}</b>`, tipo:'opciones', opciones:[mixS(-3,1,18), frS(-10,3), mixS(2,1,18), fr(73,18), NING], respuesta:mixS(2,1,18),
+    explicacion: receta({ pide:'la resta, como número mixto.',
+      pasos:[{ t:'Resta con el mismo de abajo', l:[...sin1(pasosSumaF(C(17,6), C(-7,9)).lineas)] },
+        { t:'Pasa a número mixto', l:[...lineaMixto(C(37,18))] }],
+      resp:'c) 2 1/18', error:'restar arriba y abajo directo (17 − 7 y 6 − 9): primero se buscan iguales los de abajo (18).',
+      ejemplo:'51/18 − 14/18 = 37/18 = 2 1/18.' }) }),
+  // 29. Ecuación lineal con fracciones
+  C => ({ enunciado:`Resuelve: <b>2x − ${fr('x',5)} − ${fr(3,7)} = 1</b>`, tipo:'opciones', opciones:[fr(40,63), fr(50,63), fr(60,63), fr(80,63), NING], respuesta:fr(50,63),
+    explicacion: receta({ pide:'el valor de x.',
+      pasos:[{ t:'Quita las fracciones: multiplica TODO por 35 (el MCM de 5 y 7)', l:['35 · 2x − 35 · x/5 − 35 · 3/7 = 35 · 1', '70x − 7x − 15 = 35'] },
+        { t:'Junta las x', l:['70x − 7x = 63x → 63x − 15 = 35'] },
+        { t:'Despeja x', l:[diagAmbosLados('63x − 15', '35', '+ 15', '63x', '50'), diagAmbosLados('63x', '50', '÷ 63', 'x', '50/63'), `x = ${cb('50/63')}`] }],
+      resp:'b) 50/63', error:'multiplicar solo las fracciones por 35: TODOS los términos (también el 2x y el 1) se multiplican.',
+      ejemplo:'70x − 7x − 15 = 35 → 63x = 50 → x = 50/63.' }) }),
+  // 30. Triángulos semejantes
+  C => ({ enunciado:`Dado un par de triángulos semejantes, halla los lados que faltan.${svgRectSem(5,12,13,10,'pulg')}`, tipo:'angulo2', etiquetas:['x','y'], respuesta:{a:24, b:26},
+    explicacion: receta({ pide:'x y y en el triángulo grande.',
+      pasos:[{ t:'Busca el par que tiene los dos números', l:['El lado vertical: 5 pulg en el pequeño ↔ 10 pulg en el grande.', `10 ÷ 5 = ${cb(2)}: el grande es 2 veces el pequeño.`] },
+        { t:'Multiplica los otros lados por 2', l:[`x (corresponde a 12) = 12 × 2 = ${cb('24 pulg')}`, `y (corresponde a 13) = 13 × 2 = ${cb('26 pulg')}`] }],
+      resp:'x = 24 pulg, y = 26 pulg', comp:'5/10 = 12/24 = 13/26 = 1/2 ✓', error:'sumar 5 (12 + 5 = 17): en figuras semejantes se MULTIPLICA.',
+      ejemplo:'10 ÷ 5 = 2 → x = 24, y = 26.' }) })
+];
+// tema con un banco fijo de preguntas que salen EN ORDEN (una práctica de examen copiada tal cual)
+function _modExamen(id, nombre, banco, cual){
+  return { id, nombre, secciones:['5.9'], banco:banco.length, _sig:0,
+    nuevaRonda(){ this._sig = 0; },
+    gen(){
+      const C = (n,d=1) => ({n,d}), i = this._sig % banco.length; this._sig++;
+      const ej = banco[i](C);
+      ej.enunciado = `<small>Pregunta ${i+1} de ${banco.length} · ${cual} del Examen Departamental</small><br>` + ej.enunciado;
+      ej.__n = i;
+      return ej;
+    } };
+}
 /* ══════════════════════════════════════════════════════════
    2. EXPLICACIONES  (salen de las mismas variables que la respuesta)
    ══════════════════════════════════════════════════════════ */
@@ -4608,21 +4840,10 @@ const MODULOS = [
     return pick(plant)();
   }
 },
-{
-  // Las 30 preguntas EXACTAS de la práctica del Examen Departamental en EducoSoft (intento del 2026-10-01,
-  // "Examen Departamental - Midterm (Practice)", attempt 466981115). Mismos números, mismas opciones a)–e)
-  // en el mismo orden y en el mismo orden de preguntas. Una ronda = las 30, en orden (banco + nuevaRonda).
-  id:'educo-dep-exacto', nombre:'Examen Departamental: las 30 preguntas de tu práctica (exactas)', secciones:['5.9'],
-  banco:30, _sig:0,
-  nuevaRonda(){ this._sig = 0; },
-  gen(){
-    const C = (n,d=1) => ({n,d}), i = this._sig % 30; this._sig++;
-    const ej = DEP_EXACTO[i](C);
-    ej.enunciado = `<small>Pregunta ${i+1} de 30 · práctica del Examen Departamental</small><br>` + ej.enunciado;
-    ej.__n = i;
-    return ej;
-  }
-},
+// Las prácticas del Examen Departamental de EducoSoft, cada una con sus 30 preguntas EXACTAS (mismos números,
+// mismas opciones a)–e) y mismo orden). Una ronda = las 30 en orden (banco + nuevaRonda). Ver _modExamen.
+_modExamen('educo-dep-exacto', 'Examen Departamental: práctica 1 (las 30 exactas)', DEP_EXACTO, 'práctica 1'),
+_modExamen('educo-dep-exacto2', 'Examen Departamental: práctica 2 (las 30 exactas)', DEP_EXACTO2, 'práctica 2'),
 /* ══════════════════════════════════════════════════════════
    WORLD CULTURE I (HUGS 101) — clase:'wc'. Contenido sacado de las 3 presentaciones de
    Blackboard: "Conceptos Básicos" (secciones ['1.x']), "Orígenes del ser humano" (['2.x']),
@@ -5551,6 +5772,13 @@ function verificar(ej, ent){
       // escribió, se le dice si está bien o mal escrita (y una mal escrita cuenta como error)
       const fs = ent.f || [];
       if(ent.some(v => String(v).trim() === '')) return { ok:false, vacio:true };
+      if(ej.pares){   // pares de ángulos (casillas de 2 en 2): los pares en cualquier orden, y ∠AOC = ∠COA
+        const ang = s => { const t = String(s).toUpperCase().replace(/[^A-Z]/g, ''); return t.length === 3 ? [t, [...t].reverse().join('')].sort()[0] : t; };
+        const par = (a, b) => [ang(a), ang(b)].sort().join('|');
+        const dados = ej.pares.map((_, k) => par(ent[2*k], ent[2*k+1])).sort(), bien = ej.pares.map(p => par(...p)).sort();
+        const nBien = dados.filter(d => bien.includes(d)).length;
+        return nBien === bien.length ? { ok:true } : { ok:false, incompleto: nBien > 0, msg:`Tienes ${nBien} de ${bien.length} pares bien.` };
+      }
       const mal = [], fBien = [], fMal = [];
       ej.campos.forEach((c,i) => {
         if(c.ops){ if(ent[i] !== ej.respuesta[i]) mal.push(c.et); return; }
@@ -5568,7 +5796,8 @@ function verificar(ej, ent){
         const escrita = c.fs && String(fs[i] || '').trim() !== '';
         const malF = escrita && !formulaOk(fs[i], c);
         if(escrita) (malF ? fMal : fBien).push(c.et);
-        const malR = !(Math.abs(numLimpio(ent[i]) - ej.respuesta[i]) < (c.tol ?? 0.01));
+        const vIn = c.din ? Number(String(ent[i]).replace(/[\s$,]/g, '').replace('−', '-')) : numLimpio(ent[i]);   // dinero: "-$32,585" vale
+        const malR = !(Math.abs(vIn - ej.respuesta[i]) < (c.tol ?? 0.01));
         if(malF || malR) mal.push(`${c.et} (${[malF && 'fórmula', malR && 'resultado'].filter(Boolean).join(' y ')})`);
       });
       const notaF = [fBien.length && `✓ Fórmulas bien escritas: ${fBien.join(', ')}.`,
@@ -5672,7 +5901,7 @@ const SECMAP = {
   '5.5': ['repaso-cap5'],
   '5.6': ['autoeval-cap5'],
   '5.7': ['educo-cap5'],
-  '5.9': ['educo-dep-exacto']
+  '5.9': ['educo-dep-exacto','educo-dep-exacto2']
 };
 // EducoSoft está en inglés — las claves van en los dos idiomas
 const CLAVES = {
@@ -7415,7 +7644,7 @@ function entradaHTML(ej){
               <input class="campo" id="inM${i}" inputmode="decimal" autocomplete="off" placeholder="Resultado"></div>`
           : `<label class="multiFila"><span>${c.et}${c.u ? ` <small>(${c.u})</small>` : ''}</span>${c.ops
           ? `<select class="campo" id="inM${i}"><option value="">— elige —</option>${c.ops.map(o => `<option>${escHtml(o)}</option>`).join('')}</select>`
-          : `<input class="campo" id="inM${i}" inputmode="${c.q || c.ex ? 'text' : 'decimal'}" autocomplete="off" autocapitalize="off" placeholder="${c.ex ? 'ej. (x−2)/15' : c.q ? 'ej. 3 1/2' : '?'}">`}</label>`).join('')}</div>
+          : `<input class="campo" id="inM${i}" inputmode="${c.q || c.ex || c.tx || c.din ? 'text' : 'decimal'}" autocomplete="off" autocapitalize="${c.tx ? 'characters' : 'off'}" placeholder="${c.tx ? '3 letras' : c.din ? 'ej. -$1,250' : c.ex ? 'ej. (x−2)/15' : c.q ? 'ej. 3 1/2' : '?'}">`}</label>`).join('')}</div>
         <button class="btn amar" style="margin-top:12px" onclick="responder()">Comprobar</button>`;
     case 'basexp': return `
         <div class="mixIn" style="flex-wrap:wrap">
