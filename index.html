@@ -130,6 +130,8 @@
   .ayLeer th,.ayLeer td{border:1px solid rgba(128,128,128,.35);padding:7px 9px;text-align:left}
   .ayLeer th{background:rgba(128,128,128,.22)}
   .ayLeer .formula{text-align:center;font-weight:700;padding:12px;border-radius:12px;margin:12px 0;font-size:1.12rem;background:rgba(128,128,128,.18)}
+  .irPreg{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 10px;font-weight:700;font-size:.9rem}
+  .irPreg select{flex:none;width:auto;min-width:110px;margin:0;padding:8px 10px}
   .ayFoto{display:block;width:100%;max-width:300px;margin:12px auto 0;border-radius:12px;background:#fff;border:1px solid rgba(128,128,128,.3)}
   .nota{background:rgba(255,255,255,.22);border:1px solid rgba(255,255,255,.4);padding:11px 14px;
     border-radius:14px;margin:10px 0;font-size:.9rem;color:var(--muted)}
@@ -7669,6 +7671,18 @@ function entradaHTML(ej){
   return '';
 }
 
+// temas de preguntas EN ORDEN (las prácticas del Examen Departamental): se puede saltar a cualquiera sin hacer las anteriores
+function selectorPregunta(){
+  if(!modActual.nuevaRonda || !esTemaFijo || modoErrores || modoRepasoRonda || examen || ejActual.__n == null) return '';
+  const n = modActual.banco;
+  return `<label class="irPreg"><span>Ir a la pregunta</span><select class="campo" aria-label="Ir a la pregunta" onchange="irAPregunta(+this.value)">${Array.from({length:n}, (_, i) => `<option value="${i}"${i === ejActual.__n ? ' selected' : ''}>${i+1} de ${n}</option>`).join('')}</select></label>`;
+}
+function irAPregunta(i){
+  modActual._sig = i;   // gen() saca la pregunta i y deja la siguiente lista para "Continuar"
+  ejActual = modActual.gen(nivel); ejActual.__mod = modActual.id;
+  respondido = false; vioExpl = false; ordenSel = []; ultimoFeedback = null; ultimoProceso = ''; calcHist = [];
+  pintarEjercicio(); guardarSesion(); window.scrollTo(0, 0);
+}
 function pintarEjercicio(){
   _barra(null);
   _aiEjN++;   // el chat de IA es de UN ejercicio: al pintar otro empieza uno nuevo
@@ -7676,6 +7690,7 @@ function pintarEjercicio(){
     <button class="back" onclick="ir('inicio')">← Inicio</button>
     <div class="card">
       <span class="pill">${esTemaFijo ? '' : capFijo ? `${nombreCapitulo(capFijo)} · ` : (clase && clase.mods && clase.mods.length) ? `${clase.etiqueta.length>20?'Mi mezcla':clase.etiqueta} · ` : 'Mezcla · '}${modActual.nombre}</span>
+      ${selectorPregunta()}
       <div class="enunciado">${ejActual.enunciado}</div>
       <div id="zonaProceso">${modActual.clase === 'ayud' ? '' : procesoHTML()}</div>
       <div id="zonaEntrada">${entradaHTML(ejActual)}</div>
