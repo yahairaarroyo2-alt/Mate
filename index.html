@@ -908,8 +908,9 @@ function cuentaMenos(a, b){
   return `${mm(a)} − ${b}: ya está debajo del 0 y baja ${b} más: ${-a} + ${b} = ${b - a} → ${mm(a - b)}`;
 }
 // a × b en pedazos cuando las dos tienen 2 cifras o más (23 × 14 → 23 × 10 + 23 × 4)
-const porPedazos = (a, b) => { const d = b - b%10, u = b%10;
-  return a < 10 || b < 10 || !u ? `${a} × ${b} = ${a*b}` : `${a} × ${b} → ${a} × ${d} = ${a*d}, y ${a} × ${u} = ${a*u} → ${a*d} + ${a*u} = ${a*b}`; };
+const porPedazos = (a, b) => { if(b < 10 && a >= 10) [a, b] = [b, a];   // el chico adelante: 9 × 28 → 9 × 20 y 9 × 8
+  const d = b - b%10, u = b%10;
+  return b < 10 || !u ? `${a} × ${b} = ${a*b}` : `${a} × ${b} → ${a} × ${d} = ${a*d}, y ${a} × ${u} = ${a*u} → ${a*d} + ${a*u} = ${a*b}`; };
 // suma de varios números de dos en dos: 58 + 54 = 112 → 112 + 56 = 168 → …
 const sumaLista = xs => { let s = xs[0]; const p = []; for(let i = 1; i < xs.length; i++){ p.push(`${s} + ${xs[i]} = ${s + xs[i]}`); s += xs[i]; } return p.join(' → '); };
 // k × 3.14 en pedazos: k × 3 y k × 0.14
@@ -967,7 +968,12 @@ function explSimplif(n, d){
   const g = mcd(n, d), [sn, sd] = simplificar(n, d);
   if(n === 0) return `${tf(n,d)} = 0`;
   if(g === 1) return '';
-  return _nota(diagFrac([_fT(n, d), _op('='), _fT(sn, sd)], _par(0, 2, '÷ ' + g, sd !== 1)), `¿Por qué ${g}? Es el número MÁS GRANDE que entra exacto en los dos: ${Math.abs(n)} ÷ ${g} = ${Math.abs(sn)} y ${d} ÷ ${g} = ${sd}. Se divide arriba y abajo entre ${g}: vale lo mismo, pero más chica.`);
+  const nota = _nota(diagFrac([_fT(n, d), _op('='), _fT(sn, sd)], _par(0, 2, '÷ ' + g, sd !== 1)), `¿Por qué ${g}? Es el número MÁS GRANDE que entra exacto en los dos: ${Math.abs(n)} ÷ ${g} = ${Math.abs(sn)} y ${d} ÷ ${g} = ${sd}. Se divide arriba y abajo entre ${g}: vale lo mismo, pero más chica.`);
+  if(g < 10) return nota;
+  // un número grande como 36 no se ve de una vez: se llega poco a poco, dividiendo entre primos chicos
+  const fg = factorizar(g), primos = []; Object.keys(fg).map(Number).sort((a, b) => a - b).forEach(p => { for(let i = 0; i < fg[p]; i++) primos.push(p); });
+  let x = n, y = d; const pasos = primos.map(p => { x /= p; y /= p; return `÷ ${p} → ${tf(x, y)}`; });
+  return nota + `<div class="dgNota">¿No ves el ${g} de una vez? Hazlo poco a poco con números chicos (${primos.join(' × ')} = ${g}): ${tf(n, d)} ${pasos.join(', ')}</div>`;
 }
 // a + b (b puede venir negativo = resta). Devuelve { res, lineas }
 // líneas con grupos "▸ título" (pasosSumaF, pasosMultF…) → pasos de receta [{t, l}]
@@ -1481,7 +1487,7 @@ const DEP_EXACTO = [
   C => ({ enunciado:'Efectúa las operaciones indicadas y simplifica.<br><b>−5(4) + 2[6 − 9(−6)<sup>2</sup>]</b>', tipo:'num', respuesta:-656,
     explicacion: receta({ pide:'un solo número, siguiendo el orden de operaciones.',
       pasos:[{ t:'Primero el exponente (dentro del corchete)', l:[`(−6)² = (−6)(−6) = ${cb(36)}`, 'Queda: −5(4) + 2[6 − 9(36)]'] },
-        { t:'Después la multiplicación dentro del corchete', l:[`9 × 36 = ${cb(324)}`, 'Queda: −5(4) + 2[6 − 324]'] },
+        { t:'Después la multiplicación dentro del corchete', l:['El 9 multiplica al 36 que acabamos de sacar:', porPedazos(9, 36), `Resultado: ${cb(324)}`, 'Queda: −5(4) + 2[6 − 324]'] },
         { t:'Termina el corchete', l:[`${cuentaMenos(6, 324)}`, 'Queda: −5(4) + 2[−318]'] },
         { t:'Las multiplicaciones de afuera', l:[`−5 × 4 = ${cb('−20')} (negativo por positivo da negativo)`, `2 × (−318) = ${cb('−636')} (positivo por negativo da negativo)`, 'Queda: −20 + (−636)'] },
         { t:'Suma al final', l:[`−20 + (−636): los dos son negativos, se suman y se queda el signo menos → ${cb('−656')}`] }],
@@ -1540,7 +1546,7 @@ const DEP_EXACTO = [
     explicacion: receta({ pide:'cambiar x por 4 y calcular.',
       pasos:[{ t:'Pon el 4 donde está la x', l:[_nota(diagFrac([_tx('(3x + 2)² + 7'), _op('='), _tx('(3 · 4 + 2)² + 7')], [{ de:[0,'n'], a:[2,'n'], txt:'x = 4' }]), 'Donde dice x se escribe 4. El 3x es 3 POR x, por eso queda 3 · 4.')] },
         { t:'Primero lo de adentro del paréntesis', l:[`3 · 4 = 12, y 12 + 2 = ${cb(14)}`] },
-        { t:'Después el exponente', l:[`14² = 14 × 14 = ${cb(196)}`] },
+        { t:'Después el exponente', l:['14² = 14 × 14, por pedazos:', porPedazos(14, 14), `Resultado: ${cb(196)}`] },
         { t:'Al final la suma', l:[`196 + 7 = ${cb(203)}`] }],
       resp:'203', error:'hacer 14 × 2 = 28: el ² es 14 × 14, no por 2.',
       ejemplo:'(3·4 + 2)² + 7 = 14² + 7 = 196 + 7 = 203.' }) }),
@@ -1596,9 +1602,9 @@ const DEP_EXACTO = [
   C => ({ enunciado:'Factoriza completamente:<br><b>40r<sup>3</sup>s + 25rs<sup>3</sup></b>', tipo:'opciones',
     opciones:['5rs(8r² + 5s²)','5rs','5rs(8r² + 5rs²)','(8r³ + 5rs³)',NING], respuesta:'5rs(8r² + 5s²)',
     explicacion: receta({ pide:'sacar el factor común mayor (FCM) y dejar lo demás en el paréntesis.',
-      pasos:[{ t:'FCM de los números', l:['40 y 25: el número más grande que entra en los dos es ' + cb(5)] },
-        { t:'FCM de cada letra: la MENOR potencia', l:['r: r³ y r¹ → se saca ' + cb('r'), 's: s¹ y s³ → se saca ' + cb('s'), 'FCM = 5rs'] },
-        { t:'Divide cada término entre 5rs', l:['40r³s ÷ 5rs = 8r²', '25rs³ ÷ 5rs = 5s²', `→ ${cb('5rs(8r² + 5s²)')}`] }],
+      pasos:[{ t:'FCM de los números', l:['Se escriben los números que entran exacto en cada uno:', '40: 1, 2, 4, 5, 8, 10, 20, 40', '25: 1, 5, 25', 'Los que están en los dos: 1 y 5 → el más grande es ' + cb(5)] },
+        { t:'FCM de cada letra: la MENOR potencia', l:['Se saca lo que está en TODOS los términos, con el exponente más chico:', 'r: en el primero hay r³ (r · r · r) y en el segundo r¹ (una sola r) → la menor es ' + cb('r'), 's: en el primero hay s¹ y en el segundo s³ → la menor es ' + cb('s'), 'FCM = 5rs'] },
+        { t:'Divide cada término entre 5rs: número con número, letra con letra', l:['40r³s ÷ 5rs → 40 ÷ 5 = 8; r³ ÷ r = r² (se tacha una r); s ÷ s = 1 (se va) → ' + cb('8r²'), '25rs³ ÷ 5rs → 25 ÷ 5 = 5; r ÷ r = 1 (se va); s³ ÷ s = s² → ' + cb('5s²'), `Lo de afuera por lo que quedó: ${cb('5rs(8r² + 5s²)')}`] }],
       resp:'a) 5rs(8r² + 5s²)', comp:'5rs × 8r² = 40r³s y 5rs × 5s² = 25rs³ ✓', error:'escoger 5rs(8r² + 5rs²): al dividir 25rs³ entre 5rs, la r se va completa.',
       ejemplo:'FCM = 5rs → 5rs(8r² + 5s²).' }) }),
   // 24. Mixto + fracción propia
@@ -1647,7 +1653,7 @@ const DEP_EXACTO = [
   C => ({ enunciado:`Resuelve la proporción.<br><b>${fr('x + 3', 5)} = ${fr(3,4)}</b>`, tipo:'frac', respuesta:{n:3, d:4}, pedirSimple:true, signo:true,
     ayuda:'x = ___ (si sale un entero, escríbelo con denominador 1)',
     explicacion: receta({ pide:'el valor de x.',
-      pasos:[{ t:'Productos cruzados', l:[diagCruzados('x + 3', 5, 3, 4), '4(x + 3) = 5 × 3 = 15'] },
+      pasos:[{ t:'Productos cruzados', l:[diagCruzados('x + 3', 5, 3, 4), 'Lo de arriba de un lado por lo de abajo del otro: (x + 3) × 4 = 5 × 3', 'Es decir: 4(x + 3) = 15'] },
         { t:'Reparte el 4', l:['4x + 12 = 15'] },
         { t:'Despeja x', l:[diagAmbosLados('4x + 12', '15', '− 12', '4x', '3'), diagAmbosLados('4x', '3', '÷ 4', 'x', '3/4'), `x = ${cb('3/4')}`] }],
       resp:'x = 3/4', comp:'(3/4 + 3)/5 = (15/4)/5 = 15/20 = 3/4 ✓', error:'multiplicar 4 × x + 3 sin paréntesis (4x + 3): el 4 multiplica a TODO el x + 3.',
@@ -1832,9 +1838,9 @@ const DEP_EXACTO2 = [
   C => ({ enunciado:'Factoriza completamente: <b>30a<sup>2</sup>b<sup>3</sup> − 20ab<sup>4</sup></b>', tipo:'opciones',
     opciones:['10ab³(3a − 2b)','10ab(3ab² − 2b³)','5ab(6ab² − 4b³)','10ab(3a − 2b)',NING], respuesta:'10ab³(3a − 2b)',
     explicacion: receta({ pide:'sacar el factor común mayor (FCM) y dejar lo demás en el paréntesis.',
-      pasos:[{ t:'FCM de los números', l:['30 y 20: el más grande que entra en los dos es ' + cb(10)] },
-        { t:'FCM de cada letra: la MENOR potencia', l:['a: a² y a¹ → ' + cb('a'), 'b: b³ y b⁴ → ' + cb('b³'), 'FCM = 10ab³'] },
-        { t:'Divide cada término entre 10ab³', l:['30a²b³ ÷ 10ab³ = 3a', '20ab⁴ ÷ 10ab³ = 2b', `→ ${cb('10ab³(3a − 2b)')}`] }],
+      pasos:[{ t:'FCM de los números', l:['Se escriben los números que entran exacto en cada uno:', '30: 1, 2, 3, 5, 6, 10, 15, 30', '20: 1, 2, 4, 5, 10, 20', 'Los que están en los dos: 1, 2, 5 y 10 → el más grande es ' + cb(10)] },
+        { t:'FCM de cada letra: la MENOR potencia', l:['Se saca lo que está en TODOS los términos, con el exponente más chico:', 'a: en el primero hay a² (a · a) y en el segundo a¹ (una sola a) → la menor es ' + cb('a'), 'b: en el primero hay b³ y en el segundo b⁴ → la menor es ' + cb('b³'), 'FCM = 10ab³'] },
+        { t:'Divide cada término entre 10ab³: número con número, letra con letra', l:['30a²b³ ÷ 10ab³ → 30 ÷ 10 = 3; a² ÷ a = a (se tacha una a); b³ ÷ b³ = 1 (se va) → ' + cb('3a'), '20ab⁴ ÷ 10ab³ → 20 ÷ 10 = 2; a ÷ a = 1 (se va); b⁴ ÷ b³ = b (se tachan tres b) → ' + cb('2b'), `Lo de afuera por lo que quedó: ${cb('10ab³(3a − 2b)')}`] }],
       resp:'a) 10ab³(3a − 2b)', comp:'10ab³ × 3a = 30a²b³ y 10ab³ × 2b = 20ab⁴ ✓', error:'escoger 10ab(3ab² − 2b³): ahí sí se puede sacar más b, no está COMPLETA.',
       ejemplo:'FCM = 10ab³ → 10ab³(3a − 2b).' }) }),
   // 24. Tres fracciones no semejantes
@@ -1878,8 +1884,9 @@ const DEP_EXACTO2 = [
   // 29. Ecuación lineal con fracciones
   C => ({ enunciado:`Resuelve: <b>2x − ${fr('x',5)} − ${fr(3,7)} = 1</b>`, tipo:'opciones', opciones:[fr(40,63), fr(50,63), fr(60,63), fr(80,63), NING], respuesta:fr(50,63),
     explicacion: receta({ pide:'el valor de x.',
-      pasos:[{ t:'Quita las fracciones: multiplica TODO por 35 (el MCM de 5 y 7)', l:['35 · 2x − 35 · x/5 − 35 · 3/7 = 35 · 1', '70x − 7x − 15 = 35'] },
-        { t:'Junta las x', l:['70x − 7x = 63x → 63x − 15 = 35'] },
+      pasos:[{ t:'Busca el número que hace desaparecer los de abajo (el MCM de 5 y 7)', l:['Abajo hay un 5 y un 7. Se busca un número que esté en la tabla del 5 y también en la del 7:', 'Tabla del 5: 5, 10, 15, 20, 25, 30, 35', 'Tabla del 7: 7, 14, 21, 28, 35', `El primero que está en las dos es ${cb(35)}`] },
+        { t:'Multiplica los DOS lados por 35, cada término por separado', l:[diagAmbosLados('2x − x/5 − 3/7', '1', '× 35', '70x − 7x − 15', '35'), 'Cada término por separado:', `2x → 35 × 2x = ${cb('70x')} (35 × 2 = 70)`, `x/5 → 35 × x/5: el 35 se divide entre el 5 de abajo (35 ÷ 5 = 7) → ${cb('7x')}`, `3/7 → 35 × 3/7: el 35 se divide entre el 7 de abajo (35 ÷ 7 = 5) y queda 5 × 3 = 15 → ${cb('15')}`, `1 → 35 × 1 = ${cb('35')}`, 'Los signos se quedan como estaban: 70x − 7x − 15 = 35'] },
+        { t:'Junta las x', l:['70x − 7x: se restan los números que acompañan a la x → 70 − 7 = 63 → 63x', '63x − 15 = 35'] },
         { t:'Despeja x', l:[diagAmbosLados('63x − 15', '35', '+ 15', '63x', '50'), diagAmbosLados('63x', '50', '÷ 63', 'x', '50/63'), `x = ${cb('50/63')}`] }],
       resp:'b) 50/63', error:'multiplicar solo las fracciones por 35: TODOS los términos (también el 2x y el 1) se multiplican.',
       ejemplo:'70x − 7x − 15 = 35 → 63x = 50 → x = 50/63.' }) }),
@@ -1999,7 +2006,8 @@ function explMcmFactores(ns){
   const { fs, primos } = _primosDe(ns), m = ns.reduce(mcm), mx = p => Math.max(...fs.map(f => f[p]||0));
   const lin = primos.map(p => `El ${p}: ${ns.map((n,i) => fs[i][p] ? `en el ${n} está ${_veces(fs[i][p])}` : `en el ${n} no está`).join('; ')} → va ${cb(p + _supE1(mx(p)))}`);
   return receta({ pide:`el número más chico que está en la tabla de ${ns.join(', ')} a la vez.`,
-    pasos:[{ t:'Factoriza cada número', l: ns.map((n,i) => `${n} = ${fmtFactores(fs[i])}`) },
+    pasos:[{ t:'Factoriza cada número', l:['A cada número se le divide entre el primo más chico que entre exacto, y se repite hasta llegar a 1:', ...ns.flatMap((n,i) => { const exp = fmtFactores(fs[i]), planos = planosDe(n);
+        return [`${n}: ${pasosFactorizar(n).filter(x => /^\d+ ÷/.test(x)).join(' → ')}`, `→ ${n} = ${planos === exp ? exp : planos + ' = ' + exp}`]; })] },
       { t:'Toma TODOS los primos que aparecen, cada uno con las MÁS veces que salga', l: lin },
       { t:'Multiplícalos', l:[...primos.filter(p => mx(p) > 1).map(p => _potLinea(p, mx(p))), multLista(primos.map(p => Math.pow(p, mx(p)))), `MCM = ${cb(m)}`] }],
     resp:String(m), comp: ns.map(n => `${m} ÷ ${n} = ${m/n}`).join(', ') + ' — todos exactos ✓',
