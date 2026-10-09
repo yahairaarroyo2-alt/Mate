@@ -1,7 +1,7 @@
 // Service Worker — caché offline. App de un solo archivo, sin timers/notificaciones
 // que cachear (a diferencia de Fit-F/Fit-M), así que esto es mucho más simple que
 // esos sw.js: solo cachear los assets propios y servir la app sin conexión.
-const CACHE = 'mate-v126';
+const CACHE = 'mate-v127';
 const CACHE_FOTOS = 'mate-fotos-ayudante-v1';   // si cambias una foto de ayudante/, sube este número
 const ASSETS = [
   './',
@@ -24,7 +24,7 @@ self.addEventListener('install', e => {
 
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys().then(keys =>
-    Promise.all(keys.filter(k => k !== CACHE && k !== CACHE_FOTOS).map(k => caches.delete(k)))
+    Promise.all(keys.filter(k => k.startsWith('mate-') && k !== CACHE && k !== CACHE_FOTOS).map(k => caches.delete(k)))
   ));
   self.clients.claim();
 });

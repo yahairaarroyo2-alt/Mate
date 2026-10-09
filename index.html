@@ -6729,7 +6729,21 @@ function ir(pantalla, arg, continuar){
    ══════════════════════════════════════════════════════════ */
 // SIN prefijo mate_ a propósito: exportarRespaldo() solo guarda mate_*, y la sync solo manda
 // claves concretas — así la clave de la usuaria no va al .json ni a Firestore.
-const AI_KEY_STORAGE = 'ai_gemini_key_v1';
+// La clave de IA tiene nombre propio por app: las cuatro apps (Fit-F, Fit-M, Mate, Facturas) viven en el mismo dominio y compartían
+// 'ai_gemini_key_v1', así que pegar la clave en una pisaba la de las otras (y "Quitar" la quitaba en todas). La primera vez se copia la
+// anterior, sin volver a pegarla; cuando las cuatro ya la copiaron, la vieja se borra. Sin prefijo fba_: no entra al backup.
+const AI_KEY_STORAGE = 'ai_gemini_key_mate_v1';
+(function () {
+  try {
+    const VIEJA = 'ai_gemini_key_v1', MARCA = 'ai_key_mig_mate';
+    if (!localStorage.getItem(MARCA)) {
+      const v = localStorage.getItem(VIEJA);
+      if (v && !localStorage.getItem(AI_KEY_STORAGE)) localStorage.setItem(AI_KEY_STORAGE, v);
+      localStorage.setItem(MARCA, '1');
+    }
+    if (['fitf', 'fitm', 'mate', 'fact'].every(a => localStorage.getItem('ai_key_mig_' + a))) localStorage.removeItem(VIEJA);
+  } catch (e) {}
+})();
 const getAiKey = () => { try{ return localStorage.getItem(AI_KEY_STORAGE) || ''; }catch(e){ return ''; } };
 const AI_B = '<span class="aiB">AI</span>';   // mini-etiqueta dentro de los botones
 // Del mejor al más básico: _aiJSON baja al siguiente si uno no está disponible. Con la clave
