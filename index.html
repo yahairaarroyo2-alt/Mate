@@ -836,9 +836,9 @@ const opT = f => f.d===1 ? mm(f.n) : tf(f.n,f.d);
 function explSumaEnteros(a, b){
   const r = a + b;
   if(a === 0 || b === 0) return `${mm(a)} + ${b<0?`(${mm(b)})`:b} = ${mm(r)} (sumar 0 no cambia nada).`;
-  if((a<0) === (b<0)) return `${mm(a)} + ${b<0?`(${mm(b)})`:b}: mismo signo, se suman los valores (${Math.abs(a)} + ${Math.abs(b)} = ${Math.abs(r)}) y se conserva ese signo → ${mm(r)}.`;
+  if((a<0) === (b<0)) return `${mm(a)} + ${b<0?`(${mm(b)})`:b}: los dos tienen el MISMO signo, así que se SUMAN (sin los signos):<br>${Math.abs(a)} + ${Math.abs(b)} = ${Math.abs(r)}<br>Se queda ese mismo signo: ${mm(r)}`;
   const g = Math.abs(a) >= Math.abs(b) ? a : b;
-  return `${mm(a)} + ${b<0?`(${mm(b)})`:b}: signos distintos, se restan los valores (${Math.max(Math.abs(a),Math.abs(b))} − ${Math.min(Math.abs(a),Math.abs(b))} = ${Math.abs(r)}) y gana el signo del más grande, ${mm(g)} → ${mm(r)}.`;
+  return `${mm(a)} + ${b<0?`(${mm(b)})`:b}: tienen signos DIFERENTES, así que se RESTAN (sin los signos):<br>${Math.max(Math.abs(a),Math.abs(b))} − ${Math.min(Math.abs(a),Math.abs(b))} = ${Math.abs(r)}<br>Se queda el signo del más grande (el ${mm(g)}): ${mm(r)}`;
 }
 // ── dibujos con flechas para las explicaciones: × al pasar a denominador común, ÷ al simplificar,
 //    "se voltea" al dividir, arriba×arriba / abajo×abajo al multiplicar ──
@@ -896,21 +896,22 @@ function receta({ pide, pasos, resp, comp, error, ejemplo }){
 const cb = s => `<b class="cambia">${s}</b>`;
 // cuentas de enteros explicadas, con la regla del signo cuando hace falta (b siempre positivo)
 function cuentaMas(a, b){
-  if(a >= 0) return b >= 10 && b % 10 && a >= 10 ? `${a} + ${b} → ${a} + ${b - b%10} = ${a + b - b%10}, y ${a + b - b%10} + ${b%10} = ${a + b}` : `${a} + ${b} = ${a + b}`;
+  // una cuenta por renglón (<br>): así no queda todo pegado
+  if(a >= 0) return b >= 10 && b % 10 && a >= 10 ? `${a} + ${b}, por partes:<br>${a} + ${b - b%10} = ${a + b - b%10}<br>${a + b - b%10} + ${b%10} = ${a + b}` : `${a} + ${b} = ${a + b}`;
   const A = -a;
   if(A === b) return `${mm(a)} + ${b}: son opuestos, se cancelan → 0`;
-  return A > b ? `${mm(a)} + ${b}: signos diferentes, se restan: ${A} − ${b} = ${A - b}. Gana el signo del más grande (el ${mm(a)}) → ${mm(a + b)}`
-               : `${mm(a)} + ${b}: signos diferentes, se restan: ${b} − ${A} = ${b - A}. Gana el signo del más grande (el +${b}) → ${a + b}`;
+  return A > b ? `${mm(a)} + ${b}: tienen signos diferentes, así que se RESTAN (sin los signos):<br>${A} − ${b} = ${A - b}<br>Se queda el signo del más grande (el ${mm(a)}): ${mm(a + b)}`
+               : `${mm(a)} + ${b}: tienen signos diferentes, así que se RESTAN (sin los signos):<br>${b} − ${A} = ${b - A}<br>Se queda el signo del más grande (el +${b}): ${a + b}`;
 }
 function cuentaMenos(a, b){
-  if(a >= b) return b >= 10 && b % 10 && a >= 20 ? `${a} − ${b} → ${a} − ${b - b%10} = ${a - b + b%10}, y ${a - b + b%10} − ${b%10} = ${a - b}` : `${a} − ${b} = ${a - b}`;
-  if(a >= 0) return `${a} − ${b}: le quitas más de lo que hay, así que pasa del 0 y queda negativo: ${b} − ${a} = ${b - a} → ${mm(a - b)}`;
-  return `${mm(a)} − ${b}: ya está debajo del 0 y baja ${b} más: ${-a} + ${b} = ${b - a} → ${mm(a - b)}`;
+  if(a >= b) return b >= 10 && b % 10 && a >= 20 ? `${a} − ${b}, por partes:<br>${a} − ${b - b%10} = ${a - b + b%10}<br>${a - b + b%10} − ${b%10} = ${a - b}` : `${a} − ${b} = ${a - b}`;
+  if(a >= 0) return `${a} − ${b}: le quitas MÁS de lo que tienes, así que el resultado es negativo.<br>Se resta el grande menos el chico: ${b} − ${a} = ${b - a}<br>Y se le pone el signo menos: ${mm(a - b)}`;
+  return `${mm(a)} − ${b}: ya está debajo del 0 y baja ${b} más.<br>Se suman sin el signo: ${-a} + ${b} = ${b - a}<br>Y se le pone el signo menos: ${mm(a - b)}`;
 }
 // a × b en pedazos cuando las dos tienen 2 cifras o más (23 × 14 → 23 × 10 + 23 × 4)
 const porPedazos = (a, b) => { if(b < 10 && a >= 10) [a, b] = [b, a];   // el chico adelante: 9 × 28 → 9 × 20 y 9 × 8
   const d = b - b%10, u = b%10;
-  return b < 10 || !u ? `${a} × ${b} = ${a*b}` : `${a} × ${b} → ${a} × ${d} = ${a*d}, y ${a} × ${u} = ${a*u} → ${a*d} + ${a*u} = ${a*b}`; };
+  return b < 10 || !u ? `${a} × ${b} = ${a*b}` : `${a} × ${b}, por pedazos:<br>${a} × ${d} = ${a*d}<br>${a} × ${u} = ${a*u}<br>${a*d} + ${a*u} = ${a*b}`; };
 // suma de varios números de dos en dos: 58 + 54 = 112 → 112 + 56 = 168 → …
 const sumaLista = xs => { let s = xs[0]; const p = []; for(let i = 1; i < xs.length; i++){ p.push(`${s} + ${xs[i]} = ${s + xs[i]}`); s += xs[i]; } return p.join(' → '); };
 // k × 3.14 en pedazos: k × 3 y k × 0.14
@@ -949,13 +950,16 @@ const diagCruzados = (a, b, c, d) => _nota(diagFrac([{ t:'f', n:a, d:b }, _op('=
   [{ de:[0,'n'], a:[2,'d'], recta:true }, { de:[0,'d'], a:[2,'n'], recta:true }]), 'Se multiplica en X: lo de arriba de un lado por lo de abajo del otro. Si la proporción es cierta, los dos resultados son iguales.');
 // lo mismo en los DOS lados de la ecuación: izq = der  →  (op a los dos lados)  →  izq2 = der2
 function diagAmbosLados(izq, der, op, izq2, der2){
-  const w = s => String(s).length*9.2 + 14, wl = Math.max(w(izq), w(izq2), 40), wr = Math.max(w(der), w(der2), 36), W = 12 + wl + 30 + wr, id = 'dg' + (++_dgId);
+  // Tres renglones, como se escribe a mano: la ecuación, la MISMA operación escrita en los dos lados (en naranja) y cómo queda.
+  const sOp = String(op), conPar = s => /^[×÷]/.test(sOp) && / [+−-] /.test(String(s)) ? `(${s})` : String(s);
+  const a2 = `${conPar(izq)} ${sOp}`, b2 = `${conPar(der)} ${sOp}`, id = 'dg' + (++_dgId);
+  const w = s => String(s).length*9.2 + 14, wl = Math.max(w(izq), w(a2), w(izq2), 40), wr = Math.max(w(der), w(b2), w(der2), 36), W = 12 + wl + 30 + wr;
   const xl = 6 + wl/2, xe = 6 + wl + 15, xr = 6 + wl + 30 + wr/2;
-  const fila = (y, a, b) => `<text x="${xl}" y="${y}" text-anchor="middle">${a}</text><text x="${xe}" y="${y}" text-anchor="middle">=</text><text x="${xr}" y="${y}" text-anchor="middle">${b}</text>`;
-  const fl = x => `<path d="M${x} 32 L${x} 54" stroke="#e8a23a" stroke-width="1.8" fill="none" marker-end="url(#${id})"/><text x="${x + 8}" y="48" font-size="13" font-weight="700" fill="#e8a23a">${op}</text>`;
-  const nota = { '+':'Para quitar lo que está restando se SUMA ese número, en los DOS lados (así la igualdad no se rompe).', '−':'Para quitar lo que está sumando se RESTA ese número, en los DOS lados (así la igualdad no se rompe).', '÷':'La letra está multiplicada por un número; para dejarla sola se DIVIDE entre ese número, en los DOS lados.', '×':'Para dejar la letra sola se MULTIPLICA en los DOS lados (así se cancela la división o la fracción).' }[String(op)[0]] || '';
-  const svg = `<svg viewBox="0 0 ${W} 86" style="width:100%;max-width:${Math.min(Math.round(W*0.95), 300)}px;height:auto;display:block;margin:4px 0" xmlns="http://www.w3.org/2000/svg"><defs><marker id="${id}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#e8a23a"/></marker></defs><g font-size="17" fill="currentColor" font-family="inherit">${fila(24, izq, der)}${fl(xl)}${fl(xr)}${fila(78, izq2, der2)}</g></svg>`;
-  return _nota(svg, nota, 'ambos' + String(op)[0]);
+  const op2 = s => `${conPar(s)} <tspan fill="#e8a23a" font-weight="700">${sOp}</tspan>`;
+  const fila = (y, a, b, peso) => `<text x="${xl}" y="${y}" text-anchor="middle"${peso ? ' font-weight="700"' : ''}>${a}</text><text x="${xe}" y="${y}" text-anchor="middle">=</text><text x="${xr}" y="${y}" text-anchor="middle"${peso ? ' font-weight="700"' : ''}>${b}</text>`;
+  const nota = { '+':'Para quitar lo que está restando se SUMA ese número, en los DOS lados (así la igualdad no se rompe). En naranja: lo que se hizo.', '−':'Para quitar lo que está sumando se RESTA ese número, en los DOS lados (así la igualdad no se rompe). En naranja: lo que se hizo.', '÷':'La letra está multiplicada por un número; para dejarla sola se DIVIDE entre ese número, en los DOS lados. En naranja: lo que se hizo.', '×':'Se MULTIPLICA en los DOS lados (así se cancela la división o la fracción). En naranja: lo que se hizo.' }[sOp[0]] || '';
+  const svg = `<svg viewBox="0 0 ${W} 104" style="width:100%;max-width:${Math.min(Math.round(W*0.95), 320)}px;height:auto;display:block;margin:4px 0" xmlns="http://www.w3.org/2000/svg"><g font-size="17" fill="currentColor" font-family="inherit">${fila(24, izq, der)}${fila(58, op2(izq), op2(der))}<line x1="6" x2="${W - 6}" y1="70" y2="70" stroke="currentColor" stroke-opacity=".25" stroke-width="1"/>${fila(94, izq2, der2, true)}</g></svg>`;
+  return _nota(svg, nota, 'ambos' + sOp[0]);
 }
 const _fT = (n, d) => ({ t:'f', n:mm(n), d });
 const _op = s => ({ t:'o', s });
@@ -978,15 +982,23 @@ function explSimplif(n, d){
 // a + b (b puede venir negativo = resta). Devuelve { res, lineas }
 // líneas con grupos "▸ título" (pasosSumaF, pasosMultF…) → pasos de receta [{t, l}]
 const lineasAPasos = ls => { const P = []; ls.forEach(l => { if(typeof l === 'string' && l.startsWith('▸ ')) P.push({ t:l.slice(2), l:[] }); else { if(!P.length) P.push({ t:'Haz la cuenta', l:[] }); P[P.length - 1].l.push(l); } }); return P; };
+// cómo se llega al MCM de dos denominadores: con las tablas si son cortas; si no tienen nada en común, multiplicándolos
+function _comoMCM(p, q, m){
+  const tabla = (x) => Array.from({ length: m/x }, (_, i) => x*(i+1)).join(', ');
+  if(m/Math.min(p, q) <= 8) return `Tabla del ${p}: ${tabla(p)}<br>Tabla del ${q}: ${tabla(q)}<br>El primero que está en las dos: ${cb(m)}`;
+  if(m === p*q) return `${p} y ${q} no tienen ningún número en común que los divida (fuera del 1), así que el MCM es multiplicarlos: ${p} × ${q} = ${cb(m)}`;
+  const g = mcd(p, q);
+  return `${p} y ${q} se pueden dividir los dos entre ${g}. El MCM es ${p} × ${q} ÷ ${g} = ${p*q} ÷ ${g} = ${cb(m)}`;
+}
 function pasosSumaF(a, b){
   const r = sumarF([a, b]), lineas = [];
-  if(a.d === b.d) lineas.push('▸ Suma los de arriba (el de abajo se queda igual)', `${opTP(a)} + ${opTP(b)}: el de abajo es el mismo (${r.m}), solo se suman los de arriba.`, `Arriba: ${sumaArriba(a.n, b.n)} → ${opT({n:r.tot, d:r.m})}`);
+  if(a.d === b.d) lineas.push('▸ Suma los de arriba (el de abajo se queda igual)', `${opTP(a)} + ${opTP(b)}: el de abajo es el mismo (${r.m}), solo se suman los de arriba.`, `Arriba: ${sumaArriba(a.n, b.n)}`, `Queda: ${opT({n:r.tot, d:r.m})}`);
   else {
-    lineas.push('▸ Busca el MCM de los de abajo', `Los de abajo (${a.d} y ${b.d}) son distintos, y para sumar o restar deben ser iguales. Se busca el MCM: el número más chico que está en la tabla del ${a.d} y en la del ${b.d} → ${r.m}`);
+    lineas.push('▸ Busca el MCM de los de abajo', `Los de abajo (${a.d} y ${b.d}) son distintos, y para sumar o restar deben ser iguales. Se busca el MCM: el número más chico que está en la tabla del ${a.d} y en la del ${b.d}.`, _comoMCM(a.d, b.d, r.m));
     lineas.push('▸ Pasa cada fracción al denominador común');
     if(r.m !== a.d) lineas.push(diagConvertir(a, r.nums[0], r.m));
     if(r.m !== b.d) lineas.push(diagConvertir(b, r.nums[1], r.m));
-    lineas.push('▸ Suma los de arriba (el de abajo se queda igual)', `${tf(r.nums[0], r.m)} + ${tfP(r.nums[1], r.m)}: ya tienen el mismo de abajo (${r.m}), ahora se suman los de arriba.`, `Arriba: ${sumaArriba(r.nums[0], r.nums[1])} → ${opT({n:r.tot, d:r.m})}`);
+    lineas.push('▸ Suma los de arriba (el de abajo se queda igual)', `${tf(r.nums[0], r.m)} + ${tfP(r.nums[1], r.m)}: ya tienen el mismo de abajo (${r.m}), ahora se suman los de arriba.`, `Arriba: ${sumaArriba(r.nums[0], r.nums[1])}`, `Queda: ${opT({n:r.tot, d:r.m})}`);
   }
   const s = explSimplif(r.tot, r.m); if(s) lineas.push('▸ Simplifica', s);
   return { res:{n:r.n, d:r.d}, lineas };
@@ -1032,7 +1044,7 @@ const explImpropia = f => { const e = Math.floor(Math.abs(f.n)/f.d), p = Math.ab
   return _nota(diagFrac([{ t:'m', e:(f.n<0 ? '−' : '') + e, n:p, d:f.d }, _op('='), _fT(f.n, f.d)], [{ de:[0,'e'], a:[2,'n'], txt:`${e} × ${f.d} + ${p}` }]), `Entero × denominador + numerador: ${e} × ${f.d} = ${e*f.d}, más ${p} = ${Math.abs(f.n)}. El de abajo se queda igual.`); };
 // "sobra" = lo que queda después de sacar todos los grupos completos; se explica con la resta para que no sea magia
 const explAMixto = f => { const e = Math.floor(f.n/f.d), r = f.n%f.d;
-  return `${tf(f.n,f.d)} = ${tMix(f)}   (¿cuántos ${f.d} caben en ${f.n}? Caben ${e}, porque ${f.d} × ${e} = ${f.d*e}. Si de ${f.n} quitas esos ${f.d*e}, queda ${f.n} − ${f.d*e} = ${r}: eso es lo que sobra, no alcanza para otro ${f.d}. El ${e} es el entero y el ${r} va arriba de la fracción)`; };
+  return `${tf(f.n,f.d)} = ${tMix(f)}<br>¿Cuántos ${f.d} caben en ${f.n}? Caben ${e}, porque ${f.d} × ${e} = ${f.d*e}.<br>Lo que sobra: ${f.n} − ${f.d*e} = ${r} (no alcanza para otro ${f.d}).<br>El ${e} es el entero y el ${r} va arriba de la fracción.`; };
 // "pasa a impropia" para todos los mixtos de la lista (y los enteros como n/1)
 function lineasImpropias(fs){
   const li = [], mix = fs.filter(esMixto), ent = fs.filter(f => f.d===1);
@@ -1477,9 +1489,9 @@ const DEP_EXACTO = [
   C => _multiDep('Escribe <b>$620,000,000</b> en forma corta usando una potencia de 10.<br><small>Respuesta: ___ × 10<sup>___</sup></small>',
     [{ et:'Número delante', r:62 }, { et:'Exponente de 10', r:7 }],
     receta({ pide:'620,000,000 escrito como (número) × 10 con un exponente.',
-      pasos:[{ t:'Cuenta los ceros del final', l:[`620,000,000 → después del 62 hay ${cb('7')} ceros: 62${cb('0 0 0 0 0 0 0')}`] },
-        { t:'Quita esos ceros: lo que queda va delante', l:[`Queda ${cb(62)}`] },
-        { t:'La cantidad de ceros es el exponente', l:[`7 ceros → 10${sup(7)} = 10,000,000 → ${cb('62 × 10' + sup(7))}`, diagCeros('620,000,000', '62', 7)] }],
+      pasos:[{ t:'Cuenta los ceros del final', l:['Escribe el número sin comas: 620000000', `Primero va el 62, y después vienen ${cb('7 ceros')}: 62 | 0 0 0 0 0 0 0`] },
+        { t:'Quita esos ceros: lo que queda va delante', l:[`Sin los 7 ceros queda ${cb(62)}`] },
+        { t:'La cantidad de ceros es el exponente', l:[diagCeros('620,000,000', '62', 7), `Quitaste 7 ceros, así que el exponente es 7: 10${sup(7)} (un 1 con 7 ceros = 10,000,000)`, `Respuesta: ${cb('62 × 10' + sup(7))}`] }],
       resp:'62 × 10⁷', comp:'62 × 10,000,000 = 620,000,000 ✓', error:'dejar un solo dígito delante (6.2 × 10⁸): aquí se quitan TODOS los ceros del final y el número de adelante puede tener varias cifras (62).',
       ejemplo:'$620,000,000 = 62 × 10⁷.' }).filter(l => !/^TRUCO:/.test(l)),
     'TRUCO: el exponente de 10 es la cantidad de ceros que quitas del final. Ejemplo con este mismo: 620,000,000 → quito 7 ceros → 62 × 10⁷.'),
@@ -1530,8 +1542,8 @@ const DEP_EXACTO = [
   // 10. ax + b = c
   C => ({ enunciado:'Resuelve la ecuación: <b>7x + 7 = 21</b>', tipo:'opciones', opciones:['x = 2','x = 5',`x = ${fr(2,3)}`,'x = 14',NING], respuesta:'x = 2',
     explicacion: receta({ pide:'el valor de x.',
-      pasos:[{ t:'Quita el 7 que suma (resta 7 en los dos lados)', l:[diagAmbosLados('7x + 7', '21', '− 7', '7x', '21 − 7'), `7x = ${cb(14)}`] },
-        { t:'Divide entre 7 en los dos lados', l:[diagAmbosLados('7x', '14', '÷ 7', 'x', '14 ÷ 7'), `x = ${cb(2)}`] }],
+      pasos:[{ t:'Quita el 7 que suma (resta 7 en los dos lados)', l:[diagAmbosLados('7x + 7', '21', '− 7', '7x', '14'), 'Lado izquierdo: + 7 − 7 = 0, se cancelan y queda solo 7x.', 'Lado derecho: 21 − 7 = 14.', `Queda: 7x = ${cb(14)}`] },
+        { t:'Divide entre 7 en los dos lados', l:[diagAmbosLados('7x', '14', '÷ 7', 'x', '2'), 'Lado izquierdo: 7x ÷ 7 = x (el 7 se va).', 'Lado derecho: 14 ÷ 7 = 2.', `x = ${cb(2)}`] }],
       resp:'a) x = 2', comp:'7(2) + 7 = 14 + 7 = 21 ✓', error:'contestar x = 14: falta dividir entre 7.',
       ejemplo:'7x + 7 = 21 → 7x = 14 → x = 2.' }) }),
   // 11. Perímetro de un triángulo
@@ -1545,15 +1557,15 @@ const DEP_EXACTO = [
   C => ({ enunciado:'Halla el valor numérico de:<br><b>(3x + 2)<sup>2</sup> + 7</b> cuando <b>x = 4</b>', tipo:'num', respuesta:203,
     explicacion: receta({ pide:'cambiar x por 4 y calcular.',
       pasos:[{ t:'Pon el 4 donde está la x', l:[_nota(diagFrac([_tx('(3x + 2)² + 7'), _op('='), _tx('(3 · 4 + 2)² + 7')], [{ de:[0,'n'], a:[2,'n'], txt:'x = 4' }]), 'Donde dice x se escribe 4. El 3x es 3 POR x, por eso queda 3 · 4.')] },
-        { t:'Primero lo de adentro del paréntesis', l:[`3 · 4 = 12, y 12 + 2 = ${cb(14)}`] },
-        { t:'Después el exponente', l:['14² = 14 × 14, por pedazos:', porPedazos(14, 14), `Resultado: ${cb(196)}`] },
+        { t:'Primero lo de adentro del paréntesis', l:['Adentro hay una multiplicación y una suma: primero la multiplicación.', '3 × 4 = 12', `Después la suma: 12 + 2 = ${cb(14)}`] },
+        { t:'Después el exponente', l:['14² quiere decir 14 × 14.', porPedazos(14, 14), `Resultado: ${cb(196)}`] },
         { t:'Al final la suma', l:[`196 + 7 = ${cb(203)}`] }],
       resp:'203', error:'hacer 14 × 2 = 28: el ² es 14 × 14, no por 2.',
       ejemplo:'(3·4 + 2)² + 7 = 14² + 7 = 196 + 7 = 203.' }) }),
   // 13. Número que falta dado el promedio
   C => ({ enunciado:'El promedio de cuatro números es 85. Si tres de los números son 79, 80 y 65, halla el cuarto número.', tipo:'opciones', opciones:['95','87','100','116',NING], respuesta:'116',
     explicacion: receta({ pide:'el número que falta para que el promedio sea 85.',
-      pasos:[{ t:'Promedio × cuántos son = suma total', l:[`85 × 4 = ${cb(340)}`] },
+      pasos:[{ t:'Promedio × cuántos son = suma total', l:['Si el promedio de 4 números es 85, entre los 4 suman 85 × 4.', porPedazos(85, 4), `Suma total: ${cb(340)}`] },
         { t:'Suma los que ya tienes', l:[`${sumaLista([79, 80, 65])}`] },
         { t:'Lo que falta es la diferencia', l:[`340 − 224 = ${cb(116)}`] }],
       resp:'d) 116', comp:'(79 + 80 + 65 + 116) ÷ 4 = 340 ÷ 4 = 85 ✓', error:'sacar el promedio de los tres (224 ÷ 3): hay que usar la suma TOTAL de los cuatro.',
@@ -1604,7 +1616,7 @@ const DEP_EXACTO = [
     explicacion: receta({ pide:'sacar el factor común mayor (FCM) y dejar lo demás en el paréntesis.',
       pasos:[{ t:'FCM de los números', l:['Se escriben los números que entran exacto en cada uno:', '40: 1, 2, 4, 5, 8, 10, 20, 40', '25: 1, 5, 25', 'Los que están en los dos: 1 y 5 → el más grande es ' + cb(5)] },
         { t:'FCM de cada letra: la MENOR potencia', l:['Se saca lo que está en TODOS los términos, con el exponente más chico:', 'r: en el primero hay r³ (r · r · r) y en el segundo r¹ (una sola r) → la menor es ' + cb('r'), 's: en el primero hay s¹ y en el segundo s³ → la menor es ' + cb('s'), 'FCM = 5rs'] },
-        { t:'Divide cada término entre 5rs: número con número, letra con letra', l:['40r³s ÷ 5rs → 40 ÷ 5 = 8; r³ ÷ r = r² (se tacha una r); s ÷ s = 1 (se va) → ' + cb('8r²'), '25rs³ ÷ 5rs → 25 ÷ 5 = 5; r ÷ r = 1 (se va); s³ ÷ s = s² → ' + cb('5s²'), `Lo de afuera por lo que quedó: ${cb('5rs(8r² + 5s²)')}`] }],
+        { t:'Divide cada término entre 5rs: número con número, letra con letra', l:['40r³s ÷ 5rs:<br>· los números: 40 ÷ 5 = 8<br>· la r: r³ ÷ r = r² (se tacha una r)<br>· la s: s ÷ s = 1 (se va)<br>Queda ' + cb('8r²'), '25rs³ ÷ 5rs:<br>· los números: 25 ÷ 5 = 5<br>· la r: r ÷ r = 1 (se va)<br>· la s: s³ ÷ s = s² (se tacha una s)<br>Queda ' + cb('5s²'), `Lo de afuera por lo que quedó: ${cb('5rs(8r² + 5s²)')}`] }],
       resp:'a) 5rs(8r² + 5s²)', comp:'5rs × 8r² = 40r³s y 5rs × 5s² = 25rs³ ✓', error:'escoger 5rs(8r² + 5rs²): al dividir 25rs³ entre 5rs, la r se va completa.',
       ejemplo:'FCM = 5rs → 5rs(8r² + 5s²).' }) }),
   // 24. Mixto + fracción propia
@@ -1645,7 +1657,7 @@ const DEP_EXACTO = [
     explicacion: receta({ pide:'el resultado como número mixto.',
       pasos:[{ t:'Simplifica 10/14', l:[explSimplif(10, 14)] },
         { t:'Escribe el 3 con el mismo de abajo', l:['Para restar necesitas el mismo de abajo (7). Un entero es una fracción con 1 abajo: 3 = 3/1.', diagConvertir(C(3,1), 21, 7), '3 = 21/7 (3 × 7 = 21)'] },
-        { t:'Resta los de arriba', l:['5/7 − 21/7: el de abajo se queda igual', `Arriba: ${cuentaMenos(5, 21)} → ${cb('−16/7')}`] },
+        { t:'Resta los de arriba', l:['5/7 − 21/7: el de abajo se queda igual', `Arriba: ${cuentaMenos(5, 21)}`, `Queda: ${cb('−16/7')}`] },
         { t:'Pasa a número mixto (el signo se queda delante)', l:[explAMixto(C(16,7)), `Con el signo: ${cb('−2 2/7')}`] }],
       resp:'−2 2/7', comp:'−2 2/7 + 3 = 5/7 = 10/14 ✓', error:'dejarlo positivo: 5/7 es menos que 3, así que el resultado es negativo.',
       ejemplo:'10/14 = 5/7; 5/7 − 21/7 = −16/7 = −2 2/7.' }) }),
@@ -1654,8 +1666,8 @@ const DEP_EXACTO = [
     ayuda:'x = ___ (si sale un entero, escríbelo con denominador 1)',
     explicacion: receta({ pide:'el valor de x.',
       pasos:[{ t:'Productos cruzados', l:[diagCruzados('x + 3', 5, 3, 4), 'Lo de arriba de un lado por lo de abajo del otro: (x + 3) × 4 = 5 × 3', 'Es decir: 4(x + 3) = 15'] },
-        { t:'Reparte el 4', l:['4x + 12 = 15'] },
-        { t:'Despeja x', l:[diagAmbosLados('4x + 12', '15', '− 12', '4x', '3'), diagAmbosLados('4x', '3', '÷ 4', 'x', '3/4'), `x = ${cb('3/4')}`] }],
+        { t:'Reparte el 4', l:['El 4 multiplica a los DOS de adentro:', '4 × x = 4x', '4 × 3 = 12', 'Queda: 4x + 12 = 15'] },
+        { t:'Despeja x', l:['Primero se quita el 12 que está sumando:', diagAmbosLados('4x + 12', '15', '− 12', '4x', '3'), 'Lado izquierdo: + 12 − 12 = 0, se cancelan y queda 4x.', 'Lado derecho: 15 − 12 = 3.', 'Ahora se quita el 4 que multiplica a la x:', diagAmbosLados('4x', '3', '÷ 4', 'x', '3/4'), 'Lado izquierdo: 4x ÷ 4 = x.', 'Lado derecho: 3 ÷ 4 no sale exacto, así que se deja como fracción: 3/4.', `x = ${cb('3/4')}`] }],
       resp:'x = 3/4', comp:'(3/4 + 3)/5 = (15/4)/5 = 15/20 = 3/4 ✓', error:'multiplicar 4 × x + 3 sin paréntesis (4x + 3): el 4 multiplica a TODO el x + 3.',
       ejemplo:'4(x + 3) = 15 → 4x = 3 → x = 3/4.' }) }),
   // 30. Triángulos semejantes
@@ -1700,8 +1712,8 @@ const DEP_EXACTO2 = [
     [{ et:'Pérdida mensual promedio', r:-32585, din:true }, { et:'Pérdida mensual promedio por accionista', r:-1715, din:true }],
     receta({ pide:'cuánto se pierde cada mes, y cuánto le toca de esa pérdida a cada accionista.',
       pasos:[{ t:'Una pérdida es un número NEGATIVO', l:['Perdió $358,435 → −358,435'] },
-        { t:'Pérdida de cada mes: divide entre los 11 meses', l:['−358,435 ÷ 11: negativo entre positivo da negativo. Primero se divide sin el signo, por pedazos:', '11 × 30,000 = 330,000 → de 358,435 sobran 28,435', '11 × 2,000 = 22,000 → de 28,435 sobran 6,435', '11 × 500 = 5,500 → de 6,435 sobran 935', '11 × 85 = 935 → sobran 0', `30,000 + 2,000 + 500 + 85 = 32,585 → con el signo: ${cb('−$32,585')}`] },
-        { t:'Lo de cada accionista: divide entre los 19', l:['−32,585 ÷ 19: otra vez sin el signo, por pedazos:', '19 × 1,000 = 19,000 → de 32,585 sobran 13,585', '19 × 700 = 13,300 → de 13,585 sobran 285', '19 × 15 = 285 → sobran 0', `1,000 + 700 + 15 = 1,715 → con el signo: ${cb('−$1,715')}`] }],
+        { t:'Pérdida de cada mes: divide entre los 11 meses', l:['Negativo entre positivo da negativo, así que primero se divide SIN el signo y al final se le pone el menos.', 'Se reparte de a poco: ¿cuántas veces cabe el 11?', '11 × 30,000 = 330,000<br>358,435 − 330,000 = 28,435 (lo que falta repartir)', '11 × 2,000 = 22,000<br>28,435 − 22,000 = 6,435 (lo que falta)', '11 × 500 = 5,500<br>6,435 − 5,500 = 935 (lo que falta)', '11 × 85 = 935<br>935 − 935 = 0 (ya no falta nada)', 'Se suman los pedazos: 30,000 + 2,000 + 500 + 85 = 32,585', `Con el signo menos: ${cb('−$32,585')}`] },
+        { t:'Lo de cada accionista: divide entre los 19', l:['Otra vez se divide sin el signo, de a poco: ¿cuántas veces cabe el 19 en 32,585?', '19 × 1,000 = 19,000<br>32,585 − 19,000 = 13,585 (lo que falta repartir)', '19 × 700 = 13,300<br>13,585 − 13,300 = 285 (lo que falta)', '19 × 15 = 285<br>285 − 285 = 0 (ya no falta nada)', 'Se suman los pedazos: 1,000 + 700 + 15 = 1,715', `Con el signo menos: ${cb('−$1,715')}`] }],
       resp:'−$32,585 al mes, y −$1,715 por accionista', comp:'1,715 × 19 = 32,585 y 32,585 × 11 = 358,435 ✓', error:'dejarlo positivo: perder dinero es negativo.',
       ejemplo:'−358,435 ÷ 11 = −32,585; −32,585 ÷ 19 = −1,715.' }).filter(l => !/^TRUCO:/.test(l)),
     'TRUCO: divide primero entre los meses y DESPUÉS entre las personas, y no olvides el signo menos de la pérdida. Ejemplo con este mismo: −358,435 ÷ 11 = −32,585 → ÷ 19 = −1,715.'),
@@ -1722,10 +1734,10 @@ const DEP_EXACTO2 = [
   // 5. Valor absoluto y orden de operaciones
   C => ({ enunciado:'Efectúa las operaciones indicadas.<br><b>| 4<sup>2</sup> − 5<sup>2</sup> | − 12 ÷ 12</b>', tipo:'num', respuesta:8,
     explicacion: receta({ pide:'un solo número, siguiendo el orden de operaciones.',
-      pasos:[{ t:'Los exponentes de adentro de las barras', l:['4² = 4 × 4 = 16 y 5² = 5 × 5 = 25 → | 16 − 25 | − 12 ÷ 12'] },
-        { t:'La resta de adentro de las barras', l:[`${cuentaMenos(16, 25)} → | −9 |`] },
+      pasos:[{ t:'Los exponentes de adentro de las barras', l:['4² = 4 × 4 = 16', '5² = 5 × 5 = 25', 'Queda: | 16 − 25 | − 12 ÷ 12'] },
+        { t:'La resta de adentro de las barras', l:[cuentaMenos(16, 25), 'Queda: | −9 | − 12 ÷ 12'] },
         { t:'El valor absoluto quita el signo', l:[`| −9 | = ${cb(9)}`] },
-        { t:'La división antes que la resta', l:['12 ÷ 12 = 1 → 9 − 1'] },
+        { t:'La división antes que la resta', l:['12 ÷ 12 = 1', 'Queda: 9 − 1'] },
         { t:'Al final la resta', l:[`9 − 1 = ${cb(8)}`] }],
       resp:'8', error:'dejar el −9 negativo: las barras | | lo vuelven positivo.',
       ejemplo:'|16 − 25| − 1 = 9 − 1 = 8.' }) }),
@@ -1733,7 +1745,7 @@ const DEP_EXACTO2 = [
   C => _multiDep('Convierte a una expresión algebraica y simplifica, asumiendo que la desconocida es <i>y</i>: <b>trece</b> más que <b>seis</b> veces el número.',
     [{ et:'Expresión', ex:'13+6y', r:'13 + 6y' }],
     receta({ pide:'la expresión con y que dice la frase.',
-      pasos:[{ t:'"seis veces el número"', l:['= 6y'] },
+      pasos:[{ t:'"seis veces el número"', l:['"seis veces el número" = 6 × y = 6y'] },
         { t:'"trece MÁS que 6y"', l:[diagMasQue('trece', 13, 'seis veces y', '6y'), `A 6y se le suman 13 → ${cb('13 + 6y')} (o 6y + 13, es lo mismo)`] }],
       resp:'13 + 6y', error:'escribir 6(y + 13): no hay "la suma de…", así que no va paréntesis.',
       ejemplo:'trece más que seis veces el número → 13 + 6y.' }).filter(l => !/^TRUCO:/.test(l)),
@@ -1759,7 +1771,7 @@ const DEP_EXACTO2 = [
   // 9. Simplificar con la distributiva
   C => _multiDep('Simplifica:<br><b>3(−8k − 6) + 3</b>', [{ et:'Resultado', ex:'-24k-15', r:'−24k − 15' }],
     receta({ pide:'la expresión sin paréntesis y con los números juntos.',
-      pasos:[{ t:'Reparte el 3 a cada término', l:[diagDistribuir(3, '−8k', '−', '6', '−24k', '18'), '3(−8k) = −24k (positivo por negativo da negativo) y 3(−6) = −18 (igual) → −24k − 18 + 3'] },
+      pasos:[{ t:'Reparte el 3 a cada término', l:[diagDistribuir(3, '−8k', '−', '6', '−24k', '18'), '3 × (−8k) = −24k (positivo por negativo da negativo)', '3 × (−6) = −18 (igual: positivo por negativo da negativo)', 'Queda: −24k − 18 + 3'] },
         { t:'Junta los números solos', l:[`−18 + 3 = ${cb('−15')}`, `→ ${cb('−24k − 15')}`] }],
       resp:'−24k − 15', error:'multiplicar solo el primero (−24k − 6 + 3): el 3 multiplica a TODOS los de adentro.',
       ejemplo:'3(−8k − 6) + 3 = −24k − 18 + 3 = −24k − 15.' }).filter(l => !/^TRUCO:/.test(l)),
@@ -1767,8 +1779,8 @@ const DEP_EXACTO2 = [
   // 10. ax + b = c
   C => ({ enunciado:'Resuelve la ecuación: <b>5x + 2 = 12</b>', tipo:'opciones', opciones:['x = 2','x = 5',`x = ${fr(2,5)}`,'x = −2',NING], respuesta:'x = 2',
     explicacion: receta({ pide:'el valor de x.',
-      pasos:[{ t:'Quita el 2 que suma (resta 2 en los dos lados)', l:[diagAmbosLados('5x + 2', '12', '− 2', '5x', '12 − 2'), `5x = ${cb(10)}`] },
-        { t:'Divide entre 5 en los dos lados', l:[diagAmbosLados('5x', '10', '÷ 5', 'x', '10 ÷ 5'), `x = ${cb(2)}`] }],
+      pasos:[{ t:'Quita el 2 que suma (resta 2 en los dos lados)', l:[diagAmbosLados('5x + 2', '12', '− 2', '5x', '10'), 'Lado izquierdo: + 2 − 2 = 0, se cancelan y queda solo 5x.', 'Lado derecho: 12 − 2 = 10.', `Queda: 5x = ${cb(10)}`] },
+        { t:'Divide entre 5 en los dos lados', l:[diagAmbosLados('5x', '10', '÷ 5', 'x', '2'), 'Lado izquierdo: 5x ÷ 5 = x (el 5 se va).', 'Lado derecho: 10 ÷ 5 = 2.', `x = ${cb(2)}`] }],
       resp:'a) x = 2', comp:'5(2) + 2 = 12 ✓', error:'contestar x = 5 o 2/5: primero se quita el 2 y después se divide 10 ÷ 5.',
       ejemplo:'5x + 2 = 12 → 5x = 10 → x = 2.' }) }),
   // 11. Perímetro de un rectángulo
@@ -1783,7 +1795,7 @@ const DEP_EXACTO2 = [
     explicacion: receta({ pide:'cambiar cada x por (−3) y calcular.',
       pasos:[{ t:'Pon (−3) con paréntesis', l:['(−3)³ + 5(−3)² + 3(−3) + 1'] },
         { t:'Las potencias', l:['(−3)³ = (−3)(−3)(−3) = −27 (3 negativos → negativo)', '(−3)² = 9 (2 negativos → positivo)'] },
-        { t:'Las multiplicaciones', l:['5 × 9 = 45 y 3 × (−3) = −9', 'Queda: −27 + 45 − 9 + 1'] },
+        { t:'Las multiplicaciones', l:['5 × 9 = 45', '3 × (−3) = −9 (positivo por negativo da negativo)', 'Queda: −27 + 45 − 9 + 1'] },
         { t:'Suma de izquierda a derecha', l:[`−27 + 45 = 18 → 18 − 9 = 9 → 9 + 1 = ${cb(10)}`] }],
       resp:'10', error:'hacer (−3)² = −9: con paréntesis, (−3)(−3) da +9.',
       ejemplo:'−27 + 45 − 9 + 1 = 10.' }) }),
@@ -1831,7 +1843,7 @@ const DEP_EXACTO2 = [
   // 22. El 5to múltiplo
   C => ({ enunciado:'¿Cuál de los siguientes números es el 5to múltiplo de 56?', tipo:'opciones', opciones:['250','556','280','61',NING], respuesta:'280',
     explicacion: receta({ pide:'el quinto número de la tabla del 56.',
-      pasos:[{ t:'El 5to múltiplo es 56 × 5', l:[`56 × 5 → 50 × 5 = 250, y 6 × 5 = 30 → 250 + 30 = ${cb(280)}`] }],
+      pasos:[{ t:'El 5to múltiplo es 56 × 5', l:['Los múltiplos de 56 son su tabla: 56 × 1, 56 × 2, 56 × 3… El quinto es 56 × 5.', porPedazos(56, 5), `El 5to múltiplo es ${cb(280)}`] }],
       resp:'c) 280', comp:'56, 112, 168, 224, 280 → el quinto es 280 ✓', error:'sumar 56 + 5 = 61: múltiplo es MULTIPLICAR.',
       ejemplo:'56 × 5 = 280.' }) }),
   // 23. FCM de dos términos
@@ -1840,7 +1852,7 @@ const DEP_EXACTO2 = [
     explicacion: receta({ pide:'sacar el factor común mayor (FCM) y dejar lo demás en el paréntesis.',
       pasos:[{ t:'FCM de los números', l:['Se escriben los números que entran exacto en cada uno:', '30: 1, 2, 3, 5, 6, 10, 15, 30', '20: 1, 2, 4, 5, 10, 20', 'Los que están en los dos: 1, 2, 5 y 10 → el más grande es ' + cb(10)] },
         { t:'FCM de cada letra: la MENOR potencia', l:['Se saca lo que está en TODOS los términos, con el exponente más chico:', 'a: en el primero hay a² (a · a) y en el segundo a¹ (una sola a) → la menor es ' + cb('a'), 'b: en el primero hay b³ y en el segundo b⁴ → la menor es ' + cb('b³'), 'FCM = 10ab³'] },
-        { t:'Divide cada término entre 10ab³: número con número, letra con letra', l:['30a²b³ ÷ 10ab³ → 30 ÷ 10 = 3; a² ÷ a = a (se tacha una a); b³ ÷ b³ = 1 (se va) → ' + cb('3a'), '20ab⁴ ÷ 10ab³ → 20 ÷ 10 = 2; a ÷ a = 1 (se va); b⁴ ÷ b³ = b (se tachan tres b) → ' + cb('2b'), `Lo de afuera por lo que quedó: ${cb('10ab³(3a − 2b)')}`] }],
+        { t:'Divide cada término entre 10ab³: número con número, letra con letra', l:['30a²b³ ÷ 10ab³:<br>· los números: 30 ÷ 10 = 3<br>· la a: a² ÷ a = a (se tacha una a)<br>· la b: b³ ÷ b³ = 1 (se va)<br>Queda ' + cb('3a'), '20ab⁴ ÷ 10ab³:<br>· los números: 20 ÷ 10 = 2<br>· la a: a ÷ a = 1 (se va)<br>· la b: b⁴ ÷ b³ = b (se tachan tres b)<br>Queda ' + cb('2b'), `Lo de afuera por lo que quedó: ${cb('10ab³(3a − 2b)')}`] }],
       resp:'a) 10ab³(3a − 2b)', comp:'10ab³ × 3a = 30a²b³ y 10ab³ × 2b = 20ab⁴ ✓', error:'escoger 10ab(3ab² − 2b³): ahí sí se puede sacar más b, no está COMPLETA.',
       ejemplo:'FCM = 10ab³ → 10ab³(3a − 2b).' }) }),
   // 24. Tres fracciones no semejantes
@@ -1886,8 +1898,8 @@ const DEP_EXACTO2 = [
     explicacion: receta({ pide:'el valor de x.',
       pasos:[{ t:'Busca el número que hace desaparecer los de abajo (el MCM de 5 y 7)', l:['Abajo hay un 5 y un 7. Se busca un número que esté en la tabla del 5 y también en la del 7:', 'Tabla del 5: 5, 10, 15, 20, 25, 30, 35', 'Tabla del 7: 7, 14, 21, 28, 35', `El primero que está en las dos es ${cb(35)}`] },
         { t:'Multiplica los DOS lados por 35, cada término por separado', l:[diagAmbosLados('2x − x/5 − 3/7', '1', '× 35', '70x − 7x − 15', '35'), 'Cada término por separado:', `2x → 35 × 2x = ${cb('70x')} (35 × 2 = 70)`, `x/5 → 35 × x/5: el 35 se divide entre el 5 de abajo (35 ÷ 5 = 7) → ${cb('7x')}`, `3/7 → 35 × 3/7: el 35 se divide entre el 7 de abajo (35 ÷ 7 = 5) y queda 5 × 3 = 15 → ${cb('15')}`, `1 → 35 × 1 = ${cb('35')}`, 'Los signos se quedan como estaban: 70x − 7x − 15 = 35'] },
-        { t:'Junta las x', l:['70x − 7x: se restan los números que acompañan a la x → 70 − 7 = 63 → 63x', '63x − 15 = 35'] },
-        { t:'Despeja x', l:[diagAmbosLados('63x − 15', '35', '+ 15', '63x', '50'), diagAmbosLados('63x', '50', '÷ 63', 'x', '50/63'), `x = ${cb('50/63')}`] }],
+        { t:'Junta las x', l:['70x y 7x llevan la misma letra, así que se pueden juntar: se restan los números de adelante.', '70 − 7 = 63', 'Entonces 70x − 7x = 63x', 'Queda: 63x − 15 = 35'] },
+        { t:'Despeja x', l:['Primero se quita el 15 que está restando (se SUMA 15):', diagAmbosLados('63x − 15', '35', '+ 15', '63x', '50'), 'Lado izquierdo: − 15 + 15 = 0, se cancelan y queda 63x.', 'Lado derecho: 35 + 15 = 50.', 'Ahora se quita el 63 que multiplica a la x:', diagAmbosLados('63x', '50', '÷ 63', 'x', '50/63'), 'Lado izquierdo: 63x ÷ 63 = x.', 'Lado derecho: 50 ÷ 63 no sale exacto, así que se deja como fracción: 50/63.', `x = ${cb('50/63')}`] }],
       resp:'b) 50/63', error:'multiplicar solo las fracciones por 35: TODOS los términos (también el 2x y el 1) se multiplican.',
       ejemplo:'70x − 7x − 15 = 35 → 63x = 50 → x = 50/63.' }) }),
   // 30. Triángulos semejantes
@@ -1905,7 +1917,10 @@ function _modExamen(id, nombre, banco, cual){
     gen(){
       const C = (n,d=1) => ({n,d}), i = this._sig % banco.length; this._sig++;
       const ej = banco[i](C);
-      ej.enunciado = `<small>Pregunta ${i+1} de ${banco.length} · ${cual} del Examen Departamental</small><br>` + ej.enunciado;
+      // una cuenta por renglón: "a → b → c" y "…, y …" se separan para que no quede todo pegado
+      ej.explicacion = ej.explicacion.map(l => typeof l !== 'string' || /^§|^TRUCO:/.test(l) || l.includes('<svg') ? l
+        : l.replace(/(= −?[\d.,/]+) → (?=−?[\d(][\d.,/)]* [+−×÷] )/g, '$1<br>').replace(/, y (?=[\d−(])/g, '<br>y '));
+      ej.enunciado =`<small>Pregunta ${i+1} de ${banco.length} · ${cual} del Examen Departamental</small><br>` + ej.enunciado;
       ej.__n = i;
       return ej;
     } };
@@ -6538,7 +6553,11 @@ function restaurarSesion(){
   sesionTotal = s.sesionTotal || sesionCola.length || SESION_TEMA;
   ejActual = s.ejActual; respondido = s.respondido; vioExpl = s.vioExpl;
   ordenSel = s.ordenSel || []; ultimoFeedback = s.ultimoFeedback || null;
-  if(modActual.nuevaRonda && ejActual && ejActual.__n != null) modActual._sig = ejActual.__n + 1;   // las 30 del examen: sigue desde donde ibas
+  if(modActual.nuevaRonda && ejActual && ejActual.__n != null){   // las 30 del examen: sigue desde donde ibas
+    // la explicación guardada puede ser de una versión vieja de la app: se vuelve a sacar la de ahora (la pregunta es la misma)
+    modActual._sig = ejActual.__n; const fresco = modActual.gen(nivel);
+    ejActual.explicacion = fresco.explicacion; ejActual.enunciado = fresco.enunciado;
+  }
   ultimoProceso = s.ultimoProceso || '';
   ultimaEntrada = s.ultimaEntrada === undefined ? null : s.ultimaEntrada;
   pintarEjercicio();
