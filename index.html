@@ -6451,7 +6451,7 @@ let sesionPendientes = [];// preguntas falladas en espera de volver a salir: [{m
 let sesionTotal = 0;      // tamaño de la ronda actual; al llegar acá se para de verdad (pantallaRondaCompleta)
 // puestos de la ronda (el selector 1, 2, 3…): sesionEjs[i] = el ejercicio del puesto i, sesionAbiertos = puestos ya sacados,
 // sesionVistos = puestos contestados o con la explicación vista (si se repiten, ya no cuentan otra vez)
-let sesionEjs = [], sesionIdx = 0, sesionAbiertos = {}, sesionVistos = {};
+let sesionEjs = [], sesionIdx = 0, sesionAbiertos = {}, sesionVistos = {}, sesionOrden = [];   // sesionOrden: la cola de la mezcla como se sorteó (el puesto i = sesionOrden[i])
 // fallos DE ESTA RONDA (se reinicia con cada ronda nueva) — separado de `errores`, que es la
 // lista permanente de "Repasar mis errores"; esto es solo para el botón "Repetir las que fallé"
 // que aparece en pantallaRondaCompleta, y se descarta al salir de esa pantalla
@@ -6462,14 +6462,16 @@ let colaRepasoRonda = [];  // copia de trabajo de sesionFallos que se va vaciand
 let temasEjemploVisto = {};
 const SESION_TEMA = 20;   // tamaño de ronda cuando el tema está fijo (no hay de dónde sacar "2 de cada")
 const VECES_POR_TEMA = 2; // mezcla: mínimo garantizado de repeticiones de cada tema activo en la ronda
-const tamanoMezcla = ms => ms.length * VECES_POR_TEMA;   // para mostrarlo en los botones sin arrancar la ronda
+// veces que entra el tema m en una mezcla de ms: normal = 2; si lo elegido son SOLO prácticas del examen (ej. el grupo "Examen 1"), entra completa
+const vecesDe = (ms, m) => ms.every(x => x.nuevaRonda) ? m.banco : VECES_POR_TEMA;
+const tamanoMezcla = ms => ms.reduce((s, m) => s + vecesDe(ms, m), 0);   // para mostrarlo en los botones sin arrancar la ronda
 function construirCola(cap){
   const ms = typeof cap === 'number' ? MODULOS.filter(m=>m.clase===materia && m.secciones[0][0]===String(cap)) : modulosActivos();
   // agrupada: se mezcla el ORDEN de los temas, pero las repeticiones de cada uno quedan juntas.
   // no agrupada (por defecto): se mezclan las repeticiones sueltas, así que pueden salir intercaladas.
-  if(agruparTema) return shuffle(ms.map(m=>m.id)).flatMap(id => Array(VECES_POR_TEMA).fill(id));
+  if(agruparTema) return shuffle(ms).flatMap(m => Array(vecesDe(ms, m)).fill(m.id));
   const cola = [];
-  ms.forEach(m => cola.push(m.id, m.id));
+  ms.forEach(m => { for(let k = 0; k < vecesDe(ms, m); k++) cola.push(m.id); });
   return shuffle(cola);
 }
 function toggleAgrupar(){
@@ -6545,7 +6547,7 @@ const leerProceso = () => [...document.querySelectorAll('#listaPasos .pasoPartes
 /* ---------- retomar donde quedó (mate_sesion_v1) ---------- */
 function guardarSesion(){
   guardar('mate_sesion_v1', { modId: modActual.id, esTemaFijo, capFijo, sesionHechos, sesionCorrectos,
-    sesionCola, sesionPendientes, sesionFallos, temasEjemploVisto, sesionTotal, sesionIdx, sesionAbiertos, sesionVistos, ejActual, respondido, vioExpl, ordenSel, ultimoFeedback, ultimoProceso, ultimaEntrada });
+    sesionCola, sesionPendientes, sesionFallos, temasEjemploVisto, sesionTotal, sesionIdx, sesionAbiertos, sesionVistos, sesionOrden, ejActual, respondido, vioExpl, ordenSel, ultimoFeedback, ultimoProceso, ultimaEntrada });
   // los ejercicios ya sacados van aparte: si no caben, solo se pierde poder volver a los de antes. Las prácticas del examen se vuelven a armar solas (siempre salen igual)
   guardar('mate_sesion_ejs_v1', modActual.nuevaRonda ? [] : sesionEjs);
 }
@@ -6562,7 +6564,7 @@ function restaurarSesion(){
   ejActual = s.ejActual; respondido = s.respondido; vioExpl = s.vioExpl;
   sesionIdx = s.sesionIdx != null ? s.sesionIdx : sesionHechos - 1;
   sesionAbiertos = s.sesionAbiertos || Object.fromEntries(Array.from({length:sesionHechos}, (_, i) => [i, true]));
-  sesionVistos = s.sesionVistos || {};
+  sesionVistos = s.sesionVistos || {}; sesionOrden = s.sesionOrden || [];
   sesionEjs = modActual.nuevaRonda ? [] : (leer('mate_sesion_ejs_v1', []) || []); sesionEjs[sesionIdx] = ejActual;
   ordenSel = s.ordenSel || []; ultimoFeedback = s.ultimoFeedback || null;
   if(modActual.nuevaRonda && ejActual && ejActual.__n != null){   // las 30 del examen: sigue desde donde ibas
@@ -7665,12 +7667,20 @@ function _ejDelPuesto(i, arg){
     const repite = nuevo && sesionPendientes.find(p => p.esperar <= 0);
     if(repite){
       sesionPendientes.splice(sesionPendientes.indexOf(repite), 1);
+      if(sesionOrden.length) sesionOrden.splice(i, 0, '*');   // este puesto es una repetición: lo planeado se corre uno
       mod = MOD_POR_ID[repite.modId] || modActual; ej = repite.ej;
     } else if(mod0){
       mod = mod0; ej = mod.gen(nivel);
     } else {
-      if(!sesionCola.length) sesionCola = construirCola(capFijo);   // red de seguridad, no debería pasar
-      mod = MOD_POR_ID[sesionCola.shift()]; ej = mod.gen(nivel);
+      let id = sesionOrden[i];
+      if(id && id !== '*'){
+        const k = sesionCola.indexOf(id); if(k >= 0) sesionCola.splice(k, 1);
+      } else {
+        if(!sesionCola.length) sesionCola = construirCola(capFijo);   // red de seguridad, no debería pasar
+        id = sesionCola.shift();
+      }
+      mod = MOD_POR_ID[id]; if(mod.nuevaRonda) mod._sig = sesionOrden.slice(0, i).filter(x => x === id).length % mod.banco;   // práctica del examen: el puesto es su pregunta
+      ej = mod.gen(nivel);
     }
   }
   ej.__mod = mod.id;
@@ -7693,7 +7703,7 @@ function nuevoEjercicio(arg, continuar){
     sesionEjs = []; sesionAbiertos = {}; sesionVistos = {}; sesionIdx = -1;
     esTemaFijo = typeof arg !== 'number' && !!arg;
     capFijo = typeof arg === 'number' ? arg : null;
-    sesionCola = esTemaFijo ? [] : construirCola(capFijo);
+    sesionCola = esTemaFijo ? [] : construirCola(capFijo); sesionOrden = sesionCola.slice();
     sesionTotal = esTemaFijo ? (MOD_POR_ID[arg].banco || SESION_TEMA) : sesionCola.length;   // banco = temas de preguntas fijas (Repaso de ayudante): una ronda las trae todas
     if(esTemaFijo && MOD_POR_ID[arg].nuevaRonda) MOD_POR_ID[arg].nuevaRonda();               // las 30 del examen: cada ronda empieza en la pregunta 1
   }
