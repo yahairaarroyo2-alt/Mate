@@ -6484,6 +6484,7 @@ function _programarRepeticion(){
 }
 let ultimoFeedback = null;// resultado de verificar() del último responder(), para poder retomarlo
 let ultimoProceso = '';   // lo que el usuario escribió en "Tu proceso" antes de responder (un paso por línea)
+let _reintento = false;    // true = el ejercicio se reinició después de contestarlo o de ver la explicación (ya no cuenta otra vez)
 let ultimaEntrada = null; // lo que respondió (ent de responder()), para que la IA pueda revisarlo después
 // "Tu proceso": una caja por paso, opcional, en todos los ejercicios. Va FUERA de #zonaEntrada
 // para que la calculadora no escriba ahí y no se ponga opaca al contestar.
@@ -7667,7 +7668,7 @@ function nuevoEjercicio(arg, continuar){
     ejActual = modActual.gen(nivel);
   }
   ejActual.__mod = modActual.id;
-  respondido = false; vioExpl = false; ordenSel = []; ultimoFeedback = null; ultimoProceso = ''; calcHist = [];
+  respondido = false; vioExpl = false; _reintento = false; ordenSel = []; ultimoFeedback = null; ultimoProceso = ''; calcHist = [];
   if(!temasEjemploVisto[modActual.id] && !modActual.banco){   // temas de preguntas fijas (Repaso de ayudante, las 30 del examen): sin "ejemplo resuelto", sería gastar una pregunta
     temasEjemploVisto[modActual.id] = true;
     guardarSesion();
@@ -7778,7 +7779,7 @@ function selectorPregunta(){
 function irAPregunta(i){
   modActual._sig = i;   // gen() saca la pregunta i y deja la siguiente lista para "Continuar"
   ejActual = modActual.gen(nivel); ejActual.__mod = modActual.id;
-  respondido = false; vioExpl = false; ordenSel = []; ultimoFeedback = null; ultimoProceso = ''; calcHist = [];
+  respondido = false; vioExpl = false; _reintento = false; ordenSel = []; ultimoFeedback = null; ultimoProceso = ''; calcHist = [];
   pintarEjercicio(); guardarSesion(); window.scrollTo(0, 0);
 }
 function pintarEjercicio(){
@@ -7798,6 +7799,7 @@ function pintarEjercicio(){
         <button class="btn sec chico" onclick="saltarEjercicio()">Saltar</button>
         <button class="btn sec chico" onclick="verExplicacion()">Ver explicación</button>
       </div>
+      <button class="btn sec chico" style="margin-top:8px" onclick="reiniciarEjercicio()">↺ Reiniciar este ejercicio<small>borra tu respuesta y tu proceso</small></button>
     </div>
     <div class="card" id="cardProgreso" style="padding:14px 20px">
       <div class="racha">
@@ -7856,7 +7858,7 @@ function _pintarSiguienteRepasoRonda(){
   const item = colaRepasoRonda[0];
   modActual = MOD_POR_ID[item.modId] || { id:item.modId, nombre:'Repaso' };
   ejActual = item.ej;
-  respondido = false; vioExpl = false; ordenSel = []; ultimoProceso = ''; calcHist = []; _aiEjN++;
+  respondido = false; vioExpl = false; _reintento = false; ordenSel = []; ultimoProceso = ''; calcHist = []; _aiEjN++;
   _barra(null);
   main.innerHTML = `
     <button class="back" onclick="ir('inicio')">← Inicio</button>
@@ -7955,6 +7957,15 @@ const _feedbackHaptico = ok => { if(navigator.vibrate) navigator.vibrate(ok ? 30
 
 // qué hace "Siguiente ejercicio" según el modo — factorizado para poder llamarlo también
 // desde el atajo de teclado Enter, no solo desde el onclick del botón
+// el MISMO ejercicio otra vez, desde cero: sin respuesta, sin explicación y con "Tu proceso" vacío.
+// Si ya lo habías contestado o viste la explicación, el intento nuevo no vuelve a contar en las estadísticas.
+function reiniciarEjercicio(){
+  if(examen || modoErrores || modoRepasoRonda) return;
+  const yaContado = respondido || vioExpl;
+  respondido = false; ordenSel = []; ultimoFeedback = null; ultimoProceso = ''; ultimaEntrada = null; calcHist = [];
+  vioExpl = yaContado; _reintento = yaContado;
+  pintarEjercicio(); guardarSesion(); window.scrollTo(0, 0);
+}
 function _siguienteEjercicio(){
   if(modoErrores) return _pintarSiguienteError();
   if(modoRepasoRonda) return _pintarSiguienteRepasoRonda();
@@ -7972,11 +7983,11 @@ function mostrarFb(res, soloAviso){
       ${res.msg ? `<small>${res.msg}</small>` : ''}
       ${!res.ok ? `<small>La respuesta es <b>${fmtRespuesta(ejActual)}</b>.</small>`
         : (ejActual.campos && ejActual.campos.some(c => c.fs)) ? `<small>Compara tu sustitución: <b>${fmtRespuesta(ejActual)}</b></small>` : ''}
-      ${vioExpl ? `<small>Este no cuenta para las estadísticas (viste la explicación antes).</small>` : ''}
+      ${vioExpl ? `<small>Este no cuenta para las estadísticas (${_reintento ? 'es un ejercicio que repetiste' : 'viste la explicación antes'}).</small>` : ''}
     </div>
     ${explHTML()}
     <button class="btn amar" onclick="_siguienteEjercicio()">Siguiente ejercicio</button>
-    ${(!modoErrores && !modoRepasoRonda) ? `<button class="btn sec chico" style="margin-top:8px" onclick="otroDelMismoTema()">Otro de este tema<small>no gasta tu ronda</small></button>` : ''}`;
+    ${(!modoErrores && !modoRepasoRonda) ? `<button class="btn sec chico" style="margin-top:8px" onclick="reiniciarEjercicio()">↺ Reiniciar este ejercicio<small>hazlo otra vez desde cero (con tu proceso vacío)</small></button><button class="btn sec chico" style="margin-top:8px" onclick="otroDelMismoTema()">Otro de este tema<small>no gasta tu ronda</small></button>` : ''}`;
   $('zonaEntrada').style.opacity = '.5';
   $('zonaEntrada').style.pointerEvents = 'none';
   $('accionesPre').style.display = 'none';
@@ -8160,7 +8171,7 @@ function saltarEjercicio(){
 function otroDelMismoTema(){
   ejActual = modActual.gen(nivel);
   ejActual.__mod = modActual.id;
-  respondido = false; vioExpl = false; ordenSel = []; ultimoFeedback = null; ultimoProceso = ''; calcHist = [];
+  respondido = false; vioExpl = false; _reintento = false; ordenSel = []; ultimoFeedback = null; ultimoProceso = ''; calcHist = [];
   pintarEjercicio();
   guardarSesion();
 }
@@ -8200,7 +8211,7 @@ function _pintarSiguienteError(){
   _errorActual = item;
   modActual = MOD_POR_ID[item.modId] || { id:item.modId, nombre:'Repaso' };
   ejActual = item.ej;
-  respondido = false; vioExpl = false; ordenSel = []; ultimoProceso = ''; calcHist = []; _aiEjN++;
+  respondido = false; vioExpl = false; _reintento = false; ordenSel = []; ultimoProceso = ''; calcHist = []; _aiEjN++;
   main.innerHTML = `
     <button class="back" onclick="ir('inicio')">← Inicio</button>
     <div class="card">
