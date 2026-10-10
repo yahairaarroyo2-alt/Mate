@@ -130,8 +130,10 @@
   .ayLeer th,.ayLeer td{border:1px solid rgba(128,128,128,.35);padding:7px 9px;text-align:left}
   .ayLeer th{background:rgba(128,128,128,.22)}
   .ayLeer .formula{text-align:center;font-weight:700;padding:12px;border-radius:12px;margin:12px 0;font-size:1.12rem;background:rgba(128,128,128,.18)}
-  .irPreg{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 10px;font-weight:700;font-size:.9rem}
-  .irPreg select{flex:none;width:auto;min-width:110px;margin:0;padding:8px 10px}
+  .cabEj{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+  .cabEj .pill{flex:0 1 auto;min-width:0}
+  .irPreg{flex:none;display:flex;align-items:center;gap:6px;margin:0 0 9px;font-weight:700;font-size:.8rem}
+  .irPreg select{flex:none;width:auto;min-width:64px;margin:0;padding:6px 8px}
   .ayFoto{display:block;width:100%;max-width:300px;margin:12px auto 0;border-radius:12px;background:#fff;border:1px solid rgba(128,128,128,.3)}
   .nota{background:rgba(255,255,255,.22);border:1px solid rgba(255,255,255,.4);padding:11px 14px;
     border-radius:14px;margin:10px 0;font-size:.9rem;color:var(--muted)}
@@ -6447,6 +6449,9 @@ let sesionCorrectos = 0;  // cuántos de esos aciertos, para el resumen al termi
 let sesionCola = [];      // mezcla: ids de módulo ya sorteados para esta ronda (2 de cada uno), se van sacando
 let sesionPendientes = [];// preguntas falladas en espera de volver a salir: [{modId, ej, esperar}]
 let sesionTotal = 0;      // tamaño de la ronda actual; al llegar acá se para de verdad (pantallaRondaCompleta)
+// puestos de la ronda (el selector 1, 2, 3…): sesionEjs[i] = el ejercicio del puesto i, sesionAbiertos = puestos ya sacados,
+// sesionVistos = puestos contestados o con la explicación vista (si se repiten, ya no cuentan otra vez)
+let sesionEjs = [], sesionIdx = 0, sesionAbiertos = {}, sesionVistos = {};
 // fallos DE ESTA RONDA (se reinicia con cada ronda nueva) — separado de `errores`, que es la
 // lista permanente de "Repasar mis errores"; esto es solo para el botón "Repetir las que fallé"
 // que aparece en pantallaRondaCompleta, y se descarta al salir de esa pantalla
@@ -6540,9 +6545,11 @@ const leerProceso = () => [...document.querySelectorAll('#listaPasos .pasoPartes
 /* ---------- retomar donde quedó (mate_sesion_v1) ---------- */
 function guardarSesion(){
   guardar('mate_sesion_v1', { modId: modActual.id, esTemaFijo, capFijo, sesionHechos, sesionCorrectos,
-    sesionCola, sesionPendientes, sesionFallos, temasEjemploVisto, sesionTotal, ejActual, respondido, vioExpl, ordenSel, ultimoFeedback, ultimoProceso, ultimaEntrada });
+    sesionCola, sesionPendientes, sesionFallos, temasEjemploVisto, sesionTotal, sesionIdx, sesionAbiertos, sesionVistos, ejActual, respondido, vioExpl, ordenSel, ultimoFeedback, ultimoProceso, ultimaEntrada });
+  // los ejercicios ya sacados van aparte: si no caben, solo se pierde poder volver a los de antes. Las prácticas del examen se vuelven a armar solas (siempre salen igual)
+  guardar('mate_sesion_ejs_v1', modActual.nuevaRonda ? [] : sesionEjs);
 }
-const borrarSesion = () => { try{ localStorage.removeItem('mate_sesion_v1'); }catch(e){} };
+const borrarSesion = () => { try{ localStorage.removeItem('mate_sesion_v1'); localStorage.removeItem('mate_sesion_ejs_v1'); }catch(e){} };
 function restaurarSesion(){
   const s = leer('mate_sesion_v1', null);
   if(!s || !MOD_POR_ID[s.modId] || !s.ejActual) return false;
@@ -6553,6 +6560,10 @@ function restaurarSesion(){
   temasEjemploVisto = s.temasEjemploVisto || {};
   sesionTotal = s.sesionTotal || sesionCola.length || SESION_TEMA;
   ejActual = s.ejActual; respondido = s.respondido; vioExpl = s.vioExpl;
+  sesionIdx = s.sesionIdx != null ? s.sesionIdx : sesionHechos - 1;
+  sesionAbiertos = s.sesionAbiertos || Object.fromEntries(Array.from({length:sesionHechos}, (_, i) => [i, true]));
+  sesionVistos = s.sesionVistos || {};
+  sesionEjs = modActual.nuevaRonda ? [] : (leer('mate_sesion_ejs_v1', []) || []); sesionEjs[sesionIdx] = ejActual;
   ordenSel = s.ordenSel || []; ultimoFeedback = s.ultimoFeedback || null;
   if(modActual.nuevaRonda && ejActual && ejActual.__n != null){   // las 30 del examen: sigue desde donde ibas
     // la explicación guardada puede ser de una versión vieja de la app: se vuelve a sacar la de ahora (la pregunta es la misma)
@@ -7641,34 +7652,52 @@ function _pintarEjemploTema(m){
     <button class="btn amar" onclick="_seguirTrasEjemplo()">Continuar</button>`;
 }
 function _seguirTrasEjemplo(){ pintarEjercicio(); guardarSesion(); }
+// saca el ejercicio del puesto i de la ronda (lo genera la primera vez; después es el mismo). arg = id del tema si la ronda es de un tema fijo
+function _ejDelPuesto(i, arg){
+  if(sesionEjs[i]) return sesionEjs[i];
+  const mod0 = esTemaFijo ? MOD_POR_ID[arg] : null;
+  let mod, ej;
+  if(mod0 && mod0.nuevaRonda){          // las 30 del examen: el puesto i es siempre la pregunta i
+    mod = mod0; mod._sig = i % mod.banco; ej = mod.gen(nivel);
+  } else {
+    const nuevo = !sesionAbiertos[i];
+    if(nuevo) sesionPendientes.forEach(p => p.esperar--);
+    const repite = nuevo && sesionPendientes.find(p => p.esperar <= 0);
+    if(repite){
+      sesionPendientes.splice(sesionPendientes.indexOf(repite), 1);
+      mod = MOD_POR_ID[repite.modId] || modActual; ej = repite.ej;
+    } else if(mod0){
+      mod = mod0; ej = mod.gen(nivel);
+    } else {
+      if(!sesionCola.length) sesionCola = construirCola(capFijo);   // red de seguridad, no debería pasar
+      mod = MOD_POR_ID[sesionCola.shift()]; ej = mod.gen(nivel);
+    }
+  }
+  ej.__mod = mod.id;
+  sesionAbiertos[i] = true; sesionHechos = Object.keys(sesionAbiertos).length;
+  return sesionEjs[i] = ej;
+}
+// pone en pantalla (sin pintar) el puesto i, desde cero
+function _mostrarPuesto(i, arg){
+  ejActual = _ejDelPuesto(i, arg);
+  modActual = MOD_POR_ID[ejActual.__mod] || modActual;
+  sesionIdx = i;
+  vioExpl = !!sesionVistos[i];   // ya contestado o con la explicación vista: si lo repite, no cuenta otra vez
+  respondido = false; _reintento = vioExpl; ordenSel = []; ultimoFeedback = null; ultimoProceso = ''; ultimaEntrada = null; calcHist = [];
+}
 function nuevoEjercicio(arg, continuar){
   // límite real: al llegar al final de la ronda, no se sigue solo — hay que elegir "seguir" o "terminar"
-  if(continuar && sesionHechos >= sesionTotal) return pantallaRondaCompleta();
+  if(continuar && sesionIdx + 1 >= sesionTotal) return pantallaRondaCompleta();
   if(!continuar){                       // ronda nueva: arma la cola y fija el tamaño
     sesionHechos = 0; sesionCorrectos = 0; sesionPendientes = []; sesionFallos = []; temasEjemploVisto = {};
+    sesionEjs = []; sesionAbiertos = {}; sesionVistos = {}; sesionIdx = -1;
     esTemaFijo = typeof arg !== 'number' && !!arg;
     capFijo = typeof arg === 'number' ? arg : null;
     sesionCola = esTemaFijo ? [] : construirCola(capFijo);
     sesionTotal = esTemaFijo ? (MOD_POR_ID[arg].banco || SESION_TEMA) : sesionCola.length;   // banco = temas de preguntas fijas (Repaso de ayudante): una ronda las trae todas
     if(esTemaFijo && MOD_POR_ID[arg].nuevaRonda) MOD_POR_ID[arg].nuevaRonda();               // las 30 del examen: cada ronda empieza en la pregunta 1
   }
-  sesionHechos++;
-  sesionPendientes.forEach(p => p.esperar--);
-  const repite = sesionPendientes.find(p => p.esperar <= 0);
-  if(repite){
-    sesionPendientes.splice(sesionPendientes.indexOf(repite), 1);
-    modActual = MOD_POR_ID[repite.modId] || modActual;
-    ejActual = repite.ej;
-  } else if(esTemaFijo){
-    modActual = MOD_POR_ID[arg];
-    ejActual = modActual.gen(nivel);
-  } else {
-    if(!sesionCola.length) sesionCola = construirCola(capFijo);   // red de seguridad, no debería pasar
-    modActual = MOD_POR_ID[sesionCola.shift()];
-    ejActual = modActual.gen(nivel);
-  }
-  ejActual.__mod = modActual.id;
-  respondido = false; vioExpl = false; _reintento = false; ordenSel = []; ultimoFeedback = null; ultimoProceso = ''; calcHist = [];
+  _mostrarPuesto(sesionIdx + 1, arg);
   if(!temasEjemploVisto[modActual.id] && !modActual.banco){   // temas de preguntas fijas (Repaso de ayudante, las 30 del examen): sin "ejemplo resuelto", sería gastar una pregunta
     temasEjemploVisto[modActual.id] = true;
     guardarSesion();
@@ -7770,16 +7799,15 @@ function entradaHTML(ej){
   return '';
 }
 
-// temas de preguntas EN ORDEN (las prácticas del Examen Departamental): se puede saltar a cualquiera sin hacer las anteriores
+// "Ir al ejercicio": cualquier puesto de la ronda (1, 2, 3…) sin hacer los de antes — mezcla, un tema o las prácticas del examen
 function selectorPregunta(){
-  if(!modActual.nuevaRonda || !esTemaFijo || modoErrores || modoRepasoRonda || examen || ejActual.__n == null) return '';
-  const n = modActual.banco;
-  return `<label class="irPreg"><span>Ir a la pregunta</span><select class="campo" aria-label="Ir a la pregunta" onchange="irAPregunta(+this.value)">${Array.from({length:n}, (_, i) => `<option value="${i}"${i === ejActual.__n ? ' selected' : ''}>${i+1} de ${n}</option>`).join('')}</select></label>`;
+  if(modoErrores || modoRepasoRonda || examen || sesionTotal < 2) return '';
+  return `<label class="irPreg">Pág.<select class="campo" aria-label="Ir al ejercicio número" onchange="irAEj(+this.value)">${Array.from({length:sesionTotal}, (_, i) => `<option value="${i}"${i === sesionIdx ? ' selected' : ''}>${i+1}</option>`).join('')}</select></label>`;
 }
-function irAPregunta(i){
-  modActual._sig = i;   // gen() saca la pregunta i y deja la siguiente lista para "Continuar"
-  ejActual = modActual.gen(nivel); ejActual.__mod = modActual.id;
-  respondido = false; vioExpl = false; _reintento = false; ordenSel = []; ultimoFeedback = null; ultimoProceso = ''; calcHist = [];
+function irAEj(i){
+  if(i === sesionIdx || !(i >= 0 && i < sesionTotal)) return;
+  _mostrarPuesto(i, esTemaFijo ? modActual.id : undefined);
+  temasEjemploVisto[modActual.id] = true;   // saltó: no le toca el ejemplo de ese tema
   pintarEjercicio(); guardarSesion(); window.scrollTo(0, 0);
 }
 function pintarEjercicio(){
@@ -7788,8 +7816,7 @@ function pintarEjercicio(){
   main.innerHTML = `
     <button class="back" onclick="ir('inicio')">← Inicio</button>
     <div class="card">
-      <span class="pill">${esTemaFijo ? '' : capFijo ? `${nombreCapitulo(capFijo)} · ` : (clase && clase.mods && clase.mods.length) ? `${clase.etiqueta.length>20?'Mi mezcla':clase.etiqueta} · ` : 'Mezcla · '}${modActual.nombre}</span>
-      ${selectorPregunta()}
+      <div class="cabEj"><span class="pill">${esTemaFijo ? '' : capFijo ? `${nombreCapitulo(capFijo)} · ` : (clase && clase.mods && clase.mods.length) ? `${clase.etiqueta.length>20?'Mi mezcla':clase.etiqueta} · ` : 'Mezcla · '}${modActual.nombre}</span>${selectorPregunta()}</div>
       <div class="enunciado">${ejActual.enunciado}</div>
       <div id="zonaProceso">${modActual.clase === 'ayud' ? '' : procesoHTML()}</div>
       <div id="zonaEntrada">${entradaHTML(ejActual)}</div>
@@ -7941,6 +7968,7 @@ function responder(valor){
     // no toca `errores` ni las estadísticas, es solo repetir lo que ya se falló en esta ronda
     if(res.ok){ colaRepasoRonda.shift(); } else { colaRepasoRonda.push(colaRepasoRonda.shift()); }
   } else {
+    sesionVistos[sesionIdx] = true;
     if(!vioExpl) anotar(ejActual.__mod, res.ok);
     if(!vioExpl && res.ok) sesionCorrectos++;
     if(!vioExpl && !res.ok){
@@ -8171,6 +8199,7 @@ function saltarEjercicio(){
 function otroDelMismoTema(){
   ejActual = modActual.gen(nivel);
   ejActual.__mod = modActual.id;
+  sesionEjs[sesionIdx] = ejActual; delete sesionVistos[sesionIdx];   // este puesto ahora es el ejercicio nuevo
   respondido = false; vioExpl = false; _reintento = false; ordenSel = []; ultimoFeedback = null; ultimoProceso = ''; calcHist = [];
   pintarEjercicio();
   guardarSesion();
@@ -8178,6 +8207,7 @@ function otroDelMismoTema(){
 function verExplicacion(){
   if(respondido) return;             // ya contestó de verdad: eso sí queda cerrado
   vioExpl = true;                    // solo "espió" la explicación — el ejercicio sigue abierto
+  sesionVistos[sesionIdx] = true;
   ultimoProceso = leerProceso();
   _pintarVistaExplicacion();
   guardarSesion();
