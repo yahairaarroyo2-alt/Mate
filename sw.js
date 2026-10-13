@@ -1,11 +1,10 @@
 // Service Worker — caché offline. App de un solo archivo, sin timers/notificaciones
 // que cachear (a diferencia de Fit-F/Fit-M), así que esto es mucho más simple que
 // esos sw.js: solo cachear los assets propios y servir la app sin conexión.
-const CACHE = 'mate-v132';
-const CACHE_FOTOS = 'mate-fotos-ayudante-v1';   // si cambias una foto de ayudante/, sube este número
+const CACHE = 'mate-v133';
+const CACHE_FOTOS = 'mate-fotos-ayudante-v2';   // si cambias una foto de ayudante/, sube este número
 const ASSETS = [
-  './',
-  './index.html',
+  './index.html',   // la app ('./' es la misma página: se sirve desde esta copia, no hace falta guardarla dos veces)
   './manifest.json',
   './icons/icon-192.png',
   './icons/icon-512.png',
@@ -17,7 +16,7 @@ const ASSETS = [
 
 self.addEventListener('install', e => {
   e.waitUntil(
-    caches.open(CACHE).then(c => Promise.all(ASSETS.map(a => c.add(a).catch(() => {}))))
+    caches.open(CACHE).then(c => Promise.all(ASSETS.map(a => c.add(new Request(a, { cache: 'reload' })).catch(() => {}))))
   );
   self.skipWaiting();
 });
@@ -49,31 +48,35 @@ h2{margin:0 0 10px;font-size:22px}p{margin:0;font-size:14px;opacity:.75;line-hei
 pueden seguir funcionando.</p></div></body></html>`;
 
 self.addEventListener('fetch', e => {
-  const url = e.request.url;
-  if (!url.startsWith(self.location.origin)) return;
+  const url = new URL(e.request.url);
+  if (url.origin !== self.location.origin) return;
   if (e.request.mode === 'navigate') {
-    // Documento principal: red primero (para no quedarse pegado en una versión
-    // vieja), con timeout corto y caché como respaldo — mismo patrón que Fit-F.
-    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 4000));
-    e.respondWith(
-      Promise.race([fetch(e.request, { cache: 'no-cache' }), timeout]).then(res => {
-        if (res && res.status === 200) {
-          e.waitUntil(caches.open(CACHE).then(c => c.put(e.request, res.clone())).catch(() => {}));
-        }
-        return res;
-      }).catch(() => caches.match(e.request).then(cached => cached || new Response(
-        OFFLINE_HTML, { status: 503, statusText: 'Service Unavailable', headers: { 'Content-Type': 'text/html; charset=utf-8' } }
-      )))
-    );
+    // Abrir la app (con o sin ?test / ?practica=…): se sirve AL INSTANTE la copia guardada, sin esperar
+    // al internet (antes esperaba hasta 4 s cada vez). En segundo plano se baja la versión nueva para
+    // la próxima vez; cuando se publica una versión (sube CACHE) el SW nuevo recarga la app solo.
+    const esLaApp = url.pathname.endsWith('/') || url.pathname.endsWith('/index.html');
+    if (!esLaApp) return;
+    const red = fetch(url.origin + url.pathname, { cache: 'no-cache' }).then(res => {
+      if (res && res.status === 200) {
+        const copia = res.clone();
+        caches.open(CACHE).then(c => c.put('./index.html', copia)).catch(() => {});
+      }
+      return res;
+    });
+    e.waitUntil(red.catch(() => {}));
+    e.respondWith(caches.match('./index.html', { cacheName: CACHE }).then(cached => cached || red.catch(() =>
+      new Response(OFFLINE_HTML, { status: 503, statusText: 'Service Unavailable', headers: { 'Content-Type': 'text/html; charset=utf-8' } })
+    )));
     return;
   }
   // Resto de assets: caché primero, red solo si falta. Las fotos de "Repaso de ayudante"
   // (~6 MB) van a su propia caché, que NO se borra al subir de versión: no se bajan otra vez.
-  const cache = url.includes('/ayudante/') ? CACHE_FOTOS : CACHE;
+  const cache = url.pathname.includes('/ayudante/') ? CACHE_FOTOS : CACHE;
   e.respondWith(
     caches.match(e.request).then(cached => cached || fetch(e.request).then(res => {
       if (res && res.status === 200) {
-        e.waitUntil(caches.open(cache).then(c => c.put(e.request, res.clone())).catch(() => {}));
+        const copia = res.clone();
+        e.waitUntil(caches.open(cache).then(c => c.put(e.request, copia)).catch(() => {}));
       }
       return res;
     }))
