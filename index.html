@@ -483,7 +483,9 @@
   /* sin backdrop-filter propio (mismo motivo que .btn, ver comentario junto a .btn arriba):
      estos botones viven siempre dentro de .calcCard, que ya está esmerilada — un blur por
      cada uno de los 16 botones era puro costo de GPU repetido, y se sentía como lag al tocar */
-  .calcGrid button{border:1.5px solid rgba(255,255,255,.45);border-radius:14px;padding:16px 0;
+  .calcFrac{text-align:right;font-weight:700;font-size:1.05rem;margin:-8px 4px 12px;color:var(--texto)}
+  .calcGrid .calcIgual{grid-row:span 2}
+  .calcGrid button{border:1.5px solid rgba(255,255,255,.45);border-radius:14px;padding:13px 0;
     font-size:1.15rem;font-weight:700;cursor:pointer;font-family:inherit;color:var(--texto);
     background:rgba(255,255,255,.42)}
   .calcGrid button:active{transform:scale(.95)}
@@ -524,27 +526,31 @@
       </div>
     </div>
     <div class="calcPantalla" id="calcPantalla">0</div>
+    <div class="calcFrac" id="calcFrac" style="display:none"></div>
     <div class="calcHist" id="calcHist" style="display:none"></div>
     <div class="calcGrid">
-      <button onclick="calcClear()">C</button>
-      <button onclick="calcSigno()">±</button>
+      <button onclick="calcClear()" aria-label="Borrar todo">C</button>
+      <button onclick="calcBorrar()" aria-label="Borrar el último">⌫</button>
       <button onclick="calcPorcentaje()">%</button>
       <button class="calcOp" onclick="calcOp('÷')">÷</button>
+      <button onclick="calcParen('(')">(</button>
+      <button onclick="calcParen(')')">)</button>
+      <button onclick="calcSigno()" aria-label="Cambiar el signo">±</button>
+      <button class="calcOp" onclick="calcOp('×')">×</button>
       <button onclick="calcDigito('7')">7</button>
       <button onclick="calcDigito('8')">8</button>
       <button onclick="calcDigito('9')">9</button>
-      <button class="calcOp" onclick="calcOp('×')">×</button>
+      <button class="calcOp" onclick="calcOp('-')">−</button>
       <button onclick="calcDigito('4')">4</button>
       <button onclick="calcDigito('5')">5</button>
       <button onclick="calcDigito('6')">6</button>
-      <button class="calcOp" onclick="calcOp('-')">−</button>
+      <button class="calcOp" onclick="calcOp('+')">+</button>
       <button onclick="calcDigito('1')">1</button>
       <button onclick="calcDigito('2')">2</button>
       <button onclick="calcDigito('3')">3</button>
-      <button class="calcOp" onclick="calcOp('+')">+</button>
+      <button class="calcOp calcIgual" onclick="calcIgual()">=</button>
       <button class="calcCero" onclick="calcDigito('0')">0</button>
       <button onclick="calcPunto()">.</button>
-      <button class="calcOp" onclick="calcIgual()">=</button>
     </div>
   </div>
 </div>
@@ -796,7 +802,7 @@ const mm = n => String(n).replace('-','−');
 // sin espacios, sin "^", con el exponente como dígito plano — para aceptar varias formas de
 // escribir lo mismo en el tipo 'coefvar'
 const normVar = s => String(s).trim().toLowerCase().replace(/\s+/g,'').replace(/\^/g,'')
-  .replace(/[²³⁴⁵⁶⁷⁸⁹]/g, c => ({'²':'2','³':'3','⁴':'4','⁵':'5'}[c]));
+  .replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹]/g, c => '⁰¹²³⁴⁵⁶⁷⁸⁹'.indexOf(c));
 // fracción apilada para el enunciado
 const fr = (n,d) => `<span class="fr"><b>${n}</b><i>${d}</i></span>`;
 // tipo 'orden' venía solo con fracciones {n,d} — otras materias ordenan texto plano (ej. épocas
@@ -5812,7 +5818,9 @@ function parseFactores(s){
   }
   return out;
 }
-const numLimpio = s => Number(String(s).trim().replace(/\s+/g,'').replace(',','.'));
+// 1,250 = 1250 (en Puerto Rico la coma separa los miles); 2,5 sigue siendo 2.5; el menos largo (−) también vale
+const numLimpio = s => { const t = String(s).trim().replace(/\s+/g,'').replace(/[−–]/g,'-');
+  return Number(/^-?\d{1,3}(,\d{3})+(\.\d+)?$/.test(t) ? t.replace(/,/g,'') : t.replace(',','.')); };
 
 function verificar(ej, ent){
   switch(ej.tipo){
@@ -5820,7 +5828,8 @@ function verificar(ej, ent){
     case 'cmp':  return { ok: ent === ej.respuesta };
     case 'num': {
       const v = numLimpio(ent);
-      if(!isFinite(v) || ent === '') return { ok:false, vacio:true };
+      if(String(ent).trim() === '') return { ok:false, vacio:true };
+      if(!isFinite(v)) return { ok:false, aviso:true, msg: /\//.test(ent) ? 'Aquí va un número, no una fracción: escríbelo con punto decimal (por ejemplo 1/2 = 0.5).' : 'Eso no es un número. Escribe solo el número (por ejemplo -12 o 3.5).' };
       return { ok: Math.abs(v - ej.respuesta) < (ej.tol ?? 0.01) };   // tolerancia: promedio/círculo redondean a 2 decimales; circuitos traen su propia tol (valores de 0.000470 A)
     }
     case 'opciones': return { ok: ent === ej.respuesta };
@@ -6095,12 +6104,25 @@ const URL_JSZIP = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min
 const URL_PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
 const URL_PDFWK = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
+// huella (SRI) de cada librería de afuera: si el CDN sirviera una copia alterada, el navegador no la corre.
+// Si subes la versión de una librería, saca la huella nueva: curl -s URL | openssl dgst -sha384 -binary | openssl base64 -A
+const SRI = {
+  'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js': 'sha384-+mbV2IY1Zk/X1p/nWllGySJSUN8uMs+gUAN10Or95UBH0fpj6GfKgPmgC5EXieXG',
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js': 'sha384-/1qUCSGwTur9vjf/z9lmu/eCUYbpOTgSjmpbMQZ1/CtX2v/WcAIKqRv+U1DUCG6e',
+  'https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js': 'sha384-ZaR6mWzmJtrRibZ1Vm7SoHFr8OXjyAuGAXalGDKqbxFT18oi/z+oZLIRFkpeNor1',
+  'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js': 'sha384-Ke0FJhH7LyRqDxZ0wt+/OXV38yfQVu7g9VPEEGjYmB4RVOY/ta04uecRhsMwT7V3'
+};
+// una sola promesa por librería: si se pide dos veces seguidas (dos archivos soltados rápido),
+// la segunda espera a que la primera TERMINE de cargar en vez de seguir antes de tiempo
+const _cargando = {};
 function cargarScript(src){
-  return new Promise((ok, err)=>{
-    if(document.querySelector(`script[src="${src}"]`)) return ok();
+  if(_cargando[src]) return _cargando[src];
+  return _cargando[src] = new Promise((ok, err)=>{
     const s = document.createElement('script');
-    s.src = src; s.onload = ()=>ok();
-    s.onerror = ()=>err(new Error('No se pudo cargar la librería. ¿Hay internet?'));
+    s.src = src;
+    if(SRI[src]){ s.integrity = SRI[src]; s.crossOrigin = 'anonymous'; }
+    s.onload = ()=>ok();
+    s.onerror = ()=>{ delete _cargando[src]; s.remove(); err(new Error('No se pudo cargar la librería. ¿Hay internet?')); };
     document.head.appendChild(s);
   });
 }
@@ -6125,7 +6147,7 @@ async function textoDePptx(file){
 async function textoDePdf(file){
   await cargarScript(URL_PDFJS);
   pdfjsLib.GlobalWorkerOptions.workerSrc = URL_PDFWK;
-  const doc = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+  const doc = await pdfjsLib.getDocument({ data: await file.arrayBuffer(), isEvalSupported: false }).promise;   // isEvalSupported:false cierra la falla CVE-2024-4367 de pdf.js 3.x
   const out = [];
   for(let i=1; i<=doc.numPages; i++){
     const tc = await (await doc.getPage(i)).getTextContent();
@@ -6152,14 +6174,50 @@ const leer = (k,d) => { try{ const v = localStorage.getItem(k); return v==null ?
 const fechaLocal = d => { d = d || new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
 const fechaHaceDias = n => { const d = new Date(); d.setDate(d.getDate()-n); return fechaLocal(d); };
 
-let nivel  = leer('mate_nivel_v1', 'medio');
+// Lo que llega de la sincronización (Firestore) o de un respaldo importado se LIMPIA antes de usarlo:
+// ids solo con letras/números/guiones, números donde van números y textos cortos (que además se pintan
+// con escHtml). Las cuatro apps comparten el mismo dominio: un texto con código metido en un grupo
+// podría leer las claves de IA y los datos de Fit F, Fit M y Facturas.
+const _idOk = s => typeof s === 'string' && /^[a-z0-9-]{1,40}$/i.test(s);
+const _num0 = v => Math.max(0, Math.floor(Number(v)) || 0);
+const _limpiarGrupos = gs => Array.isArray(gs) ? gs.filter(g => g && _idOk(g.id) && Array.isArray(g.mods))
+  .map(g => ({ id:g.id, nombre:String(g.nombre == null ? '' : g.nombre).slice(0, 60), mods:g.mods.filter(_idOk) })) : [];
+function _limpiarClase(c){
+  if(!c || typeof c !== 'object' || !Array.isArray(c.mods)) return null;
+  const o = { etiqueta:String(c.etiqueta == null ? '' : c.etiqueta).slice(0, 80), mods:c.mods.filter(_idOk) };
+  if(_idOk(c.grupoId)) o.grupoId = c.grupoId;
+  return o;
+}
+function _limpiarStats(s){
+  const o = {};
+  if(s && typeof s === 'object') Object.keys(s).forEach(id => { if(_idOk(id) && s[id] && typeof s[id] === 'object') o[id] = { ok:_num0(s[id].ok), fallo:_num0(s[id].fallo) }; });
+  return o;
+}
+const _limpiarRacha = x => ({ actual:_num0(x && x.actual), mejor:_num0(x && x.mejor) });
+const _nivelOk = n => ['facil','medio','dificil'].includes(n) ? n : 'medio';
+// HTML de un respaldo importado (los errores guardados traen enunciados con dibujos): se le quitan
+// scripts, iframes y atributos on… / javascript:, el resto (fracciones, SVG) se queda igual
+function _limpiarHTML(s){
+  if(typeof s !== 'string' || !/[<&]/.test(s)) return s;
+  const doc = new DOMParser().parseFromString('<body>' + s + '</body>', 'text/html');
+  doc.body.querySelectorAll('script,iframe,object,embed,link,meta,base,form,foreignObject').forEach(n => n.remove());
+  doc.body.querySelectorAll('*').forEach(n => [...n.attributes].forEach(a => {
+    if(/^on/i.test(a.name) || /^\s*(javascript|data):/i.test(a.value) && /href|src|action/i.test(a.name)) n.removeAttribute(a.name);
+  }));
+  return doc.body.innerHTML;
+}
+const _limpiarTodoHTML = v => typeof v === 'string' ? _limpiarHTML(v) : Array.isArray(v) ? v.map(_limpiarTodoHTML)
+  : v && typeof v === 'object' ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, _limpiarTodoHTML(x)])) : v;
+
+let nivel  = _nivelOk(leer('mate_nivel_v1', 'medio'));
 let materia = leer('mate_materia_v1', 'mate');   // qué materia se está estudiando ahora mismo
-let clase  = leer('mate_clase_v1', null);      // { etiqueta, mods:[] } — la mezcla activa ahora mismo
-let grupos = leer('mate_grupos_v1', []);       // [{id, nombre, mods:[]}] — grupos guardados (ej. "Examen 1"),
-                                                // no sincronizan entre aparatos (solo locales, a propósito)
+if(!Object.prototype.hasOwnProperty.call(MATERIAS, materia)) materia = 'mate';
+let clase  = _limpiarClase(leer('mate_clase_v1', null));      // { etiqueta, mods:[] } — la mezcla activa ahora mismo
+let grupos = _limpiarGrupos(leer('mate_grupos_v1', []));      // [{id, nombre, mods:[]}] — grupos guardados (ej. "Examen 1"),
+                                                               // SÍ se sincronizan entre aparatos (ver _guardarGrupos)
 const idGrupo = () => 'g'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
-let stats  = leer('mate_stats_v1', {});        // { modId:{ok, fallo} }
-let racha  = leer('mate_racha_v1', { actual:0, mejor:0 });
+let stats  = _limpiarStats(leer('mate_stats_v1', {}));        // { modId:{ok, fallo} }
+let racha  = _limpiarRacha(leer('mate_racha_v1', { actual:0, mejor:0 }));
 let errores = leer('mate_errores_v1', []);          // [{modId, ej}], más reciente primero, tope 30
 let historial = leer('mate_historial_v1', {});      // { "YYYY-MM-DD": cantidad de ejercicios }
 let rachaDias = leer('mate_racha_dias_v1', { actual:0, mejor:0, ultimoDia:null });
@@ -6168,7 +6226,8 @@ let repetirFallo = leer('mate_repetir_v1', false);  // true = una pregunta falla
 // [{fecha, correctas, total}], tope 30 — historial de resultados de "Modo examen" (ver
 // finalizarExamen). El modo en sí no tiene botón que lo abra ahora mismo (ver CLAUDE.md,
 // "Modo examen"); esto solo asegura que el resultado quede guardado el día que se reexponga.
-let examenes = leer('mate_examenes_v1', []);
+let examenes = (Array.isArray(leer('mate_examenes_v1', [])) ? leer('mate_examenes_v1', []) : []).filter(e => e && typeof e === 'object')
+  .map(e => ({ fecha:String(e.fecha || '').slice(0, 10), titulo:e.titulo ? String(e.titulo).slice(0, 60) : '', correctas:_num0(e.correctas), total:_num0(e.total) || 1 }));
 
 function anotar(modId, ok){
   const s = stats[modId] || (stats[modId] = { ok:0, fallo:0 });
@@ -6224,6 +6283,7 @@ const URL_FB_FS  = 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestor
 const ALFABETO_CODIGO = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';  // sin 0/O/1/I/L, para no confundir al escribir
 
 let syncCode = leer('mate_sync_code_v1', null);
+if(typeof syncCode !== 'string' || !/^[A-Z0-9-]{4,30}$/.test(syncCode)) syncCode = null;
 let syncDoc = null;      // referencia Firestore, null hasta conectar
 let syncListo = false;   // true cuando ya hay listener activo
 let _syncUnsub = null;
@@ -6270,14 +6330,14 @@ async function conectarSync(codigo){           // se llama UNA vez, al vincular 
   const ref = db.collection('syncs').doc(id);
   const snap = await ref.get();
   const remoto = snap.exists ? snap.data() : {};
-  grupos = _unirGrupos(remoto.grupos || [], grupos);
+  grupos = _unirGrupos(_limpiarGrupos(remoto.grupos), grupos);
   guardar('mate_grupos_v1', grupos);
   await ref.set({
-    stats: _fusionarStats(remoto.stats || {}, stats),
+    stats: _fusionarStats(_limpiarStats(remoto.stats), stats),
     racha: { actual: (remoto.racha && remoto.racha.actual) || racha.actual,
              mejor: Math.max((remoto.racha && remoto.racha.mejor) || 0, racha.mejor) },
-    nivel: remoto.nivel || nivel,
-    clase: remoto.clase !== undefined ? remoto.clase : (clase || null),
+    nivel: remoto.nivel ? _nivelOk(remoto.nivel) : nivel,
+    clase: remoto.clase !== undefined ? _limpiarClase(remoto.clase) : (clase || null),
     grupos
   }, { merge: true });
   syncDoc = ref;
@@ -6300,14 +6360,11 @@ function _escucharSync(){
     if(!d) return;
     // Firestore solo guarda el campo que se incrementó (ok o fallo) — un tema sin fallos
     // nunca queda con esa clave. Se normaliza al recibir para que pct() no dé NaN.
-    if(d.stats){
-      stats = {};
-      Object.keys(d.stats).forEach(id => { stats[id] = { ok: d.stats[id].ok||0, fallo: d.stats[id].fallo||0 }; });
-    }
-    if(d.racha){ racha.actual = d.racha.actual||0; racha.mejor = Math.max(racha.mejor||0, d.racha.mejor||0); }
-    if(d.nivel) nivel = d.nivel;
-    if(d.clase !== undefined) clase = d.clase;
-    if(d.grupos !== undefined) grupos = d.grupos;
+    if(d.stats) stats = _limpiarStats(d.stats);
+    if(d.racha){ const rr = _limpiarRacha(d.racha); racha.actual = rr.actual; racha.mejor = Math.max(racha.mejor||0, rr.mejor); }
+    if(d.nivel) nivel = _nivelOk(d.nivel);
+    if(d.clase !== undefined) clase = _limpiarClase(d.clase);
+    if(d.grupos !== undefined) grupos = _limpiarGrupos(d.grupos);
     guardar('mate_stats_v1', stats); guardar('mate_racha_v1', racha);
     guardar('mate_nivel_v1', nivel); guardar('mate_clase_v1', clase);
     guardar('mate_grupos_v1', grupos);
@@ -6451,7 +6508,10 @@ let sesionPendientes = [];// preguntas falladas en espera de volver a salir: [{m
 let sesionTotal = 0;      // tamaño de la ronda actual; al llegar acá se para de verdad (pantallaRondaCompleta)
 // puestos de la ronda (el selector 1, 2, 3…): sesionEjs[i] = el ejercicio del puesto i, sesionAbiertos = puestos ya sacados,
 // sesionVistos = puestos contestados o con la explicación vista (si se repiten, ya no cuentan otra vez)
-let sesionEjs = [], sesionIdx = 0, sesionAbiertos = {}, sesionVistos = {}, sesionOrden = [];   // sesionOrden: la cola de la mezcla como se sorteó (el puesto i = sesionOrden[i])
+let sesionEjs = [], sesionIdx = 0, sesionAbiertos = {}, sesionVistos = {}, sesionOrden = [];
+let sesionRes = {};          // resultado de cada página: 'ok' | 'mal' | 'vista' (vio la explicación sin contestar) — el mapa de preguntas
+let _ejsSucios = new Set();  // páginas de la ronda que todavía no se guardaron en su clave (mate_sesion_ej_N)
+let _borradorPend = null;    // lo escrito sin comprobar que hay que volver a poner al retomar la ronda   // sesionOrden: la cola de la mezcla como se sorteó (el puesto i = sesionOrden[i])
 // fallos DE ESTA RONDA (se reinicia con cada ronda nueva) — separado de `errores`, que es la
 // lista permanente de "Repasar mis errores"; esto es solo para el botón "Repetir las que fallé"
 // que aparece en pantallaRondaCompleta, y se descarta al salir de esa pantalla
@@ -6464,7 +6524,9 @@ const SESION_TEMA = 20;   // tamaño de ronda cuando el tema está fijo (no hay 
 const VECES_POR_TEMA = 2; // mezcla: mínimo garantizado de repeticiones de cada tema activo en la ronda
 // veces que entra el tema m en una mezcla de ms: normal = 2; si lo elegido son SOLO prácticas del examen (ej. el grupo "Examen 1"), entra completa
 const vecesDe = (ms, m) => ms.every(x => x.nuevaRonda) ? m.banco : VECES_POR_TEMA;
-const tamanoMezcla = ms => ms.reduce((s, m) => s + vecesDe(ms, m), 0);   // para mostrarlo en los botones sin arrancar la ronda
+// para mostrarlo en los botones sin arrancar la ronda; acepta módulos o ids (los grupos y "Elegir temas" guardan ids)
+const tamanoMezcla = lista => { const ms = lista.map(m => typeof m === 'string' ? MOD_POR_ID[m] : m).filter(Boolean); return ms.reduce((s, m) => s + vecesDe(ms, m), 0); };
+const nTemas = n => n === 1 ? '1 tema' : `${n} temas`;
 function construirCola(cap){
   const ms = typeof cap === 'number' ? MODULOS.filter(m=>m.clase===materia && m.secciones[0][0]===String(cap)) : modulosActivos();
   // agrupada: se mezcla el ORDEN de los temas, pero las repeticiones de cada uno quedan juntas.
@@ -6474,13 +6536,22 @@ function construirCola(cap){
   ms.forEach(m => { for(let k = 0; k < vecesDe(ms, m); k++) cola.push(m.id); });
   return shuffle(cola);
 }
+// la fila de abajo de la práctica (te faltan / racha / agrupar / repetir). Los dos botones solo
+// repintan ESTA fila: repintar todo el ejercicio borraba la respuesta, "Siguiente" y Tu proceso.
+const _filaProgresoHTML = () => `<div class="racha">
+        <div><b>${sesionTotal - sesionHechos}/${sesionTotal}</b><span>te faltan</span></div>
+        <div><b>${racha.actual}</b><span>racha actual</span></div>
+        <button class="${agruparTema?'on':''}" onclick="toggleAgrupar()"><b>${agruparTema?'Sí':'No'}</b><span>agrupar</span></button>
+        <button class="${repetirFallo?'on':''}" onclick="toggleRepetir()"><b>${repetirFallo?'Sí':'No'}</b><span>repetir</span></button>
+      </div>`;
+const _repintarFilaProgreso = () => { const c = $('cardProgreso'); if(c) c.innerHTML = _filaProgresoHTML(); };
 function toggleAgrupar(){
   agruparTema = !agruparTema; guardar('mate_agrupar_v1', agruparTema);
-  if(modActual) pintarEjercicio();   // no reordena la ronda en curso — se aplica desde la próxima
+  _repintarFilaProgreso();   // no reordena la ronda en curso — se aplica desde la próxima
 }
 function toggleRepetir(){
   repetirFallo = !repetirFallo; guardar('mate_repetir_v1', repetirFallo);
-  if(modActual) pintarEjercicio();
+  _repintarFilaProgreso();
 }
 // agenda la pregunta fallada para que vuelva a salir, igual (mismo enunciado y números), más
 // adelante en la misma ronda — nunca la próxima (esperar arranca en 2 como mínimo), y la ronda
@@ -6524,7 +6595,8 @@ function quitarFraccion(x){ const fr = x.closest('.pfa, .pfr'), sig = fr.nextEle
   if(sig && prev && sig.classList.contains('pt') && prev.classList.contains('pt')){ prev.value = (prev.value + ' ' + sig.value).trim(); sig.remove(); }
   const foco = prev || fr.parentNode.firstElementChild; fr.remove(); if(foco && foco.focus) foco.focus(); }
 function procesoHTML(){
-  const guardados = ((respondido || vioExpl) && ultimoProceso) ? ultimoProceso.split('\n') : [];
+  const texto = (_borradorPend && _borradorPend.proceso) || ((respondido || vioExpl) && ultimoProceso) || '';
+  const guardados = texto ? texto.split('\n') : [];
   const n = Math.max(3, guardados.length);
   return `<div class="procesoCaja"><div class="procesoTit"><span>Tu proceso</span>
       <button type="button" id="btnOcultarProceso" class="procesoOcultar" onclick="toggleProceso()">▲ Ocultar</button></div>
@@ -6545,13 +6617,37 @@ const leerProceso = () => [...document.querySelectorAll('#listaPasos .pasoPartes
     return ''; }).filter(Boolean).join(' ')).filter(Boolean).join('\n');
 
 /* ---------- retomar donde quedó (mate_sesion_v1) ---------- */
-function guardarSesion(){
-  guardar('mate_sesion_v1', { modId: modActual.id, esTemaFijo, capFijo, sesionHechos, sesionCorrectos,
-    sesionCola, sesionPendientes, sesionFallos, temasEjemploVisto, sesionTotal, sesionIdx, sesionAbiertos, sesionVistos, sesionOrden, ejActual, respondido, vioExpl, ordenSel, ultimoFeedback, ultimoProceso, ultimaEntrada });
-  // los ejercicios ya sacados van aparte: si no caben, solo se pierde poder volver a los de antes. Las prácticas del examen se vuelven a armar solas (siempre salen igual)
-  guardar('mate_sesion_ejs_v1', modActual.nuevaRonda ? [] : sesionEjs);
+// lo escrito y todavía sin comprobar (Tu proceso y las casillas de respuesta), si en pantalla está ESTE ejercicio
+function _borradorActual(){
+  const z = $('zonaEntrada');
+  if(respondido || !z || main.dataset.ej !== String(sesionIdx)) return null;
+  const entrada = {};
+  z.querySelectorAll('input[id], select[id]').forEach(x => { if(x.value !== '') entrada[x.id] = x.value; });
+  const proceso = leerProceso();
+  return (proceso || Object.keys(entrada).length) ? { proceso, entrada } : null;
 }
-const borrarSesion = () => { try{ localStorage.removeItem('mate_sesion_v1'); localStorage.removeItem('mate_sesion_ejs_v1'); }catch(e){} };
+function guardarSesion(){
+  clearTimeout(_borradorT); _borradorT = null;
+  guardar('mate_sesion_v1', { modId: modActual.id, esTemaFijo, capFijo, sesionHechos, sesionCorrectos,
+    sesionCola, sesionPendientes, sesionFallos, temasEjemploVisto, sesionTotal, sesionIdx, sesionAbiertos, sesionVistos, sesionRes, sesionOrden, ejActual, respondido, vioExpl, ordenSel, ultimoFeedback, ultimoProceso, ultimaEntrada, borrador: _borradorActual() });
+  // cada página de la ronda se guarda UNA sola vez, en su propia clave (antes se reescribía la ronda entera,
+  // hasta 365 KB, en cada respuesta). Las de las prácticas del examen no: se vuelven a armar iguales (las repeticiones sí).
+  _ejsSucios.forEach(i => { const ej = sesionEjs[i], m = ej && MOD_POR_ID[ej.__mod];
+    if(ej && !(m && m.nuevaRonda && !ej.__rep)) guardar('mate_sesion_ej_' + i, ej); });
+  _ejsSucios.clear();
+}
+const _borrarPaginasSesion = () => { try{ Object.keys(localStorage).filter(k => k.startsWith('mate_sesion_ej_') || k === 'mate_sesion_ejs_v1').forEach(k => localStorage.removeItem(k)); }catch(e){} };
+const borrarSesion = () => { try{ localStorage.removeItem('mate_sesion_v1'); }catch(e){} _borrarPaginasSesion(); _ejsSucios.clear(); };
+// lo que se escribe se guarda solo, un momento después de dejar de escribir, y al salir de la app:
+// si Android cierra la app mientras miras otra cosa, al volver está todo donde lo dejaste
+let _borradorT = null;
+const _alEscribir = e => {
+  if(!e.target.closest || !e.target.closest('#zonaProceso, #zonaEntrada') || !modActual || examen || modoErrores || modoRepasoRonda || main.dataset.ej === undefined) return;
+  clearTimeout(_borradorT); _borradorT = setTimeout(guardarSesion, 700);
+};
+document.addEventListener('input', _alEscribir);
+document.addEventListener('change', _alEscribir);
+document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'hidden' && _borradorT) guardarSesion(); });
 function restaurarSesion(){
   const s = leer('mate_sesion_v1', null);
   if(!s || !MOD_POR_ID[s.modId] || !s.ejActual) return false;
@@ -6564,8 +6660,13 @@ function restaurarSesion(){
   ejActual = s.ejActual; respondido = s.respondido; vioExpl = s.vioExpl;
   sesionIdx = s.sesionIdx != null ? s.sesionIdx : sesionHechos - 1;
   sesionAbiertos = s.sesionAbiertos || Object.fromEntries(Array.from({length:sesionHechos}, (_, i) => [i, true]));
-  sesionVistos = s.sesionVistos || {}; sesionOrden = s.sesionOrden || [];
-  sesionEjs = modActual.nuevaRonda ? [] : (leer('mate_sesion_ejs_v1', []) || []); sesionEjs[sesionIdx] = ejActual;
+  sesionVistos = s.sesionVistos || {}; sesionRes = s.sesionRes || {}; sesionOrden = s.sesionOrden || [];
+  sesionEjs = []; _ejsSucios = new Set();
+  const viejas = leer('mate_sesion_ejs_v1', null);   // formato anterior: toda la ronda en una sola clave → se pasa a una clave por página
+  Object.keys(sesionAbiertos).forEach(k => { const i = +k, ej = (Array.isArray(viejas) && viejas[i]) || leer('mate_sesion_ej_' + i, null); if(ej) sesionEjs[i] = ej; });
+  if(Array.isArray(viejas)){ try{ localStorage.removeItem('mate_sesion_ejs_v1'); }catch(e){} sesionEjs.forEach((e, i) => { if(e) _ejsSucios.add(i); }); }
+  sesionEjs[sesionIdx] = ejActual;
+  _borradorPend = !respondido && s.borrador ? s.borrador : null;
   ordenSel = s.ordenSel || []; ultimoFeedback = s.ultimoFeedback || null;
   if(modActual.nuevaRonda && ejActual && ejActual.__n != null){   // las 30 del examen: sigue desde donde ibas
     // la explicación guardada puede ser de una versión vieja de la app: se vuelve a sacar la de ahora (la pregunta es la misma)
@@ -6575,6 +6676,10 @@ function restaurarSesion(){
   ultimoProceso = s.ultimoProceso || '';
   ultimaEntrada = s.ultimaEntrada === undefined ? null : s.ultimaEntrada;
   pintarEjercicio();
+  if(_borradorPend){   // las casillas de respuesta que estaban escritas
+    Object.entries(_borradorPend.entrada || {}).forEach(([id, v]) => { const x = $(id); if(x && $('zonaEntrada').contains(x)) x.value = v; });
+    _borradorPend = null;
+  }
   if(respondido && ultimoFeedback) mostrarFb(ultimoFeedback, false);   // ya contestó de verdad
   else if(vioExpl) _pintarVistaExplicacion();                          // solo vio la explicación, sigue pudiendo responder
   return true;
@@ -6599,6 +6704,7 @@ function _posicionarLente(){
 }
 window.onresize = () => { _bnLenteLista = false; _posicionarLente(); };
 function _barra(activa){
+  delete main.dataset.ej;   // pintarEjercicio la vuelve a poner: así el borrador nunca se toma de otra pantalla
   bn.classList.toggle('oculta', !activa);
   bn.querySelectorAll('.bn-item').forEach(b => b.classList.toggle('active', b.dataset.tab === activa));
   if(activa) _posicionarLente();
@@ -6618,7 +6724,7 @@ function menuGrupos(e){
   menu.innerHTML = gs.length ? gs.map(g => `
       <button class="ajRow" onclick="cerrarMenuGrupos();practicarGrupo('${g.id}')">
         <div style="flex:1"><div class="ajTitulo">${escHtml(g.nombre)}</div>
-          <div class="ajSub">${g.mods.length} temas · ${tamanoMezcla(g.mods)} preguntas</div></div>
+          <div class="ajSub">${nTemas(g.mods.length)} · ${tamanoMezcla(g.mods)} preguntas</div></div>
         <span class="ajCheck" style="opacity:${clase && clase.grupoId===g.id ? 1 : 0}">✓</span>
       </button>`).join('') +
       `<button class="ajRow" onclick="cerrarMenuGrupos();ir('grupos')"><div class="ajTitulo">Ver todos los grupos</div></button>`
@@ -6648,123 +6754,191 @@ function _cerrarMenuGruposFuera(e){
 
 // calculadora — botón flotante, disponible en toda la app (incluso practicando) para
 // comprobar una cuenta a mano; no toca ninguna variable de la práctica.
-// calcTokens guarda la expresión tal como se escribe (números y signos alternados) y
-// calcVal el número que se está escribiendo ahora mismo — nada se calcula hasta "=":
-// antes calcVal se sobreescribía con el resultado parcial apenas se tocaba un segundo
-// signo, y ese resultado se colaba en pantalla aunque el usuario no hubiera pedido "=".
-let calcVal = '0', calcNuevo = false, calcTokens = [];
+// calcExpr guarda la expresión tal como se escribe (números, signos y paréntesis) y calcVal el
+// número que se está escribiendo ahora mismo — nada se calcula hasta "=", y "=" respeta el
+// orden de operaciones (× y ÷ antes que + y −, paréntesis primero), como en el examen.
+let calcVal = '', calcExpr = [], calcNuevo = false, calcRes = null;   // calcRes = último resultado {v, f:{n,d}|null}
 // cuentas ya resueltas (con "=") en el ejercicio actual — se reinicia con cada ejercicio nuevo
-// (ver los 4 sitios que hacen "ultimoProceso = ''"), no al abrir/cerrar la calculadora, así que
+// (ver los sitios que hacen "calcHist = []"), no al abrir/cerrar la calculadora, así que
 // si la cierras y la vuelves a abrir en el MISMO ejercicio sigues viendo lo que ya hiciste.
 let calcHist = [];   // [{expr, res}]
+const _CALC_OPS = ['+', '-', '×', '÷'];
+const _calcEsOp = t => _CALC_OPS.includes(t);
+const _calcEsNum = t => t !== undefined && !_calcEsOp(t) && t !== '(' && t !== ')';
+const _calcMostrar = t => t === '-' ? '−' : t.replace(/^-(?=[\d.])/, '−');
 function _calcRenderHist(){
   const el = $('calcHist'); if(!el) return;
   el.style.display = calcHist.length ? 'block' : 'none';
-  el.innerHTML = calcHist.slice().reverse().map(h =>
-    `<button class="calcHistFila" onclick="calcVal='${h.res}';calcNuevo=false;_calcRender()">
-      <span>${h.expr} =</span><b>${h.res}</b>
+  el.innerHTML = calcHist.slice().reverse().map((h, k) =>
+    `<button class="calcHistFila" onclick="_calcUsarHist(${calcHist.length - 1 - k})">
+      <span>${escHtml(h.expr)} =</span><b>${escHtml(h.res)}</b>
     </button>`).join('');
 }
+function _calcUsarHist(k){ const h = calcHist[k]; if(!h) return; if(calcNuevo){ calcExpr = []; calcNuevo = false; } calcVal = String(h.v); _calcRender(); }
 function _calcRender(){
-  // justo después de tocar un signo (calcNuevo true) calcVal todavía guarda el operando
-  // anterior, que ya está en calcTokens — mostrarlo de nuevo lo duplicaba en pantalla
-  // ("5 × 5 + 5" antes de escribir el segundo 5). Se oculta hasta que se escriba uno nuevo.
-  const ocultarVal = calcNuevo && calcTokens.length;
-  $('calcPantalla').textContent = calcTokens.length
-    ? calcTokens.join(' ') + (ocultarVal ? '' : ' ' + calcVal)
-    : calcVal;
+  const partes = calcExpr.map(_calcMostrar).concat(calcVal ? [calcVal.replace(/^-/, '−')] : []);
+  $('calcPantalla').textContent = partes.length ? partes.join(' ') : '0';
+  const fr = $('calcFrac');
+  if(fr){ const f = calcNuevo && calcRes && calcRes.f; fr.textContent = f ? '= ' + _calcFracTxt(f) : ''; fr.style.display = f ? '' : 'none'; }
 }
+// 0.375 → 3/8 ; 1.75 → 7/4 (1 3/4). Solo si el decimal es de verdad una fracción con denominador chico.
+function _calcAFraccion(x){
+  if(!isFinite(x) || Number.isInteger(x)) return null;
+  for(let d = 2; d <= 1000; d++){ const n = Math.round(x * d); if(Math.abs(n / d - x) < 1e-9) return { n, d }; }
+  return null;
+}
+const _calcFracTxt = f => { const a = Math.abs(f.n), s = f.n < 0 ? '−' : '';
+  return s + a + '/' + f.d + (a > f.d ? ` (${s}${Math.floor(a / f.d)} ${a % f.d}/${f.d})` : ''); };
 function abrirCalc(){
-  calcVal = '0'; calcNuevo = false; calcTokens = [];
+  calcVal = ''; calcExpr = []; calcNuevo = false; calcRes = null;
   _calcRender();
   _calcRenderHist();
   // "Usar" aparece si hay al menos un campo de respuesta donde ponerlo (num, frac, mixto,
   // ángulos con figura...); los pasos de "Tu proceso" están en #zonaProceso, fuera de #zonaEntrada,
-  // así que este selector no los toma.
-  $('calcUsarBtn').style.display = $('zonaEntrada').querySelector('input.campo') ? '' : 'none';
+  // así que este selector no los toma. Fuera de un ejercicio no hay #zonaEntrada: no sale.
+  const z = $('zonaEntrada');
+  $('calcUsarBtn').style.display = z && z.querySelector('input.campo') ? '' : 'none';
   $('calcOv').style.display = 'flex';
 }
 function cerrarCalc(){ $('calcOv').style.display = 'none'; }
 // Llena el primer campo VACÍO (arriba antes que abajo, entero antes que la fracción...,
 // según el orden en que aparecen en pantalla); si ya están todos llenos, empieza de nuevo
-// por el primero — así una sola cuenta sirve para ir llenando numerador y denominador,
-// las dos partes de un mixto, o los dos ángulos, con dos o tres toques de "Usar".
+// por el primero. Si el resultado es una fracción y el ejercicio pide fracción o número
+// mixto, la pone completa (arriba, abajo y el entero).
 function calcUsar(){
-  if(calcVal === 'Error') return;
-  const campos = [...$('zonaEntrada').querySelectorAll('input.campo')];
+  const z = $('zonaEntrada'); if(!z) return;
+  const v = calcNuevo && calcRes ? calcRes : (calcVal && calcVal !== '-' ? { v: parseFloat(calcVal), f: _calcAFraccion(parseFloat(calcVal)) } : null);
+  if(!v || !isFinite(v.v)) return;
+  const f = v.f, inN = z.querySelector('#inN'), inD = z.querySelector('#inD'), inE = z.querySelector('#inE');
+  if(f && inN && inD){
+    if(inE){ const a = Math.abs(f.n); inE.value = (f.n < 0 ? '-' : '') + Math.floor(a / f.d); inN.value = a % f.d; }
+    else inN.value = f.n;
+    inD.value = f.d;
+    return cerrarCalc();
+  }
+  const campos = [...z.querySelectorAll('input.campo')];
   if(!campos.length) return;
-  (campos.find(c => c.value === '') || campos[0]).value = calcVal;
+  (campos.find(c => c.value === '') || campos[0]).value = _calcFormato(v.v);
   cerrarCalc();
 }
+function _calcEmpezarSiResultado(usarlo){
+  if(!calcNuevo) return;
+  calcNuevo = false;
+  calcExpr = []; calcVal = usarlo && calcRes && isFinite(calcRes.v) ? _calcFormato(calcRes.v) : '';
+}
 function calcDigito(d){
-  if(calcNuevo || calcVal === '0'){ calcVal = d; calcNuevo = false; }
-  else if(calcVal.length < 12) calcVal += d;
+  _calcEmpezarSiResultado(false);
+  if(calcExpr[calcExpr.length - 1] === ')' && !calcVal) calcExpr.push('×');
+  if(calcVal === '0') calcVal = d;
+  else if(calcVal === '-0') calcVal = '-' + d;
+  else if(calcVal.replace(/[-.]/g, '').length < 12) calcVal += d;
   _calcRender();
 }
 function calcPunto(){
-  if(calcNuevo){ calcVal = '0.'; calcNuevo = false; }
+  _calcEmpezarSiResultado(false);
+  if(calcExpr[calcExpr.length - 1] === ')' && !calcVal) calcExpr.push('×');
+  if(!calcVal || calcVal === '-') calcVal += '0.';
   else if(calcVal.indexOf('.') === -1) calcVal += '.';
   _calcRender();
 }
 function calcSigno(){
-  calcVal = calcVal.startsWith('-') ? calcVal.slice(1) : (calcVal === '0' ? '0' : '-'+calcVal);
+  _calcEmpezarSiResultado(true);
+  calcVal = calcVal.startsWith('-') ? calcVal.slice(1) : '-' + calcVal;
   _calcRender();
 }
 function calcPorcentaje(){
+  _calcEmpezarSiResultado(true);
+  if(!calcVal || calcVal === '-') return;
   calcVal = _calcFormato(parseFloat(calcVal) / 100);
   _calcRender();
 }
 function calcClear(){
-  calcVal = '0'; calcNuevo = false; calcTokens = [];
+  calcVal = ''; calcExpr = []; calcNuevo = false; calcRes = null;
   _calcRender();
 }
-function _calcOperar(a, b, op){
-  if(op === '+') return a + b;
-  if(op === '-') return a - b;
-  if(op === '×') return a * b;
-  if(op === '÷') return b === 0 ? NaN : a / b;
+function calcBorrar(){
+  if(calcNuevo){ calcClear(); return; }
+  if(calcVal){ calcVal = calcVal.slice(0, -1); if(calcVal === '-') calcVal = ''; }
+  else if(calcExpr.length){ const t = calcExpr.pop(); if(_calcEsNum(t)) calcVal = t.slice(0, -1) === '-' ? '' : t.slice(0, -1); }
+  _calcRender();
+}
+function calcOp(op){
+  _calcEmpezarSiResultado(true);
+  if(calcVal === '-') return;
+  if(calcVal){ calcExpr.push(calcVal); calcVal = ''; }
+  const ult = calcExpr[calcExpr.length - 1];
+  if(ult === undefined || ult === '('){ if(op === '-'){ calcVal = '-'; _calcRender(); } return; }   // un "−" al empezar es el signo del número
+  if(_calcEsOp(ult)) calcExpr[calcExpr.length - 1] = op;   // cambiar de opinión sobre el signo: se reemplaza
+  else calcExpr.push(op);
+  _calcRender();
+}
+function calcParen(p){
+  _calcEmpezarSiResultado(p === ')');
+  if(p === '('){
+    if(calcVal === '-'){ calcVal = ''; calcExpr.push('-1', '×'); }
+    else if(calcVal){ calcExpr.push(calcVal, '×'); calcVal = ''; }
+    else if(calcExpr.length && (_calcEsNum(calcExpr[calcExpr.length - 1]) || calcExpr[calcExpr.length - 1] === ')')) calcExpr.push('×');
+    calcExpr.push('(');
+  } else {
+    const abiertos = calcExpr.filter(t => t === '(').length - calcExpr.filter(t => t === ')').length;
+    if(abiertos <= 0) return;
+    if(calcVal && calcVal !== '-'){ calcExpr.push(calcVal); calcVal = ''; }
+    const ult = calcExpr[calcExpr.length - 1];
+    if(_calcEsOp(ult) || ult === '(') return;
+    calcExpr.push(')');
+  }
+  _calcRender();
+}
+// evalúa con el orden de operaciones: primero lo de los paréntesis, luego × y ÷, al final + y −
+function _calcEvaluar(ts){
+  let i = 0;
+  const num = () => {
+    const t = ts[i];
+    if(t === '('){ i++; const v = suma(); if(ts[i] === ')') i++; return v; }
+    if(t === '-'){ i++; return -num(); }
+    i++; return parseFloat(t);
+  };
+  const prod = () => { let v = num(); while(ts[i] === '×' || ts[i] === '÷'){ const o = ts[i++], b = num(); v = o === '×' ? v * b : (b === 0 ? NaN : v / b); } return v; };
+  const suma = () => { let v = prod(); while(ts[i] === '+' || ts[i] === '-'){ const o = ts[i++], b = prod(); v = o === '+' ? v + b : v - b; } return v; };
+  const v = suma();
+  return i === ts.length ? v : NaN;
 }
 function _calcFormato(n){
   if(!isFinite(n)) return 'Error';
   return String(Math.round(n * 1e8) / 1e8);   // recorta el ruido de coma flotante
 }
-function calcOp(op){
-  // si ya había un signo pendiente y no se escribió número nuevo, el usuario solo está
-  // cambiando de opinión sobre el signo — se reemplaza, no se apila
-  if(calcTokens.length && calcNuevo) calcTokens[calcTokens.length-1] = op;
-  else calcTokens.push(calcVal, op);
-  calcNuevo = true;
-  _calcRender();
-}
 function calcIgual(){
-  if(!calcTokens.length) return;
-  const nums = calcTokens.filter((_,i)=>i%2===0).map(parseFloat).concat(parseFloat(calcVal));
-  const ops = calcTokens.filter((_,i)=>i%2===1);
-  let total = nums[0];
-  for(let i=0; i<ops.length; i++) total = _calcOperar(total, nums[i+1], ops[i]);
-  const expr = calcTokens.concat(calcVal).join(' ');
-  calcVal = _calcFormato(total);
-  calcHist.push({ expr, res: calcVal });
-  calcNuevo = true; calcTokens = [];
-  _calcRender();
+  if(calcNuevo) return;
+  const ts = calcExpr.slice(); if(calcVal && calcVal !== '-') ts.push(calcVal);
+  while(ts.length && (_calcEsOp(ts[ts.length - 1]) || ts[ts.length - 1] === '(')) ts.pop();   // un signo o "(" suelto al final no cuenta
+  if(!ts.length) return;
+  const faltan = ts.filter(t => t === '(').length - ts.filter(t => t === ')').length;
+  for(let k = 0; k < faltan; k++) ts.push(')');   // los paréntesis sin cerrar se cierran solos
+  const v = _calcEvaluar(ts), res = _calcFormato(v);
+  calcRes = { v, f: _calcAFraccion(Math.round(v * 1e9) / 1e9) };
+  calcHist.push({ expr: ts.map(_calcMostrar).join(' '), res: calcRes.f ? `${res} = ${_calcFracTxt(calcRes.f)}` : res, v });
+  calcExpr = res === 'Error' ? [] : [res]; calcVal = ''; calcNuevo = true;
+  $('calcPantalla').textContent = res.replace(/^-/, '−');
+  const fr = $('calcFrac'); if(fr){ fr.textContent = calcRes.f ? '= ' + _calcFracTxt(calcRes.f) : ''; fr.style.display = calcRes.f ? '' : 'none'; }
   _calcRenderHist();
 }
-// teclado físico para la calculadora — antes solo funcionaba a clics, incómodo en la compu.
-// Solo actúa mientras el overlay está abierto, así que no interfiere con Enter en los
-// inputs de la práctica ni con ningún otro atajo de la página.
+// teclado físico para la calculadora — solo actúa mientras el overlay está abierto, así que no
+// interfiere con Enter en los inputs de la práctica ni con ningún otro atajo de la página.
 document.addEventListener('keydown', e => {
   if($('calcOv').style.display !== 'flex') return;
   if(/^[0-9]$/.test(e.key)) calcDigito(e.key);
   else if(e.key === '.' || e.key === ',') calcPunto();
   else if(e.key === '+') calcOp('+');
   else if(e.key === '-') calcOp('-');
-  else if(e.key === '*') calcOp('×');
+  else if(e.key === '*' || e.key === 'x') calcOp('×');
   else if(e.key === '/'){ e.preventDefault(); calcOp('÷'); }   // '/' abre la búsqueda rápida en Firefox
+  else if(e.key === '(' || e.key === ')') calcParen(e.key);
   else if(e.key === '%') calcPorcentaje();
   else if(e.key === 'Enter' || e.key === '=') calcIgual();
   else if(e.key === 'u' || e.key === 'U') calcUsar();
   else if(e.key === 'Escape') cerrarCalc();
-  else if(e.key === 'Backspace'){ calcVal = calcVal.length>1 ? calcVal.slice(0,-1) : '0'; _calcRender(); }
+  else if(e.key === 'Backspace') calcBorrar();
+  else if(e.key === 'Delete') calcClear();
   else return;
   e.preventDefault();
 });
@@ -6779,6 +6953,16 @@ document.addEventListener('keydown', e => {
   if(e.target && /^inP\d+$/.test(e.target.id || '')){   // Enter en un paso: al siguiente paso (o agrega uno), no avanza
     e.preventDefault(); const sig = $('inP' + (+e.target.id.slice(3) + 1)); if(sig) sig.focus(); else agregarPaso(); return;
   }
+  // Enter en cualquier otra casilla de "Tu proceso" (fracciones, cajas de texto sueltas): pasa a la casilla
+  // siguiente. Nunca salta de ejercicio — antes, después de "Ver explicación", te sacaba con lo escrito a medias.
+  if(e.target && e.target.closest && e.target.closest('#zonaProceso')){
+    e.preventDefault();
+    const cs = [...document.querySelectorAll('#zonaProceso input.campo')], k = cs.indexOf(e.target);
+    if(k >= 0 && cs[k + 1]) cs[k + 1].focus();
+    return;
+  }
+  // Enter en una casilla de respuesta todavía sin contestar: comprueba (no pasa al siguiente)
+  if(e.target && e.target.closest && e.target.closest('#zonaEntrada') && !respondido){ e.preventDefault(); responder(); return; }
   const btnSig = $('zonaFb') && $('zonaFb').querySelector('button.btn.amar');
   if(!btnSig) return;
   e.preventDefault();
@@ -7465,7 +7649,7 @@ function pantallaInicio(){
   _barra('inicio');
   const bannerClase = clase && clase.mods.length ? `
     <div class="banner">
-      <span>Practicando: ${clase.etiqueta}</span>
+      <span>Practicando: ${escHtml(clase.etiqueta)}</span>
       <button onclick="quitarClase()">Quitar</button>
     </div>` : '';
   const _rachaViva = _rachaDiasVigente();
@@ -7479,7 +7663,7 @@ function pantallaInicio(){
     <div class="card">
       ${bannerClase}
       <button class="btn amar" onclick="ir('practica')">Empezar a practicar
-        <small>${clase && clase.mods.length ? clase.mods.length+' temas de tu clase' : 'todos los temas mezclados'} · ${tamanoMezcla(modulosActivos())} preguntas</small></button>
+        <small>${clase && clase.mods.length ? nTemas(clase.mods.length)+' de tu clase' : 'todos los temas mezclados'} · ${tamanoMezcla(modulosActivos())} preguntas</small></button>
       ${_rachaViva > 0 ? `<div class="nota">🔥 ${_rachaViva} ${_rachaViva===1?'día seguido':'días seguidos'} practicando (mejor: ${rachaDias.mejor})</div>` : ''}
       <div class="row">
         <button class="btn sec chico" onclick="menuGrupos(event)">Grupos de examen<span class="flechita">▾</span></button>
@@ -7668,7 +7852,7 @@ function _ejDelPuesto(i, arg){
     if(repite){
       sesionPendientes.splice(sesionPendientes.indexOf(repite), 1);
       if(sesionOrden.length) sesionOrden.splice(i, 0, '*');   // este puesto es una repetición: lo planeado se corre uno
-      mod = MOD_POR_ID[repite.modId] || modActual; ej = repite.ej;
+      mod = MOD_POR_ID[repite.modId] || modActual; ej = repite.ej; ej.__rep = true;
     } else if(mod0){
       mod = mod0; ej = mod.gen(nivel);
     } else {
@@ -7685,6 +7869,7 @@ function _ejDelPuesto(i, arg){
   }
   ej.__mod = mod.id;
   sesionAbiertos[i] = true; sesionHechos = Object.keys(sesionAbiertos).length;
+  _ejsSucios.add(i);
   return sesionEjs[i] = ej;
 }
 // pone en pantalla (sin pintar) el puesto i, desde cero
@@ -7700,7 +7885,8 @@ function nuevoEjercicio(arg, continuar){
   if(continuar && sesionIdx + 1 >= sesionTotal) return pantallaRondaCompleta();
   if(!continuar){                       // ronda nueva: arma la cola y fija el tamaño
     sesionHechos = 0; sesionCorrectos = 0; sesionPendientes = []; sesionFallos = []; temasEjemploVisto = {};
-    sesionEjs = []; sesionAbiertos = {}; sesionVistos = {}; sesionIdx = -1;
+    sesionEjs = []; sesionAbiertos = {}; sesionVistos = {}; sesionRes = {}; sesionIdx = -1;
+    _borrarPaginasSesion(); _ejsSucios = new Set();
     esTemaFijo = typeof arg !== 'number' && !!arg;
     capFijo = typeof arg === 'number' ? arg : null;
     sesionCola = esTemaFijo ? [] : construirCola(capFijo); sesionOrden = sesionCola.slice();
@@ -7822,11 +8008,12 @@ function irAEj(i){
 }
 function pintarEjercicio(){
   _barra(null);
+  main.dataset.ej = sesionIdx;   // qué página de la ronda está en pantalla (para guardar lo escrito sin comprobar)
   _aiEjN++;   // el chat de IA es de UN ejercicio: al pintar otro empieza uno nuevo
   main.innerHTML = `
     <button class="back" onclick="ir('inicio')">← Inicio</button>
     <div class="card">
-      <div class="cabEj"><span class="pill">${esTemaFijo ? '' : capFijo ? `${nombreCapitulo(capFijo)} · ` : (clase && clase.mods && clase.mods.length) ? `${clase.etiqueta.length>20?'Mi mezcla':clase.etiqueta} · ` : 'Mezcla · '}${modActual.nombre}</span>${selectorPregunta()}</div>
+      <div class="cabEj"><span class="pill">${esTemaFijo ? '' : capFijo ? `${nombreCapitulo(capFijo)} · ` : (clase && clase.mods && clase.mods.length) ? `${clase.etiqueta.length>20?'Mi mezcla':escHtml(clase.etiqueta)} · ` : 'Mezcla · '}${modActual.nombre}</span>${selectorPregunta()}</div>
       <div class="enunciado">${ejActual.enunciado}</div>
       <div id="zonaProceso">${modActual.clase === 'ayud' ? '' : procesoHTML()}</div>
       <div id="zonaEntrada">${entradaHTML(ejActual)}</div>
@@ -7838,14 +8025,7 @@ function pintarEjercicio(){
       </div>
       <button class="btn sec chico" style="margin-top:8px" onclick="reiniciarEjercicio()">↺ Reiniciar este ejercicio<small>borra tu respuesta y tu proceso</small></button>
     </div>
-    <div class="card" id="cardProgreso" style="padding:14px 20px">
-      <div class="racha">
-        <div><b>${sesionTotal - sesionHechos}/${sesionTotal}</b><span>te faltan</span></div>
-        <div><b>${racha.actual}</b><span>racha actual</span></div>
-        <button class="${agruparTema?'on':''}" onclick="toggleAgrupar()"><b>${agruparTema?'Sí':'No'}</b><span>agrupar</span></button>
-        <button class="${repetirFallo?'on':''}" onclick="toggleRepetir()"><b>${repetirFallo?'Sí':'No'}</b><span>repetir</span></button>
-      </div>
-    </div>`;
+    <div class="card" id="cardProgreso" style="padding:14px 20px">${_filaProgresoHTML()}</div>`;
   const primero = $('inNum') || $('inTexto') || $('inE') || $('inN') || $('inA2') || $('inBase') || $('inCoef') || $('inM0');
   if(primero){
     if(window.innerWidth > 640) primero.focus();  // en móvil no abrimos el teclado solo: tapa el enunciado
@@ -7959,7 +8139,7 @@ function responder(valor){
     return mostrarFb({ ok:false, msg:'Toca las tres fracciones, en el orden que pide.' }, true);
   }
   const res = verificar(ejActual, ent);
-  if(res.vacio) return mostrarFb({ ok:false, msg:'Te falta escribir la respuesta.' }, true);
+  if(res.vacio || res.aviso) return mostrarFb({ ok:false, msg: res.aviso ? res.msg : 'Te falta escribir la respuesta.' }, true);   // aviso = no se entendió lo escrito: no cuenta como error
 
   respondido = true;
   ultimoFeedback = res;
@@ -7978,7 +8158,7 @@ function responder(valor){
     // no toca `errores` ni las estadísticas, es solo repetir lo que ya se falló en esta ronda
     if(res.ok){ colaRepasoRonda.shift(); } else { colaRepasoRonda.push(colaRepasoRonda.shift()); }
   } else {
-    sesionVistos[sesionIdx] = true;
+    sesionVistos[sesionIdx] = true; sesionRes[sesionIdx] = res.ok ? 'ok' : 'mal';   // el mapa de preguntas muestra el último intento
     if(!vioExpl) anotar(ejActual.__mod, res.ok);
     if(!vioExpl && res.ok) sesionCorrectos++;
     if(!vioExpl && !res.ok){
@@ -8025,7 +8205,7 @@ function mostrarFb(res, soloAviso){
     </div>
     ${explHTML()}
     <button class="btn amar" onclick="_siguienteEjercicio()">Siguiente ejercicio</button>
-    ${(!modoErrores && !modoRepasoRonda) ? `<button class="btn sec chico" style="margin-top:8px" onclick="reiniciarEjercicio()">↺ Reiniciar este ejercicio<small>hazlo otra vez desde cero (con tu proceso vacío)</small></button><button class="btn sec chico" style="margin-top:8px" onclick="otroDelMismoTema()">Otro de este tema<small>no gasta tu ronda</small></button>` : ''}`;
+    ${(!modoErrores && !modoRepasoRonda) ? `<button class="btn sec chico" style="margin-top:8px" onclick="reiniciarEjercicio()">↺ Reiniciar este ejercicio<small>hazlo otra vez desde cero (con tu proceso vacío)</small></button>${modActual.nuevaRonda ? '' : `<button class="btn sec chico" style="margin-top:8px" onclick="otroDelMismoTema()">Otro de este tema<small>no gasta tu ronda</small></button>`}` : ''}`;
   $('zonaEntrada').style.opacity = '.5';
   $('zonaEntrada').style.pointerEvents = 'none';
   $('accionesPre').style.display = 'none';
@@ -8207,9 +8387,10 @@ function saltarEjercicio(){
 // Genera otro ejercicio del MISMO tema, con otros números, sin tocar sesionHechos/sesionCola
 // — para seguir practicando ese tema puntual sin gastar un puesto de la ronda en curso.
 function otroDelMismoTema(){
+  if(modActual.nuevaRonda) return;   // práctica del examen: cada página es SU pregunta (la Pág. 4 es la 4), no se cambia por otra
   ejActual = modActual.gen(nivel);
   ejActual.__mod = modActual.id;
-  sesionEjs[sesionIdx] = ejActual; delete sesionVistos[sesionIdx];   // este puesto ahora es el ejercicio nuevo
+  sesionEjs[sesionIdx] = ejActual; delete sesionVistos[sesionIdx]; delete sesionRes[sesionIdx]; _ejsSucios.add(sesionIdx);   // este puesto ahora es el ejercicio nuevo
   respondido = false; vioExpl = false; _reintento = false; ordenSel = []; ultimoFeedback = null; ultimoProceso = ''; calcHist = [];
   pintarEjercicio();
   guardarSesion();
@@ -8217,7 +8398,7 @@ function otroDelMismoTema(){
 function verExplicacion(){
   if(respondido) return;             // ya contestó de verdad: eso sí queda cerrado
   vioExpl = true;                    // solo "espió" la explicación — el ejercicio sigue abierto
-  sesionVistos[sesionIdx] = true;
+  sesionVistos[sesionIdx] = true; if(!sesionRes[sesionIdx]) sesionRes[sesionIdx] = 'vista';
   ultimoProceso = leerProceso();
   _pintarVistaExplicacion();
   guardarSesion();
@@ -8336,7 +8517,7 @@ function responderExamen(valor){
   const ent = (valor !== undefined) ? valor : leerEntrada(p.ej);
   if(p.ej.tipo === 'orden' && ent.length < p.ej.opciones.length) return;   // en examen se exige completar, sin aviso
   const res = verificar(p.ej, ent);
-  if(res.vacio) return;
+  if(res.vacio || res.aviso) return;
   p.ok = res.ok; p.completado = true;
   examen.idx++;
   if(examen.idx >= examen.preguntas.length) finalizarExamen();
@@ -8401,7 +8582,7 @@ function pantallaStats(){
     ${_aiPlanHTML(total)}
     ${examenes.length ? `<div class="card">
       <h2>Exámenes</h2>
-      ${examenes.slice(0,5).map(e => `<div class="stat"><div class="lbl"><span>${e.fecha}</span>
+      ${examenes.slice(0,5).map(e => `<div class="stat"><div class="lbl"><span>${escHtml(e.titulo ? e.titulo + ' · ' + e.fecha : e.fecha)}</span>
         <b>${e.correctas}/${e.total} · ${Math.round(e.correctas*100/e.total)}%</b></div></div>`).join('')}
     </div>` : ''}
     <div class="card">
@@ -8454,7 +8635,12 @@ function importarRespaldo(file){
     const claves = (datos && typeof datos === 'object' && !Array.isArray(datos))
       ? Object.keys(datos).filter(k => k.startsWith('mate_')) : [];
     if(!claves.length){ avisar('Ese archivo no es un respaldo válido de esta app.'); return; }
-    claves.forEach(k => localStorage.setItem(k, datos[k]));
+    claves.forEach(k => {
+      if(/^mate_sesion/.test(k) || typeof datos[k] !== 'string') return;   // la ronda en curso no viaja en un respaldo
+      let v = datos[k];
+      if(k === 'mate_errores_v1'){ try{ v = JSON.stringify(_limpiarTodoHTML(JSON.parse(v))); }catch(e){ return; } }
+      localStorage.setItem(k, v);
+    });
     avisar('Progreso restaurado. La app se va a recargar.', () => location.reload());
   };
   reader.readAsText(file);
@@ -8513,7 +8699,7 @@ function _pintarElegirTemas(){
       <div class="nota">Marca cualquier combinación de temas, de cualquier capítulo — por
         ejemplo, capítulo 1 con capítulo 2.</div>
       ${_bloquesCapitulos('_pintarElegirTemas')}
-      <div id="zonaClase"></div>
+      <div id="zonaClaseMsg"></div>
       <button class="btn amar" style="margin-top:10px" onclick="guardarClase()">Practicar esta mezcla
         <small id="ctaMezclaCount">${tamanoMezcla(seleccion)} preguntas</small></button>
     </div>`;
@@ -8534,7 +8720,7 @@ function pantallaGrupos(){
     ${gruposMateria().map(g => `
       <div class="card">
         <h3 style="margin-top:0">${escHtml(g.nombre)}${clase && clase.grupoId===g.id ? ` <span class="ajCheck">✓</span> <span class="ajSub" style="font-weight:400">seleccionado</span>` : ''}</h3>
-        <div class="nota">${g.mods.length} temas · ${tamanoMezcla(g.mods)} preguntas</div>
+        <div class="nota">${nTemas(g.mods.length)} · ${tamanoMezcla(g.mods)} preguntas</div>
         <div class="row">
           <button class="btn amar chico" onclick="practicarGrupo('${g.id}')">Practicar</button>
           <button class="btn sec chico" onclick="editarGrupo('${g.id}')">Editar</button>
@@ -8636,8 +8822,9 @@ async function _generarYMostrar(){
     btn.textContent = 'Generar código nuevo'; btn.disabled = false; }
 }
 async function _conectarYRefrescar(){
-  const codigo = $('inCodigo').value.trim();
+  const codigo = $('inCodigo').value.trim().toUpperCase();
   if(!codigo){ $('zonaSync').innerHTML = `<div class="fb medio">Escribe el código primero.</div>`; return; }
+  if(!/^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(codigo)){ $('zonaSync').innerHTML = `<div class="fb medio">El código tiene la forma XXXX-XXXX-XXXX (12 letras o números con guiones).</div>`; return; }
   const btn = $('btnConectar'); btn.textContent = 'Conectando…'; btn.disabled = true;
   try{ await conectarSync(codigo); pantallaSync(); }
   catch(e){ $('zonaSync').innerHTML = `<div class="fb mal">No se pudo conectar. Revisa el código e intenta de nuevo.</div>`;
@@ -8685,14 +8872,14 @@ function pantallaClase(){
 }
 
 async function leerArchivoClase(file){
-  $('zonaClase').innerHTML = `<div class="cargando">Leyendo ${file.name}…</div>`;
+  $('zonaClase').innerHTML = `<div class="cargando">Leyendo ${escHtml(file.name)}…</div>`;
   try {
     const txt = await textoDeArchivo(file);
     if(!txt || !txt.trim()) throw new Error('No se pudo sacar texto de ese archivo. Prueba a copiar y pegar.');
     $('txtClase').value = txt.slice(0, 200000);
     mostrarAnalisis(analizarTexto(txt), file.name);
   } catch(e){
-    $('zonaClase').innerHTML = `<div class="fb mal">${e.message}</div>`;
+    $('zonaClase').innerHTML = `<div class="fb mal">${escHtml(e.message)}</div>`;
   }
 }
 function analizarPegado(){
@@ -8706,7 +8893,7 @@ function mostrarAnalisis(a, fuente){
   seleccion = a.detectados.map(m => m.id);
   if(!a.detectados.length){
     $('zonaClase').innerHTML = `
-      <div class="fb medio">No reconocí ningún tema en ${fuente}.
+      <div class="fb medio">No reconocí ningún tema en ${escHtml(fuente)}.
         <small>Puedes elegirlos a mano abajo.</small></div>
       ${listaCheckHTML(MODULOS.filter(m=>m.clase===materia))}
       <div id="zonaClaseMsg"></div>
