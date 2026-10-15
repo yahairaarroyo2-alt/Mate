@@ -1770,13 +1770,13 @@ const DEP_EXACTO2 = [
       ejemplo:'2(18) + 2(15) = 66 m.' }) }),
   // 12. Valor de un polinomio con x negativa
   C => ({ enunciado:'Halla el valor de la expresión para el valor dado de <i>x</i>.<br><b>x<sup>3</sup> + 5x<sup>2</sup> + 3x + 1</b> para <b>x = −3</b>', tipo:'num', respuesta:10,
-    explicacion: receta({ pide:'cambiar cada x por (−3) y calcular.',
-      pasos:[{ t:'Pon (−3) con paréntesis', l:['(−3)³ + 5(−3)² + 3(−3) + 1'] },
-        { t:'Las potencias', l:['(−3)³ = (−3)(−3)(−3) = −27 (3 negativos → negativo)', '(−3)² = 9 (2 negativos → positivo)'] },
-        { t:'Las multiplicaciones', l:['5 × 9 = 45', '3 × (−3) = −9 (positivo por negativo da negativo)', 'Queda: −27 + 45 − 9 + 1'] },
-        { t:'Suma de izquierda a derecha', l:[`−27 + 45 = 18 → 18 − 9 = 9 → 9 + 1 = ${cb(10)}`] }],
-      resp:'10', error:'hacer (−3)² = −9: con paréntesis, (−3)(−3) da +9.',
-      ejemplo:'−27 + 45 − 9 + 1 = 10.' }) }),
+    explicacion: receta({ pide:'el valor de la expresión cuando x vale −3: se cambia CADA x por (−3) y se hace la cuenta.',
+      pasos:[{ t:'Cambia cada x por (−3), siempre con paréntesis', l:['La expresión tiene 3 x: en x³, en 5x² y en 3x. El 1 del final no tiene x, se queda igual.', 'x³ → (−3)³', '5x² → 5(−3)²<br>(el 5 pegado al paréntesis quiere decir 5 POR lo de adentro)', '3x → 3(−3)', 'Queda: (−3)³ + 5(−3)² + 3(−3) + 1', '¿Por qué el paréntesis? Porque el signo menos es parte del número: lo que se eleva es el −3 completo.'] },
+        { t:'Primero las potencias (van antes que las multiplicaciones)', l:['(−3)³ quiere decir: (−3) × (−3) × (−3), el −3 tres veces.', '(−3) × (−3) = 9<br>(negativo por negativo da positivo)', '9 × (−3) = −27<br>(positivo por negativo da negativo)', `Así que (−3)³ = ${cb('−27')}`, '(−3)² quiere decir: (−3) × (−3), el −3 dos veces.', `(−3) × (−3) = ${cb(9)}<br>(negativo por negativo da positivo)`, 'Regla rápida: un negativo con exponente IMPAR (3) queda negativo; con exponente PAR (2) queda positivo.', 'Queda: −27 + 5(9) + 3(−3) + 1'] },
+        { t:'Ahora las multiplicaciones', l:[`5(9) = 5 × 9 = ${cb(45)}`, `3(−3) = 3 × (−3) = ${cb('−9')}<br>(positivo por negativo da negativo)`, 'Queda: −27 + 45 + (−9) + 1', 'Sumar un negativo es lo mismo que restar: −27 + 45 − 9 + 1'] },
+        { t:'Suma y resta de izquierda a derecha, de dos en dos', l:['−27 + 45: tienen signos diferentes, así que se RESTAN (sin los signos):<br>45 − 27 = 18<br>Se queda el signo del más grande (el +45): +18', 'Queda: 18 − 9 + 1', '18 − 9 = 9', 'Queda: 9 + 1', `9 + 1 = ${cb(10)}`] }],
+      resp:'10', comp:'en la calculadora, con los paréntesis: (−3)^3 + 5×(−3)^2 + 3×(−3) + 1 = 10 ✓', error:'escribir −3² sin paréntesis: eso da −9, pero (−3)² = (−3)(−3) = +9.',
+      ejemplo:'(−3)³ = −27; 5(−3)² = 5 × 9 = 45; 3(−3) = −9 → −27 + 45 − 9 + 1 = 18 − 9 + 1 = 10.' }) }),
   // 13. (la misma de la práctica 1)
   C => DEP_EXACTO[12](C),
   // 14. Divisible por 10
