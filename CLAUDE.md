@@ -435,8 +435,8 @@ negativos con `signo:true` (botón ±): −2 2/7 vale −(2 + 2/7).
 
 Pasada desde la app suelta `Proyectos/estudio-ayudante.html` (examen de Ayudante de Perito
 Electricista, PR). Es una materia más de `MATERIAS` (caps: 1 Ley de Ohm, 2 Materiales y su uso,
-3 Las Leyes). Todo su código vive en UN bloque de `index.html`, justo antes de
-`MODULOS.forEach(... m.clase = 'mate')`: `const AYUD` (datos), 7 módulos `ayud-*`
+3 Las Leyes, 4 Reglamentos y energía renovable). Todo su código vive en UN bloque de `index.html`, justo antes de
+`MODULOS.forEach(... m.clase = 'mate')`: `const AYUD` (datos), 9 módulos `ayud-*` (los de la materia 4 son `ayud-reg-*`)
 (`_ayFicha` = tarjetas pregunta/respuesta → opción múltiple, `_ayPregunta` = preguntas con 4
 opciones, `_ayFotosTodas` = foto → nombre (materiales y conduletos juntos)) y las pantallas `pantallaAyLeer(k)` /
 `pantallaAyGaleria()` (rutas `ir('ayLeer',k)` e `ir('ayGaleria')`; sus botones salen en Inicio
@@ -445,6 +445,17 @@ anteriores" / "Ninguna" / "Ambas" NO se barajan (`_ayBarajar`). Fotos: `ayudante
 archivos, ~6 MB); el `sw.js` las guarda en su propia caché `mate-fotos-ayudante-v1`, que no se
 borra al subir de versión (si cambias una foto, sube ese número). Las fotos NO van en base64
 dentro del HTML a propósito.
+
+**Materia 4 y "viejo vs. actual" (2026-10-16):** la Ley 115 vigente (texto OGP, rev. 17-jul-2024,
+Art. 8-B) pide 4 materias al ayudante: Ohm, materiales, leyes y **reglamentos (Reglamento de Peritos,
+NEC, AEE y otros)** + 500 h de electricidad con energía renovable. La 4.ª es `AYUD.reglam` (fc, quiz,
+leer). Sus datos de ley están comprobados contra el texto; el NEC y lo de renovables son datos
+generales (la lectura lo avisa). En `AYUD.leyes` los datos que cambiaron se DEJARON y se etiquetan:
+`(Repasos viejos)` vs `(Ley actual, 2024)` en el enunciado (materias 3→4, escolaridad de ayudante y
+aprendiz, multa $100-500 → $1,000-5,000 y reincidencia $2,000-5,000, quejas Colegio → Junta, reuniones
+20 → 36, dieta, término sin "máx. 2"). Sin comprobar en el texto de 2024 (sin etiqueta): sello $5,
+certificación de 1 año, 8 h de educación continua, que el Colegio emita la certificación. Si agregas
+un dato de ley, etiquétalo igual.
 
 ## Convenciones
 
