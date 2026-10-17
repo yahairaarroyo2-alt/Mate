@@ -5758,7 +5758,7 @@ const ayTagHTML = m => m.tag ? `<span class="ayTag ${m.tag}">${AY_TAG_TXT[m.tag]
 function ayudMaterialHTML(){
   if(materia !== 'ayud') return '';
   const cap = { ohm:1, materiales:2, leyes:3, reglam:4 };
-  const tags = { ohm:['ayu','conf'], materiales:['ayu','conf','perito'], leyes:['ayu'], reglam:['ayu'] };   // qué tipos de sección trae cada lectura
+  const tags = { ohm:['ayu','conf'], materiales:['ayu','conf','perito'], leyes:['ayu'], reglam:['ayu','extra'] };   // qué tipos de sección trae cada lectura
   const que = { ohm:'Ohm, circuitos y corriente alterna', materiales:'materiales, dispositivos y paneles', leyes:'el libro y la ley actual (2024)', reglam:'NEC y reglamento de la AEE' };   // lo que trae cada lectura
   return `<div class="card">
     <h2>Material de repaso</h2>
@@ -5776,7 +5776,7 @@ function pantallaAyLeer(k){
     <button class="back" onclick="ir('inicio')">← Inicio</button>
     <div class="card ayLeer">${AYUD[k].leer}
       <button class="btn amar" style="margin-top:16px" onclick="ir('practica',${cap})">Practicar ${MATERIAS.ayud.capNombre[cap]}
-        <small>mezcla de preguntas de este tema</small></button>
+        <small>${_mezclaTexto(cap)}${selTemas.some(id => MOD_POR_ID[id] && MOD_POR_ID[id].secciones[0][0] === String(cap)) ? ' · las que marcaste' : ' · mezcla de este tema'}</small></button>
     </div>`;
 }
 function pantallaAyGaleria(){
