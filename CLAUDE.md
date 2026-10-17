@@ -446,16 +446,38 @@ archivos, ~6 MB); el `sw.js` las guarda en su propia caché `mate-fotos-ayudante
 borra al subir de versión (si cambias una foto, sube ese número). Las fotos NO van en base64
 dentro del HTML a propósito.
 
-**Materia 4 y "viejo vs. actual" (2026-10-16):** la Ley 115 vigente (texto OGP, rev. 17-jul-2024,
-Art. 8-B) pide 4 materias al ayudante: Ohm, materiales, leyes y **reglamentos (Reglamento de Peritos,
-NEC, AEE y otros)** + 500 h de electricidad con energía renovable. La 4.ª es `AYUD.reglam` (fc, quiz,
-leer). Sus datos de ley están comprobados contra el texto; el NEC y lo de renovables son datos
-generales (la lectura lo avisa). En `AYUD.leyes` los datos que cambiaron se DEJARON y se etiquetan:
-`(Repasos viejos)` vs `(Ley actual, 2024)` en el enunciado (materias 3→4, escolaridad de ayudante y
-aprendiz, multa $100-500 → $1,000-5,000 y reincidencia $2,000-5,000, quejas Colegio → Junta, reuniones
-20 → 36, dieta, término sin "máx. 2"). Sin comprobar en el texto de 2024 (sin etiqueta): sello $5,
-certificación de 1 año, 8 h de educación continua, que el Colegio emita la certificación. Si agregas
-un dato de ley, etiquétalo igual.
+**Materia 4 y "libro vs. ley actual" (2026-10-16):** la Ley 115 vigente (texto OGP, rev. 17-jul-2024,
+art. 8-B) pide 4 materias al ayudante: Ohm, materiales, leyes y **reglamentos (Reglamento de Peritos, NEC,
+AEE y otros)** + 500 h de electricidad con energía renovable.
+- **Fuente = el libro del maestro**: *Electricidad Moderna* (Prof. Vázquez Chévere), en OneDrive
+  `REPASOS REVALIDA/` (cap. A–G = págs. 1–141, edición 2003; y la 9.ª ed. de 2013 completa, con un examen
+  final y sus contestaciones en las págs. 431–435). Todo el contenido de ayudante se comparó con eso.
+- `AYUD.libro` (fund, basica, ac, disp, paneles) = lo que faltaba de los cap. B–G, módulos `ayud-lib-*`
+  (1.3–1.5 y 2.4–2.5); las lecturas de los temas 1 y 2 tienen secciones "Del libro".
+- `AYUD.reglam` (tema 4) = NEC y Reglamento Complementario de la AEE (1997) tal como los enseña el libro,
+  más el art. 23 de la Ley 115. Los artículos del NEC van en pares: `(Libro, NEC viejo)` (370, 348, 346…)
+  y `(NEC actual)` (314, 358, 344…). Donde el libro se contradice (conduleto F 18" vs 30", tubo de tierra
+  ½" vs ¾") están las dos con su fuente.
+- `AYUD.reglamExtra` = renovables y NEC general que agregué yo y NO están en el material (la usuaria
+  pidió dejarlos "como extra"): módulos `ayud-reg-extra-*` con `extra:true`, que `construirCola`,
+  `modulosActivos` y el conteo de "Mezcla de…" dejan fuera.
+- `AYUD.leyes`: el libro trae las versiones VIEJAS de la Ley 115 y la 131. Etiquetas en el enunciado:
+  `(Libro del maestro)` vs `(Ley actual, 2024)`; sin etiqueta = igual en los dos. Cambió: materias 3→4,
+  escolaridad, certificado del aprendiz, documentos de la solicitud, multa Ley 131 $100-500 → $300-1,000
+  y Ley 115 art. 23 → $1,000-5,000, sello $5 → $10 residencial, ayudantes ahora miembros del Colegio,
+  exenciones de educación continua, la Junta elige presidente/vice/secretario, reuniones 20 → 36,
+  sin "máx. 2 términos". OJO: las quejas las investigan los DOS (Colegio, de sus miembros, Ley 131 art.
+  2-h; Junta, Ley 115 art. 14). Sin comprobar: vigencia de 1 año de la certificación.
+- Plata = 9.65 (tabla del libro; antes decía 9.60).
+- **Casillas en Temas (solo materia `ayud`)**: cada tema de la lista tiene una casilla; lo marcado decide qué entra en
+  la "Mezcla" de SU capítulo (el botón dice "X/171 preguntas"; sin nada marcado en el capítulo trae todo). Estado:
+  `selTemas` / `mate_seltemas_v1` (entra solo en el respaldo, por el prefijo `mate_`); lo usa `construirCola(cap)`
+  (`_modsCap`, `_mezclaTexto`, `toggleSelTema`). Un tema [Extra] marcado SÍ entra. No toca `clase` ("Elegir temas").
+- **Etiquetas de tema (2026-10-16)**: cada módulo de ayudante lleva la etiqueta `Ayudante` (lo dice la ley o
+  venía de las fotos del examen: Ohm, cap. C, materiales, fotos, leyes, reglamentos), `[Por confirmar]` (libro
+  del maestro, falta confirmar con él: cap. B, D y E–F), `[Probable perito]` (cap. G: censo de carga) o
+  `[Extra]`. Se ven como burbuja en la esquina del botón (`.ayTag`, `m.tag`, `AY_TAG`); no hay leyenda aparte (la quitó la usuaria). Pendiente: preguntarle al maestro qué
+  capítulos entran en el de ayudante y quitar/mover lo que no. Un tema nuevo de ayudante lleva su etiqueta.
 
 ## Convenciones
 
