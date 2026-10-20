@@ -525,3 +525,10 @@ AEE y otros)** + 500 h de electricidad con energía renovable.
 - **Sí/No y listas de 2 opciones** cambian de lado al azar por ejercicio (`_invPos`); las prácticas exactas (`__n`/`nuevaRonda`) y las rotuladas (a)/(b) no.
 - Las figuras de los Repasos son SVG a mano (`svgF`, `txF`, `dashF`): para ver una página del PDF se puede dibujar con pdf.js en una página temporal y guardarla como PNG.
 - Pendiente: parsers de `verificar-respuestas.js` para estos módulos; práctica del Parcial 2 (Caps. 6-8) y tareas de 8.2-8.3 cuando las haga.
+
+**Tareas y Quizzes de EducoSoft (2026-10-20, pedido de la usuaria: "que sean los mismos siempre")**: los temas `educo-hw6|qp6|qz6|hw7|qp7|qz7|hw8|qp8|qz8`
+(`_modEducoTQ`, `sinReloj:true`) son las 102 preguntas EXACTAS de sus 9 evaluaciones, en orden, con las opciones a)–e) como las puso EducoSoft (reemplazaron a los
+`educo-cap6|7|8` con números al azar). Cada una se escribe con sus números en una llamada a un constructor `bResta/bEst/bEq/bImp…` (junto a `_modEducoTQ`); la respuesta sale
+del código y se comparó con lo que EducoSoft marcó correcto. Sale una etiqueta chiquita "Capítulo N" en la esquina de arriba (`.capEsq`, también en los Repasos y Autoevaluaciones);
+`_pideDe` la quita del "Qué te piden". Si EducoSoft cambia algo o ella hace otra evaluación, se agregan sus preguntas igual (resultados: `TestPaperResults.aspx?ID=<attempt>&tid=<test>` y
+`ViewStudentResponse.aspx?Qid=<q>&Tid=<attempt>`).
