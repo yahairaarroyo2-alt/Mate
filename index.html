@@ -6248,7 +6248,17 @@ const _limpiarTodoHTML = v => typeof v === 'string' ? _limpiarHTML(v) : Array.is
   : v && typeof v === 'object' ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, _limpiarTodoHTML(x)])) : v;
 
 let nivel  = _nivelOk(leer('mate_nivel_v1', 'medio'));
-let materia = leer('mate_materia_v1', 'mate');   // qué materia se está estudiando ahora mismo
+// Modo "solo ayudante": el link …/Mate/?solo=ayud deja la app solo con Repaso de ayudante (sin las otras materias).
+// Se guarda en mate_solo_v1 para que siga así aunque se abra sin el parámetro; ?solo=todas lo quita.
+// OJO: el parámetro se queda en la dirección (no se limpia) porque el manifiesto del modo (ver más abajo) arranca con él.
+const SOLO = (() => {
+  try{
+    const p = new URLSearchParams(location.search).get('solo');
+    if(p === 'ayud') guardar('mate_solo_v1', 'ayud'); else if(p === 'todas') guardar('mate_solo_v1', null);
+  }catch(e){}
+  return leer('mate_solo_v1', null) === 'ayud' ? 'ayud' : null;
+})();
+let materia = SOLO || leer('mate_materia_v1', 'mate');   // qué materia se está estudiando ahora mismo
 if(!Object.prototype.hasOwnProperty.call(MATERIAS, materia)) materia = 'mate';
 let clase  = _limpiarClase(leer('mate_clase_v1', null));      // { etiqueta, mods:[] } — la mezcla activa ahora mismo
 let grupos = _limpiarGrupos(leer('mate_grupos_v1', []));      // [{id, nombre, mods:[]}] — grupos guardados (ej. "Examen 1"),
@@ -7696,7 +7706,7 @@ function pantallaInicio(){
     </div>` : '';
   const _rachaViva = _rachaDiasVigente();
   main.innerHTML = `
-    ${Object.keys(MATERIAS).length > 1 ? `
+    ${Object.keys(MATERIAS).length > 1 && !SOLO ? `
     <div class="card" style="padding:12px 16px;margin-bottom:10px">
       <div class="chips">
         ${Object.keys(MATERIAS).map(k => `<button class="chip ${materia===k?'on':''}" onclick="cambiarMateria('${k}')">${MATERIAS[k].nombre}</button>`).join('')}
@@ -7876,7 +7886,7 @@ function quitarClase(){ clase = null; guardar('mate_clase_v1', null); if(syncDoc
 // cambia de materia (Álgebra ↔ World Culture I, etc.) — limpia cualquier grupo/mezcla activo
 // de la materia anterior (sus módulos no existen en la nueva) y vuelve a pintar Inicio
 function cambiarMateria(m){
-  if(m === materia || !MATERIAS[m]) return;
+  if(SOLO || m === materia || !MATERIAS[m]) return;
   materia = m; guardar('mate_materia_v1', materia);
   quitarClase();
 }
@@ -9280,6 +9290,7 @@ function _atajoInicial(){
   if(!id && !destino) return false;
   history.replaceState(null, '', location.pathname);
   const m = id && MOD_POR_ID[id];
+  if(m && SOLO && m.clase !== SOLO) return false;
   if(m){
     if(materia !== m.clase){ materia = m.clase; guardar('mate_materia_v1', materia); clase = null; guardar('mate_clase_v1', null); }
     const s = leer('mate_sesion_v1', null);
@@ -9288,6 +9299,19 @@ function _atajoInicial(){
   }
   if(destino === 'errores'){ ir('errores'); return true; }
   return false;
+}
+if(SOLO){
+  document.title = MATERIAS[SOLO].nombre;
+  fetch('manifest.json').then(r => r.json()).then(m => {
+    const abs = u => new URL(u, location.href).href, inicio = abs('./?solo=' + SOLO);
+    m.id = inicio; m.start_url = inicio; m.scope = abs('./');
+    m.name = MATERIAS[SOLO].nombre; m.short_name = 'Ayudante';
+    m.description = 'Repaso para el examen de Ayudante de Perito Electricista (Puerto Rico)';
+    m.icons = (m.icons || []).map(i => ({ ...i, src: abs(i.src) }));
+    delete m.shortcuts;   // los atajos son de otras materias
+    const l = document.querySelector('link[rel="manifest"]');
+    if(l) l.href = URL.createObjectURL(new Blob([JSON.stringify(m)], { type:'application/manifest+json' }));
+  }).catch(() => {});
 }
 aplicarTema();
 if(location.search.indexOf('test') >= 0) autotest();

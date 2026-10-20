@@ -469,6 +469,14 @@ AEE y otros)** + 500 h de electricidad con energía renovable.
   sin "máx. 2 términos". OJO: las quejas las investigan los DOS (Colegio, de sus miembros, Ley 131 art.
   2-h; Junta, Ley 115 art. 14). Sin comprobar: vigencia de 1 año de la certificación.
 - Plata = 9.65 (tabla del libro; antes decía 9.60).
+- **Modo "solo ayudante" (2026-10-19)**: el link `https://yahairaarroyo2-alt.github.io/Mate/?solo=ayud` deja la app solo con
+  Repaso de ayudante, para pasársela a otra persona. `SOLO` (justo antes de `let materia`) lee el parámetro y lo guarda en
+  `mate_solo_v1`; `?solo=todas` lo quita. Con `SOLO`: `materia` queda fija, `cambiarMateria` no hace nada, no salen los
+  botones de materia, el título es "Repaso de ayudante" y se arma un manifiesto propio (Blob: nombre, `start_url` y `id` con
+  `?solo=ayud`, sin atajos) para instalarla en la pantalla de inicio. El parámetro NO se limpia de la dirección a propósito
+  (en iPhone la app instalada tiene almacenamiento aparte y arranca por la URL). No es un candado: es solo esconder las otras
+  materias. Las etiquetas (Por confirmar, etc.) se ven igual en este modo. Para PROBAR en el panel del navegador comparte
+  localStorage con la app normal: al terminar abrir `?solo=todas`.
 - **Casillas en Temas (solo materia `ayud`)**: cada tema de la lista tiene una casilla; lo marcado decide qué entra en
   la "Mezcla" de SU capítulo (el botón dice "X/171 preguntas"; sin nada marcado en el capítulo trae todo). Estado:
   `selTemas` / `mate_seltemas_v1` (entra solo en el respaldo, por el prefijo `mate_`); lo usa `construirCola(cap)`
