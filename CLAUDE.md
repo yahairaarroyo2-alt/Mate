@@ -2,7 +2,7 @@
 
 ## Qué es
 
-App de práctica en español con 4 materias (`MATERIAS`): **Álgebra** (MAGS 120I, caps. 1-5 y las
+App de práctica en español con 4 materias (`MATERIAS`): **Álgebra** (MAGS 120I, caps. 1-8 y las
 prácticas EXACTAS del Examen Departamental), **World Culture I**, **Circuitos Eléctricos** y **Repaso de
 ayudante** (examen de Ayudante de Perito Electricista). ~90 temas. Genera ejercicios (o los saca de bancos
 fijos), verifica la respuesta y siempre explica el porqué paso a paso. Un solo archivo HTML, sin build, sin npm, publicado como PWA en GitHub Pages
@@ -513,3 +513,15 @@ AEE y otros)** + 500 h de electricidad con energía renovable.
   (`aviso:true`) que no cuenta como error.
 - **Atajos del ícono** (`manifest.json → shortcuts`): `?practica=<tema>` y `?ir=errores` (`_atajoInicial`, limpia la URL).
 - **"Practicar" un grupo** empieza la ronda directo. **Grupos:** `tamanoMezcla` acepta ids o módulos (`nTemas`: "1 tema").
+
+## Capítulos 6, 7 y 8 de Álgebra (2026-10-20)
+
+- **PDFs del E-Book** en `educosoft/cap6|7|8` (fuera de git). 18 temas del libro (`dec-*`, `suma-resta-dec`, `mult-div-dec`, `ecuaciones-dec`, `geometria-dec`,
+  `porciento-*`, `interes`…, secciones 6.1–8.5), 3 con los TIPOS de las tareas y quizzes de EducoSoft (`educo-cap6|7|8`, secciones 6.9/7.9/8.9) y los Repasos y
+  Autoevaluaciones EXACTOS del libro (`repaso-cap6|7|8`, `autoeval-cap6|7|8`: secciones 6.6/6.7, 7.6/7.7, 8.7/8.8). Faltan a propósito Repaso 8 n.º 10 y 52 y
+  Autoevaluación 8 n.º 2 y 6 (ambiguos). Los números decimales pasan SIEMPRE por `dN()` (quita basura de coma flotante); las respuestas numéricas se comparan
+  exactas (`TOL_EXACTA`); el redondeo es `redondeaK(v, k)`; el impuesto de venta sube al centavo de arriba (`alCentavoMayor`).
+- **Dinero** (`ej.dinero` en tipo `num`, o `din:true` en un campo de `multi`): se acepta con o sin `$`, y "$−6,072.31" avisa que el signo va ANTES del `$` (EducoSoft lo marca mal).
+- **Sí/No y listas de 2 opciones** cambian de lado al azar por ejercicio (`_invPos`); las prácticas exactas (`__n`/`nuevaRonda`) y las rotuladas (a)/(b) no.
+- Las figuras de los Repasos son SVG a mano (`svgF`, `txF`, `dashF`): para ver una página del PDF se puede dibujar con pdf.js en una página temporal y guardarla como PNG.
+- Pendiente: parsers de `verificar-respuestas.js` para estos módulos; práctica del Parcial 2 (Caps. 6-8) y tareas de 8.2-8.3 cuando las haga.
