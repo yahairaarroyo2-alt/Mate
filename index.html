@@ -274,8 +274,9 @@
     /* etiqueta de tema (Repaso de ayudante): burbujita en la esquina del botón, mismo estilo que la burbuja AI */
     .btn.conTag { position:relative; padding-top:29px; }   /* la burbuja va ADENTRO del botón, en la esquina; el espacio de arriba evita que pise el texto */
     .ayTag { position:absolute; top:7px; right:11px; z-index:2; padding:3px 10px; border-radius:999px; font-size:9.5px; font-weight:900; letter-spacing:.7px; text-transform:uppercase; line-height:1.2; color:#000; border:1px solid var(--tg-b); background:var(--tg-f); backdrop-filter:none; pointer-events:none; }
-    .ayTag.ayu { --tg-b:color-mix(in srgb,#2e7d32 40%,transparent); --tg-f:color-mix(in srgb,#2e7d32 22%,#fff); }
-    .ayTag.conf { --tg-b:color-mix(in srgb,#b26a00 40%,transparent); --tg-f:color-mix(in srgb,#f0a020 30%,#fff); }
+    .ayTag.ayu, .ayTag.libro { --tg-b:color-mix(in srgb,#2e7d32 40%,transparent); --tg-f:color-mix(in srgb,#2e7d32 22%,#fff); }
+    .ayTag.conf, .ayTag.educo { --tg-b:color-mix(in srgb,#b26a00 40%,transparent); --tg-f:color-mix(in srgb,#f0a020 30%,#fff); }
+    .ayTag.azar { --tg-b:color-mix(in srgb,#455a64 35%,transparent); --tg-f:color-mix(in srgb,#607d8b 18%,#fff); }
     .ayTag.perito { --tg-b:color-mix(in srgb,#c62828 40%,transparent); --tg-f:color-mix(in srgb,#e53935 22%,#fff); }
     .ayTag.extra { --tg-b:color-mix(in srgb,#6a1b9a 35%,transparent); --tg-f:color-mix(in srgb,#8e44ad 20%,#fff); }
     /* cada sección de una lectura va en una burbuja grande del color de su etiqueta */
@@ -295,8 +296,9 @@
     .ayTags { position:absolute; top:7px; right:11px; z-index:2; display:flex; gap:4px; pointer-events:none; }
     .ayTags .ayTag { position:static; }
     body.night .ayTag { color:#fff; }
-    body.night .ayTag.ayu { --tg-b:rgba(110,200,120,.4); --tg-f:rgba(60,160,80,.28); }
-    body.night .ayTag.conf { --tg-b:rgba(255,190,80,.4); --tg-f:rgba(230,150,30,.28); }
+    body.night .ayTag.ayu, body.night .ayTag.libro { --tg-b:rgba(110,200,120,.4); --tg-f:rgba(60,160,80,.28); }
+    body.night .ayTag.conf, body.night .ayTag.educo { --tg-b:rgba(255,190,80,.4); --tg-f:rgba(230,150,30,.28); }
+    body.night .ayTag.azar { --tg-b:rgba(170,195,215,.4); --tg-f:rgba(120,150,175,.26); }
     body.night .ayTag.perito { --tg-b:rgba(255,120,120,.4); --tg-f:rgba(220,60,60,.28); }
     body.night .ayTag.extra { --tg-b:rgba(190,140,230,.4); --tg-f:rgba(140,80,190,.28); }
     /* etiqueta "AI" junto al título del chat */
@@ -5752,7 +5754,7 @@ const AY_TAG = {
   'ayud-leyes-conceptos':'ayu', 'ayud-leyes-preguntas':'ayu', 'ayud-reg-conceptos':'ayu', 'ayud-reg-preguntas':'ayu',
   'ayud-reg-extra-conceptos':'extra', 'ayud-reg-extra-preguntas':'extra'
 };
-const AY_TAG_TXT = { ayu:'Ayudante', conf:'Por confirmar', perito:'Probable perito', extra:'Extra' };
+const AY_TAG_TXT = { ayu:'Ayudante', conf:'Por confirmar', perito:'Probable perito', extra:'Extra', azar:'Al azar', libro:'Del libro', educo:'EducoSoft' };   // los 3 últimos son de Álgebra
 MODULOS.forEach(m => { if (AY_TAG[m.id]) m.tag = AY_TAG[m.id]; });
 const ayTagsHTML = lista => `<span class="ayTags">${lista.map(t => `<span class="ayTag ${t}">${AY_TAG_TXT[t]}</span>`).join('')}</span>`;
 const ayTagHTML = m => m.tag ? `<span class="ayTag ${m.tag}">${AY_TAG_TXT[m.tag]}</span>` : '';
@@ -7040,7 +7042,10 @@ const svgParalelo = (h, lado, b, u) => `<svg viewBox="0 0 300 120" style="width:
    mismo orden. Cada una es un tema que sale EN ORDEN (banco + nuevaRonda, como las prácticas del Departamental). ── */
 const px = v => (v < 0 ? '−' : '') + String(Math.abs(dN(v)));                       // número tal cual lo escribe EducoSoft (sin comas de miles)
 const TT = (ej, truco) => `TRUCO: ${truco} Ejemplo con este mismo: ${ej}`;
-function _modEducoTQ(id, nombre, sec, titulo, banco){
+// temas = el tema de cada pregunta del banco ("sr sr md …", ver _EDU_TEMAS): de ahí salen los temas "— EducoSoft" (EDU_BANCOS guarda banco y temas de cada evaluación)
+const EDU_BANCOS = {};
+function _modEducoTQ(id, nombre, sec, titulo, banco, temas){
+  if(temas) EDU_BANCOS[id] = { banco, temas:temas.split(' ') };
   return { id, nombre, secciones:[sec], banco:banco.length, sinReloj:true, _sig:0, nuevaRonda(){ this._sig = 0; },
     gen(){ const i = this._sig % banco.length; this._sig++; const ej = banco[i]();
       ej.enunciado = `<small class="capEsq">Capítulo ${sec[0]}</small>` + ej.enunciado; ej.__n = i; return ej; } };
@@ -7126,7 +7131,7 @@ MODULOS.push(
 _modEducoTQ('educo-hw6', 'Tarea 6.2–6.4 de EducoSoft (las 12 exactas)', '6.9', 'Tarea (Homework) 6.2–6.4 de EducoSoft', [
   () => bResta(15.484, 3.212), () => bEst([5700.513, 171.65], false), () => bProd(-0.518, 0.001), () => bProd(97, 0.01), () => bCoc(2.2, 1.1), () => bDivMov(1023.9, 1),
   () => bEfec(43.1, 0.1), () => bDecFrac(0.0005), () => bFracDec(31, 40), () => bOrden(51.2, 2, 2, 2, 1.1), () => bFront(1, 3, 8, 4, 9), () => bProm(5, 1, 2, 5.2, 6.6)
-]),
+], 'sr sr md md md md md df df oo oo pr'),
 _modEducoTQ('educo-qp6', 'Quiz de práctica 6.2–6.4 de EducoSoft (las 15 exactas)', '6.9', 'Quiz de práctica 6.2–6.4 de EducoSoft', [
   () => MCx('<b>Suma: 2.29 + 0.73 + 37.9</b>', ['41.31', '40.92', '49.6', '40.94', NING], '40.92', ['Paso 1 — en columna con los puntos alineados:', colDec([2.29, 0.73, 37.9], '+', 40.92)], TT('2.29 + 0.73 + 37.9 = 40.92.', 'el 37.9 es 37.90 para alinear los lugares.')),
   () => bSumaRed([279.27, 36.4416, 105.9]), () => bSuma([9.53, 69.989, 0.63, 188.19]), () => bDecMix(39.32), () => bMixDec(5, 5, 19), () => bProd(-0.316, 0.001),
@@ -7135,7 +7140,7 @@ _modEducoTQ('educo-qp6', 'Quiz de práctica 6.2–6.4 de EducoSoft (las 15 exact
   () => bVel('Wilson', 88.1, 1.5), () => bOrden(49.6, 2, 2, 2, 1.2), () => bEst([313.7, 44.13, 134.774, 694.151], true), () => bFront(1, 8, 9, 3, 5),
   () => MCx('<b>Estima el producto de 3.987 × 5.09 redondeando cada número al entero más cercano.</b>', ['200', '2', '0.2', '20', NING], '20', ['Paso 1 — 3.987 ≈ 4 y 5.09 ≈ 5', 'Paso 2 — 4 × 5 = 20'], TT('4 × 5 = 20.', 'redondea primero, multiplica después.')),
   () => bFrontProd(7.51, 85.29), () => bProm(5, 2, 5, 2.5, 8.8)
-]),
+], 'sr sr sr df df md md md md oo sr oo md md pr'),
 _modEducoTQ('educo-qz6', 'Quiz 6.2–6.4 de EducoSoft (las 15 exactas)', '6.9', 'Quiz 6.2–6.4 de EducoSoft', [
   () => MCx('<b>La suma de 147.983 + 53.007 + 2.09 + 3 es:</b>', ['201,202', '206.08', '206', '206.1', NING], '206.08', ['Paso 1 — en columna con los puntos alineados (el 3 es 3.000):', colDec([147.983, 53.007, 2.09, 3], '+', 206.08)], TT('147.983 + 53.007 + 2.09 + 3 = 206.08.', 'el entero 3 tiene el punto al final: 3.000.')),
   () => MCx('<b>La diferencia entre 3.2 y 1.7 es:</b>', ['2.4', '1.4', '2.6', '1.5', NING], '1.5', ['"La diferencia entre A y B" = A − B: 3.2 − 1.7 = 1.5'], TT('3.2 − 1.7 = 1.5.', 'comprueba sumando: 1.5 + 1.7 = 3.2.')),
@@ -7151,7 +7156,7 @@ _modEducoTQ('educo-qz6', 'Quiz 6.2–6.4 de EducoSoft (las 15 exactas)', '6.9', 
   () => bFracDec(39, 40), () => bSumaFr(4, 5, 8, 0.05, 6, 2, 5), () => bFront(1, 8, 8, 5, 8),
   () => MCx('<b>Javier, Roberto y María compararon sus salarios de una semana en particular, y encontraron que el salario promedio fue $631.50. Si Roberto gana $562.25, y Javier gana $640.55, ¿cuál fue el salario de María esa semana?</b>', ['$691.70', '$591.70', '$791.70', '$390.75', NING], '$691.70',
     ['Paso 1 — si el promedio de 3 es $631.50, la SUMA de los 3 es 631.50 × 3 = 1,894.50', 'Paso 2 — se le restan los dos que conoces: 1,894.50 − 562.25 − 640.55 = 691.70'], TT('1,894.50 − 562.25 − 640.55 = 691.70.', 'total = promedio × cuántos son; el que falta = total − los conocidos.'))
-]),
+], 'sr sr sr sr md md md md md md df df oo oo pr'),
 /* ═══ CAPÍTULO 7: Tarea y Quizzes 7.1–7.2 ═══ */
 _modEducoTQ('educo-hw7', 'Tarea 7.1–7.2 de EducoSoft (las 10 exactas)', '7.9', 'Tarea (Homework) 7.1–7.2 de EducoSoft', [
   () => ({ enunciado:`Resuelve la ecuación para <i>x</i>:<br><b>${fr(5, 7)} + 4<i>x</i> = 0.5</b>`, tipo:'frac', respuesta:{ n:-3, d:56 }, pedirSimple:true, signo:true, ayuda:'x = ___ (como fracción; con el ± para el signo)',
@@ -7162,7 +7167,7 @@ _modEducoTQ('educo-hw7', 'Tarea 7.1–7.2 de EducoSoft (las 10 exactas)', '7.9',
   () => ({ enunciado:`Para la siguiente figura, halla la razón de la altura a la base, como una fracción en términos simples.${svgParalelo('2.2', '2.7', '6', 'cm')}`, tipo:'frac', respuesta:{ n:11, d:30 }, pedirSimple:true,
     explicacion:['La altura es la línea punteada (2.2 cm), NO el lado inclinado (2.7 cm). La base mide 6 cm.', 'Paso 1 — razón: 2.2/6', 'Paso 2 — se quita el punto multiplicando arriba y abajo por 10: 22/60', explSimplif(22, 60), '→ 11/30', TT('2.2/6 = 22/60 = 11/30.', 'la altura siempre es la medida que forma un ángulo recto con la base.')] }),
   () => bLibra(3.5, 17.5), () => bYardas(3.5, 24.5, 21)
-]),
+], 'ec ec ec ec fo ap ap ap ap ap'),
 _modEducoTQ('educo-qp7', 'Quiz de práctica 7.1–7.2 de EducoSoft (las 10 exactas)', '7.9', 'Quiz de práctica 7.1–7.2 de EducoSoft', [
   () => bEq('Resuelve la ecuación:', '0.03<i>x</i> + 0.055 (7000 − <i>x</i>) = 335', '', ['Se distribuye: 0.03x + 385 − 0.055x = 335 → se juntan: −0.025x + 385 = 335'], -0.025, 385, 0, 335, 3),
   () => bEq('Resuelve para <i>x</i>.', '0.7<i>x</i> = 3.5', '', [], 0.7, 0, 0, 3.5, 3), () => bBarq(1.15, 260, 4000, 3424.35), () => bSara(600),
@@ -7172,14 +7177,14 @@ _modEducoTQ('educo-qp7', 'Quiz de práctica 7.1–7.2 de EducoSoft (las 10 exact
   () => MCx('<b>Mark viaja 62.43 millas en su bicicleta en 8.3 horas. ¿Cuál es la velocidad promedio a la décima más cercana?</b>', ['7.6 mph', '8.56 mph', '7.2 mph', '7.1 mph', NING], NING, ['Velocidad = distancia ÷ tiempo = 62.43 ÷ 8.3 = 7.521… ≈ 7.5 mph', '7.5 no está entre las opciones'], TT('62.43 ÷ 8.3 ≈ 7.5.', 'si tu resultado no está, escoge "Ninguno de los anteriores".')),
   () => MCx('<b>Ciertos dulces cuestan $2.17 la libra. Hay 31 dulces en una libra. ¿Cuál es el precio de cada dulce?</b>', ['$0.07', '$67.27', '$7.00', '$70.07', NING], '$0.07', ['Una libra ($2.17) trae 31 dulces: precio de 1 = 2.17 ÷ 31 = $0.07'], TT('2.17 ÷ 31 = $0.07.', 'el precio de UNO es total ÷ cuántos.')),
   () => bCorr(7.4, 2)
-]),
+], 'ec ec ap ap ec ec fo ap ap ap'),
 _modEducoTQ('educo-qz7', 'Quiz 7.1–7.2 de EducoSoft (las 10 exactas)', '7.9', 'Quiz 7.1–7.2 de EducoSoft', [
   () => bEq('Resuelve la ecuación para <i>x</i>:', fr(1, 8) + '<i>x</i> − 4 = 5', '', [], 0.125, -4, 0, 5, 3),
   () => bEq('Resuelve para <i>x</i>.', '0.04<i>x</i> + 0.11 (<i>x</i> + 2) = 3.52', '', ['Se distribuye: 0.04x + 0.11x + 0.22 = 3.52 → se juntan: 0.15x + 0.22 = 3.52'], 0.15, 0.22, 0, 3.52, 3),
   () => bEq('Resuelve para <i>x</i>:', '0.05 (10,000) + 0.08<i>x</i> = 0.076 (10,000 + <i>x</i>)', '', ['Se multiplica y se distribuye: 500 + 0.08x = 760 + 0.076x'], 0.08, 500, 0.076, 760, 3),
   () => bEq('Resuelve la ecuación:', '2.5 (3<i>x</i> + 2) = 3<i>x</i> + 1.5', '<br><small>(Redondea a dos lugares decimales)</small>', ['Se distribuye: 7.5x + 5 = 3x + 1.5'], 7.5, 5, 3, 1.5, 2),
   () => bCels(113), () => bBalance(12326.64, 6254.33), () => bSara(800), () => bCamisas(6, 465), () => bLibra(3.6, 14.4), () => bYardas(4.4, 24.8, 22)
-]),
+], 'ec ec ec ec fo ap ap ap ap ap'),
 /* ═══ CAPÍTULO 8: Tarea y Quizzes 8.1 (Razones y proporciones) ═══ */
 _modEducoTQ('educo-hw8', 'Tarea 8.1 de EducoSoft (las 10 exactas)', '8.9', 'Tarea (Homework) 8.1 de EducoSoft', [
   () => bRazU('Halla la razón de <b>5 monedas de 10 centavos</b> a <b>6 niqueles</b>, y simplifica.<br><small>(Cambia monedas de 10 centavos y niqueles a centavos)</small>', 50, 30, ['Paso 1 — a centavos: 5 × 10 = 50 centavos y 6 × 5 = 30 centavos']),
@@ -7194,7 +7199,7 @@ _modEducoTQ('educo-hw8', 'Tarea 8.1 de EducoSoft (las 10 exactas)', '8.9', 'Tare
   () => bMaq(3, 5, 2, 3, 5),
   () => { const x = 3 * 220 / 610, r = redondeaK(x, 0); return { enunciado:'La distancia entre Glendale, Arizona y Henderson, Nevada, es <b>610 millas</b>. En cierto mapa esto está representado por una longitud de <b>3 pulgadas</b>. Bakersfield, California y Stockton, California, están separados por <b>220 millas</b>. Halla la longitud de la línea que conecta estas dos ciudades en el mapa.<br><small>(Redondea la respuesta al número entero más cercano)</small>', ...numDec(r), ayuda:'pulgadas (entero)',
     explicacion:['Proporción (pulgadas/millas): 3/610 = x/220', 'Productos cruzados: 610x = 3 × 220 = 660', `x = 660 ÷ 610 = ${fd(Math.floor(x * 100) / 100, 2)}… ≈ ${r}`, `→ ${r} pulg`, TT(`x ≈ ${r} pulg.`, 'arma la proporción con las mismas unidades en el mismo lugar (pulgadas arriba, millas abajo).')] }; }
-]),
+], 'rp rp rp rp rp rp rp rp rp rp'),
 _modEducoTQ('educo-qp8', 'Quiz de práctica 8.1 de EducoSoft (las 10 exactas)', '8.9', 'Quiz de práctica 8.1 de EducoSoft', [
   () => bRazU('Halla la razón de <b>8 pulgadas</b> a <b>2 yardas</b>, y simplifica.<br><small>(Cambia yardas a pulgadas)</small>', 8, 72, ['Paso 1 — 1 yarda = 36 pulgadas: 2 yardas = 2 × 36 = 72 pulgadas']),
   () => MCx('<b>Jaime y Julia fueron de compras al centro comercial. Jaime gastó $125 y Julia gastó $130. La comparación de la cantidad que Jaime gastó a la cantidad que Julia gastó en forma de razón es:</b>', [frS(29, 25), frS(25, 26), frS(26, 25), frS(3, 25), NING], frS(25, 26), ['Jaime a Julia: 125/130', explSimplif(125, 130)], TT('125/130 = 25/26.', 'el que se nombra primero (Jaime) va arriba.')),
@@ -7205,7 +7210,7 @@ _modEducoTQ('educo-qp8', 'Quiz de práctica 8.1 de EducoSoft (las 10 exactas)', 
   () => MCx('<b>Resuelve para <i>x</i>: ' + fr(2, 5) + '<i>x</i> = ' + fr(3, 20) + '</b>', [frS(1, 8), frS(5, 8), frS(1, 4), frS(3, 4), NING], NING, ['Se multiplica por el recíproco de 2/5, que es 5/2: x = 3/20 × 5/2 = 15/40 = 3/8', '3/8 no está entre las opciones'], TT('x = 3/20 × 5/2 = 3/8.', 'para quitar una fracción que multiplica a la x, multiplica por su recíproco (volteada).')),
   () => bMaq(2, 5, 1, 4, 7), () => bImp(800, 50000, 7000),
   () => MCx('<b>¿Cuál de las siguientes razones representa la mejor compra de habichuelas: 14 oz por $.93, 32 oz por $1.19 o 44 oz por $2.19?</b>', ['14 oz', '32 oz', '44 oz', 'Igual'], '32 oz', ['14 oz: 0.93 ÷ 14 ≈ $0.0664 por onza', '32 oz: 1.19 ÷ 32 ≈ $0.0372 por onza', '44 oz: 2.19 ÷ 44 ≈ $0.0498 por onza', 'La más barata por onza: 32 oz'], TT('$0.0372 contra $0.0664 y $0.0498 por onza.', 'compara el precio de UNA onza (precio ÷ onzas), no el precio total.'))
-]),
+], 'rp rp rp rp rp rp rp rp rp rp'),
 _modEducoTQ('educo-qz8', 'Quiz 8.1 de EducoSoft (las 10 exactas)', '8.9', 'Quiz 8.1 de EducoSoft', [
   () => bRazU('Halla la razón de <b>6 monedas de 10 centavos</b> a <b>3 pesetas</b>, y simplifica.<br><small>(Cambia monedas de 10 centavos y pesetas a centavos)</small>', 60, 75, ['Paso 1 — a centavos: 6 × 10 = 60 centavos y 3 pesetas × 25 = 75 centavos (1 peseta = 25 centavos)']),
   () => MCx('<b>La razón de 260 a 39 en su forma más simple es:</b>', [frS(13, 3), frS(20, 3), frS(10, 3), frS(3, 13), NING], frS(20, 3), ['260/39: los dos se dividen entre 13: 260 ÷ 13 = 20 y 39 ÷ 13 = 3'], TT('260/39 = 20/3.', 'prueba dividir entre 13 cuando los números no son pares.')),
@@ -7218,7 +7223,7 @@ _modEducoTQ('educo-qz8', 'Quiz 8.1 de EducoSoft (las 10 exactas)', '8.9', 'Quiz 
   () => MCx('<b>Asume que en la escala de un mapa ' + fr(1, 2) + ' pulgada representa 25 millas. ¿Cuántas pulgadas representan 87 ' + fr(1, 2) + ' millas?</b>', ['13 pulg', mixS(1, 3, 4) + ' pulg', '7 pulg', 'Ninguna'], mixS(1, 3, 4) + ' pulg',
     ['Proporción (pulgadas/millas): (1/2)/25 = x/87.5', 'x = (1/2) × 87.5 ÷ 25 = 43.75 ÷ 25 = 1.75 = 1 3/4'], TT('87.5 ÷ 25 = 3.5 medias pulgadas = 1 3/4 pulg.', 'cuenta cuántas veces cabe la escala y multiplica por la medida del mapa.')),
   () => bImp(600, 40000, 5000)
-])
+], 'rp rp rp rp rp rp rp rp rp rp')
 );
 
 /* ── Ejercicios del libro (E-Book, "Ejercicio X.Y"): los MISMOS ejercicios del libro, en orden y siempre iguales, al lado del tema al azar
@@ -7291,6 +7296,33 @@ _modEducoTQ('libro-6-2', 'Ejercicios del libro 6.2 (los 76, fijos y en orden)', 
   () => lRDS(111.051, 72.63, 135.065, 205), () => lRDS(235.231, 57.7, 342.159, 132.6), () => lSDD(2.0593, 0.655, 0.555, 0.55, false), () => lSDD(5.169, 9.254, 23.456, 7.981, true)
 ])
 );
+
+/* ── Un tema "— EducoSoft" por cada tema al azar que salió en la Tarea y los Quizzes (pedido: que un mismo tema tenga su versión al azar y su versión de EducoSoft).
+   Junta, en orden (Tarea, Quiz de práctica, Quiz), las preguntas EXACTAS de ese tema: son las mismas de los 9 temas de arriba, repartidas por tema con EDU_BANCOS.
+   Van justo debajo de su tema al azar; NO entran en la mezcla normal ni en la general (extra: ya están en la Tarea y los Quizzes completos; se meten con su casilla).
+   `cubre` = los temas al azar que copian: solo esos (y los que no tienen otra versión no) llevan la etiqueta "Al azar". ── */
+const _EDU_BANCOS_ORDEN = ['educo-hw6', 'educo-qp6', 'educo-qz6', 'educo-hw7', 'educo-qp7', 'educo-qz7', 'educo-hw8', 'educo-qp8', 'educo-qz8'];
+const _EDU_TEMAS = [   // [clave en el banco, id, nombre, sección, temas al azar que copia]
+  ['sr', 'educo-suma-resta', 'Suma y resta de decimales', '6.2', ['suma-resta-dec']],
+  ['md', 'educo-mult-div', 'Multiplicación y división de decimales', '6.3', ['mult-div-dec']],
+  ['df', 'educo-dec-frac', 'Decimales y fracciones', '6.4', ['dec-fraccion']],
+  ['oo', 'educo-orden-op', 'Orden de operaciones con decimales', '6.4', ['orden-op-dec']],
+  ['pr', 'educo-promedio', 'Promedio con decimales', '6.4', ['promedio-dec']],
+  ['ec', 'educo-ecuaciones', 'Ecuaciones lineales con decimales', '7.1', ['ecuaciones-dec']],
+  ['fo', 'educo-formulas', 'Fórmulas con decimales', '7.1', ['formulas-dec']],
+  ['ap', 'educo-aplicaciones', 'Problemas con decimales', '7.2', ['aplicaciones-dec']],
+  ['rp', 'educo-razones-prop', 'Razones y proporciones', '8.1', ['razones', 'proporciones', 'razon-unitaria-prop']]   // el 8.1 de su curso (sus temas al azar están en los caps. 3 y 5)
+];
+MODULOS.push(..._EDU_TEMAS.map(([k, id, nombre, sec, cubre]) => {
+  const banco = _EDU_BANCOS_ORDEN.flatMap(b => EDU_BANCOS[b].banco.filter((_, i) => EDU_BANCOS[b].temas[i] === k));
+  return Object.assign(_modEducoTQ(id, `${nombre} — EducoSoft (las ${banco.length} exactas)`, sec, nombre, banco), { cubre, extra:true });
+}));
+MODULOS.find(m => m.id === 'libro-6-2').cubre = ['suma-resta-dec'];
+// cada uno va justo debajo de su tema al azar en la lista (el orden de MODULOS es el de la lista de Temas)
+const _debajoDe = (id, ref) => { const [m] = MODULOS.splice(MODULOS.findIndex(x => x.id === id), 1); MODULOS.splice(MODULOS.findIndex(x => x.id === ref) + 1, 0, m); };
+[['educo-suma-resta', 'suma-resta-dec'], ['libro-6-2', 'educo-suma-resta'], ['educo-mult-div', 'mult-div-dec'], ['educo-dec-frac', 'dec-fraccion'], ['educo-orden-op', 'orden-op-dec'],
+ ['educo-promedio', 'promedio-dec'], ['educo-ecuaciones', 'ecuaciones-dec'], ['educo-formulas', 'formulas-dec'], ['educo-aplicaciones', 'aplicaciones-dec'], ['educo-razones-prop', 'compras-grandes']]
+  .forEach(([id, ref]) => _debajoDe(id, ref));
 
 /* ── Capítulos 6, 7 y 8: Ejercicios de Repaso y Autoevaluación — ejercicios EXACTOS del E-Book (pág. 348-351, 403-406, 456-458) ──
    Un número del libro = un ejercicio; los que piden (a)(b)(c) usan 'multi'. Las respuestas salen del código (no de la clave del libro,
@@ -7655,6 +7687,10 @@ MODULOS.push(
 // todo módulo sin "clase" explícita es de matemáticas — así los 37 módulos de arriba no
 // necesitan tocarse uno por uno al agregar otras materias
 MODULOS.forEach(m => { if(!m.clase) m.clase = 'mate'; });
+// etiqueta de cada tema de Álgebra en la lista de Temas (misma burbuja que Repaso de ayudante): EducoSoft | del libro | al azar. "Al azar" solo la lleva un tema que
+// se repite (otro tema fijo lo copia: `cubre`); un tema con una sola versión no lleva etiqueta.
+const _cubiertos = new Set(MODULOS.flatMap(m => m.cubre || []));
+MODULOS.forEach(m => { if(m.clase === 'mate') m.tag = /^educo-/.test(m.id) ? 'educo' : /^(libro|repaso|autoeval)-/.test(m.id) ? 'libro' : _cubiertos.has(m.id) ? 'azar' : ''; });
 const MOD_POR_ID = {}; MODULOS.forEach(m => MOD_POR_ID[m.id] = m);
 // Álgebra: los temas que todavía arman la explicación con líneas sueltas salen igual en forma de receta (aReceta)
 MODULOS.filter(m => !m.clase || m.clase === 'mate').forEach(m => { const g = m.gen;
@@ -8479,7 +8515,7 @@ const tamanoMezcla = lista => { const ms = lista.map(m => typeof m === 'string' 
 const nTemas = n => n === 1 ? '1 tema' : `${n} temas`;
 function construirCola(cap){
   const delCap = typeof cap === 'number' ? _modsCap(cap) : null;
-  const marcados = delCap && materia === 'ayud' ? delCap.filter(m => selTemas.includes(m.id)) : [];   // casillas de la lista de Temas
+  const marcados = delCap && _conCasillas() ? delCap.filter(m => selTemas.includes(m.id)) : [];   // casillas de la lista de Temas
   const ms = delCap ? (marcados.length ? marcados : delCap.filter(m => !m.extra)) : modulosActivos();
   // agrupada: se mezcla el ORDEN de los temas, pero las repeticiones de cada uno quedan juntas.
   // no agrupada (por defecto): se mezclan las repeticiones sueltas, así que pueden salir intercaladas.
@@ -9635,13 +9671,14 @@ function pantallaInicio(){
 }
 
 /* ---------- temas: tema suelto, elegir para mezclar, grupos de examen ---------- */
-// Repaso de ayudante: las casillas de la lista de Temas deciden qué entra en la "Mezcla" de SU capítulo
+// Repaso de ayudante y Álgebra: las casillas de la lista de Temas deciden qué entra en la "Mezcla" de SU capítulo
 // (sin nada marcado en el capítulo, la mezcla trae todo, como siempre). Se guarda en mate_seltemas_v1.
 let selTemas = (leer('mate_seltemas_v1', []) || []).filter(id => MOD_POR_ID[id]);
+const _conCasillas = () => materia === 'ayud' || materia === 'mate';
 const _modsCap = cap => MODULOS.filter(m => m.clase === materia && m.secciones[0][0] === String(cap));
 function _mezclaTexto(cap){
   const ms = _modsCap(cap), total = tamanoMezcla(ms.filter(m => !m.extra));
-  const sel = materia === 'ayud' ? ms.filter(m => selTemas.includes(m.id)) : [];
+  const sel = _conCasillas() ? ms.filter(m => selTemas.includes(m.id)) : [];
   if(!sel.length) return `${total} preguntas`;
   const n = tamanoMezcla(sel);
   return n <= total ? `${n}/${total} preguntas` : `${n} preguntas`;   // un tema Extra marcado puede pasar del total de la mezcla normal
@@ -9668,7 +9705,7 @@ function pantallaTemas(){
             const s = stats[m.id], p = s ? pct(s) : null;
             const btnTema = `<button class="btn sec chico${m.tag ? ' conTag' : ''}" onclick="ir('practica','${m.id}')">${m.nombre}${ayTagHTML(m)}
               ${p!==null ? `<small>${p}% de aciertos · ${s.ok+s.fallo} ejercicios</small>` : ''}</button>`;
-            return (materia === 'ayud' ? `<div class="temaFila"><input type="checkbox" aria-label="Marcar ${escHtml(m.nombre)}" ${selTemas.includes(m.id) ? 'checked' : ''} onchange="toggleSelTema('${m.id}', this.checked)">${btnTema}</div>` : btnTema) +
+            return (_conCasillas() ? `<div class="temaFila"><input type="checkbox" aria-label="Marcar ${escHtml(m.nombre)}" ${selTemas.includes(m.id) ? 'checked' : ''} onchange="toggleSelTema('${m.id}', this.checked)">${btnTema}</div>` : btnTema) +
               (m.nuevaRonda && !m.sinReloj ? `<button class="btn sec chico" onclick="ir('examen','${m.id}')">${_nombreSimulacro(m)} con reloj
                 <small>las ${m.banco} preguntas en 1 h 30 min, como el examen real, con la nota al final</small></button>` : '');
           }).join('')}
@@ -10763,7 +10800,7 @@ const _bloquesCapitulos = repintar => MATERIAS[materia].caps.map(cap => { const 
   </details>
 `; }).join('');
 function _marcarCapitulo(cap, repintar){
-  const ms = MODULOS.filter(m=>m.clase===materia && m.secciones[0][0]===String(cap));
+  const ms = MODULOS.filter(m=>m.clase===materia && m.secciones[0][0]===String(cap) && !(materia === 'mate' && m.extra));   // en Álgebra "todo" no mete los "— EducoSoft" (repiten la Tarea y los Quizzes); se marcan uno por uno
   const todosMarcados = ms.every(m=>seleccion.indexOf(m.id)>=0);
   ms.forEach(m=>toggleMod(m.id, !todosMarcados));
   (repintar || _pintarElegirTemas)();
@@ -11085,6 +11122,28 @@ function autotest(){
       if(raras)   lineas.push(`        ↳ ${raras} enunciados rotos`);
     });
   });
+
+  lineas.push('', '── etiquetas y casillas de la lista de Temas (Álgebra) ──');
+  const algM = MODULOS.filter(m => m.clase === 'mate'), selAntes = selTemas;
+  const fijo = m => /^(educo|libro|repaso|autoeval)-/.test(m.id), copiado = m => algM.some(x => (x.cubre || []).includes(m.id));
+  chk('etiquetas: un tema fijo siempre lleva la suya; uno al azar lleva "Al azar" solo si otro tema fijo lo copia', algM.every(m => fijo(m) ? ['libro', 'educo'].includes(m.tag) : (m.tag === 'azar') === copiado(m)));
+  chk('etiquetas: suma-resta-dec = azar, dec-redondear = sin etiqueta, libro-6-2 = libro, educo-hw6 y educo-suma-resta = educo',
+    MOD_POR_ID['suma-resta-dec'].tag === 'azar' && !MOD_POR_ID['dec-redondear'].tag && MOD_POR_ID['libro-6-2'].tag === 'libro' && MOD_POR_ID['educo-hw6'].tag === 'educo' && MOD_POR_ID['educo-suma-resta'].tag === 'educo');
+  const txtQ = m => { m.nuevaRonda(); return Array.from({ length:m.banco }, () => { const e = m.gen('medio'); return JSON.stringify([e.enunciado, e.respuesta]); }); };
+  const porTema = _EDU_TEMAS.flatMap(([, id]) => txtQ(MOD_POR_ID[id])).sort(), delTodo = _EDU_BANCOS_ORDEN.flatMap(id => txtQ(MOD_POR_ID[id])).sort();
+  chk('temas "— EducoSoft": reparten las 102 preguntas de la Tarea y los Quizzes, ni una de más ni de menos, idénticas', delTodo.length === 102 && eq(porTema, delTodo));
+  chk('cada tema fijo va justo debajo de su tema al azar en la lista', _EDU_TEMAS.filter(t => t[4].length === 1).every(t => MODULOS.findIndex(m => m.id === t[1]) === MODULOS.findIndex(m => m.id === t[4][0]) + 1));
+  selTemas = ['suma-resta-dec', 'libro-6-2'];
+  const col6 = construirCola(6);
+  chk('Mezcla del cap. 6 con 2 casillas: solo esos 2 temas (2 veces cada uno)', col6.length === 4 && col6.every(id => id === 'suma-resta-dec' || id === 'libro-6-2'));
+  selTemas = ['libro-6-2'];
+  chk('Mezcla del cap. 6 con solo un tema fijo marcado: entra completo (76)', construirCola(6).length === 76);
+  selTemas = ['educo-suma-resta', 'educo-mult-div'];
+  chk('Mezcla del cap. 6 con solo 2 temas "— EducoSoft" marcados: entran completos (10 + 17)', construirCola(6).length === 27);
+  selTemas = [];
+  const col6s = construirCola(6);
+  chk('Mezcla del cap. 6 sin casillas: todos los temas del capítulo, sin los "— EducoSoft" (extra)', new Set(col6s).size === _modsCap(6).filter(m => !m.extra).length && !col6s.some(id => MOD_POR_ID[id].extra));
+  selTemas = selAntes;
 
   lineas.push('', '── verificación (casos borde) ──');
   const ejS = { tipo:'frac', respuesta:{n:3,d:4}, pedirSimple:true };
