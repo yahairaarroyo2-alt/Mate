@@ -532,3 +532,11 @@ AEE y otros)** + 500 h de electricidad con energía renovable.
 del código y se comparó con lo que EducoSoft marcó correcto. Sale una etiqueta chiquita "Capítulo N" en la esquina de arriba (`.capEsq`, también en los Repasos y Autoevaluaciones);
 `_pideDe` la quita del "Qué te piden". Si EducoSoft cambia algo o ella hace otra evaluación, se agregan sus preguntas igual (resultados: `TestPaperResults.aspx?ID=<attempt>&tid=<test>` y
 `ViewStudentResponse.aspx?Qid=<q>&Tid=<attempt>`).
+
+**Ejercicios del libro, fijos (2026-10-20, pedido: "que se pueda como está y al azar")**: `libro-6-2` (`_modEducoTQ`, sección 6.2, junto al tema al azar `suma-resta-dec`) trae los
+76 ejercicios de "Ejercicio 6.2" del E-Book, en orden y siempre iguales (builders `lSuma/lResta/lSig/lDe/lSem/lEst/lRDS/lSDD`, tras `_modEducoTQ`). Es un PILOTO: la usuaria
+dijo "publica y deja como está", así que las otras 14 secciones (6.1, 6.3, 6.4, 7.1–7.4, 8.1–8.5) siguen SOLO al azar; si pide más, se hacen igual (una sección por módulo
+`libro-X-Y` + su entrada en SECMAP/CLAVES). Las respuestas salen del código y se compararon con la clave de impares del libro: coinciden todas salvo 2 errores de la clave
+(n.º 13: dice 1.10 y la cuenta da 1.11; n.º 29: dice 6.04 y la cuenta da 6.038), con nota en la explicación. En 57–72 ("estima y luego calcula") se pide solo el cálculo REAL
+(el estimado, por estimación frontal, va en la explicación: la clave del 61 no sigue su propia regla). Los ceros finales no se conservan (3.410 se ve 3.41). Para ver una página de
+un PDF sin servidor: `Windows.Data.Pdf` desde PowerShell 5.1 (`PdfDocument.LoadFromFileAsync`, `GetPage(i).RenderToStreamAsync` con `AsTask` por reflexión) guarda un PNG que se lee con Read.

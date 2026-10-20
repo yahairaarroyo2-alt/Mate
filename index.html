@@ -7221,6 +7221,77 @@ _modEducoTQ('educo-qz8', 'Quiz 8.1 de EducoSoft (las 10 exactas)', '8.9', 'Quiz 
 ])
 );
 
+/* ── Ejercicios del libro (E-Book, "Ejercicio X.Y"): los MISMOS ejercicios del libro, en orden y siempre iguales, al lado del tema al azar
+   de la misma sección (cada ronda = todos, como las prácticas del examen). Piloto: 6.2 (76 ejercicios). Las respuestas salen del código y
+   se comparan con la clave de impares del libro. En los de "estima y luego calcula" se pide el cálculo REAL (el estimado va en la explicación). ── */
+const _lbU = (u, x) => u === '$' ? '$' + fd(x, 2) : u ? fd(x) + ' ' + u : fd(x);                       // número con su unidad, como lo escribe el libro
+const _lbX = u => u === '$' ? { dinero:true, ayuda:DIN_AYUDA } : u ? { ayuda:`Respuesta en ${u}.` } : {};
+const lSuma = (xs, u) => { const s = dN(xs.reduce((a, b) => a + b, 0));
+  return { enunciado:`Suma los decimales.<br><b>${xs.map(x => _lbU(u, x)).join(' + ')}</b>`, ...numDec(s), ..._lbX(u),
+    explicacion:['Paso 1 — en columna con los puntos alineados (se rellena con ceros):', colDec(xs, '+', s), `→ ${_lbU(u, s)}`, TT(`${xs.map(x => fd(x)).join(' + ')} = ${fd(s)}.`, 'rellena con ceros para que todos tengan los mismos lugares decimales.')] }; };
+const lResta = (a, b, u, nota) => { const r = dN(a - b);
+  return { enunciado:`Halla la diferencia.<br><b>${_lbU(u, a)} − ${_lbU(u, b)}</b>`, ...numDec(r), ..._lbX(u),
+    explicacion:['Paso 1 — en columna con los puntos alineados (se rellena con ceros):', colDec([a, b], '−', r), ...(nota ? [nota] : []), `→ ${_lbU(u, r)}`, TT(`${fd(a)} − ${fd(b)} = ${fd(r)}.`, 'comprueba sumando: la diferencia + el que restaste = el primero.')] }; };
+const lSig = (a, b, resta) => { const r = dN(resta ? a - b : a + b), e = `${fd(a)} ${resta ? '−' : '+'} ${fdP(b)}`;
+  return { enunciado:`Halla la ${resta ? 'diferencia' : 'suma'} indicada.<br><b>${e}</b>`, ...numDec(r),
+    explicacion:[...(resta ? [`Paso 1 — restar es sumar el opuesto: ${e} = ${fd(a)} + ${fdP(dN(-b))}`] : []), `Paso ${resta ? 2 : 1} — con la regla de los signos:`, ...sumaSignos(a, resta ? dN(-b) : b), `→ ${fd(r)}`,
+      TT(`${e} = ${fd(r)}.`, resta ? 'menos un negativo es MÁS: cambia la resta por la suma del opuesto.' : 'signos iguales se suman; signos diferentes se restan y se queda el signo del más grande.')] }; };
+// "Resta b de a" (con redondeo opcional a k lugares) y las 4 frases de "Aplicaciones"
+const lDe = (b, a, k, nota) => { const ex = dN(a - b), r = k === undefined ? ex : redondeaK(ex, k);
+  return { enunciado:`Resta <b>${fd(b)}</b> de <b>${fd(a)}</b>${k === undefined ? '.' : ` y redondea la diferencia a la ${k === 2 ? 'centésima' : 'décima'} más cercana.`}`, ...numDec(r),
+    explicacion:[`Paso 1 — "resta ${fd(b)} de ${fd(a)}" es ${fd(a)} − ${fd(b)} (lo que va después del "de" va primero).`, colDec([a, b], '−', ex), ...(k === undefined ? [] : [`Paso 2 — se redondea a ${k} lugares: ${fd(ex)} → ${fd(r, k)}`]), ...(nota ? [nota] : []), `→ ${fd(r)}`,
+      TT(`${fd(a)} − ${fd(b)} = ${fd(ex)}${k === undefined ? '' : ` ≈ ${fd(r, k)}`}.`, '"resta A de B" es B − A: al revés da otro resultado.')] }; };
+const lFrase = (enun, pasos, r, truco) => ({ enunciado:enun, ...numDec(r), explicacion:[...pasos, `→ ${fd(r)}`, TT(`${fd(r)}.`, truco)] });
+const lRDS = (a, b, c, d) => { const dif = dN(a - b), sum = dN(c + d), r = dN(sum - dif);       // resta la diferencia de a y b de la suma de c y d
+  return lFrase(`Resta la diferencia de <b>${fd(a)}</b> y <b>${fd(b)}</b> de la suma de <b>${fd(c)}</b> y <b>${fd(d)}</b>.`, ['Paso 1 — la diferencia de los dos primeros:', colDec([a, b], '−', dif), 'Paso 2 — la suma de los otros dos:', colDec([c, d], '+', sum), 'Paso 3 — la suma MENOS la diferencia ("resta X de Y" es Y − X):', colDec([sum, dif], '−', r)], r, 'lo que va después del "de" es lo que va primero en la resta.'); };
+const lSDD = (a, b, c, d, suma1) => { const x = dN(suma1 ? a + b : a - b), y = dN(c - d), r = dN(x + y);   // suma (la suma | la diferencia) de a y b a la diferencia entre c y d
+  return lFrase(`Suma la ${suma1 ? 'suma' : 'diferencia'} de <b>${fd(a)}</b> y <b>${fd(b)}</b> a la diferencia entre <b>${fd(c)}</b> y <b>${fd(d)}</b>.`, [`Paso 1 — la ${suma1 ? 'suma' : 'diferencia'} de los dos primeros:`, colDec([a, b], suma1 ? '+' : '−', x), 'Paso 2 — la diferencia de los otros dos:', colDec([c, d], '−', y), 'Paso 3 — se suman los dos resultados:', colDec([x, y], '+', r)], r, 'primero calcula cada parte por separado y al final júntalas.'); };
+// simplificar combinando términos semejantes: ts = [[coeficiente, letra]] ('' = número solo)
+const lSem = ts => {
+  const orden = [...new Set(ts.map(t => t[1]))], suma = v => dN(ts.filter(t => t[1] === v).reduce((a, t) => a + t[0], 0));
+  const trm = (c, v, i) => `${i ? (c < 0 ? ' − ' : ' + ') : (c < 0 ? '−' : '')}${fd(Math.abs(c))}${v ? `<i>${v}</i>` : ''}`;
+  const arma = gs => gs.map(([v, c], i) => trm(c, v, i)).join('');
+  const res = orden.map(v => [v, suma(v)]).filter(([, c]) => c !== 0), ok = arma(res) || '0';
+  const malos = [arma(res.map(([v, c]) => [v, dN(-c)])), arma(orden.map(v => [v, dN(ts.filter(t => t[1] === v).reduce((a, t) => a + Math.abs(t[0]), 0))])),
+    arma(res.map(([v, c], i) => [v, i ? c : dN(c + 1)])), arma(res.map(([v, c], i) => [v, i ? c : dN(c - 1)])), res.length === 1 && res[0][1] !== 0 ? arma(res) + '<sup>2</sup>' : ''].filter(Boolean);
+  const pasos = [];
+  orden.forEach(v => { const g = ts.filter(t => t[1] === v); if(g.length > 1) pasos.push(`${v ? `Los términos con <i>${v}</i>` : 'Los números solos'}: ${g.map((t, i) => (i ? (t[0] < 0 ? '− ' : '+ ') : (t[0] < 0 ? '−' : '')) + fd(Math.abs(t[0]))).join(' ')} = ${cb(fd(suma(v)))}`); });
+  return { enunciado:`Simplifica combinando términos semejantes.<br><b>${ts.map(([c, v], i) => trm(c, v, i)).join('')}</b>`, tipo:'opciones', opciones:opcionesUnicas(ok, malos), respuesta:ok,
+    explicacion:['Paso 1 — se juntan los términos con la MISMA letra (los números solos van aparte); solo se suman los números de delante y la letra se queda igual:', ...pasos, `→ ${ok.replace(/<[^>]+>/g, '')}`,
+      TT(`${ts.map(([c, v], i) => trm(c, v, i)).join('').replace(/<[^>]+>/g, '')} = ${ok.replace(/<[^>]+>/g, '')}.`, 'x + x es 2x (no x²); un término con y y otro con x NO se juntan.')] }; };
+// "estima y luego efectúa": se pide el cálculo REAL; el estimado (estimación frontal) va en la explicación
+const lEst = (xs, ops, u) => { const ev = v => v.reduce((a, x, i) => i ? dN(ops[i - 1] === '+' ? a + x : a - x) : x), r = ev(xs), ex = xs.map(frontal), e = ev(ex);
+  const t = (v, i) => (i ? ` ${ops[i - 1]} ` : '') + (v < 0 && i ? `(${_lbU(u, v)})` : _lbU(u, v));
+  return { enunciado:`Primero estima la respuesta y luego efectúa el cálculo real. Escribe el <b>cálculo real</b>.<br><b>${xs.map(t).join('')}</b>`, ...numDec(r), ..._lbX(u),
+    explicacion:['Paso 1 — estimado: cada número se redondea a su valor posicional mayor (estimación frontal):', ...xs.map((x, i) => `${_lbU(u, x)} ≈ ${fd(ex[i])}`), `Paso 2 — la cuenta con los estimados: ${ex.map((v, i) => (i ? ` ${ops[i - 1]} ` : '') + fdP(v)).join('')} = ${fd(e)}`,
+      'Paso 3 — el cálculo real:', ...(xs.every(x => x >= 0) && ops.every(o => o === ops[0]) ? [colDec(xs, ops[0], r)] : [`${xs.map(t).join('')} = ${_lbU(u, r)}`]),
+      `Paso 4 — comparación: el real (${fd(r)}) debe estar cerca del estimado (${fd(e)}) ✓`, `→ ${_lbU(u, r)}`, TT(`estimado ${fd(e)}, real ${fd(r)}.`, 'el estimado solo sirve para ver si el real es razonable.')] }; };
+
+MODULOS.push(
+_modEducoTQ('libro-6-2', 'Ejercicios del libro 6.2 (los 76, fijos y en orden)', '6.2', 'Ejercicio 6.2 del E-Book', [
+  () => lSuma([24.4, 16.6, 8.7]), () => lSuma([3.05, 12.86, 17.29]), () => lSuma([123.043, 72.006, 9.104]), () => lSuma([3.410, 6.3975, 23.251]),
+  () => lSuma([1.4003, 13.5, 27.251]), () => lSuma([28.92, 3.49, 45.788, 36.066]), () => lSuma([68.39, 141.45, 87.3, 213.09], 'lb'),
+  () => lSuma([441.03, 2.59, 73.123, 0.9925]), () => lSuma([13.715, 25.25, 75.025, 105.05]), () => lSuma([18.624, 0.0116, 3.410, 6.3975]),
+  () => lResta(85.294, 36.079), () => lResta(191.05, 71.02), () => lResta(8.201, 7.091, '', 'Ojo: la clave del libro trae 1.10, pero la cuenta da 1.110 = 1.11.'), () => lResta(17.946, 0.378),
+  () => lResta(5.831, 0.287), () => lResta(6.271, 3.845), () => lResta(86.236, 49.547), () => lResta(93.782, 56.896),
+  () => lResta(39.502, 15.400), () => lResta(27.216, 26.8383), () => lResta(72.53, 24.642), () => lResta(603.042, 246.3),
+  () => lResta(0.3, 0.1350), () => lResta(102.578, 73.678), () => lResta(979.84, 425.69, '$'), () => lResta(254.345, 129.4),
+  () => lDe(218.765, 300), () => lDe(573.0958, 1069.75, 2), () => lDe(14.962, 21, undefined, 'Ojo: la clave del libro trae 6.04 (la diferencia 6.038 ya redondeada a la centésima); la resta exacta es 6.038.'),
+  () => lSig(-8.9, 17.82), () => lSig(-29.6, 13.71), () => lSig(0.543, -31.007), () => lSig(-17.526, 132.418), () => lSig(14.823, -21.715),
+  () => lSig(100, -82.89), () => lSig(23.175, -18.627), () => lSig(25.264, -19.837), () => lSig(27.893, -22.934),
+  () => lSig(-8.3, -7.265, true), () => lSig(-4.7, -3.92, true), () => lSig(-3.75, -5.3, true), () => lSig(-13.71, -29.6, true), () => lSig(6, 2.94, true),
+  () => lSig(-3.845, -6.271, true), () => lSig(-200.36, -45.87, true), () => lSig(350.42, -51.63, true), () => lSig(203.13, -19.25, true), () => lSig(-419.234, -412.479, true),
+  () => lSem([[6, 'x'], [5.1, 'x'], [-11.9, 'x']]), () => lSem([[5.65, 'y'], [-4.91, 'y'], [-0.05, 'y']]), () => lSem([[1.3, 'x'], [21.41, 'x'], [32.05, 'x']]),
+  () => lSem([[4.31, 't'], [-9.74, 't'], [3.21, 't']]), () => lSem([[85.7, 'x'], [-22.3, 'x'], [-17.9, 'x']]), () => lSem([[13.7, 'x'], [-7.29, 'y'], [2.89, 'y'], [-2.6, 'x']]),
+  () => lSem([[2.5, 'x'], [16.37, ''], [-5.8, 'x']]), () => lSem([[1.254, 'x'], [1.425, 'x'], [-3.203, 'x']]),
+  () => lEst([0.0125, 0.8235], ['+']), () => lEst([0.3691, 0.2798], ['−']), () => lEst([-0.5913, 0.3617], ['−']), () => lEst([0.0673, -0.7981], ['−']),
+  () => lEst([-0.0081, -0.0963], ['+']), () => lEst([0.8571, -0.0689], ['−']), () => lEst([-0.0897, -0.8973], ['+']), () => lEst([-0.0719, -0.8397], ['−']),
+  () => lEst([47.0987, 23.601], ['−']), () => lEst([2759.543, 874.099], ['−']), () => lEst([2.79, 19.23, 15.8], ['+', '+']), () => lEst([77.9, 18.42, 9.89], ['+', '−']),
+  () => lEst([1099.9, 2154.23, 819.72], ['+', '−']), () => lEst([79.82, 26.70, 43.39], ['+', '+'], '$'), () => lEst([678.49, 57.61], ['−'], 'lb'), () => lEst([6.271, 3.845], ['−']),
+  () => lRDS(111.051, 72.63, 135.065, 205), () => lRDS(235.231, 57.7, 342.159, 132.6), () => lSDD(2.0593, 0.655, 0.555, 0.55, false), () => lSDD(5.169, 9.254, 23.456, 7.981, true)
+])
+);
+
 /* ── Capítulos 6, 7 y 8: Ejercicios de Repaso y Autoevaluación — ejercicios EXACTOS del E-Book (pág. 348-351, 403-406, 456-458) ──
    Un número del libro = un ejercicio; los que piden (a)(b)(c) usan 'multi'. Las respuestas salen del código (no de la clave del libro,
    que solo trae los impares): el autotest/verificador las compara con la clave de los impares. Faltan a propósito (ambiguos o sin medidas
@@ -7821,7 +7892,7 @@ const SECMAP = {
   '7.7': ['autoeval-cap7'],
   '8.7': ['repaso-cap8'],
   '8.8': ['autoeval-cap8'],
-  '6.2': ['suma-resta-dec'],
+  '6.2': ['suma-resta-dec','libro-6-2'],
   '6.3': ['mult-div-dec'],
   '6.4': ['dec-fraccion','orden-op-dec','promedio-dec'],
   '7.1': ['ecuaciones-dec','formulas-dec'],
@@ -7919,6 +7990,7 @@ const CLAVES = {
   'autoeval-cap7':    ['autoevaluación del capítulo 7','7.7 autoevaluación'],
   'repaso-cap8':      ['repaso del capítulo 8','8.7 ejercicios de repaso','chapter 8 review'],
   'autoeval-cap8':    ['autoevaluación del capítulo 8','8.8 autoevaluación'],
+  'libro-6-2':        ['ejercicio 6.2','suma y resta de decimales del libro','ejercicios del libro 6.2'],
   'educo-hw6':        ['tarea de 6.2','homework on 6.2','estimación frontal','estimado frontal'],
   'educo-qp6':        ['quiz de práctica de 6.2','quiz on 6.2 (practice)'],
   'educo-qz6':        ['quiz de 6.2','quiz on 6.2'],
