@@ -2,7 +2,7 @@
 // Lee el enunciado de cada ejercicio, recalcula la respuesta con su propio evaluador de
 // fracciones/enteros (y parsers por módulo) y la compara con ej.respuesta. Así se atrapan
 // generadores que guardan una respuesta que no corresponde a lo que se ve en pantalla
-// (el autotest de index.html no puede: solo comprueba que la respuesta guardada pase el
+// (el autotest de app.js no puede: solo comprueba que la respuesta guardada pase el
 // verificador de la propia app, y eso es circular).
 //
 // Cómo correrlo: abrir la app en el navegador (index.html, no ?test), y en la consola:

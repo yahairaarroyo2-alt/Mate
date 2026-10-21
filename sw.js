@@ -1,22 +1,28 @@
 // Service Worker — caché offline. App de un solo archivo, sin timers/notificaciones
 // que cachear (a diferencia de Fit-F/Fit-M), así que esto es mucho más simple que
 // esos sw.js: solo cachear los assets propios y servir la app sin conexión.
-const CACHE = 'mate-v167';
+const CACHE = 'mate-v168';
 const CACHE_FOTOS = 'mate-fotos-ayudante-v2';   // si cambias una foto de ayudante/, sube este número
+// La app son DOS archivos: index.html (HTML + CSS) y app.js (todo el JavaScript). El ?v= de <script src="app.js?v=N"> en index.html
+// es el MISMO número que CACHE: así una página nueva nunca corre con el JavaScript viejo. En cada deploy se suben los dos.
+const APP_JS = './app.js?v=' + CACHE.split('-v')[1];
+const NUCLEO = ['./index.html', APP_JS];   // sin esto la app no abre sin internet: si no se pueden guardar, la instalación falla y se queda la versión anterior (completa)
 const ASSETS = [
-  './index.html',   // la app ('./' es la misma página: se sirve desde esta copia, no hace falta guardarla dos veces)
   './manifest.json',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/icon-180.png',
   './icons/favicon-32.png'
   // jszip/pdf.js NO se precachean: se cargan solo si el usuario suelta un
-  // .pptx/.pdf en "Material de clase", y solo con conexión — ver index.html.
+  // .pptx/.pdf en "Material de clase", y solo con conexión — ver app.js.
 ];
 
 self.addEventListener('install', e => {
   e.waitUntil(
-    caches.open(CACHE).then(c => Promise.all(ASSETS.map(a => c.add(new Request(a, { cache: 'reload' })).catch(() => {}))))
+    caches.open(CACHE).then(c => Promise.all([
+      ...NUCLEO.map(a => c.add(new Request(a, { cache: 'reload' }))),
+      ...ASSETS.map(a => c.add(new Request(a, { cache: 'reload' })).catch(() => {}))
+    ]))
   );
   self.skipWaiting();
 });
@@ -56,10 +62,12 @@ self.addEventListener('fetch', e => {
     // la próxima vez; cuando se publica una versión (sube CACHE) el SW nuevo recarga la app solo.
     const esLaApp = url.pathname.endsWith('/') || url.pathname.endsWith('/index.html');
     if (!esLaApp) return;
-    const red = fetch(url.origin + url.pathname, { cache: 'no-cache' }).then(res => {
+    // la copia guardada solo se reescribe si la del servidor es otra (mismo ETag = la misma página: antes se volvía a escribir en el disco en CADA apertura)
+    const red = fetch(url.origin + url.pathname, { cache: 'no-cache' }).then(async res => {
       if (res && res.status === 200) {
-        const copia = res.clone();
-        caches.open(CACHE).then(c => c.put('./index.html', copia)).catch(() => {});
+        const c = await caches.open(CACHE), vieja = await c.match('./index.html');
+        const et = res.headers.get('etag');
+        if (!(vieja && et && vieja.headers.get('etag') === et)) await c.put('./index.html', res.clone());
       }
       return res;
     });

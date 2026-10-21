@@ -4,8 +4,8 @@
 
 App de práctica en español con 4 materias (`MATERIAS`): **Álgebra** (MAGS 120I, caps. 1-8 y las
 prácticas EXACTAS del Examen Departamental), **World Culture I**, **Circuitos Eléctricos** y **Repaso de
-ayudante** (examen de Ayudante de Perito Electricista). ~90 temas. Genera ejercicios (o los saca de bancos
-fijos), verifica la respuesta y siempre explica el porqué paso a paso. Un solo archivo HTML, sin build, sin npm, publicado como PWA en GitHub Pages
+ayudante** (examen de Ayudante de Perito Electricista). 132 temas (Álgebra 90). Genera ejercicios (o los saca de bancos
+fijos), verifica la respuesta y siempre explica el porqué paso a paso. Dos archivos (`index.html` = HTML + CSS, `app.js` = todo el JavaScript), sin build, sin npm, publicado como PWA en GitHub Pages
 con sincronización opcional entre aparatos vía Firebase.
 
 - **Repo:** https://github.com/yahairaarroyo2-alt/Mate
@@ -17,7 +17,9 @@ con sincronización opcional entre aparatos vía Firebase.
 
 ```
 Mate/
-├── index.html      # todo: HTML + CSS + JS (~9100 líneas, ~800 KB: casi todo son bancos de preguntas y explicaciones)
+├── index.html      # HTML + CSS (~47 KB) y una sola línea <script src="app.js?v=N">
+├── app.js          # TODO el JavaScript (~1.2 MB, ~11,200 líneas: casi todo son bancos de preguntas y explicaciones). Antes iba dentro de index.html;
+│                   # en un archivo aparte Chrome guarda el código ya compilado y no lo vuelve a analizar en cada apertura (2026-10-21)
 ├── manifest.json   # PWA manifest
 ├── sw.js           # Service Worker — sube el número de versión (mate-vN) en cada deploy
 ├── icons/          # 4 íconos PWA (generados con un <canvas>, sin herramienta externa)
@@ -29,16 +31,18 @@ Mate/
 ## Cómo probar / desplegar
 
 - Abrir `index.html?test` corre `autotest()`: 200 tiradas × 3 niveles × cada uno de los
-  ~90 módulos (315 comprobaciones en 2026-10-13), más casos borde de `verificar()`/`analizarTexto()`, validez geométrica
+  132 módulos (466 comprobaciones en 2026-10-21), más casos borde de `verificar()`/`analizarTexto()`, validez geométrica
   (triángulos/trapecios generados), unicidad (MCM de un número consigo mismo), fechas
   locales (`fechaLocal`/`fechaHaceDias`), caducidad de la racha de días y deduplicado de
   `_registrarError` — el número exacto de comprobaciones lo dice el propio resultado (no
   lo hardcodees en la doc, sumó ~14 en la auditoría de 2026-09-16 respecto a las 107 de antes).
-- `node --check index.html` no sirve directo (es HTML) — hay que extraer el `<script>` a un
-  `.js` primero. El autotest de arriba ya cubre errores de sintaxis igual.
+- Sintaxis: `node --check app.js` y `node --check sw.js` (el JavaScript ya no va dentro del HTML). El autotest de arriba ya cubre errores de sintaxis igual.
 - Deploy: `git push` a `main` — GitHub Pages redespliega solo en 1-2 minutos. **Subir
-  siempre el número de `sw.js` (`mate-vN` → `mate-vN+1`)** en cada cambio, si no el
-  Service Worker sigue sirviendo la versión vieja desde caché.
+  siempre el número de `sw.js` (`mate-vN` → `mate-vN+1`) Y el MISMO número en `<script src="app.js?v=N">` de `index.html`** en cada cambio
+  (`sw.js` precachea `./app.js?v=N` a partir de `CACHE`): si no, el Service Worker sigue sirviendo la versión vieja desde caché o la página nueva corre con el JavaScript viejo.
+  Si `app.js` o `index.html` no se pueden guardar al instalar, la instalación falla y se queda la versión anterior completa.
+- Para probar en local (el navegador del panel no abre `file://`): un servidor estático chico (Node, `http.createServer`) en una carpeta `.claude/` temporal con su `launch.json`;
+  **antes de cada recarga** hay que desregistrar el Service Worker y borrar las cachés (si no, sirve la versión vieja, incluso con `?test`), y al terminar borrar `.claude/`.
 
 ## Arquitectura del motor de ejercicios
 
@@ -442,7 +446,7 @@ opciones, `_ayFotosTodas` = foto → nombre (materiales y conduletos juntos)) y 
 `pantallaAyGaleria()` (rutas `ir('ayLeer',k)` e `ir('ayGaleria')`; sus botones salen en Inicio
 y Temas vía `ayudMaterialHTML()`, solo con `materia==='ayud'`). Las preguntas con "Todas las
 anteriores" / "Ninguna" / "Ambas" NO se barajan (`_ayBarajar`). Fotos: `ayudante/` (184
-archivos, ~6 MB); el `sw.js` las guarda en su propia caché `mate-fotos-ayudante-v1`, que no se
+archivos, ~1.3 MB en WebP); el `sw.js` las guarda en su propia caché `mate-fotos-ayudante-v2`, que no se
 borra al subir de versión (si cambias una foto, sube ese número). Las fotos NO van en base64
 dentro del HTML a propósito.
 
@@ -493,8 +497,8 @@ AEE y otros)** + 500 h de electricidad con energía renovable.
   que las apps hermanas Fit-F/Fit-M.
 - Antes de cualquier cambio grande: confirmar que `git status` está limpio o hacer un
   respaldo del archivo — este proyecto no tiene red de seguridad más que git.
-- Después de editar el `<script>`: extraerlo y correr `node --check`, y volver a correr
-  `index.html?test` — todas las comprobaciones tienen que seguir pasando (315 en 2026-10-13).
+- Después de editar `app.js`: correr `node --check app.js`, y volver a correr
+  `index.html?test` — todas las comprobaciones tienen que seguir pasando (466 en 2026-10-21).
 
 ## Auditoría 2026-10-13 — reglas que dejó
 
@@ -517,14 +521,15 @@ AEE y otros)** + 500 h de electricidad con energía renovable.
 ## Capítulos 6, 7 y 8 de Álgebra (2026-10-20)
 
 - **PDFs del E-Book** en `educosoft/cap6|7|8` (fuera de git). 18 temas del libro (`dec-*`, `suma-resta-dec`, `mult-div-dec`, `ecuaciones-dec`, `geometria-dec`,
-  `porciento-*`, `interes`…, secciones 6.1–8.5), 3 con los TIPOS de las tareas y quizzes de EducoSoft (`educo-cap6|7|8`, secciones 6.9/7.9/8.9) y los Repasos y
+  `porciento-*`, `interes`…, secciones 6.1–8.5), 9 temas "— EducoSoft" con las preguntas EXACTAS de la Tarea y los Quizzes (más abajo; los `educo-cap6|7|8` con números al azar ya no existen) y los Repasos y
   Autoevaluaciones EXACTOS del libro (`repaso-cap6|7|8`, `autoeval-cap6|7|8`: secciones 6.6/6.7, 7.6/7.7, 8.7/8.8). Faltan a propósito Repaso 8 n.º 10 y 52 y
   Autoevaluación 8 n.º 2 y 6 (ambiguos). Los números decimales pasan SIEMPRE por `dN()` (quita basura de coma flotante); las respuestas numéricas se comparan
   exactas (`TOL_EXACTA`); el redondeo es `redondeaK(v, k)`; el impuesto de venta sube al centavo de arriba (`alCentavoMayor`).
 - **Dinero** (`ej.dinero` en tipo `num`, o `din:true` en un campo de `multi`): se acepta con o sin `$`, y "$−6,072.31" avisa que el signo va ANTES del `$` (EducoSoft lo marca mal).
 - **Sí/No y listas de 2 opciones** cambian de lado al azar por ejercicio (`_invPos`); las prácticas exactas (`__n`/`nuevaRonda`) y las rotuladas (a)/(b) no.
 - Las figuras de los Repasos son SVG a mano (`svgF`, `txF`, `dashF`): para ver una página del PDF se puede dibujar con pdf.js en una página temporal y guardarla como PNG.
-- Pendiente: parsers de `verificar-respuestas.js` para estos módulos; práctica del Parcial 2 (Caps. 6-8) y tareas de 8.2-8.3 cuando las haga.
+- Pendiente: parsers de `verificar-respuestas.js` para los temas nuevos de los caps. 6-8 (los al azar: `dec-*`, `suma-resta-dec`, `mult-div-dec`, `ecuaciones-dec`, `formulas-dec`, `aplicaciones-dec`, `geometria-dec`, `porciento-*`, `interes`, `compras-grandes`…; ahora devuelve "NO RECONOCIDO" para ellos);
+  práctica del Parcial 2 (Caps. 6-8) y tareas de 8.2-8.3 cuando las haga (sus preguntas exactas se agregan como bancos nuevos + su cadena de temas, ver abajo).
 
 **Tareas y Quizzes de EducoSoft (2026-10-20, pedido de la usuaria: "que sean los mismos siempre")**: los bancos `educo-hw6|qp6|qz6|hw7|qp7|qz7|hw8|qp8|qz8`
 (`_modEducoTQ`, `sinReloj:true`; los 9 YA NO son temas sueltos —repetían los 9 temas "— EducoSoft" y metían 2 preguntas siempre iguales en cada mezcla—: la usuaria pidió quitarlos, primero el cap. 6 y
@@ -553,3 +558,28 @@ no el lado inclinado); `ecuaciones-dec`: `fraccion` ((n/b)x ± c = d), `fracComb
 - **Casillas:** cada fila de la lista de Temas de Álgebra tiene su casilla (`.temaFila`; `_conCasillas()` = materia `ayud` o `mate`; `selTemas` en `mate_seltemas_v1`) y decide qué entra en la "Mezcla de capítulo" (`construirCola`, `_mezclaTexto`); sin casillas, la mezcla trae todo como siempre. Con SOLO temas fijos marcados cada uno entra completo (`vecesDe`); mezclados con temas al azar cada fijo entra 2 veces y siempre son sus preguntas 1 y 2 (`_sig` = nº de vez en la ronda; ya pasaba en la mezcla normal). World Culture y Circuitos no cambian.
 - **Temas "— EducoSoft" por tema:** `_EDU_TEMAS` (tras los bancos de arriba) crea 9 temas que reparten las 102 preguntas EXACTAS de la Tarea y los Quizzes por tema (Tarea → Quiz de práctica → Quiz): suma-resta 10, mult-div 17, dec-frac 6, orden-op 6, promedio 3 (cap. 6), ecuaciones 12, fórmulas 3, problemas 15 (cap. 7) y razones-prop 30 (cap. 8: el 8.1 de su curso; sus temas al azar están en los caps. 3 y 5). El tema de cada pregunta es el 6.º argumento de `_modEducoTQ` (`'sr sr md …'`, en el cierre de cada banco; `EDU_BANCOS` los guarda): una Tarea/Quiz nueva lleva el suyo. Son `extra:true` (no entran en la mezcla normal, ni en la general, ni en "Marcar todo" de Elegir temas: ya están en la Tarea y los Quizzes completos; se marcan con su casilla) y van justo debajo de su tema al azar (`_debajoDe`).
 - **Etiquetas** (`m.tag`, la burbuja `.ayTag` de Repaso de ayudante; colores `.ayTag.azar/.libro/.educo`, claro y noche): `educo` "EducoSoft" = `educo-*`; `libro` "Del libro" = `repaso-*`, `autoeval-*`; `azar` "Al azar" SOLO si otro tema fijo lo copia (`cubre` = ids de los temas al azar que copia; lo declaran los "— EducoSoft"). Un tema con una sola versión (6.1, 7.3, 7.4, 8.x…) va SIN etiqueta (pedido: "que tenga etiqueta si se repite"). `m.rep` (= `azar` o tiene `cubre`) hace que `ayTagHTML` escriba «Se repite · Al azar / EducoSoft» (pedido: "que la etiqueta diga que sí se repite: lo mismo pero con otros ejercicios"); las versiones del mismo tema comparten COLOR (pedido: "que la etiqueta sea del mismo color"): `_COLORES_GRUPO` + `_raiz` juntan por `cubre` (aunque estén en otro capítulo: razones, proporciones y razon-unitaria-prop con `educo-razones-prop`), `m.gc` es el color del grupo y `ayTagHTML` lo pone como `--gc` en `.ayTag.gr`; las que no se repiten (Tarea/Quizzes completos, Repaso, Autoevaluación) conservan su color de tipo; una nota arriba de la lista (solo Álgebra, en `pantallaTemas`) lo explica; cuando la otra versión está en OTRO capítulo, `_otroLado(m)` pone bajo el nombre dónde está ("También de EducoSoft: capítulo 8 (…)" / "También al azar: capítulo 3 (…); capítulo 5 (…)"; hoy solo Razones y proporciones: caps. 3 y 5 ↔ cap. 8); la Tarea y los Quizzes completos, Repaso, Autoevaluación y los Departamentales llevan solo su tipo (sus preguntas son las MISMAS, no otras). El autotest comprueba la regla, que los 9 temas reparten las 102 preguntas idénticas y las mezclas con casillas.
+
+## Auditoría 2026-10-21 — reglas que dejó
+
+- **El JavaScript vive en `app.js`** (ver "Archivos" y "Cómo probar / desplegar": `?v=` de `index.html` = número de `CACHE` en `sw.js`; el núcleo —`index.html` y `app.js`— se precachea sin `catch`). `sw.js` solo reescribe la copia guardada de `index.html` si el ETag del servidor cambió.
+- **"Siguiente"** (`_siguientePuesto`) va a la próxima página que todavía no se abrió (después de la actual y, si no hay, desde la primera); la ronda termina cuando se abrieron TODAS. Las páginas saltadas o solo vistas no vuelven: se cuentan aparte en el resumen. Antes era siempre la página de al lado y desde la última (se llega con "Pág.") acababa la ronda con páginas sin ver.
+- **Resumen de la ronda** (`_rondaContadas` = acertadas + falladas que cuentan): el porcentaje es solo de lo que cuenta; "saltaste N" y "viste la explicación de M" salen aparte. Al volver a una página ya contestada (`_notaPreviaHTML`) sale "Ya la contestaste: estaba bien / la fallaste / viste la explicación".
+- **Ronda guardada compacta:** un fallo (`sesionFallos`) o una repetición pendiente que es de una página ya guardada en `mate_sesion_ej_N` solo guarda su número de página (`p`, `_compactarEj`/`_desCompactarEj`); los de las prácticas del examen o los que ya no coinciden con su página se guardan completos. Las páginas se escriben ANTES que la ronda.
+- **`guardar()` con el espacio lleno:** primero suelta lo único desechable (`mate_sesion*`) y reintenta; si aun así no cabe, avisa UNA vez (`_sinEspacio`). Un `mate_sesion*` que no cabe no avisa. `importarRespaldo` también avisa si no cabe. Las 4 apps comparten el espacio del navegador.
+- **Números con coma** (`numLimpio`): "1,250" = 1250 (miles), "0,375" = 0.375 (un número que empieza en 0 no lleva miles), "2,5" = 2.5; si una coma de exactamente 3 dígitos daría la respuesta como decimal ("2,375" cuando era 2.375), sale un aviso (`aviso:true`, no cuenta como error).
+- **`escHtml` escapa también `"` y `'`:** se usa dentro de `value="…"` (nombre del grupo) y un nombre con comillas abría un atributo nuevo.
+- **Calculadora:** `+`/`−` seguido de `%` calcula el % DEL número anterior (200 + 15 % = 230); después de × o ÷ es solo ÷ 100 (80 × 15 % = 12).
+- **Versión nueva de la app:** si hay una pregunta sin contestar (o un simulacro), espera (`_swReloadPendiente`); se pone al salir de la app (`visibilitychange` oculto, menos en un simulacro con reloj) o al cambiar de pantalla, pero NO al seguir practicando (recargar ahí te devolvía a la pregunta que acababas de contestar).
+- **IA (mismos arreglos que Fit F):** `AI_MODELS` sin repetidos (3.1-pro → 3.8-flash → 3.6-flash → 3.5-flash-lite); los modelos que fallaron se recuerdan entre aperturas en `ai_skip_mate_v1` (sin `mate_`: no va al respaldo ni a la sincronización): 10 min, y 24 h si el 429 dice "limit: 0" (el Pro con la clave gratis); el último (el básico) nunca queda fuera; el mensaje de un 429 distingue por minuto / por día / ningún modelo gratis pudo (no es tu límite). Guardar o quitar la clave limpia las pausas.
+- **Progreso → "Lo que te falta para el Parcial 2"** (solo Álgebra; `_faltaParcial2`, `_parcial2HTML`, `practicarParcial2`): los temas de los caps. 6-8 de la mezcla (sin los "— EducoSoft", que suman a su tema al azar por `cubre`) sin practicar o por debajo de `PARCIAL2_META` (70 %); el botón arma una mezcla con ellos (`clase`, como "Practicar" un grupo).
+- `.calcBtn` usa `backdrop-filter: blur(8px)` (era el blur(40px) del vidrio de las tarjetas, recalculado en cada cuadro del scroll en todas las pantallas).
+- Pendientes que NO se aplicaron: el simulacro con reloj de los caps. 6-8 (25 preguntas) y "Otro parecido" en Repasar mis errores (se propusieron, no se pidieron todavía).
+
+## Explicaciones de los caps. 6, 7 y 8 (2026-10-21, pedido: "que sea fácil de entender y tenga todos los pasos de dónde se sacan las cosas")
+
+Todos los temas de los caps. 6-8 (al azar, "— EducoSoft", Repasos y Autoevaluaciones) explican con `receta()`: cada paso con título que dice QUÉ se hace, y cada número sale de su cuenta. Las respuestas NO cambiaron (comprobado contra la versión anterior con la misma semilla: 14,850 ejercicios, 0 diferencias). Ayudantes (junto a `sumaSignos`, `pasosDivDec` y los Repasos):
+- `explRed(v, k)` redondeo explicado (qué dígito es el del lugar, cuál decide, qué pasa con el 9, cómo queda); `pctDec(p)` / `decPct(v)` el porciento ↔ decimal con su "÷ 100 / × 100"; `divLarga(n, d)` la división a mano cifra por cifra (se detiene cuando lo que sobra se repite: de ahí la barra); `fracDecL(n, d)` la usa y escribe el decimal (`0.8611…`).
+- `pasosMultDec(a, b)` "sin los puntos" + cuenta de lugares (pone el punto con sus ceros: `641.4510 = 641.451`); `pasosDivDec(a, b)` corre el punto del divisor, divide y dice si la división no termina (`lugares(q) ≥ 9` tras `dN`); `_corta(v, k)` muestra k decimales sin redondear con "…".
+- `receta({ …, truco })`: el `truco` sale aparte en "TRUCO PARA QUE SEA MÁS FÁCIL". `MCx(enun, ops, ok, R)` (opción múltiple de EducoSoft) y `ecL` (ecuaciones: dice por qué se suma/resta/divide en los DOS lados) ya la usan.
+- Repasos y Autoevaluaciones: `uiR(cab, enun, resp, R, ayuda)` y `ejR(cab, enun, campos, R)` con `R = { pasos:[_pa('título', líneas…)], resp, comp, error, truco }` (el "Qué te piden" sale del enunciado; en `ejR` la respuesta sale de las casillas). `ui`/`ejVarios5` (con `aReceta`, títulos adivinados) siguen para los demás capítulos.
+- No pongas títulos "Haz la cuenta"/"Resultado"/"Queda": el revisor de la sesión los marcaba como flojos. Para editar código de app.js desde un script usa `split/join`, NUNCA `String.replace` con texto que tenga `$'` (insertó el archivo dentro de sí mismo).
