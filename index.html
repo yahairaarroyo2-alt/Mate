@@ -273,10 +273,11 @@
     .aic-bubble:active { transform:scale(.94); }
     /* etiqueta de tema (Repaso de ayudante): burbujita en la esquina del botón, mismo estilo que la burbuja AI */
     .btn.conTag { position:relative; padding-top:29px; }   /* la burbuja va ADENTRO del botón, en la esquina; el espacio de arriba evita que pise el texto */
-    .ayTag { position:absolute; top:7px; right:11px; z-index:2; padding:3px 10px; border-radius:999px; font-size:9.5px; font-weight:900; letter-spacing:.7px; text-transform:uppercase; line-height:1.2; color:#000; border:1px solid var(--tg-b); background:var(--tg-f); backdrop-filter:none; pointer-events:none; }
+    .ayTag { position:absolute; white-space:nowrap; top:7px; right:11px; z-index:2; padding:3px 10px; border-radius:999px; font-size:9.5px; font-weight:900; letter-spacing:.7px; text-transform:uppercase; line-height:1.2; color:#000; border:1px solid var(--tg-b); background:var(--tg-f); backdrop-filter:none; pointer-events:none; }
     .ayTag.ayu, .ayTag.libro { --tg-b:color-mix(in srgb,#2e7d32 40%,transparent); --tg-f:color-mix(in srgb,#2e7d32 22%,#fff); }
     .ayTag.conf, .ayTag.educo { --tg-b:color-mix(in srgb,#b26a00 40%,transparent); --tg-f:color-mix(in srgb,#f0a020 30%,#fff); }
-    .ayTag.azar { --tg-b:color-mix(in srgb,#455a64 35%,transparent); --tg-f:color-mix(in srgb,#607d8b 18%,#fff); }
+    /* etiqueta de un tema que se repite (Álgebra): todas las versiones del mismo tema llevan el MISMO color, --gc (uno por grupo, ver _COLORES_GRUPO) */
+    .ayTag.gr { --tg-b:color-mix(in srgb,var(--gc) 45%,transparent); --tg-f:color-mix(in srgb,var(--gc) 24%,#fff); }
     .ayTag.perito { --tg-b:color-mix(in srgb,#c62828 40%,transparent); --tg-f:color-mix(in srgb,#e53935 22%,#fff); }
     .ayTag.extra { --tg-b:color-mix(in srgb,#6a1b9a 35%,transparent); --tg-f:color-mix(in srgb,#8e44ad 20%,#fff); }
     /* cada sección de una lectura va en una burbuja grande del color de su etiqueta */
@@ -298,7 +299,7 @@
     body.night .ayTag { color:#fff; }
     body.night .ayTag.ayu, body.night .ayTag.libro { --tg-b:rgba(110,200,120,.4); --tg-f:rgba(60,160,80,.28); }
     body.night .ayTag.conf, body.night .ayTag.educo { --tg-b:rgba(255,190,80,.4); --tg-f:rgba(230,150,30,.28); }
-    body.night .ayTag.azar { --tg-b:rgba(170,195,215,.4); --tg-f:rgba(120,150,175,.26); }
+    body.night .ayTag.gr { --tg-b:color-mix(in srgb,var(--gc) 75%,transparent); --tg-f:color-mix(in srgb,var(--gc) 45%,transparent); }
     body.night .ayTag.perito { --tg-b:rgba(255,120,120,.4); --tg-f:rgba(220,60,60,.28); }
     body.night .ayTag.extra { --tg-b:rgba(190,140,230,.4); --tg-f:rgba(140,80,190,.28); }
     /* etiqueta "AI" junto al título del chat */
@@ -3334,6 +3335,20 @@ const MODULOS = [
   gen(nv){
     const alto = porNivel(nv, 12, 30, 60);
     const orden = 'Lo primero que se menciona va ARRIBA; lo segundo, abajo.';
+    if(Math.random() < 0.22){   // razón con unidades distintas: se pasan a la MISMA unidad antes de simplificar (los de EducoSoft 8.1: monedas, niqueles, pesetas, pulgadas, yardas)
+      const fam = pick([
+        { us:[['monedas de 10 centavos', 10], ['niqueles', 5], ['pesetas', 25]], base:'centavos', nota:'Un niquel vale 5 centavos y una peseta vale 25 centavos.' },
+        { us:[['pulgadas', 1], ['pies', 12], ['yardas', 36]], base:'pulgadas', nota:'1 pie = 12 pulgadas y 1 yarda = 36 pulgadas.' },
+        { us:[['minutos', 1], ['horas', 60]], base:'minutos', nota:'1 hora = 60 minutos.' }]);
+      const [u1, u2] = shuffle(fam.us.slice()).slice(0, 2), a1 = R(2, 12), b1 = R(2, 12), A = a1 * u1[1], B = b1 * u2[1], [sn1, sd1] = simplificar(A, B);
+      const cambia = [u1, u2].filter(u => u[1] !== 1).map(u => u[0]).join(' y '), conv = (q, u) => u[1] === 1 ? `${q} ${u[0]} ya está en ${fam.base}` : `${q} ${u[0]} = ${q} × ${u[1]} = ${cb(q * u[1] + ' ' + fam.base)}`;
+      return { enunciado:`Halla la razón de <b>${a1} ${u1[0]}</b> a <b>${b1} ${u2[0]}</b>, y simplifica.<br><small>(Cambia ${cambia} a ${fam.base})</small>`,
+        tipo:'frac', respuesta:{ n:sn1, d:sd1 }, pedirSimple:true, ayuda:'La razón a : b se escribe con a arriba y b abajo.',
+        explicacion: receta({ pide:'la razón entre las dos cantidades, ya en la MISMA unidad y simplificada.',
+          pasos:[{ t:`Pasa las dos cantidades a ${fam.base}`, l:[fam.nota, conv(a1, u1), conv(b1, u2)] },
+            { t:'Escribe la razón en orden', l:[orden, `${A} a ${B} → ${cb(A + '/' + B)}`] }, pasoSimplif(A, B)],
+          resp:`${sn1} : ${sd1}`, error:`comparar ${a1} con ${b1} sin pasar a la misma unidad: ${u1[0]} y ${u2[0]} no se pueden comparar directamente.`, ejemplo:`${A}/${B} = ${sn1}/${sd1}.` }) };
+    }
     if(Math.random()<0.2){
       const ninas = R(5, porNivel(nv,12,20,30)), ninos = R(5, porNivel(nv,12,20,30));
       const total = ninas+ninos, g3 = mcd(ninas,ninos), sn3=ninas/g3, sd3=ninos/g3;
@@ -5757,7 +5772,8 @@ const AY_TAG = {
 const AY_TAG_TXT = { ayu:'Ayudante', conf:'Por confirmar', perito:'Probable perito', extra:'Extra', azar:'Al azar', libro:'Del libro', educo:'EducoSoft' };   // los 3 últimos son de Álgebra
 MODULOS.forEach(m => { if (AY_TAG[m.id]) m.tag = AY_TAG[m.id]; });
 const ayTagsHTML = lista => `<span class="ayTags">${lista.map(t => `<span class="ayTag ${t}">${AY_TAG_TXT[t]}</span>`).join('')}</span>`;
-const ayTagHTML = m => m.tag ? `<span class="ayTag ${m.tag}">${AY_TAG_TXT[m.tag]}</span>` : '';
+// m.rep (Álgebra): el mismo tema también está en otra versión, con otros ejercicios; m.gc = el color de su grupo (las versiones del mismo tema comparten color)
+const ayTagHTML = m => m.tag ? `<span class="ayTag ${m.gc ? 'gr' : m.tag}"${m.gc ? ` style="--gc:${m.gc}"` : ''}>${m.rep ? 'Se repite · ' : ''}${AY_TAG_TXT[m.tag]}</span>` : '';
 // tarjeta con los botones de leer + galería (Inicio y Temas, solo en esta materia)
 function ayudMaterialHTML(){
   if(materia !== 'ayud') return '';
@@ -6034,7 +6050,7 @@ MODULOS.push(
 {
   id:'suma-resta-dec', nombre:'Suma y resta de decimales', secciones:['6.2'],
   gen(nv){
-    const tipo = pick(nv === 'facil' ? ['suma','resta','resta'] : nv === 'medio' ? ['suma','resta','restaDe','signos','signos','semejantes'] : ['suma','restaDe','signos','signos','semejantes','frase']);
+    const tipo = pick(nv === 'facil' ? ['suma','resta','resta'] : nv === 'medio' ? ['suma','resta','restaDe','restaRed','signos','signos','semejantes','estima'] : ['suma','restaDe','restaRed','signos','signos','semejantes','frase','estima']);
     const errCol = 'no alinear los puntos decimales: se ponen uno debajo del otro, décimas con décimas, centésimas con centésimas.';
     if(tipo === 'suma'){
       const xs = Array.from({ length: R(2, 3) }, () => decK(0.1, porNivel(nv, 99, 500, 999), R(1, 3)));
@@ -6058,6 +6074,32 @@ MODULOS.push(
             { t:'Resta como con enteros y baja el punto', l:[colDec([a, b], '−', r)] }],
           resp: fd(r), comp:`${fd(r)} + ${fd(b)} = ${fd(a)} ✓`, error: tipo === 'restaDe' ? 'restar al revés: "resta 5 de 9" es 9 − 5.' : errCol,
           ejemplo:`${fd(a)} − ${fd(b)} = ${fd(r)}, y ${fd(r)} + ${fd(b)} = ${fd(a)}.` }) };
+    }
+    if(tipo === 'restaRed'){   // "Resta b de a y redondea la diferencia a la décima / centésima más cercana" (el ejercicio 28 del libro 6.2)
+      const a = decK(100, porNivel(nv, 999, 1999, 4999), 2), b = decK(1, a, 4), k = pick([1, 2]), ex = dN(a - b), r = redondeaK(ex, k), lug = k === 1 ? 'décima' : 'centésima';
+      const dig = Math.floor(Math.abs(ex) * P10(k + 1)) % 10;
+      return { enunciado:`Resta <b>${fd(b)}</b> de <b>${fd(a)}</b> y redondea la diferencia a la <b>${lug}</b> más cercana.`, ...numDec(r), ayuda:`Escribe el número con ${k} lugar${k > 1 ? 'es' : ''} decimal${k > 1 ? 'es' : ''}.`,
+        explicacion: receta({ pide:`${fd(a)} − ${fd(b)}, redondeado a la ${lug}.`,
+          pasos:[{ t:'Ordena la resta', l:[`"Resta ${fd(b)} de ${fd(a)}" = ${cb(fd(a) + ' − ' + fd(b))}`] },
+            { t:'Resta con TODOS los lugares (puntos alineados)', l:[colDec([a, b], '−', ex)] },
+            { t:`Redondea a la ${lug}`, l:[marcaDigito(ex, k), `El dígito de la derecha es ${dig}: ${dig >= 5 ? 'sube' : 'se queda'} → ${cb(fd(r, k))}`] }],
+          resp: fd(r, k), error:'redondear los números ANTES de restar (se resta completo y se redondea al final) o restar al revés.',
+          ejemplo:`${fd(a)} − ${fd(b)} = ${fd(ex)} ≈ ${fd(r, k)}.` }) };
+    }
+    if(tipo === 'estima'){   // 6.2 B: estimar una suma o una diferencia (EducoSoft: "al número cardinal más cercano"; el libro: estimación frontal, al valor posicional mayor)
+      const fr = Math.random() < 0.35, suma = Math.random() < 0.55;
+      let xs = Array.from({ length: suma ? R(2, 4) : 2 }, () => fr ? dN(decK(1, 99, R(1, 3)) * pick([0.1, 1, 10, 100])) : decK(10, porNivel(nv, 999, 5999, 9999), R(1, 3)));
+      if(!suma && xs[0] < xs[1]) xs = [xs[1], xs[0]];
+      const rs = xs.map(x => fr ? frontal(x) : redondeaK(x, 0)), op = suma ? ' + ' : ' − ';
+      const est = dN(suma ? rs.reduce((a, b) => a + b, 0) : rs[0] - rs[1]), real = dN(suma ? xs.reduce((a, b) => a + b, 0) : xs[0] - xs[1]);
+      if(est <= 0) return this.gen(nv);
+      return { enunciado:`Estima la ${suma ? 'suma' : 'diferencia'} ${fr ? 'usando estimación frontal (redondea cada número a su valor posicional mayor)' : 'redondeando cada número al número cardinal más cercano'}.<br><b>${xs.map(x => fd(x)).join(op)}</b>`, ...numDec(est),
+        ayuda: fr ? 'Estimación frontal.' : 'Redondeado al número cardinal más cercano.',
+        explicacion: receta({ pide:`un ESTIMADO de la ${suma ? 'suma' : 'diferencia'} (no la respuesta exacta).`,
+          pasos:[{ t: fr ? 'Redondea cada número a su valor posicional mayor (el primer dígito de la izquierda)' : 'Redondea cada número al entero más cercano (mira la décima: 5 o más sube)', l: xs.map((x, i) => `${fd(x)} ≈ ${cb(fd(rs[i]))}`) },
+            { t:`${suma ? 'Suma' : 'Resta'} los números ya redondeados`, l:[`${rs.map(x => fd(x)).join(op)} = ${cb(fd(est))}`] }],
+          resp: fd(est), comp:`la respuesta real, ${fd(real)}, queda cerca del estimado ✓`, error:'dar la respuesta exacta en vez del estimado, o redondear a un lugar que no es el que pide.',
+          ejemplo:`${xs.map(x => fd(x)).join(op)} ≈ ${rs.map(x => fd(x)).join(op)} = ${fd(est)}.` }) };
     }
     if(tipo === 'signos'){
       const a = (Math.random() < 0.6 ? -1 : 1) * decK(0.1, porNivel(nv, 30, 99, 400), R(1, 3));
@@ -6091,6 +6133,19 @@ MODULOS.push(
             { t:`Pon la ${L}`, l:[cb(ok)] }],
           resp: ok, error:`sumar también las letras (${L} + ${L} no es ${L}²) o perder un signo menos.`,
           ejemplo:`${cs.map(x => fd(x)).join(' y ')} suman ${fd(s)} → ${ok}.` }) };
+    }
+    // frases (el libro 6.2, "Aplicaciones"): "Suma la diferencia | la suma de a y b a la diferencia entre c y d" o "Resta la diferencia de a y b de la suma de c y d"
+    const forma = pick(['rds', 'sdd', 'ssd']);
+    if(forma !== 'rds'){
+      const suma1 = forma === 'ssd', p = decK(1, 200, 3), q = suma1 ? decK(1, 100, 3) : decK(0.1, p, 3), u = decK(1, 100, 3), w = decK(0.1, u, 3);
+      const x = dN(suma1 ? p + q : p - q), y = dN(u - w), t = dN(x + y);
+      return { enunciado:`Suma la ${suma1 ? 'suma' : 'diferencia'} de <b>${fd(p)}</b> y <b>${fd(q)}</b> a la diferencia entre <b>${fd(u)}</b> y <b>${fd(w)}</b>.`, ...numDec(t),
+        explicacion: receta({ pide:'(la primera parte) + (la diferencia entre los otros dos): "suma A a B" es A + B.',
+          pasos:[{ t:`La ${suma1 ? 'suma' : 'diferencia'} de los dos primeros`, l:[colDec([p, q], suma1 ? '+' : '−', x)] },
+            { t:'La diferencia entre los otros dos (el mayor menos el menor)', l:[colDec([u, w], '−', y)] },
+            { t:'Suma los dos resultados', l:[colDec([x, y], '+', t)] }],
+          resp: fd(t), error:'restar al final en vez de sumar: "suma A a B" es A + B.',
+          ejemplo:`${fd(x)} + ${fd(y)} = ${fd(t)}.` }) };
     }
     // "Resta la diferencia de a y b de la suma de c y d"
     const a = decK(10, 200, 3), b = decK(1, 9, 2), c2 = decK(50, 300, 3), d = R(10, 300);
@@ -6341,7 +6396,7 @@ MODULOS.push(
   id:'ecuaciones-dec', nombre:'Ecuaciones lineales con decimales', secciones:['7.1'],
   gen(nv){
     const L = pick(['x','x','y','t','w']);
-    const tipo = pick(nv === 'facil' ? ['suma','ax+b','ax+b'] : nv === 'medio' ? ['suma','ax+b','ax+b','div','comb'] : ['ax+b','div','dist','ambos','ambos','comb']);
+    const tipo = pick(nv === 'facil' ? ['suma','ax+b','ax+b'] : nv === 'medio' ? ['suma','ax+b','ax+b','div','comb','fraccion'] : ['ax+b','div','dist','ambos','ambos','comb','fraccion','fracComb','fracConst']);
     const x = (Math.random() < porNivel(nv, 0.1, 0.3, 0.4) ? -1 : 1) * decK(0.1, porNivel(nv, 30, 60, 99), R(1, 2));
     const sg = () => Math.random() < 0.5 ? -1 : 1;
     let enun, pasos = [], k, b, rhs, verif;
@@ -6372,6 +6427,26 @@ MODULOS.push(
       enun = `${fd(a)}(${L}${_term(c)}) = ${fd(rhs)}`;
       pasos.push({ t:'Quita el paréntesis (Propiedad Distributiva)', l:[`${fd(a)} × ${L} = ${fd(a)}${L} y ${fd(a)} × ${fdP(c)} = ${fd(b)} → ${_term(a, L, true)}${_term(b)} = ${fd(rhs)}`] });
       verif = `${fd(a)}(${fd(x)} ${c < 0 ? '−' : '+'} ${fd(Math.abs(c))}) = ${fd(a)} × ${fdP(dN(x + c))} = ${fd(rhs)}`;
+    } else if(tipo === 'fraccion'){   // (n/b)x ± c = d: la fracción pasa a decimal y se despeja (EducoSoft 7.1: 1/8 x − 4 = 5)
+      const b2 = pick([2, 4, 5, 8, 10]), n2 = R(1, b2 - 1), m2 = (Math.random() < 0.3 ? -1 : 1) * R(2, 12), c2 = (Math.random() < 0.5 ? -1 : 1) * R(2, 15), dec = dN(n2 / b2), d2 = dN(n2 * m2 + c2);
+      return ecL('', `${fr(n2, b2)}<i>x</i> ${c2 < 0 ? '−' : '+'} ${Math.abs(c2)} = ${fd(d2)}`, [`${n2}/${b2} escrito como decimal: ${n2} ÷ ${b2} = ${fd(dec)}, así que la ecuación queda ${fd(dec)}x ${c2 < 0 ? '−' : '+'} ${Math.abs(c2)} = ${fd(d2)}`], dec, c2, 0, d2, 3);
+    } else if(tipo === 'fracComb'){   // (a/b)x − (c/d)x = x − e/f: se juntan las fracciones de la izquierda (EducoSoft 7.1: 3/5 x − 1/10 x = x − 3/2)
+      const F = [[1, 2], [3, 5], [1, 4], [3, 4], [2, 5], [1, 5], [3, 10], [7, 10], [1, 10], [1, 20], [9, 10]];
+      let f1, f2, mm, dif, xs;
+      do { f1 = pick(F); f2 = pick(F); mm = pick([[3, 2], [5, 2], [7, 2], [9, 4], [7, 4], [1, 2], [9, 5], [3, 4], [11, 4], [13, 2]]);
+        dif = dN(f1[0] / f1[1] - f2[0] / f2[1]); xs = dif === 1 ? NaN : dN((mm[0] / mm[1]) / (1 - dif));
+      } while(f1[1] === f2[1] && f1[0] === f2[0] || !isFinite(xs) || xs === 0 || lugares(xs) > 3 || Math.abs(xs) > 500);
+      const d1 = dN(f1[0] / f1[1]), d2b = dN(f2[0] / f2[1]);
+      return ecL('', `${fr(f1[0], f1[1])}<i>x</i> − ${fr(f2[0], f2[1])}<i>x</i> = <i>x</i> − ${fr(mm[0], mm[1])}`,
+        [`Se juntan los términos semejantes de la izquierda: ${f1[0]}/${f1[1]} − ${f2[0]}/${f2[1]} = ${fd(d1)} − ${fd(d2b)} = ${fd(dif)} → ${fd(dif)}x = x − ${fd(dN(mm[0] / mm[1]))}`], dif, 0, 1, dN(-mm[0] / mm[1]), 3);
+    } else if(tipo === 'fracConst'){   // p/q + kx = r (decimal): la respuesta es una FRACCIÓN (EducoSoft 7.1: 5/7 + 4x = 0.5 → −3/56)
+      let p3, q3, k3, r3, fo;
+      do { q3 = pick([3, 5, 7, 9, 11]); p3 = R(1, q3 - 1); k3 = pick([2, 3, 4, 5, 6, 8]); r3 = pick([0.5, 0.25, 0.75, 0.2, 0.4, 0.6, 0.8, 1.5, 0.125]); fo = fracDe(r3); } while(fo.n * q3 === p3 * fo.d);
+      const L3 = mcm(fo.d, q3), t1 = fo.n * (L3 / fo.d), t2 = p3 * (L3 / q3), dif3 = t1 - t2, xf = Fq(dif3, L3 * k3);
+      return { enunciado:`Resuelve la ecuación para <i>x</i>:<br><b>${fr(p3, q3)} + ${k3}<i>x</i> = ${fd(r3)}</b>`, tipo:'frac', respuesta:{ n:xf.n, d:xf.d }, pedirSimple:true, signo:true, ayuda:'x = ___ (como fracción; con el ± para el signo)',
+        explicacion:[`Paso 1 — ${fd(r3)} como fracción: ${fo.n}/${fo.d}`, `Paso 2 — se resta ${p3}/${q3} en los dos lados: ${k3}x = ${fo.n}/${fo.d} − ${p3}/${q3} = ${t1}/${L3} − ${t2}/${L3} = ${dif3}/${L3}`,
+          `Paso 3 — se divide entre ${k3}: x = (${dif3}/${L3}) ÷ ${k3} = ${tf(xf.n, xf.d)}`, `→ x = ${tf(xf.n, xf.d)}`,
+          `TRUCO: si hay una fracción, pasa el decimal a fracción y trabaja todo en fracciones. Ejemplo con este mismo: ${k3}x = ${dif3}/${L3} → x = ${tf(xf.n, xf.d)}.`] };
     } else { // a·L + b = c·L + d
       const a = decK(0.5, 9, 1) * sg(); let c; do { c = decK(0.5, 9, 1) * sg(); } while(dN(a - c) === 0);
       // a·L + b = c·L + dd, armada desde la respuesta: dd = a·x + b − c·x  →  (a − c)L + b = dd
@@ -6392,7 +6467,7 @@ MODULOS.push(
 {
   id:'formulas-dec', nombre:'Fórmulas: sustituir y despejar (con decimales)', secciones:['7.1'],
   gen(nv){
-    const tipo = pick(nv === 'facil' ? ['ln','Sn','FdeC'] : nv === 'medio' ? ['ln','Sn','FdeC','CdeF','VCil','A=P+Prt'] : ['FdeC','CdeF','VCil','A=P+Prt','hTrap','A=P+Prt']);
+    const tipo = pick(nv === 'facil' ? ['ln','Sn','FdeC'] : nv === 'medio' ? ['ln','Sn','FdeC','CdeF','VCil','hCil','A=P+Prt'] : ['FdeC','CdeF','VCil','hCil','A=P+Prt','hTrap','A=P+Prt']);
     let enun, r, pasos, pide, error, red = false;
     if(tipo === 'ln'){
       const a = decK(1, 20, 1), d = decK(0.1, 5, 1), n = R(5, 40); r = dN(a + (n - 1) * d);
@@ -6423,6 +6498,12 @@ MODULOS.push(
       pasos = [{ t:'Sustituye', l:[`V = 3.14 × (${fd(rr)})<sup>2</sup> × ${fd(h)}`] }, { t:'Primero el exponente', l:[`(${fd(rr)})<sup>2</sup> = ${fd(dN(rr * rr))}`] },
         { t:'Multiplica todo', l:[`V = 3.14 × ${fd(dN(rr * rr))} × ${fd(h)} = ${fd(dN(v))}`] }, { t:'Redondea a la centésima', l:[cb(fd(r, 2))] }];
       pide = 'el volumen (redondeado a la centésima).'; error = 'multiplicar r × 2 en vez de r × r: r² es r por sí mismo.';
+    } else if(tipo === 'hCil'){   // el volumen del cilindro, despejando la altura (EducoSoft 7.1: V = 3.14 r² h, hallar h a dos lugares decimales)
+      const rr = R(2, 9), v = decK(5, porNivel(nv, 100, 400, 900), 2), den = dN(3.14 * rr * rr), h = v / den; r = redondeaK(h, 2); red = true;
+      enun = `V = 3.14r<sup>2</sup>h ; halla <b>h</b>, dado V = ${fd(v)} cm<sup>3</sup> y r = ${rr} cm. Redondea a la centésima.`;
+      pasos = [{ t:'Sustituye V y r', l:[`${fd(v)} = 3.14 × ${rr}<sup>2</sup> × h`] }, { t:'Primero el exponente y después la multiplicación', l:[`${rr}<sup>2</sup> = ${rr * rr}`, `3.14 × ${rr * rr} = ${fd(den)}, así que ${fd(v)} = ${fd(den)}h`] },
+        { t:`Divide los dos lados entre ${fd(den)}`, l:[`h = ${fd(v)} ÷ ${fd(den)} = ${fd(Math.floor(h * 1000) / 1000, 3)}…`] }, { t:'Redondea a la centésima', l:[cb(fd(r, 2))] }];
+      pide = 'la altura h (despejar y redondear a la centésima).'; error = 'multiplicar r × 2 en vez de r × r: r² es r por sí mismo.';
     } else if(tipo === 'A=P+Prt'){
       const P = 100 * R(5, 60), rt = pick([0.02, 0.03, 0.04, 0.05, 0.06, 0.08]), t = pick([2, 3, 4, 5, 2.5, 1.5, 6]), A = dN(P * (1 + rt * t)); r = P;
       enun = `A = P + Prt ; halla <b>P</b>, dado A = ${fd(A)}, r = ${fd(rt)} y t = ${fd(t)}.`;
@@ -6444,7 +6525,7 @@ MODULOS.push(
 {
   id:'aplicaciones-dec', nombre:'Problemas con decimales (dinero, razones, mejor compra)', secciones:['7.2'],
   gen(nv){
-    const tipo = pick(['neto','balance','ganancia','unitario','mejor','escala','libras','pctDinero','velocidad','dosPrecios']);
+    const tipo = pick(['neto','balance','ganancia','unitario','mejor','escala','libras','pctDinero','velocidad','dosPrecios','figura']);
     const quien = pick(['Jorge', 'Mónica', 'Donald', 'Jenny', 'Eddie', 'Roberto', 'Kim', 'Laura', 'Felipe']);
     const din = v => '$' + fd(v, 2);
     let enun, r, pasos, pide, error, k = 2, extra = {};
@@ -6508,6 +6589,14 @@ MODULOS.push(
       enun = `${quien} recorrió ${fd(dist)} millas en ${fd(t)} horas. ¿Cuál fue su velocidad promedio en millas por hora? Redondea a la décima.`;
       pasos = [{ t:'Velocidad = distancia ÷ tiempo', l:[`${fd(dist)} ÷ ${fd(t)} = ${fd(Math.floor(dist / t * 100) / 100, 2)}…`] }, { t:'Redondea a la décima', l:[cb(fd(r, 1)) + ' mph'] }];
       pide = 'las millas que recorre en UNA hora.'; error = 'multiplicar distancia × tiempo.';
+    } else if(tipo === 'figura'){   // razón de la altura a la base en un paralelogramo: la altura es la línea punteada, NO el lado inclinado (EducoSoft 7.2)
+      const h = decK(1, 9, 1), lado = dN(h + decK(0.1, 3, 1)), b = R(3, 12), u = pick(['cm', 'm', 'pulg']), n = Math.round(h * 10), d = b * 10, f = Fq(n, d);
+      return { enunciado:`Para la siguiente figura, halla la razón de la <b>altura</b> a la <b>base</b>, como una fracción en términos simples.${svgParalelo(fd(h), fd(lado), b, u)}`,
+        tipo:'frac', respuesta:{ n:f.n, d:f.d }, pedirSimple:true, ayuda:'La razón a : b se escribe con a arriba y b abajo.',
+        explicacion: receta({ pide:'la razón altura/base como fracción simplificada.',
+          pasos:[{ t:'Escoge las medidas correctas', l:[`La ALTURA es la línea punteada: ${fd(h)} ${u} (NO el lado inclinado, ${fd(lado)} ${u}). La base mide ${b} ${u}.`] },
+            { t:'Escribe la razón: altura arriba, base abajo', l:[cb(`${fd(h)}/${b}`)] }, { t:'Quita el punto decimal: multiplica arriba y abajo por 10', l:[`${fd(h)}/${b} = ${n}/${d}`] }, pasoSimplif(n, d)],
+          resp:`${f.n} : ${f.d}`, error:'usar el lado inclinado como altura: la altura es la medida que forma un ángulo recto con la base.', ejemplo:`${n}/${d} = ${f.n}/${f.d}.` }) };
     } else { // dosPrecios: total T, uno cuesta d menos que el otro
       const caro = decK(40, 2000, 2), d = decK(5, caro / 2, 2), barato = dN(caro - d), T = dN(caro + barato);
       const cosas = pick([['una camiseta', 'una calculadora'], ['la computadora más barata', 'la otra'], ['el disco de 40 GB', 'el de 80 GB']]);
@@ -7226,80 +7315,9 @@ _modEducoTQ('educo-qz8', 'Quiz 8.1 de EducoSoft (las 10 exactas)', '8.9', 'Quiz 
 ], 'rp rp rp rp rp rp rp rp rp rp')
 );
 
-/* ── Ejercicios del libro (E-Book, "Ejercicio X.Y"): los MISMOS ejercicios del libro, en orden y siempre iguales, al lado del tema al azar
-   de la misma sección (cada ronda = todos, como las prácticas del examen). Piloto: 6.2 (76 ejercicios). Las respuestas salen del código y
-   se comparan con la clave de impares del libro. En los de "estima y luego calcula" se pide el cálculo REAL (el estimado va en la explicación). ── */
-const _lbU = (u, x) => u === '$' ? '$' + fd(x, 2) : u ? fd(x) + ' ' + u : fd(x);                       // número con su unidad, como lo escribe el libro
-const _lbX = u => u === '$' ? { dinero:true, ayuda:DIN_AYUDA } : u ? { ayuda:`Respuesta en ${u}.` } : {};
-const lSuma = (xs, u) => { const s = dN(xs.reduce((a, b) => a + b, 0));
-  return { enunciado:`Suma los decimales.<br><b>${xs.map(x => _lbU(u, x)).join(' + ')}</b>`, ...numDec(s), ..._lbX(u),
-    explicacion:['Paso 1 — en columna con los puntos alineados (se rellena con ceros):', colDec(xs, '+', s), `→ ${_lbU(u, s)}`, TT(`${xs.map(x => fd(x)).join(' + ')} = ${fd(s)}.`, 'rellena con ceros para que todos tengan los mismos lugares decimales.')] }; };
-const lResta = (a, b, u, nota) => { const r = dN(a - b);
-  return { enunciado:`Halla la diferencia.<br><b>${_lbU(u, a)} − ${_lbU(u, b)}</b>`, ...numDec(r), ..._lbX(u),
-    explicacion:['Paso 1 — en columna con los puntos alineados (se rellena con ceros):', colDec([a, b], '−', r), ...(nota ? [nota] : []), `→ ${_lbU(u, r)}`, TT(`${fd(a)} − ${fd(b)} = ${fd(r)}.`, 'comprueba sumando: la diferencia + el que restaste = el primero.')] }; };
-const lSig = (a, b, resta) => { const r = dN(resta ? a - b : a + b), e = `${fd(a)} ${resta ? '−' : '+'} ${fdP(b)}`;
-  return { enunciado:`Halla la ${resta ? 'diferencia' : 'suma'} indicada.<br><b>${e}</b>`, ...numDec(r),
-    explicacion:[...(resta ? [`Paso 1 — restar es sumar el opuesto: ${e} = ${fd(a)} + ${fdP(dN(-b))}`] : []), `Paso ${resta ? 2 : 1} — con la regla de los signos:`, ...sumaSignos(a, resta ? dN(-b) : b), `→ ${fd(r)}`,
-      TT(`${e} = ${fd(r)}.`, resta ? 'menos un negativo es MÁS: cambia la resta por la suma del opuesto.' : 'signos iguales se suman; signos diferentes se restan y se queda el signo del más grande.')] }; };
-// "Resta b de a" (con redondeo opcional a k lugares) y las 4 frases de "Aplicaciones"
-const lDe = (b, a, k, nota) => { const ex = dN(a - b), r = k === undefined ? ex : redondeaK(ex, k);
-  return { enunciado:`Resta <b>${fd(b)}</b> de <b>${fd(a)}</b>${k === undefined ? '.' : ` y redondea la diferencia a la ${k === 2 ? 'centésima' : 'décima'} más cercana.`}`, ...numDec(r),
-    explicacion:[`Paso 1 — "resta ${fd(b)} de ${fd(a)}" es ${fd(a)} − ${fd(b)} (lo que va después del "de" va primero).`, colDec([a, b], '−', ex), ...(k === undefined ? [] : [`Paso 2 — se redondea a ${k} lugares: ${fd(ex)} → ${fd(r, k)}`]), ...(nota ? [nota] : []), `→ ${fd(r)}`,
-      TT(`${fd(a)} − ${fd(b)} = ${fd(ex)}${k === undefined ? '' : ` ≈ ${fd(r, k)}`}.`, '"resta A de B" es B − A: al revés da otro resultado.')] }; };
-const lFrase = (enun, pasos, r, truco) => ({ enunciado:enun, ...numDec(r), explicacion:[...pasos, `→ ${fd(r)}`, TT(`${fd(r)}.`, truco)] });
-const lRDS = (a, b, c, d) => { const dif = dN(a - b), sum = dN(c + d), r = dN(sum - dif);       // resta la diferencia de a y b de la suma de c y d
-  return lFrase(`Resta la diferencia de <b>${fd(a)}</b> y <b>${fd(b)}</b> de la suma de <b>${fd(c)}</b> y <b>${fd(d)}</b>.`, ['Paso 1 — la diferencia de los dos primeros:', colDec([a, b], '−', dif), 'Paso 2 — la suma de los otros dos:', colDec([c, d], '+', sum), 'Paso 3 — la suma MENOS la diferencia ("resta X de Y" es Y − X):', colDec([sum, dif], '−', r)], r, 'lo que va después del "de" es lo que va primero en la resta.'); };
-const lSDD = (a, b, c, d, suma1) => { const x = dN(suma1 ? a + b : a - b), y = dN(c - d), r = dN(x + y);   // suma (la suma | la diferencia) de a y b a la diferencia entre c y d
-  return lFrase(`Suma la ${suma1 ? 'suma' : 'diferencia'} de <b>${fd(a)}</b> y <b>${fd(b)}</b> a la diferencia entre <b>${fd(c)}</b> y <b>${fd(d)}</b>.`, [`Paso 1 — la ${suma1 ? 'suma' : 'diferencia'} de los dos primeros:`, colDec([a, b], suma1 ? '+' : '−', x), 'Paso 2 — la diferencia de los otros dos:', colDec([c, d], '−', y), 'Paso 3 — se suman los dos resultados:', colDec([x, y], '+', r)], r, 'primero calcula cada parte por separado y al final júntalas.'); };
-// simplificar combinando términos semejantes: ts = [[coeficiente, letra]] ('' = número solo)
-const lSem = ts => {
-  const orden = [...new Set(ts.map(t => t[1]))], suma = v => dN(ts.filter(t => t[1] === v).reduce((a, t) => a + t[0], 0));
-  const trm = (c, v, i) => `${i ? (c < 0 ? ' − ' : ' + ') : (c < 0 ? '−' : '')}${fd(Math.abs(c))}${v ? `<i>${v}</i>` : ''}`;
-  const arma = gs => gs.map(([v, c], i) => trm(c, v, i)).join('');
-  const res = orden.map(v => [v, suma(v)]).filter(([, c]) => c !== 0), ok = arma(res) || '0';
-  const malos = [arma(res.map(([v, c]) => [v, dN(-c)])), arma(orden.map(v => [v, dN(ts.filter(t => t[1] === v).reduce((a, t) => a + Math.abs(t[0]), 0))])),
-    arma(res.map(([v, c], i) => [v, i ? c : dN(c + 1)])), arma(res.map(([v, c], i) => [v, i ? c : dN(c - 1)])), res.length === 1 && res[0][1] !== 0 ? arma(res) + '<sup>2</sup>' : ''].filter(Boolean);
-  const pasos = [];
-  orden.forEach(v => { const g = ts.filter(t => t[1] === v); if(g.length > 1) pasos.push(`${v ? `Los términos con <i>${v}</i>` : 'Los números solos'}: ${g.map((t, i) => (i ? (t[0] < 0 ? '− ' : '+ ') : (t[0] < 0 ? '−' : '')) + fd(Math.abs(t[0]))).join(' ')} = ${cb(fd(suma(v)))}`); });
-  return { enunciado:`Simplifica combinando términos semejantes.<br><b>${ts.map(([c, v], i) => trm(c, v, i)).join('')}</b>`, tipo:'opciones', opciones:opcionesUnicas(ok, malos), respuesta:ok,
-    explicacion:['Paso 1 — se juntan los términos con la MISMA letra (los números solos van aparte); solo se suman los números de delante y la letra se queda igual:', ...pasos, `→ ${ok.replace(/<[^>]+>/g, '')}`,
-      TT(`${ts.map(([c, v], i) => trm(c, v, i)).join('').replace(/<[^>]+>/g, '')} = ${ok.replace(/<[^>]+>/g, '')}.`, 'x + x es 2x (no x²); un término con y y otro con x NO se juntan.')] }; };
-// "estima y luego efectúa": se pide el cálculo REAL; el estimado (estimación frontal) va en la explicación
-const lEst = (xs, ops, u) => { const ev = v => v.reduce((a, x, i) => i ? dN(ops[i - 1] === '+' ? a + x : a - x) : x), r = ev(xs), ex = xs.map(frontal), e = ev(ex);
-  const t = (v, i) => (i ? ` ${ops[i - 1]} ` : '') + (v < 0 && i ? `(${_lbU(u, v)})` : _lbU(u, v));
-  return { enunciado:`Primero estima la respuesta y luego efectúa el cálculo real. Escribe el <b>cálculo real</b>.<br><b>${xs.map(t).join('')}</b>`, ...numDec(r), ..._lbX(u),
-    explicacion:['Paso 1 — estimado: cada número se redondea a su valor posicional mayor (estimación frontal):', ...xs.map((x, i) => `${_lbU(u, x)} ≈ ${fd(ex[i])}`), `Paso 2 — la cuenta con los estimados: ${ex.map((v, i) => (i ? ` ${ops[i - 1]} ` : '') + fdP(v)).join('')} = ${fd(e)}`,
-      'Paso 3 — el cálculo real:', ...(xs.every(x => x >= 0) && ops.every(o => o === ops[0]) ? [colDec(xs, ops[0], r)] : [`${xs.map(t).join('')} = ${_lbU(u, r)}`]),
-      `Paso 4 — comparación: el real (${fd(r)}) debe estar cerca del estimado (${fd(e)}) ✓`, `→ ${_lbU(u, r)}`, TT(`estimado ${fd(e)}, real ${fd(r)}.`, 'el estimado solo sirve para ver si el real es razonable.')] }; };
-
-MODULOS.push(
-_modEducoTQ('libro-6-2', 'Ejercicios del libro 6.2 (los 76, fijos y en orden)', '6.2', 'Ejercicio 6.2 del E-Book', [
-  () => lSuma([24.4, 16.6, 8.7]), () => lSuma([3.05, 12.86, 17.29]), () => lSuma([123.043, 72.006, 9.104]), () => lSuma([3.410, 6.3975, 23.251]),
-  () => lSuma([1.4003, 13.5, 27.251]), () => lSuma([28.92, 3.49, 45.788, 36.066]), () => lSuma([68.39, 141.45, 87.3, 213.09], 'lb'),
-  () => lSuma([441.03, 2.59, 73.123, 0.9925]), () => lSuma([13.715, 25.25, 75.025, 105.05]), () => lSuma([18.624, 0.0116, 3.410, 6.3975]),
-  () => lResta(85.294, 36.079), () => lResta(191.05, 71.02), () => lResta(8.201, 7.091, '', 'Ojo: la clave del libro trae 1.10, pero la cuenta da 1.110 = 1.11.'), () => lResta(17.946, 0.378),
-  () => lResta(5.831, 0.287), () => lResta(6.271, 3.845), () => lResta(86.236, 49.547), () => lResta(93.782, 56.896),
-  () => lResta(39.502, 15.400), () => lResta(27.216, 26.8383), () => lResta(72.53, 24.642), () => lResta(603.042, 246.3),
-  () => lResta(0.3, 0.1350), () => lResta(102.578, 73.678), () => lResta(979.84, 425.69, '$'), () => lResta(254.345, 129.4),
-  () => lDe(218.765, 300), () => lDe(573.0958, 1069.75, 2), () => lDe(14.962, 21, undefined, 'Ojo: la clave del libro trae 6.04 (la diferencia 6.038 ya redondeada a la centésima); la resta exacta es 6.038.'),
-  () => lSig(-8.9, 17.82), () => lSig(-29.6, 13.71), () => lSig(0.543, -31.007), () => lSig(-17.526, 132.418), () => lSig(14.823, -21.715),
-  () => lSig(100, -82.89), () => lSig(23.175, -18.627), () => lSig(25.264, -19.837), () => lSig(27.893, -22.934),
-  () => lSig(-8.3, -7.265, true), () => lSig(-4.7, -3.92, true), () => lSig(-3.75, -5.3, true), () => lSig(-13.71, -29.6, true), () => lSig(6, 2.94, true),
-  () => lSig(-3.845, -6.271, true), () => lSig(-200.36, -45.87, true), () => lSig(350.42, -51.63, true), () => lSig(203.13, -19.25, true), () => lSig(-419.234, -412.479, true),
-  () => lSem([[6, 'x'], [5.1, 'x'], [-11.9, 'x']]), () => lSem([[5.65, 'y'], [-4.91, 'y'], [-0.05, 'y']]), () => lSem([[1.3, 'x'], [21.41, 'x'], [32.05, 'x']]),
-  () => lSem([[4.31, 't'], [-9.74, 't'], [3.21, 't']]), () => lSem([[85.7, 'x'], [-22.3, 'x'], [-17.9, 'x']]), () => lSem([[13.7, 'x'], [-7.29, 'y'], [2.89, 'y'], [-2.6, 'x']]),
-  () => lSem([[2.5, 'x'], [16.37, ''], [-5.8, 'x']]), () => lSem([[1.254, 'x'], [1.425, 'x'], [-3.203, 'x']]),
-  () => lEst([0.0125, 0.8235], ['+']), () => lEst([0.3691, 0.2798], ['−']), () => lEst([-0.5913, 0.3617], ['−']), () => lEst([0.0673, -0.7981], ['−']),
-  () => lEst([-0.0081, -0.0963], ['+']), () => lEst([0.8571, -0.0689], ['−']), () => lEst([-0.0897, -0.8973], ['+']), () => lEst([-0.0719, -0.8397], ['−']),
-  () => lEst([47.0987, 23.601], ['−']), () => lEst([2759.543, 874.099], ['−']), () => lEst([2.79, 19.23, 15.8], ['+', '+']), () => lEst([77.9, 18.42, 9.89], ['+', '−']),
-  () => lEst([1099.9, 2154.23, 819.72], ['+', '−']), () => lEst([79.82, 26.70, 43.39], ['+', '+'], '$'), () => lEst([678.49, 57.61], ['−'], 'lb'), () => lEst([6.271, 3.845], ['−']),
-  () => lRDS(111.051, 72.63, 135.065, 205), () => lRDS(235.231, 57.7, 342.159, 132.6), () => lSDD(2.0593, 0.655, 0.555, 0.55, false), () => lSDD(5.169, 9.254, 23.456, 7.981, true)
-])
-);
-
 /* ── Un tema "— EducoSoft" por cada tema al azar que salió en la Tarea y los Quizzes (pedido: que un mismo tema tenga su versión al azar y su versión de EducoSoft).
-   Junta, en orden (Tarea, Quiz de práctica, Quiz), las preguntas EXACTAS de ese tema: son las mismas de los 9 temas de arriba, repartidas por tema con EDU_BANCOS.
-   Van justo debajo de su tema al azar; NO entran en la mezcla normal ni en la general (extra: ya están en la Tarea y los Quizzes completos; se meten con su casilla).
+   Junta, en orden (Tarea, Quiz de práctica, Quiz), las preguntas EXACTAS de ese tema: salen de los 9 bancos de arriba (EDU_BANCOS), que ya no son temas sueltos.
+   Van justo debajo de su tema al azar; NO entran en la mezcla normal ni en la general (extra: sus preguntas son fijas y siempre serían las mismas 2; se meten con su casilla).
    `cubre` = los temas al azar que copian: solo esos (y los que no tienen otra versión no) llevan la etiqueta "Al azar". ── */
 const _EDU_BANCOS_ORDEN = ['educo-hw6', 'educo-qp6', 'educo-qz6', 'educo-hw7', 'educo-qp7', 'educo-qz7', 'educo-hw8', 'educo-qp8', 'educo-qz8'];
 const _EDU_TEMAS = [   // [clave en el banco, id, nombre, sección, temas al azar que copia]
@@ -7317,10 +7335,11 @@ MODULOS.push(..._EDU_TEMAS.map(([k, id, nombre, sec, cubre]) => {
   const banco = _EDU_BANCOS_ORDEN.flatMap(b => EDU_BANCOS[b].banco.filter((_, i) => EDU_BANCOS[b].temas[i] === k));
   return Object.assign(_modEducoTQ(id, `${nombre} — EducoSoft (las ${banco.length} exactas)`, sec, nombre, banco), { cubre, extra:true });
 }));
-MODULOS.find(m => m.id === 'libro-6-2').cubre = ['suma-resta-dec'];
+// la Tarea y los Quizzes de 6.2–6.4, 7.1–7.2 y 8.1 ya NO son temas sueltos (repetían estas mismas 102 preguntas): sus bancos siguen en EDU_BANCOS y de ahí salen los 9 temas
+_EDU_BANCOS_ORDEN.forEach(id => MODULOS.splice(MODULOS.findIndex(m => m.id === id), 1));
 // cada uno va justo debajo de su tema al azar en la lista (el orden de MODULOS es el de la lista de Temas)
 const _debajoDe = (id, ref) => { const [m] = MODULOS.splice(MODULOS.findIndex(x => x.id === id), 1); MODULOS.splice(MODULOS.findIndex(x => x.id === ref) + 1, 0, m); };
-[['educo-suma-resta', 'suma-resta-dec'], ['libro-6-2', 'educo-suma-resta'], ['educo-mult-div', 'mult-div-dec'], ['educo-dec-frac', 'dec-fraccion'], ['educo-orden-op', 'orden-op-dec'],
+[['educo-suma-resta', 'suma-resta-dec'], ['educo-mult-div', 'mult-div-dec'], ['educo-dec-frac', 'dec-fraccion'], ['educo-orden-op', 'orden-op-dec'],
  ['educo-promedio', 'promedio-dec'], ['educo-ecuaciones', 'ecuaciones-dec'], ['educo-formulas', 'formulas-dec'], ['educo-aplicaciones', 'aplicaciones-dec'], ['educo-razones-prop', 'compras-grandes']]
   .forEach(([id, ref]) => _debajoDe(id, ref));
 
@@ -7690,8 +7709,23 @@ MODULOS.forEach(m => { if(!m.clase) m.clase = 'mate'; });
 // etiqueta de cada tema de Álgebra en la lista de Temas (misma burbuja que Repaso de ayudante): EducoSoft | del libro | al azar. "Al azar" solo la lleva un tema que
 // se repite (otro tema fijo lo copia: `cubre`); un tema con una sola versión no lleva etiqueta.
 const _cubiertos = new Set(MODULOS.flatMap(m => m.cubre || []));
-MODULOS.forEach(m => { if(m.clase === 'mate') m.tag = /^educo-/.test(m.id) ? 'educo' : /^(libro|repaso|autoeval)-/.test(m.id) ? 'libro' : _cubiertos.has(m.id) ? 'azar' : ''; });
+MODULOS.forEach(m => { if(m.clase === 'mate'){ m.tag = /^educo-/.test(m.id) ? 'educo' : /^(libro|repaso|autoeval)-/.test(m.id) ? 'libro' : _cubiertos.has(m.id) ? 'azar' : '';
+  m.rep = m.tag === 'azar' || !!m.cubre; } });   // "Se repite": el tema al azar que otro tema fijo copia, y esos fijos (los "— EducoSoft")
+// cada grupo de temas que se repiten (un tema al azar y sus versiones fijas, aunque estén en otro capítulo) lleva SU color en la etiqueta: _raiz junta los que se copian entre sí
+const _COLORES_GRUPO = ['#1565c0', '#c62828', '#7b1fa2', '#00897b', '#d81b60', '#6d4c41', '#3949ab', '#00acc1', '#546e7a'];
+const _raizDe = {}, _colorDe = {};
+const _raiz = id => { if(_raizDe[id] === undefined) _raizDe[id] = id; return _raizDe[id] === id ? id : (_raizDe[id] = _raiz(_raizDe[id])); };
+MODULOS.forEach(m => (m.cubre || []).forEach(t => { _raizDe[_raiz(m.id)] = _raiz(t); }));
+MODULOS.forEach(m => { if(m.rep){ const r = _raiz(m.id); if(!_colorDe[r]) _colorDe[r] = _COLORES_GRUPO[Object.keys(_colorDe).length % _COLORES_GRUPO.length]; m.gc = _colorDe[r]; } });
 const MOD_POR_ID = {}; MODULOS.forEach(m => MOD_POR_ID[m.id] = m);
+// "Se repite" con la otra versión en OTRO capítulo (en el mismo van pegadas y no hace falta): dice dónde está. Un tema al azar apunta a su versión de EducoSoft y al revés.
+const _otroLado = m => {
+  if(!m.rep) return '';
+  const cap = x => x.secciones[0][0], corto = x => x.nombre.replace(/ — EducoSoft.*$/, '').replace(/ \(.*$/, ''), porCap = {};
+  MODULOS.filter(x => x.rep && x.tag !== m.tag && _raiz(x.id) === _raiz(m.id) && cap(x) !== cap(m)).forEach(x => (porCap[cap(x)] = porCap[cap(x)] || []).push(corto(x)));
+  const lista = Object.keys(porCap).sort().map(c => `capítulo ${c} (${porCap[c].join(', ')})`);
+  return lista.length ? (m.tag === 'azar' ? 'También de EducoSoft: ' : 'También al azar: ') + lista.join('; ') : '';
+};
 // Álgebra: los temas que todavía arman la explicación con líneas sueltas salen igual en forma de receta (aReceta)
 MODULOS.filter(m => !m.clase || m.clase === 'mate').forEach(m => { const g = m.gen;
   m.gen = function(nv){ const e = g.call(this, nv);
@@ -7928,7 +7962,7 @@ const SECMAP = {
   '7.7': ['autoeval-cap7'],
   '8.7': ['repaso-cap8'],
   '8.8': ['autoeval-cap8'],
-  '6.2': ['suma-resta-dec','libro-6-2'],
+  '6.2': ['suma-resta-dec'],
   '6.3': ['mult-div-dec'],
   '6.4': ['dec-fraccion','orden-op-dec','promedio-dec'],
   '7.1': ['ecuaciones-dec','formulas-dec'],
@@ -7940,9 +7974,6 @@ const SECMAP = {
   '8.3': ['comercial-dec'],
   '8.4': ['interes'],
   '8.5': ['compras-grandes'],
-  '6.9': ['educo-hw6','educo-qp6','educo-qz6'],
-  '7.9': ['educo-hw7','educo-qp7','educo-qz7'],
-  '8.9': ['educo-hw8','educo-qp8','educo-qz8']
 };
 // EducoSoft está en inglés — las claves van en los dos idiomas
 const CLAVES = {
@@ -8006,7 +8037,7 @@ const CLAVES = {
   'dec-redondear':    ['redondeo de decimales','redondea el número decimal','rounding decimals'],
   'dec-comparar':     ['comparación de decimales','valor absoluto de un número decimal','gráficas de decimales','comparing decimals','graphing decimals'],
   'suma-resta-dec':   ['suma y resta de decimales','adding decimals','subtracting decimals','addition and subtraction of decimals'],
-  'mult-div-dec':     ['multiplicación y división de decimales','multiplying decimals','dividing decimals','multiplication and division of decimals'],
+  'mult-div-dec':     ['multiplicación y división de decimales','multiplying decimals','dividing decimals','multiplication and division of decimals','estimación frontal','estimado frontal'],
   'dec-fraccion':     ['decimales y fracciones','decimal periódico','decimal infinito','decimal finito','repeating decimal','terminating decimal','decimals and fractions'],
   'orden-op-dec':     ['orden de operaciones con decimales','simplifica la expresión numérica','order of operations with decimals'],
   'promedio-dec':     ['promedio de decimales','average of decimals'],
@@ -8026,16 +8057,6 @@ const CLAVES = {
   'autoeval-cap7':    ['autoevaluación del capítulo 7','7.7 autoevaluación'],
   'repaso-cap8':      ['repaso del capítulo 8','8.7 ejercicios de repaso','chapter 8 review'],
   'autoeval-cap8':    ['autoevaluación del capítulo 8','8.8 autoevaluación'],
-  'libro-6-2':        ['ejercicio 6.2','suma y resta de decimales del libro','ejercicios del libro 6.2'],
-  'educo-hw6':        ['tarea de 6.2','homework on 6.2','estimación frontal','estimado frontal'],
-  'educo-qp6':        ['quiz de práctica de 6.2','quiz on 6.2 (practice)'],
-  'educo-qz6':        ['quiz de 6.2','quiz on 6.2'],
-  'educo-hw7':        ['tarea de 7.1','homework on 7.1'],
-  'educo-qp7':        ['quiz de práctica de 7.1','quiz on 7.1 (practice)'],
-  'educo-qz7':        ['quiz de 7.1','quiz on 7.1'],
-  'educo-hw8':        ['tarea de 8.1','homework on 8.1','razones y proporciones','escritura de razones','razón unitaria'],
-  'educo-qp8':        ['quiz de práctica de 8.1','quiz on 8.1 (practice)'],
-  'educo-qz8':        ['quiz de 8.1','quiz on 8.1']
 };
 
 function analizarTexto(txt){
@@ -8161,12 +8182,13 @@ const fechaHaceDias = n => { const d = new Date(); d.setDate(d.getDate()-n); ret
 // con escHtml). Las cuatro apps comparten el mismo dominio: un texto con código metido en un grupo
 // podría leer las claves de IA y los datos de Fit F, Fit M y Facturas.
 const _idOk = s => typeof s === 'string' && /^[a-z0-9-]{1,40}$/i.test(s);
+const _modOk = s => _idOk(s) && !!MOD_POR_ID[s];   // y que el tema exista todavía (un grupo o mezcla guardados con un tema que se quitó ya no lo traen)
 const _num0 = v => Math.max(0, Math.floor(Number(v)) || 0);
 const _limpiarGrupos = gs => Array.isArray(gs) ? gs.filter(g => g && _idOk(g.id) && Array.isArray(g.mods))
-  .map(g => ({ id:g.id, nombre:String(g.nombre == null ? '' : g.nombre).slice(0, 60), mods:g.mods.filter(_idOk) })) : [];
+  .map(g => ({ id:g.id, nombre:String(g.nombre == null ? '' : g.nombre).slice(0, 60), mods:g.mods.filter(_modOk) })) : [];
 function _limpiarClase(c){
   if(!c || typeof c !== 'object' || !Array.isArray(c.mods)) return null;
-  const o = { etiqueta:String(c.etiqueta == null ? '' : c.etiqueta).slice(0, 80), mods:c.mods.filter(_idOk) };
+  const o = { etiqueta:String(c.etiqueta == null ? '' : c.etiqueta).slice(0, 80), mods:c.mods.filter(_modOk) };
   if(_idOk(c.grupoId)) o.grupoId = c.grupoId;
   return o;
 }
@@ -8651,6 +8673,9 @@ document.addEventListener('visibilitychange', () => { if(document.visibilityStat
 function restaurarSesion(){
   const s = leer('mate_sesion_v1', null);
   if(!s || !MOD_POR_ID[s.modId] || !s.ejActual) return false;
+  // una ronda guardada que trae un tema que ya no existe (se quitó) se descarta entera: seguirla se atoraría al llegar a su turno
+  const ids = [...(s.sesionOrden || []), ...(s.sesionCola || []), ...(s.sesionPendientes || []).map(p => p && p.modId), ...(s.sesionFallos || []).map(p => p && p.modId)];
+  if(!ids.every(id => id == null || id === '*' || MOD_POR_ID[id])){ borrarSesion(); return false; }
   modActual = MOD_POR_ID[s.modId];
   esTemaFijo = s.esTemaFijo; capFijo = s.capFijo; sesionHechos = s.sesionHechos || 1;
   sesionCorrectos = s.sesionCorrectos || 0; sesionCola = s.sesionCola || [];
@@ -9696,6 +9721,7 @@ function pantallaTemas(){
     ${ayudMaterialHTML()}
     <div class="card">
       <h2>Practicar un tema suelto</h2>
+      ${materia === 'mate' ? '<div class="nota"><b>Se repite</b> = el mismo tema con otros ejercicios: uno al azar y otro con las preguntas exactas de tu Tarea y tus Quizzes de EducoSoft (mismo color). La casilla mete el tema en la mezcla de su capítulo; los de EducoSoft solo entran si los marcas.</div>' : ''}
       ${MATERIAS[materia].caps.map(cap => { const ms = MODULOS.filter(m=>m.clase===materia && m.secciones[0][0]===String(cap)); return `
         <details class="temaCap">
           <summary>${nombreCapitulo(cap)}</summary>
@@ -9704,7 +9730,7 @@ function pantallaTemas(){
           ${ms.map(m=>{
             const s = stats[m.id], p = s ? pct(s) : null;
             const btnTema = `<button class="btn sec chico${m.tag ? ' conTag' : ''}" onclick="ir('practica','${m.id}')">${m.nombre}${ayTagHTML(m)}
-              ${p!==null ? `<small>${p}% de aciertos · ${s.ok+s.fallo} ejercicios</small>` : ''}</button>`;
+              ${_otroLado(m) ? `<small>${_otroLado(m)}</small>` : ''}${p!==null ? `<small>${p}% de aciertos · ${s.ok+s.fallo} ejercicios</small>` : ''}</button>`;
             return (_conCasillas() ? `<div class="temaFila"><input type="checkbox" aria-label="Marcar ${escHtml(m.nombre)}" ${selTemas.includes(m.id) ? 'checked' : ''} onchange="toggleSelTema('${m.id}', this.checked)">${btnTema}</div>` : btnTema) +
               (m.nuevaRonda && !m.sinReloj ? `<button class="btn sec chico" onclick="ir('examen','${m.id}')">${_nombreSimulacro(m)} con reloj
                 <small>las ${m.banco} preguntas en 1 h 30 min, como el examen real, con la nota al final</small></button>` : '');
@@ -11127,17 +11153,39 @@ function autotest(){
   const algM = MODULOS.filter(m => m.clase === 'mate'), selAntes = selTemas;
   const fijo = m => /^(educo|libro|repaso|autoeval)-/.test(m.id), copiado = m => algM.some(x => (x.cubre || []).includes(m.id));
   chk('etiquetas: un tema fijo siempre lleva la suya; uno al azar lleva "Al azar" solo si otro tema fijo lo copia', algM.every(m => fijo(m) ? ['libro', 'educo'].includes(m.tag) : (m.tag === 'azar') === copiado(m)));
-  chk('etiquetas: suma-resta-dec = azar, dec-redondear = sin etiqueta, libro-6-2 = libro, educo-hw6 y educo-suma-resta = educo',
-    MOD_POR_ID['suma-resta-dec'].tag === 'azar' && !MOD_POR_ID['dec-redondear'].tag && MOD_POR_ID['libro-6-2'].tag === 'libro' && MOD_POR_ID['educo-hw6'].tag === 'educo' && MOD_POR_ID['educo-suma-resta'].tag === 'educo');
-  const txtQ = m => { m.nuevaRonda(); return Array.from({ length:m.banco }, () => { const e = m.gen('medio'); return JSON.stringify([e.enunciado, e.respuesta]); }); };
-  const porTema = _EDU_TEMAS.flatMap(([, id]) => txtQ(MOD_POR_ID[id])).sort(), delTodo = _EDU_BANCOS_ORDEN.flatMap(id => txtQ(MOD_POR_ID[id])).sort();
+  chk('etiquetas: suma-resta-dec = azar, dec-redondear = sin etiqueta, repaso-cap6 = libro, educo-cap5 y educo-suma-resta = educo',
+    MOD_POR_ID['suma-resta-dec'].tag === 'azar' && !MOD_POR_ID['dec-redondear'].tag && MOD_POR_ID['repaso-cap6'].tag === 'libro' && MOD_POR_ID['educo-cap5'].tag === 'educo' && MOD_POR_ID['educo-suma-resta'].tag === 'educo');
+  chk('"Se repite": lo llevan los temas al azar que otro tema fijo copia y los fijos que copian a uno (la Tarea completa y el Repaso no)',
+    algM.every(m => !!m.rep === (m.tag === 'azar' || !!m.cubre)) && /Se repite · Al azar/.test(ayTagHTML(MOD_POR_ID['suma-resta-dec'])) && /Se repite · EducoSoft/.test(ayTagHTML(MOD_POR_ID['educo-suma-resta']))
+    && !/Se repite/.test(ayTagHTML(MOD_POR_ID['educo-cap5'])) && !/Se repite/.test(ayTagHTML(MOD_POR_ID['repaso-cap6'])));
+  const gc = id => MOD_POR_ID[id].gc;
+  chk('colores: las versiones del mismo tema comparten color (suma-resta-dec y educo-suma-resta; razones, proporciones y educo-razones-prop) y otro tema tiene otro',
+    gc('suma-resta-dec') && gc('suma-resta-dec') === gc('educo-suma-resta') && gc('razones') && gc('razones') === gc('proporciones') && gc('razones') === gc('educo-razones-prop') && gc('mult-div-dec') !== gc('suma-resta-dec'));
+  chk('colores: solo los que se repiten llevan color de grupo, y en un capítulo cada color es de UN grupo', algM.every(m => !!m.gc === !!m.rep) && [1, 2, 3, 4, 5, 6, 7, 8].every(c => {
+    const porColor = {}; algM.filter(m => m.gc && m.secciones[0][0] === String(c)).forEach(m => (porColor[m.gc] = porColor[m.gc] || new Set()).add(_raiz(m.id))); return Object.values(porColor).every(s => s.size === 1); }));
+  chk('"Se repite" con la otra versión en OTRO capítulo dice dónde está (Razones y proporciones: caps. 3 y 5 al azar ↔ cap. 8 EducoSoft); en el mismo capítulo no hace falta',
+    /EducoSoft: capítulo 8 \(Razones y proporciones\)/.test(_otroLado(MOD_POR_ID['proporciones'])) && /EducoSoft: capítulo 8/.test(_otroLado(MOD_POR_ID['razones'])) && !/Razones unitarias/.test(_otroLado(MOD_POR_ID['proporciones']))
+    && /al azar: capítulo 3 \(Razones\); capítulo 5 \(Proporciones, Razones unitarias y problemas de proporciones\)/.test(_otroLado(MOD_POR_ID['educo-razones-prop'])) && _otroLado(MOD_POR_ID['suma-resta-dec']) === '' && _otroLado(MOD_POR_ID['educo-suma-resta']) === '' && _otroLado(MOD_POR_ID['dec-redondear']) === '');
+  // la Tarea y los Quizzes de 6.2–6.4 ya no son temas sueltos: sus bancos (EDU_BANCOS) siguen y reparten las 102 preguntas por tema, idénticas
+  const limpiaTxt = h => String(h).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  const sinCap = t => t.replace(/^<small class="capEsq">[^<]*<\/small>/, '');
+  const txtQ = m => { m.nuevaRonda(); return Array.from({ length:m.banco }, () => { const e = m.gen('medio'); return JSON.stringify([sinCap(e.enunciado), e.respuesta]); }); };
+  const porTema = _EDU_TEMAS.flatMap(([, id]) => txtQ(MOD_POR_ID[id])).sort(), delTodo = _EDU_BANCOS_ORDEN.flatMap(id => EDU_BANCOS[id].banco.map(fn => { const e = fn(); return JSON.stringify([e.enunciado, e.respuesta]); })).sort();
   chk('temas "— EducoSoft": reparten las 102 preguntas de la Tarea y los Quizzes, ni una de más ni de menos, idénticas', delTodo.length === 102 && eq(porTema, delTodo));
+  chk('ya no hay Tarea/Quizzes sueltos (caps. 6, 7 y 8) ni el tema de 76 preguntas; sus bancos siguen en EDU_BANCOS', _EDU_BANCOS_ORDEN.every(id => !MOD_POR_ID[id] && EDU_BANCOS[id] && EDU_BANCOS[id].banco.length) && !MOD_POR_ID['libro-6-2']);
+  chk('las mezclas de los caps. 6, 7 y 8 no traen preguntas fijas que siempre serían las mismas (solo Repaso y Autoevaluación, que salen al azar)', [6, 7, 8].every(c => _modsCap(c).filter(m => !m.extra).every(m => !m.nuevaRonda)));
+  const salio = (() => { const vistos = []; for(let i = 0; i < 900; i++) vistos.push(limpiaTxt(MOD_POR_ID['suma-resta-dec'].gen('dificil').enunciado)); return frag => vistos.some(t => t.includes(frag)); })();
+  chk('suma-resta-dec genera lo del libro 6.2 que no tenía: estimar (cardinal y frontal), resta con redondeo y las 3 frases', ['Estima la suma', 'Estima la diferencia', 'número cardinal', 'estimación frontal', 'y redondea la diferencia', 'Suma la diferencia de', 'Suma la suma de', 'Resta la diferencia de'].every(salio));
+  const salioDe = (id, nv, n, f) => { for(let i = 0; i < n; i++){ if(f(MOD_POR_ID[id].gen(nv))) return true; } return false; };
+  chk('los temas al azar generan lo de EducoSoft (caps. 7 y 8) que no tenían: razón con unidades distintas, cilindro (hallar h), razón altura/base con figura y ecuaciones con fracciones (respuesta decimal y respuesta fracción)',
+    salioDe('razones', 'medio', 900, e => /Cambia/.test(e.enunciado)) && salioDe('formulas-dec', 'dificil', 900, e => /dado V = .* y r = \d+ cm/.test(limpiaTxt(e.enunciado))) && salioDe('aplicaciones-dec', 'medio', 900, e => /<svg/.test(e.enunciado))
+    && salioDe('ecuaciones-dec', 'dificil', 900, e => /class="fr"/.test(e.enunciado) && e.tipo === 'num') && salioDe('ecuaciones-dec', 'dificil', 1500, e => /class="fr"/.test(e.enunciado) && e.tipo === 'frac'));
   chk('cada tema fijo va justo debajo de su tema al azar en la lista', _EDU_TEMAS.filter(t => t[4].length === 1).every(t => MODULOS.findIndex(m => m.id === t[1]) === MODULOS.findIndex(m => m.id === t[4][0]) + 1));
-  selTemas = ['suma-resta-dec', 'libro-6-2'];
+  selTemas = ['suma-resta-dec', 'educo-suma-resta'];
   const col6 = construirCola(6);
-  chk('Mezcla del cap. 6 con 2 casillas: solo esos 2 temas (2 veces cada uno)', col6.length === 4 && col6.every(id => id === 'suma-resta-dec' || id === 'libro-6-2'));
-  selTemas = ['libro-6-2'];
-  chk('Mezcla del cap. 6 con solo un tema fijo marcado: entra completo (76)', construirCola(6).length === 76);
+  chk('Mezcla del cap. 6 con 2 casillas (uno al azar y uno "— EducoSoft"): solo esos 2 temas (2 veces cada uno)', col6.length === 4 && col6.every(id => id === 'suma-resta-dec' || id === 'educo-suma-resta'));
+  selTemas = ['educo-suma-resta'];
+  chk('Mezcla del cap. 6 con solo un tema fijo marcado: entra completo (10)', construirCola(6).length === 10);
   selTemas = ['educo-suma-resta', 'educo-mult-div'];
   chk('Mezcla del cap. 6 con solo 2 temas "— EducoSoft" marcados: entran completos (10 + 17)', construirCola(6).length === 27);
   selTemas = [];
