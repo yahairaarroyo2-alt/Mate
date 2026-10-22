@@ -9574,15 +9574,15 @@ const _filaProgresoHTML = () => `<div class="racha">
       </div>${esTemaFijo || modoErrores || modoRepasoRonda || examen ? '' : `<div class="racha">
         <button class="${unoPorTema?'on':''}" onclick="toggleUnoPorTema()"><b>${unoPorTema?'Sí':'No'}</b><span>1 ejercicio por tema</span></button>
       </div>`}`;
-// mapa de las preguntas de la ronda, solo en las prácticas del Examen Departamental: verde = bien, rojo = mal,
+// mapa de las preguntas de la ronda (en toda ronda, no solo en las del Examen Departamental): verde = bien, rojo = mal,
 // amarillo = viste la explicación sin contestar. Tocar un número va a esa pregunta.
-let _mapaAbierto = false;
+let _mapaAbierto = true;   // abierto desde el principio (la usuaria lo busca; ontoggle recuerda si lo cierra)
 function _mapaHTML(){
-  const soloExamen = esTemaFijo ? !!modActual.nuevaRonda : sesionOrden.length > 0 && sesionOrden.every(id => id === '*' || (MOD_POR_ID[id] && MOD_POR_ID[id].nuevaRonda));
-  if(!soloExamen || modoErrores || modoRepasoRonda || examen) return '';
+  if(sesionTotal < 2 || modoErrores || modoRepasoRonda || examen) return '';
   const nombre = { ok:', bien', mal:', mal', vista:', viste la explicación' };
   const cuenta = k => Object.values(sesionRes).filter(x => x === k).length;
-  return `<details class="mapaPreg"${_mapaAbierto ? ' open' : ''} ontoggle="_mapaAbierto=this.open"><summary>Mapa de preguntas · ${cuenta('ok')} bien, ${cuenta('mal')} mal, ${sesionTotal - Object.keys(sesionRes).length} sin hacer</summary>
+  const lado = window.matchMedia && matchMedia('(min-width:1240px)').matches;   // en computadora va fijo a la izquierda, sin título: siempre abierto
+  return `<details class="mapaPreg"${_mapaAbierto || lado ? ' open' : ''} ontoggle="_mapaAbierto=this.open"><summary>Mapa de preguntas · ${cuenta('ok')} bien, ${cuenta('mal')} mal, ${sesionTotal - Object.keys(sesionRes).length} sin hacer</summary>
     <div class="mapaGrid">${Array.from({length:sesionTotal}, (_, i) => `<button type="button" class="mapaCel ${sesionRes[i] || ''}${i === sesionIdx ? ' actual' : ''}" onclick="irAEj(${i})" aria-label="Pregunta ${i+1}${nombre[sesionRes[i]] || ''}">${i+1}</button>`).join('')}</div>
     <div class="mapaLeyenda"><span class="mapaCel ok">✓</span> bien <span class="mapaCel mal">✗</span> mal <span class="mapaCel vista">?</span> viste la explicación</div></details>`;
 }
@@ -11167,7 +11167,7 @@ function pintarEjercicio(){
       <div id="zonaFb"></div>
       <div class="row tres" id="accionesPre">
         <button class="btn sec chico" onclick="saltarEjercicio()">Saltar</button>
-        <button class="btn sec chico" onclick="verExplicacion()">Ver explicación</button>
+        <button class="btn sec chico" id="btnVerExpl" onclick="verExplicacion()">Ver explicación</button>
         <button class="btn sec chico" onclick="reiniciarEjercicio()" title="Borra tu respuesta y tu proceso" aria-label="Reiniciar este ejercicio: borra tu respuesta y tu proceso">↺ Reiniciar</button>
       </div>
     </div>
@@ -11566,6 +11566,7 @@ function verExplicacion(){
 }
 function _pintarVistaExplicacion(){
   const zona = $('zonaFb');
+  const bv = $('btnVerExpl'); if(bv) bv.style.display = 'none';   // la explicación ya está abierta: el botón sobra
   zona.innerHTML = `
     <div class="fb medio">Respuesta: <b>${fmtRespuesta(ejActual)}</b>
       <small>Este ejercicio no cuenta para las estadísticas.</small></div>

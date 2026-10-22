@@ -371,8 +371,8 @@ que `setTemaModo()` cambia la preferencia. Si agregas CSS nuevo que dependa del 
 **Selector "Pág." y mapa de preguntas (2026-10-10/13):** toda ronda tiene arriba a la derecha "Pág. 1, 2, 3…"
 (`selectorPregunta`/`irAEj`): cada página es un ejercicio fijo de la ronda (`_ejDelPuesto`: se genera la primera vez y
 después es el mismo; en las prácticas del examen la página N es la pregunta N, también dentro de un grupo de solo
-prácticas, que trae las 30 de cada una — `vecesDe`). En las prácticas del examen, debajo, el **mapa de preguntas**
-(`_mapaHTML`: verde bien, rojo mal, amarillo vio la explicación; tocar un número va ahí). "Otro de este tema" no sale
+prácticas, que trae las 30 de cada una — `vecesDe`). Debajo, en TODA ronda (desde 2026-10-22; antes solo en las prácticas del examen), el **mapa de preguntas**
+(`_mapaHTML`: verde bien, rojo mal, amarillo vio la explicación; tocar un número va ahí). En pantalla ancha (≥ 1240 px, computadora) el mapa va FIJO en el espacio vacío de la izquierda (CSS `@media (min-width:1240px)` sobre `.mapaPreg` en index.html; el ancho sale de (100vw − 720px)/2); en el teléfono sigue debajo de las estadísticas. "Otro de este tema" no sale
 en las prácticas del examen (cambiaría la pregunta de esa página).
 
 Cuatro pestañas fijas, **copiadas tal cual de Fit-F** (mismas clases CSS `.bottom-nav`/

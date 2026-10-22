@@ -149,6 +149,13 @@
   .mapaCel.actual{outline:2.5px solid var(--texto);outline-offset:1px}
   .mapaLeyenda{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:.78rem;color:var(--muted);margin-top:8px}
   .mapaLeyenda .mapaCel{padding:1px 6px;min-width:0;cursor:default}
+  /* en computadora (pantalla ancha) el mapa va fijo en el espacio vacío de la izquierda; en el teléfono sigue debajo de las estadísticas */
+  @media (min-width:1240px){
+    .mapaPreg{position:fixed;left:18px;top:72px;width:min(300px,calc((100vw - 720px)/2 - 36px));margin:0;max-height:calc(100vh - 96px);overflow:auto;
+      background:var(--card);border:var(--lg-border);border-radius:20px;box-shadow:var(--lg-shadow);padding:14px}
+    .mapaGrid{grid-template-columns:repeat(auto-fill,minmax(34px,1fr));margin-top:0}
+    .mapaPreg summary,.mapaLeyenda{display:none}   /* solo los números */
+  }
   .ayFoto{display:block;width:100%;max-width:300px;margin:12px auto 0;border-radius:12px;background:#fff;border:1px solid rgba(128,128,128,.3)}
   .nota{background:rgba(255,255,255,.22);border:1px solid rgba(255,255,255,.4);padding:11px 14px;
     border-radius:14px;margin:10px 0;font-size:.9rem;color:var(--muted)}
@@ -578,6 +585,6 @@
 </div>
 
 <!-- todo el JavaScript vive en app.js (Chrome lo guarda ya compilado y no lo vuelve a analizar en cada apertura). El ?v= es el MISMO número que CACHE en sw.js: se suben juntos en cada deploy. -->
-<script src="app.js?v=171"></script>
+<script src="app.js?v=172"></script>
 </body>
 </html>
