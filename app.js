@@ -11365,7 +11365,7 @@ function mostrarFb(res, soloAviso){
     </div>
     ${explHTML()}
     <button class="btn amar" onclick="_siguienteEjercicio()">Siguiente ejercicio</button>
-    ${(!modoErrores && !modoRepasoRonda) ? `<button class="btn sec chico" style="margin-top:8px" onclick="reiniciarEjercicio()">↺ Reiniciar este ejercicio<small>hazlo otra vez desde cero (con tu proceso vacío)</small></button>${modActual.nuevaRonda ? '' : `<button class="btn sec chico" style="margin-top:8px" onclick="otroDelMismoTema()">Otro de este tema<small>no gasta tu ronda</small></button>`}` : ''}`;
+    ${(!modoErrores && !modoRepasoRonda) ? `<div class="row tres" style="margin-top:8px"><button class="btn sec chico" onclick="reiniciarEjercicio()" title="Hazlo otra vez desde cero (con tu proceso vacío)" aria-label="Reiniciar este ejercicio: hazlo otra vez desde cero, con tu proceso vacío">↺ Reiniciar</button>${modActual.nuevaRonda ? '' : `<button class="btn sec chico" onclick="otroDelMismoTema()" title="Otro ejercicio del mismo tema; no gasta tu ronda" aria-label="Otro ejercicio de este tema: no gasta tu ronda">Otro parecido</button>`}</div>` : ''}`;
   $('zonaEntrada').style.opacity = '.5';
   $('zonaEntrada').style.pointerEvents = 'none';
   $('accionesPre').style.display = 'none';
@@ -11532,11 +11532,11 @@ function toggleRespuesta(){
   const ocultar = btn.dataset.oculto !== '1'; btn.dataset.oculto = ocultar ? '1' : '';
   ['zonaEntrada', 'cardProgreso'].forEach(id => { const e = $(id); if(e) e.style.display = ocultar ? 'none' : ''; });   // cardProgreso = te faltan / racha / agrupar / repetir
   const fb = document.querySelector('#zonaFb .fb'); if(fb) fb.style.display = ocultar ? 'none' : '';
-  btn.textContent = ocultar ? '▼ Mostrar mi respuesta y mi progreso' : '▲ Ocultar mi respuesta y mi progreso (para ver mejor la explicación)';
+  btn.textContent = ocultar ? '▼ Mostrar respuesta' : '▲ Ocultar respuesta';
   btn.scrollIntoView({ block:'nearest' });
 }
 const explHTML = () => `
-  <button type="button" id="btnOcultarResp" class="btn sec chico" style="margin-bottom:10px" onclick="toggleRespuesta()">▲ Ocultar mi respuesta y mi progreso (para ver mejor la explicación)</button>
+  <button type="button" id="btnOcultarResp" class="btn sec chico" style="margin-bottom:10px" onclick="toggleRespuesta()">▲ Ocultar respuesta</button>
   <div class="expl"><h3>Por qué</h3>${explPasos(ejActual.explicacion, ejActual.sinNumeros)}</div>
   ${getAiKey() ? '<div id="aiOtra">' + _aiOtraBtn() + '</div>' : ''}`;
 
