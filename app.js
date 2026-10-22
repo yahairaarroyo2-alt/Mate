@@ -6004,6 +6004,113 @@ const svgTriRect = (a, b, c) => `<svg viewBox="0 0 300 150" style="width:100%;ma
   <text x="182" y="144" text-anchor="middle" font-size="14" font-weight="700" fill="currentColor">${a}</text>
   <text x="87" y="78" text-anchor="end" font-size="14" font-weight="700" fill="currentColor">${b}</text>
   <text x="190" y="66" text-anchor="start" font-size="14" font-weight="700" fill="currentColor">${c}</text></svg>`;
+// ── figuras de la geometría (7.4): el dibujo con las medidas puestas; solo en la explicación (el enunciado no las trae) ──
+// naranja = lo que se explica (vuelta, altura, mitad…); el resto en el color del texto. Los valores ya vienen con su unidad ("26.1 yd").
+const _gt = (x, y, t, a = 'middle', c = '', fs = 14) => `<text x="${x}" y="${y}" text-anchor="${a}" font-size="${fs}" font-weight="700"${c ? ` fill="${c}"` : ''}>${t}</text>`;
+const _gp = (pts, fill, op) => `<polygon points="${pts}" fill="${fill || 'none'}" fill-opacity="${op || 0}" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>`;
+const _gl = (x1, y1, x2, y2, c, dash, sw = 2) => `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${c || 'currentColor'}" stroke-width="${sw}"${dash ? ' stroke-dasharray="5 4"' : ''}/>`;
+const _gAng = (x, y) => `<path d="M${x} ${y - 9} L${x + 9} ${y - 9} L${x + 9} ${y}" fill="none" stroke="currentColor" stroke-width="1.5"/>`;   // esquinita de ángulo recto (x, y = el pie de la altura)
+let _figN = false;   // true = figura del ENUNCIADO: solo la figura con sus medidas, sin flechas, colores de pista ni nota
+const figEnun = fn => { _figN = true; try { return `<div style="max-width:300px;margin:8px auto 0">${fn()}</div>`; } finally { _figN = false; } };
+const _gFig = (W, H, g, nota, id) => _figN ? _dgSvg(id, W, H, g, 14, 300) : _nota(_dgSvg(id, W, H, g, 14, 300), nota);
+const _GN = '#e8a23a';
+// rectángulo (o cuadrado): 'per' = la vuelta con una flecha naranja y los 4 lados rotulados; 'area' = lo de adentro pintado
+function figRect(Lt, At, modo, cuad, centro){
+  const id = 'dg' + (++_dgId), x0 = 74, y0 = 26, w = cuad ? 110 : 150, h = cuad ? 110 : 84, cx = x0 + w/2, cy = y0 + h/2;
+  let g = _gp(`${x0},${y0} ${x0 + w},${y0} ${x0 + w},${y0 + h} ${x0},${y0 + h}`, _GN, modo === 'area' && !_figN ? .2 : 0);
+  if(_figN) g += _gt(cx, y0 + h + 20, Lt) + _gt(x0 + w + 8, cy + 5, At, 'start');
+  else if(modo === 'per'){
+    g += `<path d="M${x0 + 10} ${y0 + 10} L${x0 + w - 10} ${y0 + 10} L${x0 + w - 10} ${y0 + h - 10} L${x0 + 10} ${y0 + h - 10} L${x0 + 10} ${y0 + 18}" fill="none" stroke="${_GN}" stroke-width="2.4" marker-end="url(#${id})"/>`
+      + _gt(cx, cy + 5, centro || 'vuelta', 'middle', _GN, 13) + _gt(cx, y0 - 8, Lt) + _gt(cx, y0 + h + 20, Lt) + _gt(x0 - 8, cy + 5, At, 'end') + _gt(x0 + w + 8, cy + 5, At, 'start');
+  } else g += _gt(cx, cy + 5, 'área', 'middle', _GN, 15) + _gt(cx, y0 + h + 20, Lt) + _gt(x0 + w + 8, cy + 5, At, 'start');
+  return _gFig(320, y0 + h + 32, g, modo === 'per' ? 'La flecha naranja da la vuelta completa por todos los lados: eso es el perímetro. Los lados de enfrente miden lo mismo.' : 'El área es lo que hay ADENTRO (en naranja): cuántos cuadritos de 1 × 1 caben.', id);
+}
+// triángulo con tres lados rotulados (dibujado con las medidas de verdad) y la flecha de la vuelta; ls = [abajo, izquierdo, derecho] (números) y lt = sus textos
+function figTriPer(ls, lt){
+  const id = 'dg' + (++_dgId), [a, b, c] = ls, cxp = (a*a + b*b - c*c) / (2*a), cyp = Math.sqrt(Math.max(b*b - cxp*cxp, 0.0001));
+  const xs = [0, a, cxp], ancho = Math.max(...xs) - Math.min(...xs), k = Math.min(200 / ancho, 84 / cyp), ox = 60 - Math.min(...xs) * k, yb = 108;
+  const escala = cyp * k >= 38 && ancho * k >= 100;   // si a escala queda muy flaco, se dibuja un triángulo cualquiera (y la nota lo dice)
+  const P = escala ? [[ox, yb], [ox + a*k, yb], [ox + cxp*k, yb - cyp*k]] : [[50, yb], [260, yb], [150, 30]], G = [(P[0][0] + P[1][0] + P[2][0]) / 3, (P[0][1] + P[1][1] + P[2][1]) / 3];
+  const ins = p => [Math.round(p[0] + (G[0] - p[0]) * .2), Math.round(p[1] + (G[1] - p[1]) * .2)], I = P.map(ins);
+  const g = _gp(P.map(p => p.map(Math.round).join(',')).join(' ')) + (_figN ? '' : `<path d="M${I[0]} L${I[1]} L${I[2]} L${I[0][0] + 4} ${I[0][1] - 6}" fill="none" stroke="${_GN}" stroke-width="2.4" marker-end="url(#${id})"/>`
+    + _gt(Math.round(G[0]), Math.round(G[1]) + 5, 'vuelta', 'middle', _GN, 13)) + _gt(Math.round((P[0][0] + P[1][0]) / 2), yb + 20, lt[0])
+    + _gt(Math.round((P[0][0] + P[2][0]) / 2) - 8, Math.round((P[0][1] + P[2][1]) / 2) - 4, lt[1], 'end') + _gt(Math.round((P[1][0] + P[2][0]) / 2) + 8, Math.round((P[1][1] + P[2][1]) / 2) - 4, lt[2], 'start');
+  return _gFig(320, 138, g, 'La flecha naranja pasa por los tres lados' + (escala ? ' (el dibujo está a escala)' : ' (el dibujo no está a escala)') + ': el perímetro es la suma de lo que mide cada uno.', id);
+}
+// triángulo con su altura punteada y el ángulo recto (a escala: la altura sale en proporción a la base)
+function figTri(bt, ht, b, h){
+  const id = 'dg' + (++_dgId), hh = Math.round(Math.min(Math.max(220 * h / b, 46), 100)), yb = 22 + hh, g = _gp(`30,${yb} 250,${yb} 100,22`, _GN, .12) + _gl(100, 22, 100, yb, _GN, true, 2.2) + _gAng(100, yb) + _gt(140, yb + 22, bt) + _gt(108, Math.round(22 + hh / 2) + 5, ht, 'start', _GN);
+  return _gFig(300, yb + 32, g, 'La base es el lado de abajo. La altura es la línea punteada: va del vértice de arriba hasta la base, formando una esquina recta (cuadrada).', id);
+}
+// el triángulo es la mitad de un rectángulo con la misma base y altura
+function figTriMitad(bt, ht){
+  const id = 'dg' + (++_dgId), x0 = 40, y0 = 22, w = 170, h = 84;
+  const g = _gp(`${x0},${y0} ${x0 + w},${y0} ${x0 + w},${y0 + h} ${x0},${y0 + h}`) + `<polygon points="${x0},${y0 + h} ${x0 + w},${y0 + h} ${x0 + w},${y0}" fill="${_GN}" fill-opacity=".3" stroke="${_GN}" stroke-width="2"/>`
+    + _gt(x0 + w - 38, y0 + h - 16, '½', 'middle', _GN, 24) + _gt(x0 + 42, y0 + 34, 'la otra', 'middle', 'currentColor', 12) + _gt(x0 + 42, y0 + 50, 'mitad', 'middle', 'currentColor', 12)
+    + _gt(x0 + w/2, y0 + h + 22, bt) + _gt(x0 + w + 8, y0 + h/2 + 5, ht, 'start');
+  return _gFig(320, y0 + h + 32, g, 'Un rectángulo con la misma base y la misma altura se parte por la diagonal en DOS triángulos iguales. Por eso el triángulo (naranja) es la MITAD: se divide entre 2.', id);
+}
+// trapecio: base mayor abajo, base menor arriba, altura punteada
+function figTrap(Bt, bt, ht, B, b){
+  const id = 'dg' + (++_dgId), tw = Math.round(Math.min(Math.max(220 * b / B, 70), 190)), xt = 30 + Math.round((220 - tw) / 3);
+  const g = _gp(`30,112 250,112 ${xt + tw},26 ${xt},26`, _GN, .12) + _gl(xt, 26, xt, 112, _GN, true, 2.2) + _gAng(xt, 112) + _gt(140, 134, Bt) + _gt(xt + tw/2, 18, bt) + _gt(xt + 8, 76, ht, 'start', _GN);
+  return _gFig(300, 144, g, 'Las dos bases son los lados PARALELOS (el de abajo es la base mayor y el de arriba la menor). La altura es la línea punteada: va de una base a la otra formando una esquina recta.', id);
+}
+// dos trapecios iguales (uno volteado) pegados forman un paralelogramo de base (B + b)
+function figTrapPar(Bt, bt, ht, B, b, suma){
+  const id = 'dg' + (++_dgId), Bp = 108, bp = Math.round(Math.min(Math.max(Bp * b / B, 30), 90)), o = Math.round((Bp - bp) / 3), x0 = 44, yb = 100, yt = 30, tot = Bp + bp;
+  const P1 = [x0, yb], P2 = [x0 + Bp, yb], P3 = [x0 + o + bp, yt], P4 = [x0 + o, yt], R1 = [x0 + Bp + o + bp, yt], R4 = [x0 + Bp + bp, yb];
+  const pts = a => a.map(p => p.join(',')).join(' ');
+  const g = `<polygon points="${pts([P1, P2, P3, P4])}" fill="${_GN}" fill-opacity=".25" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>`
+    + `<polygon points="${pts([P2, R4, R1, P3])}" fill="currentColor" fill-opacity=".1" stroke="currentColor" stroke-width="2" stroke-dasharray="5 4" stroke-linejoin="round"/>`
+    + _gt(Math.round((P2[0] + R4[0] + R1[0] + P3[0]) / 4), 66, 'copia', 'middle', 'currentColor', 11) + _gt(Math.round((P2[0] + R4[0] + R1[0] + P3[0]) / 4), 80, 'volteada', 'middle', 'currentColor', 11)
+    + _gl(x0, yb + 12, x0 + tot, yb + 12, _GN, false, 2) + _gl(x0, yb + 7, x0, yb + 17, _GN) + _gl(x0 + tot, yb + 7, x0 + tot, yb + 17, _GN) + _gt(x0 + tot/2, yb + 32, suma, 'middle', _GN)
+    + _gl(x0 + o, yt, x0 + o, yb, _GN, true, 2) + _gt(x0 + o + 6, 70, ht, 'start', _GN, 13);
+  return _gFig(320, 146, g, 'Se pega una COPIA volteada del trapecio (en gris) y juntos forman un paralelogramo cuya base es B + b. Cada trapecio es la mitad de ese paralelogramo: por eso la fórmula lleva ½.', id);
+}
+// círculo: 'circ' = la vuelta en naranja; 'area' = adentro pintado; 'radio' = la vuelta y r = ?  (rt/dt = textos con unidad; null = no se muestra; dEsN = además el radio en naranja)
+function figCirc(rt, dt, modo, extra){
+  const id = 'dg' + (++_dgId), cx = 100, cy = 76, R = 56;
+  let g = `<circle cx="${cx}" cy="${cy}" r="${R}" fill="${_GN}" fill-opacity="${modo === 'area' && !_figN ? .2 : 0}" stroke="${modo === 'area' || _figN ? 'currentColor' : _GN}" stroke-width="${modo === 'area' || _figN ? 2 : 3}"/><circle cx="${cx}" cy="${cy}" r="3" fill="currentColor"/>`;
+  const xr = cx + R + 12;   // los rótulos van afuera del círculo, a la derecha (adentro no caben)
+  if(dt){ g += _gl(cx - R, cy, cx + R, cy) + _gt(cx, cy + 22, dt); if(rt) g += _gl(cx, cy, cx, cy - R, _GN, false, 2.6) + _gt(xr, cy - R/2 + 5, rt, 'start', _GN, 13); }
+  else if(rt) g += _gl(cx, cy, cx + R, cy, 'currentColor', false, 2.6) + _gt(xr, cy + 5, rt, 'start');
+  if(modo !== 'area' && (!_figN || modo === 'radio')) g += _gt(xr, dt ? cy + 5 : cy - 38, extra || 'la vuelta', 'start', _GN, 13);
+  return _gFig(320, 150, g, modo === 'area' ? 'El área es lo que hay adentro del círculo (naranja). El RADIO va del centro al borde; el diámetro cruza todo el círculo por el centro (son 2 radios).' : 'La circunferencia (en naranja) es la vuelta alrededor del círculo. El RADIO va del centro al borde; el diámetro cruza todo el círculo por el centro (son 2 radios).', id);
+}
+// caja rectangular (o cubo): 'vol' = los tres lados rotulados; 'sup' = las 3 parejas de caras con su cuenta
+function figCaja(a, b, c, at, bt, ct, modo){
+  const id = 'dg' + (++_dgId), m = Math.max(a, b, c), w = Math.round(64 + 54 * a / m), h = Math.round(40 + 50 * c / m), d = Math.round(24 + 26 * b / m), dy = Math.round(d * 0.6), x0 = 78, yf = 34 + dy;
+  const F = [[x0, yf], [x0 + w, yf], [x0 + w, yf + h], [x0, yf + h]], T = [[x0, yf], [x0 + w, yf], [x0 + w + d, yf - dy], [x0 + d, yf - dy]], S = [[x0 + w, yf], [x0 + w + d, yf - dy], [x0 + w + d, yf + h - dy], [x0 + w, yf + h]];
+  const pts = a => a.map(p => p.join(',')).join(' '), cen = a => [Math.round(a.reduce((s, p) => s + p[0], 0) / 4), Math.round(a.reduce((s, p) => s + p[1], 0) / 4)];
+  const sup = modo === 'sup', op = sup ? [.12, .26, .4] : [.08, .16, .24];
+  let g = `<polygon points="${pts(F)}" fill="${_GN}" fill-opacity="${op[0]}" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><polygon points="${pts(T)}" fill="${_GN}" fill-opacity="${op[1]}" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><polygon points="${pts(S)}" fill="${_GN}" fill-opacity="${op[2]}" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>`
+    + _gt(x0 + w/2, yf + h + 20, at) + _gt(x0 - 8, yf + h/2 + 5, ct, 'end') + _gt(x0 + w + d + 8, yf - dy + 5, bt, 'start');
+  let extra = 0;
+  if(sup){   // leyenda: cada pareja de caras con su color y su cuenta
+    [['frente y atrás (2 caras)', 'largo × alto', op[0]], ['arriba y abajo (2 caras)', 'largo × ancho', op[1]], ['los dos lados (2 caras)', 'ancho × alto', op[2]]].forEach(([n, c, o], i) => { const y = yf + h + 42 + i * 22; g += `<rect x="${x0 - 40}" y="${y - 12}" width="22" height="15" rx="3" fill="${_GN}" fill-opacity="${o}" stroke="currentColor" stroke-width="1.5"/>` + _gt(x0 - 12, y, `${n}: ${c}`, 'start', 'currentColor', 13); });
+    extra = 70; }
+  const Wf = x0 + w + d + 72;
+  return _gFig(Math.max(Wf, sup ? 320 : 270), yf + h + 34 + extra, g, sup ? 'La caja tiene 6 caras: la de enfrente y la de atrás, la de arriba y la de abajo, y las dos de los lados. Cada pareja es igual, y por eso se cuenta dos veces.' : 'El largo es el lado de abajo del frente, el alto es el de la esquina y el ancho es el que se va hacia el fondo.', id);
+}
+// cilindro: la base (círculo naranja), el radio y la altura
+function figCil(rt, ht){
+  const id = 'dg' + (++_dgId), cx = 100, rx = 52, ry = 15, yt = 34, yb = 108;
+  const g = `<path d="M${cx - rx} ${yt} L${cx - rx} ${yb} A${rx} ${ry} 0 0 0 ${cx + rx} ${yb} L${cx + rx} ${yt}" fill="none" stroke="currentColor" stroke-width="2"/>`
+    + `<ellipse cx="${cx}" cy="${yb}" rx="${rx}" ry="${ry}" fill="${_GN}" fill-opacity=".28" stroke="${_GN}" stroke-width="2" stroke-dasharray="5 4"/>`
+    + `<ellipse cx="${cx}" cy="${yt}" rx="${rx}" ry="${ry}" fill="none" stroke="currentColor" stroke-width="2"/>` + _gl(cx, yt, cx + rx, yt, _GN, false, 2.6) + `<circle cx="${cx}" cy="${yt}" r="2.5" fill="currentColor"/>`
+    + _gt(cx + rx + 10, yt - 4, rt, 'start', _GN, 13) + _gl(cx + rx + 22, yt, cx + rx + 22, yb, 'currentColor', true) + _gt(cx + rx + 30, (yt + yb)/2 + 5, ht, 'start')
+    + (_figN ? '' : _gt(cx, yb + 5, 'base', 'middle', _GN, 12));
+  return _gFig(320, 142, g, 'La base de abajo (naranja) es un círculo de radio r. La altura h es lo que mide de alto: son los "pisos" de círculos que se apilan.', id);
+}
+// anillo entre dos círculos del mismo centro
+function figAnillo(d1t, d2t, d1, d2){
+  const id = 'dg' + (++_dgId), cx = 100, cy = 92, R2 = 62, R1 = Math.max(22, Math.round(R2 * d1 / d2));
+  const g = `<path fill-rule="evenodd" fill="${_GN}" fill-opacity=".3" stroke="currentColor" stroke-width="2" d="M${cx - R2} ${cy} a${R2} ${R2} 0 1 0 ${2 * R2} 0 a${R2} ${R2} 0 1 0 ${-2 * R2} 0 Z M${cx - R1} ${cy} a${R1} ${R1} 0 1 0 ${2 * R1} 0 a${R1} ${R1} 0 1 0 ${-2 * R1} 0 Z"/>`
+    + _gl(cx - R2, cy, cx + R2, cy, 'currentColor', true, 1.6) + _gl(cx, cy - R1, cx, cy + R1, 'currentColor', true, 1.6)
+    + _gt(cx + R2 + 8, cy - 2, 'grande:', 'start', 'currentColor', 12) + _gt(cx + R2 + 8, cy + 14, d2t, 'start') + _gl(cx, cy - R1, cx, cy - R2 - 6, 'currentColor', true, 1.4) + _gt(cx, cy - R2 - 12, 'chico: ' + d1t, 'middle');
+  return _gFig(320, 168, g, 'El anillo (naranja) es lo que queda entre el círculo grande y el chico. La línea horizontal es el diámetro del grande y la vertical el del chico.', id);
+}
 const PI = 3.14;
 
 MODULOS.push(
@@ -6347,87 +6454,133 @@ MODULOS.push(
 {
   id:'geometria-dec', nombre:'Geometría con decimales (perímetro, área, círculo, volumen)', secciones:['7.4'],
   gen(nv){
+    // figura en el ENUNCIADO solo en los tipos que el libro dibuja (rectángulo, cuadrado, triángulo, terreno, caja, cubo, anillo) y en el trapecio (pedido): el 1.º con figura, el 2.º solo texto; nuevoEjercicio lo reinicia
+    const figToca = () => ((this._n = (this._n || 0) + 1) % 2) === 1;
+    let figE = '';
     const tipo = pick(nv === 'facil' ? ['perRect','areaRect','areaTri','circunf'] : nv === 'medio' ? ['perRect','perTri','areaTri','areaTrap','circunf','areaCirc','volCaja','cercar'] : ['areaTrap','circunf','areaCirc','radio','volCaja','volCil','superficie','anulo','cercar']);
     const u = pick(['m', 'cm', 'pies', 'yd', 'pulg']);
-    let enun, r, pasos, pide, error, red = false, uR = u;
+    let enun, r, pasos, pide, error, red = false, uR = u, compN = '';   // compN = comprobación con los números (va antes de la nota de unidades)
     const d1 = (a = 1, b = 30) => decK(a, b, 1);
     if(tipo === 'perRect'){
       const L = d1(3, 40), A = d1(1, L), cuad = Math.random() < 0.3; r = cuad ? dN(4 * L) : dN(2 * (L + A));
+      const Lt = `${fd(L)} ${u}`, At = `${fd(A)} ${u}`;
       enun = cuad ? `Halla el perímetro de un cuadrado de lado ${fd(L)} ${u}.` : `Halla el perímetro de un rectángulo de ${fd(L)} ${u} de largo y ${fd(A)} ${u} de ancho.`;
-      pasos = cuad ? [{ t:'Perímetro = la suma de los 4 lados iguales', l:[`P = 4 × ${fd(L)} = ${cb(fd(r))} ${u}`] }]
-                   : [{ t:'Perímetro = la vuelta completa: 2 largos + 2 anchos = 2(largo + ancho)', l:[`Primero el paréntesis: ${fd(L)} + ${fd(A)} = ${fd(dN(L + A))}`, `Después × 2: 2 × ${fd(dN(L + A))} = ${cb(fd(r))} ${u}`] }];
+      pasos = cuad ? [{ t:'Mira la figura: el cuadrado tiene sus 4 lados iguales', l:[figRect(Lt, Lt, 'per', true)] },
+                      { t:'Perímetro = la suma de los 4 lados iguales (4 × el lado)', l:[`${fd(L)} + ${fd(L)} + ${fd(L)} + ${fd(L)} = 4 × ${fd(L)}`, `P = 4 × ${fd(L)} = ${cb(fd(r))} ${u}`] }]
+                   : [{ t:'Mira la figura: el perímetro es la vuelta completa (la flecha naranja)', l:[figRect(Lt, At, 'per')] },
+                      { t:'Suma el largo y el ancho: es la mitad de la vuelta', l:[`${fd(L)} + ${fd(A)} = ${fd(dN(L + A))}`] },
+                      { t:'Multiplica por 2: la otra mitad de la vuelta mide lo mismo', l:[`2 × ${fd(dN(L + A))} = ${cb(fd(r))} ${u}`] }];
+      compN = cuad ? `los 4 lados uno por uno: ${fd(L)} + ${fd(L)} + ${fd(L)} + ${fd(L)} = ${fd(r)} ✓` : `los 4 lados uno por uno: ${fd(L)} + ${fd(A)} + ${fd(L)} + ${fd(A)} = ${fd(r)} ✓`;
+      figE = figToca() ? figEnun(() => cuad ? figRect(Lt, Lt, 'per', true) : figRect(Lt, At, 'per')) : '';
       pide = 'la distancia alrededor de la figura.'; error = 'multiplicar largo × ancho (eso es el ÁREA).';
     } else if(tipo === 'perTri'){
       const ls = [d1(2, 20), d1(2, 20)]; ls.push(d1(Math.abs(ls[0] - ls[1]) + 0.5, ls[0] + ls[1] - 0.5)); r = dN(ls.reduce((a, b) => a + b, 0));
       enun = `Halla el perímetro de un triángulo cuyos lados miden ${ls.map(v => fd(v) + ' ' + u).join(', ').replace(/, ([^,]*)$/, ' y $1')}.`;
-      pasos = [{ t:'Suma los tres lados', l:[colDec(ls, '+', r)] }]; pide = 'la suma de los lados.'; error = 'no alinear los puntos al sumar.';
+      const mayor = Math.max(...ls);
+      pasos = [{ t:'Mira la figura: el perímetro es la suma de los tres lados', l:[figTriPer(ls, ls.map(v => `${fd(v)} ${u}`))] },
+        { t:'Suma los tres lados (punto debajo de punto)', l:[colDec(ls, '+', r)] }];
+      compN = `el perímetro (${fd(r)}) es mayor que cada lado, y el lado más largo (${fd(mayor)}) es menor que la suma de los otros dos (${fd(dN(r - mayor))}) ✓`;
+      figE = figToca() ? figEnun(() => figTriPer(ls, ls.map(v => `${fd(v)} ${u}`))) : '';
+      pide = 'la suma de los lados.'; error = 'no alinear los puntos al sumar.';
     } else if(tipo === 'areaRect'){
       const L = d1(2, 30), A = d1(1, 20); r = dN(L * A); uR = u + '²';
       enun = `Halla el área de un rectángulo de ${fd(L)} ${u} de largo y ${fd(A)} ${u} de ancho.`;
-      pasos = [{ t:'Área del rectángulo = largo × ancho', l:[`A = ${fd(L)} × ${fd(A)} = ${cb(fd(r))} ${u}²`] }]; pide = 'el área (unidades cuadradas).'; error = 'sumar los lados (eso es el perímetro).';
+      pasos = [{ t:'Mira la figura: el área es lo que ocupa ADENTRO (en naranja)', l:[figRect(`${fd(L)} ${u}`, `${fd(A)} ${u}`, 'area')] },
+        { t:'Área del rectángulo = largo × ancho (cuántos cuadritos de 1 × 1 caben)', l:[`A = ${fd(L)} × ${fd(A)} = ${cb(fd(r))} ${u}²`] }];
+      compN = `${fd(r)} ÷ ${fd(A)} = ${fd(L)}: al dividir el área entre el ancho vuelve el largo ✓`;
+      pide = 'el área (unidades cuadradas).'; error = 'sumar los lados (eso es el perímetro).';
     } else if(tipo === 'areaTri'){
       const b = d1(2, 30), h = d1(1, 20); r = dN(b * h / 2); uR = u + '²';
       enun = `Halla el área de un triángulo de base ${fd(b)} ${u} y altura ${fd(h)} ${u}.`;
-      pasos = [{ t:'Área del triángulo = ½ × base × altura', l:[`${fd(b)} × ${fd(h)} = ${fd(dN(b * h))}`, `A = ${fd(dN(b * h))} ÷ 2 = ${cb(fd(r))} ${u}²`] }];
+      pasos = [{ t:'Mira la figura: la base abajo y la altura (la línea punteada, en esquina recta con la base)', l:[figTri(`${fd(b)} ${u}`, `${fd(h)} ${u}`, b, h)] },
+        { t:'Multiplica base × altura: eso sería el área de un RECTÁNGULO del mismo tamaño', l:[`${fd(b)} × ${fd(h)} = ${fd(dN(b * h))}`, figTriMitad(`${fd(b)} ${u}`, `${fd(h)} ${u}`)] },
+        { t:'El triángulo es la MITAD del rectángulo: divide entre 2', l:[`A = ${fd(dN(b * h))} ÷ 2 = ${cb(fd(r))} ${u}²`] }];
+      compN = `el triángulo (${fd(r)}) es la mitad del rectángulo (${fd(dN(b * h))}) ✓`;
+      figE = figToca() ? figEnun(() => figTri(`${fd(b)} ${u}`, `${fd(h)} ${u}`, b, h)) : '';
       pide = 'el área del triángulo.'; error = 'olvidar dividir entre 2.';
     } else if(tipo === 'areaTrap'){
       const B = d1(5, 30), b = d1(2, B - 1), h = d1(1, 15); r = dN((B + b) * h / 2); uR = u + '²';
       enun = `Halla el área de un trapecio con bases de ${fd(B)} ${u} y ${fd(b)} ${u}, y altura ${fd(h)} ${u}.`;
-      pasos = [{ t:'Área del trapecio = ½ × (base mayor + base menor) × altura', l:[`${fd(B)} + ${fd(b)} = ${fd(dN(B + b))}`, `${fd(dN(B + b))} × ${fd(h)} = ${fd(dN((B + b) * h))}`, `A = ${fd(dN((B + b) * h))} ÷ 2 = ${cb(fd(r))} ${u}²`] }];
+      pasos = [{ t:'Mira la figura: las dos bases son los lados paralelos; la altura es la línea punteada', l:[figTrap(`${fd(B)} ${u}`, `${fd(b)} ${u}`, `${fd(h)} ${u}`, B, b)] },
+        { t:'Suma las dos bases (la mayor y la menor)', l:[`${fd(B)} + ${fd(b)} = ${fd(dN(B + b))}`] },
+        { t:'Pega una copia volteada: queda un paralelogramo de base (B + b), y esa cuenta da DOS trapecios', l:[figTrapPar(`${fd(B)} ${u}`, `${fd(b)} ${u}`, `${fd(h)} ${u}`, B, b, `${fd(B)} + ${fd(b)} = ${fd(dN(B + b))} ${u}`), `${fd(dN(B + b))} × ${fd(h)} = ${fd(dN((B + b) * h))}`] },
+        { t:'Un trapecio es la MITAD: divide entre 2 (por eso la fórmula lleva ½)', l:[`A = ${fd(dN((B + b) * h))} ÷ 2 = ${cb(fd(r))} ${u}²`] }];
+      compN = `el trapecio (${fd(r)}) queda entre un rectángulo de la base menor (${fd(b)} × ${fd(h)} = ${fd(dN(b * h))}) y uno de la base mayor (${fd(B)} × ${fd(h)} = ${fd(dN(B * h))}) ✓`;
+      figE = figToca() ? figEnun(() => figTrap(`${fd(B)} ${u}`, `${fd(b)} ${u}`, `${fd(h)} ${u}`, B, b)) : '';
       pide = 'el área del trapecio.'; error = 'multiplicar solo una base: se suman las DOS bases.';
     } else if(tipo === 'circunf'){
       const conD = Math.random() < 0.5, x = decK(1, 50, 1), c = conD ? PI * x : 2 * PI * x; r = redondeaK(c, 2); red = true;
+      const dm = conD ? x : dN(2 * x);
       enun = `Halla la circunferencia de un círculo con ${conD ? 'diámetro' : 'radio'} de ${fd(x)} ${u}. Usa π = 3.14 y redondea a la centésima.`;
-      pasos = [{ t: conD ? 'Circunferencia = π × diámetro' : 'Circunferencia = 2 × π × radio', l:[conD ? `C = 3.14 × ${fd(x)} = ${fd(dN(c))}` : `C = 2 × 3.14 × ${fd(x)} = 6.28 × ${fd(x)} = ${fd(dN(c))}`] },
+      pasos = [{ t:'Mira la figura: la circunferencia es la vuelta alrededor del círculo (naranja)', l:[conD ? figCirc(null, `${fd(x)} ${u}`, 'circ') : figCirc(`${fd(x)} ${u}`, null, 'circ')] },
+        { t: conD ? 'Circunferencia = π × diámetro (π = 3.14: la vuelta mide un poco más de 3 diámetros)' : 'Circunferencia = 2 × π × radio (el diámetro son 2 radios; π = 3.14)', l:[conD ? `C = 3.14 × ${fd(x)} = ${fd(dN(c))}` : `C = 2 × 3.14 × ${fd(x)} = 6.28 × ${fd(x)} = ${fd(dN(c))}`] },
         { t:'Redondea a la centésima', l: explRed(c, 2) }];
+      compN = `la vuelta tiene que ser un poco más de 3 diámetros: 3 × ${fd(dm)} = ${fd(dN(3 * dm))}, y ${fd(r, 2)} es un poco más ✓`;
       pide = 'la distancia alrededor del círculo.'; error = conD ? 'multiplicar por 2 cuando te dan el DIÁMETRO (el diámetro ya son 2 radios).' : 'olvidar el 2 cuando te dan el RADIO.';
     } else if(tipo === 'areaCirc'){
       const conD = Math.random() < 0.4, x = decK(1, 30, 1), rr = conD ? dN(x / 2) : x, a = PI * rr * rr; r = redondeaK(a, 2); red = true; uR = u + '²';
       enun = `Halla el área de un círculo cuyo ${conD ? 'diámetro' : 'radio'} mide ${fd(x)} ${u}. Usa π = 3.14 y redondea a la centésima.`;
-      pasos = [...(conD ? [{ t:'El área usa el RADIO: la mitad del diámetro', l:[`r = ${fd(x)} ÷ 2 = ${fd(rr)}`] }] : []),
+      pasos = [{ t:'Mira la figura: el área es lo que hay adentro del círculo (naranja)', l:[conD ? figCirc(`r = ${fd(rr)} ${u}`, `d = ${fd(x)} ${u}`, 'area') : figCirc(`r = ${fd(x)} ${u}`, null, 'area')] },
+        ...(conD ? [{ t:'El área usa el RADIO: la mitad del diámetro', l:[`r = ${fd(x)} ÷ 2 = ${fd(rr)}`] }] : []),
         { t:'Área = π × r² (r² es r × r, no r × 2)', l:[`r² = ${fd(rr)} × ${fd(rr)} = ${fd(dN(rr * rr))}`, `A = 3.14 × ${fd(dN(rr * rr))} = ${fd(dN(a))}`] }, { t:'Redondea a la centésima', l: explRed(a, 2) }];
+      compN = `el área es un poco más de 3 cuadrados de lado r: 3 × ${fd(dN(rr * rr))} = ${fd(dN(3 * rr * rr))}, y ${fd(r, 2)} es un poco más ✓`;
       pide = 'el área del círculo.'; error = conD ? 'usar el diámetro en la fórmula del área: primero se divide entre 2.' : 'hacer r × 2 en vez de r × r.';
     } else if(tipo === 'radio'){
       const C = decK(10, 200, 1), rr = C / (2 * PI); r = redondeaK(rr, 2); red = true;
       enun = `Halla el radio de un círculo con circunferencia de ${fd(C)} ${u}. Usa π = 3.14 y redondea a la centésima.`;
-      pasos = [{ t:'Sustituye en C = 2πr', l:[`${fd(C)} = 2 × 3.14 × r`, `2 × 3.14 = 6.28 → ${cb(`${fd(C)} = 6.28r`)}`] }, { t:'Despeja r: divide los DOS lados entre 6.28', l:[`r = ${fd(C)} ÷ 6.28 = ${fd(Math.floor(rr * 1000) / 1000, 3)}… (con la calculadora)`] },
+      pasos = [{ t:'Mira la figura: se sabe la vuelta (circunferencia) y falta el radio', l:[figCirc('r = ?', null, 'radio', `C = ${fd(C)} ${u}`)] },
+        { t:'Sustituye en C = 2πr', l:[`${fd(C)} = 2 × 3.14 × r`, `2 × 3.14 = 6.28 → ${cb(`${fd(C)} = 6.28r`)}`] }, { t:'Despeja r: divide los DOS lados entre 6.28', l:[diagAmbosLados(fd(C), '6.28r', '÷ 6.28', fd(Math.floor(rr * 1000) / 1000, 3) + '…', 'r'), `r = ${fd(C)} ÷ 6.28 = ${fd(Math.floor(rr * 1000) / 1000, 3)}… (con la calculadora)`] },
         { t:'Redondea a la centésima', l: explRed(rr, 2) }];
+      compN = `con r = ${fd(r, 2)}: 2 × 3.14 × ${fd(r, 2)} = ${fd(dN(2 * PI * r))}, casi ${fd(C)} (no da exacto porque se redondeó) ✓`;
       pide = 'el radio (despejar de C = 2πr).'; error = 'dividir solo entre 3.14 (eso da el diámetro, no el radio).';
     } else if(tipo === 'volCaja'){
       const cubo = Math.random() < 0.3, a = d1(1, 12), b = cubo ? a : d1(1, 10), c = cubo ? a : d1(1, 10); r = dN(a * b * c); uR = u + '³';
       enun = cubo ? `Halla el volumen de un cubo cuyo lado mide ${fd(a)} ${u}.` : `Un envase mide ${fd(a)} ${u} por ${fd(b)} ${u} por ${fd(c)} ${u}. ¿Cuál es su volumen?`;
-      pasos = [{ t: cubo ? 'Volumen del cubo = lado × lado × lado' : 'Volumen = largo × ancho × alto', l:[`${fd(a)} × ${fd(b)} = ${fd(dN(a * b))}`, `${fd(dN(a * b))} × ${fd(c)} = ${cb(fd(r))} ${u}³`] }];
+      pasos = [{ t: cubo ? 'Mira la figura: el cubo tiene los tres lados iguales' : 'Mira la figura: largo, ancho y alto', l:[figCaja(a, b, c, `${fd(a)} ${u}`, `${fd(b)} ${u}`, `${fd(c)} ${u}`, 'vol')] },
+        { t: cubo ? 'La base (el piso) = lado × lado: cuántos cubitos de 1 × 1 × 1 caben' : 'La base (el piso) = largo × ancho: cuántos cubitos de 1 × 1 × 1 caben', l:[`${fd(a)} × ${fd(b)} = ${fd(dN(a * b))}`] },
+        { t:'Multiplica por el alto: cuántos pisos de esos caben', l:[`${fd(dN(a * b))} × ${fd(c)} = ${cb(fd(r))} ${u}³`] }];
+      compN = `${fd(r)} ÷ ${fd(c)} = ${fd(dN(a * b))}: sin el alto vuelve la base ✓`;
+      figE = figToca() ? figEnun(() => figCaja(a, b, c, `${fd(a)} ${u}`, `${fd(b)} ${u}`, `${fd(c)} ${u}`, 'vol')) : '';
       pide = 'el volumen (unidades cúbicas).'; error = cubo ? 'multiplicar el lado por 3 (el cubo es lado × lado × lado).' : 'sumar las medidas.';
     } else if(tipo === 'volCil'){
       const rr = d1(1, 8), h = d1(1, 15), v = PI * rr * rr * h; r = redondeaK(v, 2); red = true; uR = u + '³';
       enun = `Halla el volumen de un cilindro de radio ${fd(rr)} ${u} y altura ${fd(h)} ${u}. Usa π = 3.14 y redondea a la centésima.`;
-      pasos = [{ t:'Volumen del cilindro = π × r² × h: primero r²', l:[`r² = ${fd(rr)} × ${fd(rr)} = ${fd(dN(rr * rr))}`] }, { t:'Multiplica de izquierda a derecha', l:[`3.14 × ${fd(dN(rr * rr))} = ${fd(dN(PI * rr * rr))}`, `${fd(dN(PI * rr * rr))} × ${fd(h)} = ${fd(dN(v))}`] },
+      pasos = [{ t:'Mira la figura: la base es un círculo (naranja) y la altura son los "pisos"', l:[figCil(`r = ${fd(rr)} ${u}`, `h = ${fd(h)} ${u}`)] },
+        { t:'Volumen del cilindro = π × r² × h: primero r² (el área de la base es π × r²)', l:[`r² = ${fd(rr)} × ${fd(rr)} = ${fd(dN(rr * rr))}`] }, { t:'Multiplica de izquierda a derecha', l:[`3.14 × ${fd(dN(rr * rr))} = ${fd(dN(PI * rr * rr))} (el área de la base)`, `${fd(dN(PI * rr * rr))} × ${fd(h)} = ${fd(dN(v))}`] },
         { t:'Redondea a la centésima', l: explRed(v, 2) }];
+      compN = `el volumen es un poco más de 3 × ${fd(dN(rr * rr))} × ${fd(h)} = ${fd(dN(3 * rr * rr * h))}, y ${fd(r, 2)} es un poco más ✓`;
       pide = 'el volumen del cilindro.'; error = 'usar el diámetro en vez del radio.';
     } else if(tipo === 'superficie'){
       const a = d1(1, 12), b = d1(1, 10), c = d1(1, 10); r = dN(2 * (a * b + a * c + b * c)); uR = u + '²';
       enun = `Halla el área de superficie de una caja rectangular de ${fd(a)} ${u} de largo, ${fd(b)} ${u} de ancho y ${fd(c)} ${u} de alto.`;
-      pasos = [{ t:'La caja tiene 6 caras, en 3 parejas iguales', l:[`largo × ancho = ${fd(dN(a * b))}`, `largo × alto = ${fd(dN(a * c))}`, `ancho × alto = ${fd(dN(b * c))}`] },
-        { t:'Suma las tres y multiplica por 2', l:[`${fd(dN(a * b))} + ${fd(dN(a * c))} + ${fd(dN(b * c))} = ${fd(dN(a * b + a * c + b * c))}`, `× 2 = ${cb(fd(r))} ${u}²`] }];
+      pasos = [{ t:'Mira la figura: las 6 caras son 3 parejas iguales', l:[figCaja(a, b, c, `${fd(a)} ${u}`, `${fd(b)} ${u}`, `${fd(c)} ${u}`, 'sup')] },
+        { t:'La caja tiene 6 caras, en 3 parejas iguales: halla el área de UNA de cada pareja', l:[`largo × ancho = ${fd(dN(a * b))}`, `largo × alto = ${fd(dN(a * c))}`, `ancho × alto = ${fd(dN(b * c))}`] },
+        { t:'Suma las tres y multiplica por 2 (cada pareja son dos caras)', l:[`${fd(dN(a * b))} + ${fd(dN(a * c))} + ${fd(dN(b * c))} = ${fd(dN(a * b + a * c + b * c))}`, `× 2 = ${cb(fd(r))} ${u}²`] }];
+      compN = `las 6 caras: 2 × ${fd(dN(a * b))} + 2 × ${fd(dN(a * c))} + 2 × ${fd(dN(b * c))} = ${fd(r)} ✓`;
       pide = 'el área de las 6 caras.'; error = 'calcular el volumen (largo × ancho × alto) en vez del área de las caras.';
     } else if(tipo === 'anulo'){
       const d1v = 2 * R(2, 10), d2v = d1v + 2 * R(1, 6), r1 = d1v / 2, r2 = d2v / 2, a = PI * (r2 * r2 - r1 * r1); r = redondeaK(a, 2); red = true; uR = u + '²';
       enun = `Los diámetros de dos círculos concéntricos miden ${d1v} ${u} y ${d2v} ${u}. Halla el área de la región en forma de anillo entre los dos círculos. Usa π = 3.14.`;
-      pasos = [{ t:'Radios: la mitad de cada diámetro', l:[`Grande: ${d2v} ÷ 2 = ${r2}. Chico: ${d1v} ÷ 2 = ${r1}.`] },
+      pasos = [{ t:'Mira la figura: el anillo es lo que queda entre el círculo grande y el chico', l:[figAnillo(`${d1v} ${u}`, `${d2v} ${u}`, d1v, d2v)] },
+        { t:'Radios: la mitad de cada diámetro', l:[`Grande: ${d2v} ÷ 2 = ${r2}. Chico: ${d1v} ÷ 2 = ${r1}.`] },
         { t:'Área de cada círculo = 3.14 × r²', l:[`Grande: ${r2}² = ${r2 * r2} → 3.14 × ${r2 * r2} = ${fd(dN(PI * r2 * r2))}`, `Chico: ${r1}² = ${r1 * r1} → 3.14 × ${r1 * r1} = ${fd(dN(PI * r1 * r1))}`] },
         { t:'El anillo = el grande − el chico (el hueco)', l:[`${fd(dN(PI * r2 * r2))} − ${fd(dN(PI * r1 * r1))} = ${cb(fd(r, 2))} ${u}²`] }];
+      compN = `el anillo (${fd(r, 2)}) es menor que el círculo grande entero (${fd(dN(PI * r2 * r2))}) ✓`;
+      figE = figToca() ? figEnun(() => figAnillo(`${d1v} ${u}`, `${d2v} ${u}`, d1v, d2v)) : '';
       pide = 'el área del anillo.'; error = 'restar los diámetros y sacar el área de esa diferencia.';
     } else { // cercar: perímetro × precio
       const L = R(30, 120), A = R(20, L), pr = decK(0.5, 4, 2), veces = pick([1, 2]); const P = 2 * (L + A); r = dN(P * veces * pr); uR = '';
       enun = `Un terreno rectangular mide ${L} yd de largo y ${A} yd de ancho. Halla el costo de cercar${veces === 2 ? ' dos veces (dos hileras de alambre)' : ''} todo el terreno a razón de $${fd(pr, 2)} por yarda.`;
-      pasos = [{ t:'Perímetro (la vuelta completa) = 2(largo + ancho)', l:[`${L} + ${A} = ${L + A}`, `2 × ${L + A} = ${P} yd`] }, ...(veces === 2 ? [{ t:'Dos hileras: el doble de alambre', l:[`${P} × 2 = ${2 * P} yd`] }] : []),
+      pasos = [{ t:'Mira la figura: cercar es dar la vuelta al terreno, así que se necesita el perímetro', l:[figRect(`${L} yd`, `${A} yd`, 'per', false, 'cerca')] },
+        { t:'Perímetro (la vuelta completa) = 2(largo + ancho)', l:[`${L} + ${A} = ${L + A}`, `2 × ${L + A} = ${P} yd`] }, ...(veces === 2 ? [{ t:'Dos hileras: el doble de alambre', l:[`${P} × 2 = ${2 * P} yd`] }] : []),
         { t:'Costo = yardas × precio de una yarda', l:[`${P * veces} × ${fd(pr, 2)}`, ...pasosMultDec(P * veces, pr), `= ${cb('$' + fd(r, 2))}`] }];
+      figE = figToca() ? figEnun(() => figRect(`${L} yd`, `${A} yd`, 'per')) : '';
       pide = 'cuánto cuesta la cerca.'; error = 'usar el área: para cercar se usa la vuelta (perímetro).';
-      return { enunciado: enun, ...numDec(r), explicacion: receta({ pide, pasos, resp:'$' + fd(r, 2), error, ejemplo:`${P * veces} yd × $${fd(pr, 2)} = $${fd(r, 2)}.` }) };
+      return { enunciado: enun + figE, ...numDec(r), explicacion: receta({ pide, pasos, resp:'$' + fd(r, 2), error, comp:`${P * veces} yardas × $${fd(pr, 2)} = $${fd(r, 2)}, y al revés: $${fd(r, 2)} ÷ ${P * veces} yardas = $${fd(pr, 2)} cada una ✓`, ejemplo:`${P * veces} yd × $${fd(pr, 2)} = $${fd(r, 2)}.` }) };
     }
-    return { enunciado: enun, ...numDec(r), ...(red ? { ayuda:'Escribe el número con 2 lugares decimales.' } : {}),
+    return { enunciado: enun + figE, ...numDec(r), ...(red ? { ayuda:'Escribe el número con 2 lugares decimales.' } : {}),
       explicacion: receta({ pide, pasos, resp:`${fd(r, red ? 2 : undefined)} ${uR}`, error,
-        comp: uR.endsWith('²') ? 'las áreas van en unidades CUADRADAS (' + uR + ').' : uR.endsWith('³') ? 'los volúmenes van en unidades CÚBICAS (' + uR + ').' : 'el perímetro va en unidades de largo (' + uR + ').',
+        comp: (compN ? compN + ' ' : '') + (uR.endsWith('²') ? 'las áreas van en unidades CUADRADAS (' + uR + ').' : uR.endsWith('³') ? 'los volúmenes van en unidades CÚBICAS (' + uR + ').' : 'el perímetro va en unidades de largo (' + uR + ').'),
         ejemplo: _ejDe(pasos) }) };
   }
 }
@@ -10694,7 +10847,8 @@ function cambiarMateria(m){
 // ejercicio real esperando a que se toque "Continuar".
 function _pintarEjemploTema(m){
   _barra(null);
-  const ej = m.gen(nivel);
+  const n0 = m._n, ej = m.gen(nivel);
+  if(m.id === 'geometria-dec') m._n = n0;   // el ejemplo no gasta el turno de la figura (el 1.º ejercicio ya se generó antes que el ejemplo)
   main.innerHTML = `
     <button class="back" onclick="ir('inicio')">← Inicio</button>
     <div class="card">
@@ -10760,6 +10914,7 @@ function nuevoEjercicio(arg, continuar){
   if(continuar && sig < 0) return pantallaRondaCompleta();
   if(!continuar){                      // ronda nueva: arma la cola y fija el tamaño
     sesionHechos = 0; sesionCorrectos = 0; sesionPendientes = []; sesionFallos = []; temasEjemploVisto = {};
+    if(MOD_POR_ID['geometria-dec']) MOD_POR_ID['geometria-dec']._n = 0;   // geometría: el 1.er ejercicio de cada ronda lleva figura en el enunciado
     sesionEjs = []; sesionAbiertos = {}; sesionVistos = {}; sesionRes = {}; sesionIdx = -1;
     _borrarPaginasSesion(); _ejsSucios = new Set();
     esTemaFijo = typeof arg !== 'number' && !!arg;
