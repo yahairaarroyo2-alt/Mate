@@ -11566,7 +11566,12 @@ function verExplicacion(){
 }
 function _pintarVistaExplicacion(){
   const zona = $('zonaFb');
-  const bv = $('btnVerExpl'); if(bv) bv.style.display = 'none';   // la explicación ya está abierta: el botón sobra
+  // la explicación ya está abierta: "Ver explicación" sobra y en su lugar va "Otro parecido" (el mismo de "Otro de este tema"); en las prácticas del examen cada página es SU pregunta, ahí solo se oculta
+  const bv = $('btnVerExpl');
+  if(bv){
+    if(modActual.nuevaRonda) bv.style.display = 'none';
+    else { bv.textContent = 'Otro parecido'; bv.setAttribute('onclick', 'otroDelMismoTema()'); }
+  }
   zona.innerHTML = `
     <div class="fb medio">Respuesta: <b>${fmtRespuesta(ejActual)}</b>
       <small>Este ejercicio no cuenta para las estadísticas.</small></div>
