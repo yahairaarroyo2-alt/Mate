@@ -81,8 +81,13 @@ círculo) dan respuesta con decimales, y `"numeric"` no muestra el punto en iOS.
 
 **Ayudas:** el botón "Pista" ya NO existe. `verExplicacion()` muestra todo "Por qué" y marca `vioExpl`
 (esa respuesta no cuenta en las estadísticas); pedir ayuda a la IA antes de contestar cuenta igual.
-**"↺ Reiniciar este ejercicio"** (`reiniciarEjercicio`) lo deja desde cero (respuesta, explicación y Tu
+**"↺ Reiniciar"** (`reiniciarEjercicio`) lo deja desde cero (respuesta, explicación y Tu
 proceso); si ya lo habías contestado o visto la explicación, el intento nuevo no cuenta otra vez (`_reintento`).
+Desde 2026-10-21 va en UNA fila con Saltar y Ver explicación (`#accionesPre`, `.row.tres`: sin salto de línea, así que
+en teléfono "Ver explicación" cae en 2 renglones); al contestar la fila se esconde y el feedback trae su propio Reiniciar.
+**"Tu proceso"** arranca OCULTO (`procesoHTML`): solo sale abierto si ya hay texto (borrador o proceso de un intento
+anterior). **Los avisos `ayuda` ya no se dibujan** bajo la casilla (`entradaHTML`, tipos num/texto/frac, 2026-10-21): la
+propiedad `ayuda` sigue en los datos (`uno5`/`uiR`) pero nadie la lee; si hay que volver a mostrarla, es en esos tres `case`.
 
 ## Modos de práctica
 
@@ -129,7 +134,20 @@ Todos pasan por `responder()`, que se ramifica según el modo activo:
       de la ronda y te toca el `esperar` más largo (4), puede no alcanzar a reaparecer
       antes de que la ronda termine — no rompe nada, la repetición pendiente simplemente
       se descarta al empezar la ronda siguiente.
-    - Ninguno de los dos reordena la ronda YA armada — cambian recién en la próxima que
+    - **1 ejercicio por tema** (`unoPorTema`, `mate_uno_v1`, `toggleUnoPorTema`; 2026-10-21):
+      fila propia debajo de la de arriba (en una fila de 5 no cabe "161/162"). `vecesDe()`
+      devuelve 1 en vez de `VECES_POR_TEMA`, así la mezcla pasa de 162 a 81 preguntas y los
+      contadores de `tamanoMezcla` lo reflejan. NO cambia los bancos fijos (Repaso de
+      ayudante y las prácticas del Examen Departamental: todas sus preguntas pueden salir en
+      el examen) y no se dibuja en un tema fijo (no tiene sentido ahí). A DIFERENCIA de los
+      otros dos, al tocarlo rehace la ronda EN CURSO (`_replanearRonda()`): lo ya abierto no
+      se toca; los puestos sin abrir que sobran se quitan y las páginas abiertas pasan a su
+      número nuevo (re-clave de `sesionEjs/Abiertos/Vistos/Res`, `sesionIdx`, y se reescriben
+      las claves `mate_sesion_ej_N`); si faltan, se agregan al final. `sesionTotal` =
+      `sesionOrden.length + sesionPendientes.length` (cada repetición pendiente ya tiene su
+      puesto), y el selector "Pág." se repinta con `_repintarPagina()`. `construirCola` ahora
+      usa `_colaDe(ms, veces)`, la misma que usa el replaneo.
+    - `agrupar` y `repetir` no reordenan la ronda YA armada — cambian recién en la próxima que
       arranques (`toggleAgrupar()`/`toggleRepetir()` solo repintan la pantalla actual).
 - **Simulacro del Departamental** (2026-10-13): en Temas, debajo de cada práctica del Examen Departamental, "Simulacro
   de la práctica N con reloj" → `ir('examen', modId)` → `iniciarExamen(modId)`: las 30 preguntas en orden, 1 h 30 min,
@@ -242,7 +260,7 @@ real. Los dos helpers viven junto a `guardar`/`leer`, arriba del todo de "ALMACE
 | `mate_clase_v1` | `{ etiqueta, mods:[] }` — la mezcla ACTIVA ahora mismo (personalizada, detectada del material de clase, o copiada de un grupo al tocar "Practicar") |
 | `mate_grupos_v1` | `[{id, nombre, mods:[]}]` — grupos de examen guardados (ej. "Examen 1" = cap. 1 y 2); **sí sincroniza entre aparatos** (2026-09-13), ver "Grupos de examen" más abajo — la nota vieja aquí decía "no sincroniza, a propósito" y estaba desactualizada/contradecía esa sección; no vuelvas a escribirla sin corregir la otra |
 | `mate_examenes_v1` | `[{fecha, titulo, correctas, total}]`, tope 30 — notas de los simulacros (y del examen al azar), salen en Progreso |
-| `mate_agrupar_v1` / `mate_repetir_v1` | `true`/`false` — los dos ajustes de la fila de estadísticas en práctica (agrupar por tema / repetir si fallo, ver "Modos de práctica") |
+| `mate_agrupar_v1` / `mate_repetir_v1` / `mate_uno_v1` | `true`/`false` — los tres ajustes de la pantalla de práctica (agrupar por tema / repetir si fallo / 1 ejercicio por tema, ver "Modos de práctica") |
 | `mate_stats_v1` | `{ modId: {ok, fallo} }` |
 | `mate_racha_v1` | `{ actual, mejor }` — racha de aciertos seguidos |
 | `mate_racha_dias_v1` | `{ actual, mejor, ultimoDia }` — racha de *días* practicados (distinta de la de arriba) |
@@ -582,4 +600,5 @@ Todos los temas de los caps. 6-8 (al azar, "— EducoSoft", Repasos y Autoevalua
 - `pasosMultDec(a, b)` "sin los puntos" + cuenta de lugares (pone el punto con sus ceros: `641.4510 = 641.451`); `pasosDivDec(a, b)` corre el punto del divisor, divide y dice si la división no termina (`lugares(q) ≥ 9` tras `dN`); `_corta(v, k)` muestra k decimales sin redondear con "…".
 - `receta({ …, truco })`: el `truco` sale aparte en "TRUCO PARA QUE SEA MÁS FÁCIL". `MCx(enun, ops, ok, R)` (opción múltiple de EducoSoft) y `ecL` (ecuaciones: dice por qué se suma/resta/divide en los DOS lados) ya la usan.
 - Repasos y Autoevaluaciones: `uiR(cab, enun, resp, R, ayuda)` y `ejR(cab, enun, campos, R)` con `R = { pasos:[_pa('título', líneas…)], resp, comp, error, truco }` (el "Qué te piden" sale del enunciado; en `ejR` la respuesta sale de las casillas). `ui`/`ejVarios5` (con `aReceta`, títulos adivinados) siguen para los demás capítulos.
+- **Dibujos con flechas (2026-10-21, pedido: "ponles flechas y esas cosas si es necesario")**, todos con el naranja `#e8a23a` de `diagFrac` y su nota corta debajo (`_nota`): `diagPunto(v, k, nota)` el punto decimal que salta k lugares (una flecha numerada por lugar, punto viejo gris y nuevo naranja, ceros agregados en naranja, ceros que no cuentan apagados; lo usan `pctDec`/`decPct`, `pasosMultDec` (salta desde el final), `diagCorreDiv` (divisor y dividendo) y potencias de 10); `diagRed` el redondeo (cuadro en el lugar, flecha del dígito que decide: "sube"/"se queda"; es el primer renglón de `explRed`); `tablaLugares(xs, 'ult'|'dif')` tabla de valor posicional con los nombres en vertical (leer, comparar, decimal → fracción); `diagAmbosLados` (ya existía) en `ecL`, `despejarDec`, fórmulas y C = T · B — si no cabe en un teléfono, el renglón del medio pone solo la operación; `diagSustituir(pares)` cada letra con flecha a su número ("?" = la que se busca: fórmulas, C = T · B, I = Prt, compuesto); `diagCadena(inicio, [[qué se hace, queda]…])` cajitas de arriba a abajo (balance, descuentos, impuesto, comisión, propina, préstamos) y `_escalera` = la misma para orden de operaciones; `diagFilas` dos filas con la misma flecha a los dos lados (escala, precio por unidad); `diagEntreRaiz` recta numérica de √n; `svgTriRect` (ya existía) en Pitágoras; `diagCruzados` (ya existía) en cada "Multiplica en cruz". Probado en pantalla de 360 px: nada se sale de la tarjeta y ningún dibujo queda a menos de 75 % de su tamaño. El "Ejemplo con este mismo" que se arma de las líneas (`_ejDe`) salta los dibujos y `_sinDibujo` les quita el texto (si no, los números del dibujo se colaban). Autotest: "dibujo del punto que salta".
 - No pongas títulos "Haz la cuenta"/"Resultado"/"Queda": el revisor de la sesión los marcaba como flojos. Para editar código de app.js desde un script usa `split/join`, NUNCA `String.replace` con texto que tenga `$'` (insertó el archivo dentro de sí mismo).

@@ -329,6 +329,59 @@ const _tx = s => ({ t:'x', s });
 // dibujo + una línea corta debajo que dice POR QUÉ (para quien parte de cero)
 // k = tipo de nota que se repite igual (conv, mult, ambos…): explPasos deja solo la primera de cada tipo
 const _nota = (svg, t, k) => svg + `<div class="dgNota"${k ? ` data-k="${k}"` : ''}>${t}</div>`;
+const _dgEtiq = t => `<div class="dgEtiq">${t}</div>`;   // rótulo chiquito encima de un dibujo
+const _dgSvg = (id, W, H, g, fs = 17, maxW = 340) => `<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:${Math.min(W, maxW)}px;height:auto;display:block;margin:4px 0" xmlns="http://www.w3.org/2000/svg"><defs><marker id="${id}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#e8a23a"/></marker></defs><g font-size="${fs}" fill="currentColor" font-family="inherit">${g}</g></svg>`;
+// a ÷ b con decimales en el divisor: su punto salta hasta que queda entero, y el del dividendo los mismos lugares (dos dibujos, una nota)
+function diagCorreDiv(a, b){
+  const k = lugares(b), A = Math.abs(a), B = Math.abs(b), lg = n => n === 1 ? '1 lugar' : n + ' lugares';
+  return _dgEtiq(`El divisor: ${fd(B)} → ${fd(dN(B * P10(k)))}`) + diagPunto(B, k, '') + _dgEtiq(`El dividendo, los MISMOS ${lg(k)}: ${fd(A)} → ${fd(dN(A * P10(k)))}`)
+    + diagPunto(A, k, `El punto del divisor salta hasta que queda entero (${lg(k)}), y el del dividendo salta los mismos ${lg(k)}.`);
+}
+// orden de operaciones como escalera: la expresión arriba y, en cada flecha, UNA operación (la que toca) hasta que queda un número
+const _escalera = (inicio, pasos) => diagCadena(inicio, pasos, 'Toda la cuenta de arriba a abajo: en cada flecha se hace UNA operación (en naranja, la que toca según el orden) y abajo queda la expresión más corta.');
+// cadena de arriba a abajo: el primer valor en una cajita, y por cada paso una flecha hacia abajo con lo que se hace (a su derecha) y el valor que queda.
+// pasos: [[qué se hace, valor que queda], …]; el último valor sale en naranja (es la respuesta)
+function diagCadena(inicio, pasos, nota){
+  // cajas pegadas a la izquierda y la flecha cerca del borde izquierdo, con lo que se hace a su derecha: así el dibujo es angosto y no se achica en el teléfono
+  const id = 'dg' + (++_dgId), vals = [inicio, ...pasos.map(p => p[1])], anchoT = v => String(v).length*9.3 + 22, ax = 24;
+  const ops = pasos.map(p => String(p[0])), W = Math.max(...vals.map(v => 6 + anchoT(v)), ...ops.map(o => ax + 14 + o.length*8.2)) + 8;
+  let g = '', y = 6;
+  vals.forEach((v, i) => {
+    const ult = i === vals.length - 1, bw = anchoT(v);
+    g += `<rect x="6" y="${y}" width="${bw}" height="30" rx="8" fill="none" stroke="${ult ? '#e8a23a' : 'currentColor'}" stroke-opacity="${ult ? 1 : .45}" stroke-width="${ult ? 2.2 : 1.4}"/><text x="${6 + bw/2}" y="${y + 21}" text-anchor="middle" font-weight="700"${ult ? ' fill="#e8a23a"' : ''}>${v}</text>`;
+    y += 30;
+    if(!ult){ g += `<line x1="${ax}" y1="${y + 3}" x2="${ax}" y2="${y + 25}" stroke="#e8a23a" stroke-width="2.2" marker-end="url(#${id})"/><text x="${ax + 14}" y="${y + 20}" font-size="15" font-weight="700" fill="#e8a23a">${ops[i]}</text>`; y += 30; }
+  });
+  return _nota(_dgSvg(id, W, y + 6, g, 16), nota || 'Se empieza arriba; cada flecha dice qué se hace (en naranja) y abajo queda el resultado.', nota ? '' : 'cadena');
+}
+// dos filas que se corresponden (1 pulgada → 120 millas; 2.5 pulgadas → ? millas): a los dos lados, la MISMA flecha (× 2.5 o ÷ 20)
+function diagFilas(f1, f2, op, nota){
+  const id = 'dg' + (++_dgId), wl = Math.max(String(f1[0]).length, String(f2[0]).length)*8.6 + 12, wr = Math.max(String(f1[1]).length, String(f2[1]).length)*8.6 + 12;
+  const ow = String(op).length*7.6 + 32, dosRot = 8 + 2*ow + wl + wr + 36 <= 330;   // si no cabe en el teléfono, el texto va solo en la flecha de la izquierda
+  const xl = 8 + ow + wl/2, xm = 8 + ow + wl + 18, xr = xm + 18 + wr/2, W = xr + wr/2 + (dosRot ? ow : 30), y1 = 30, y2 = 100;
+  const fila = (y, a, b, ult) => `<text x="${xl}" y="${y}" text-anchor="middle" font-weight="700">${a}</text><text x="${xm}" y="${y}" text-anchor="middle" opacity=".6">→</text><text x="${xr}" y="${y}" text-anchor="middle" font-weight="700"${ult ? ' fill="#e8a23a"' : ''}>${b}</text>`;
+  const fl = (x, lado) => `<path d="M${x} ${y1 + 8} Q${x + lado*26} ${(y1 + y2)/2 - 6} ${x} ${y2 - 20}" fill="none" stroke="#e8a23a" stroke-width="2.2" marker-end="url(#${id})"/>` + (lado > 0 && !dosRot ? '' : `<text x="${x + lado*30}" y="${(y1 + y2)/2}" text-anchor="${lado < 0 ? 'end' : 'start'}" font-size="13.5" font-weight="700" fill="#e8a23a">${op}</text>`);
+  const g = fila(y1, f1[0], f1[1]) + fila(y2, f2[0], f2[1], true) + fl(xl - wl/2 - 4, -1) + fl(xr + wr/2 + 4, 1);
+  return _nota(_dgSvg(id, W, y2 + 12, g, 16), nota || `Lo que se le hace a un lado se le hace al otro: ${op} en los dos.`, nota ? '' : 'filas');
+}
+// recta numérica: n entre a² y (a+1)², así √n queda entre a y a + 1
+function diagEntreRaiz(a, n){
+  const lo = a*a, hi = (a + 1)*(a + 1), y = 46, X = v => v === lo ? 40 : v === hi ? 280 : Math.min(Math.max(40 + (v - lo)/(hi - lo)*240, 120), 200);   // el del medio, lejos de los rótulos de las puntas
+  const tick = (v, arriba, abajo, nar) => `<line x1="${X(v)}" x2="${X(v)}" y1="${y - 7}" y2="${y + 7}" stroke="${nar ? '#e8a23a' : 'currentColor'}" stroke-width="2"/><text x="${X(v)}" y="${y - 13}" text-anchor="middle" font-size="13"${nar ? ' fill="#e8a23a" font-weight="700"' : ''}>${arriba}</text><text x="${X(v)}" y="${y + 25}" text-anchor="middle" font-size="14" font-weight="700"${nar ? ' fill="#e8a23a"' : ''}>${abajo}</text>`;
+  const g = `<line x1="20" x2="300" y1="${y}" y2="${y}" stroke="currentColor" stroke-width="1.6"/>` + tick(lo, `${a}² = ${lo}`, a) + tick(hi, `${a + 1}² = ${hi}`, a + 1) + tick(n, n, '√' + n, true);
+  return _nota(_dgSvg('dg' + (++_dgId), 320, 80, g, 14, 360), `Arriba los números; abajo sus raíces. Como ${n} está entre ${lo} y ${hi}, √${n} está entre ${a} y ${a + 1}.`);
+}
+// sustituir en una fórmula: cada letra con una flecha hacia abajo a su número; la que se busca lleva "?" (pares: [[letra, valor], …], valor null = la que falta)
+function diagSustituir(pares, nota){
+  const id = 'dg' + (++_dgId), vt = v => v == null ? '?' : String(v);
+  const an = pares.map(([l, v]) => Math.max(String(l).length*12, vt(v).length*10.5) + 20); let x = 6; const xs = an.map(w => { const c = x + w/2; x += w; return c; });
+  const W = x + 6;
+  const g = pares.map(([l, v], i) => `<text x="${xs[i]}" y="22" text-anchor="middle" font-weight="700" font-style="italic">${l}</text>`
+    + `<line x1="${xs[i]}" y1="30" x2="${xs[i]}" y2="52" stroke="#e8a23a" stroke-width="2.2" marker-end="url(#${id})"/>`
+    + `<text x="${xs[i]}" y="76" text-anchor="middle" font-weight="700"${v == null ? ' fill="#e8a23a" font-size="22"' : ''}>${vt(v)}</text>`).join('');
+  const svg = `<svg viewBox="0 0 ${W} 86" style="width:100%;max-width:${Math.min(W, 340)}px;height:auto;display:block;margin:4px 0" xmlns="http://www.w3.org/2000/svg"><defs><marker id="${id}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#e8a23a"/></marker></defs><g font-size="19" fill="currentColor" font-family="inherit">${g}</g></svg>`;
+  return _nota(svg, nota || 'Cada letra se cambia por su número (flecha hacia abajo). La que tiene "?" es la que se busca.', nota ? '' : 'sust');
+}
 const _sinNotasRepetidas = html => { const vistas = {}; return html.replace(/<div class="dgNota" data-k="([^"]+)">[\s\S]*?<\/div>/g, (m, k) => vistas[k] ? '' : (vistas[k] = 1, m)); };
 // ── RECETA: la misma forma de explicar en todos los temas ──
 // Qué te piden → pasos con título (se abren de a uno con "Siguiente paso") → Respuesta → Comprueba → Error común,
@@ -404,10 +457,13 @@ const diagCruzados = (a, b, c, d) => _nota(diagFrac([{ t:'f', n:a, d:b }, _op('=
 function diagAmbosLados(izq, der, op, izq2, der2){
   // Tres renglones, como se escribe a mano: la ecuación, la MISMA operación escrita en los dos lados (en naranja) y cómo queda.
   const sOp = String(op), conPar = s => /^[×÷]/.test(sOp) && / [+−-] /.test(String(s)) ? `(${s})` : String(s);
-  const a2 = `${conPar(izq)} ${sOp}`, b2 = `${conPar(der)} ${sOp}`, id = 'dg' + (++_dgId);
-  const w = s => String(s).length*9.2 + 14, wl = Math.max(w(izq), w(a2), w(izq2), 40), wr = Math.max(w(der), w(b2), w(der2), 36), W = 12 + wl + 30 + wr;
+  const w = s => String(s).length*9.2 + 14;
+  // si el renglón del medio (lado + operación) no cabe en un teléfono, ahí va solo la operación debajo de cada lado (como se escribe a mano)
+  const corto = 12 + Math.max(w(izq), w(`${conPar(izq)} ${sOp}`), w(izq2), 40) + 30 + Math.max(w(der), w(`${conPar(der)} ${sOp}`), w(der2), 36) > 330;
+  const a2 = corto ? sOp : `${conPar(izq)} ${sOp}`, b2 = corto ? sOp : `${conPar(der)} ${sOp}`, id = 'dg' + (++_dgId);
+  const wl = Math.max(w(izq), w(a2), w(izq2), 40), wr = Math.max(w(der), w(b2), w(der2), 36), W = 12 + wl + 30 + wr;
   const xl = 6 + wl/2, xe = 6 + wl + 15, xr = 6 + wl + 30 + wr/2;
-  const op2 = s => `${conPar(s)} <tspan fill="#e8a23a" font-weight="700">${sOp}</tspan>`;
+  const op2 = s => corto ? `<tspan fill="#e8a23a" font-weight="700">${sOp}</tspan>` : `${conPar(s)} <tspan fill="#e8a23a" font-weight="700">${sOp}</tspan>`;
   const fila = (y, a, b, peso) => `<text x="${xl}" y="${y}" text-anchor="middle"${peso ? ' font-weight="700"' : ''}>${a}</text><text x="${xe}" y="${y}" text-anchor="middle">=</text><text x="${xr}" y="${y}" text-anchor="middle"${peso ? ' font-weight="700"' : ''}>${b}</text>`;
   const nota = { '+':'Para quitar lo que está restando se SUMA ese número, en los DOS lados (así la igualdad no se rompe). En naranja: lo que se hizo.', '−':'Para quitar lo que está sumando se RESTA ese número, en los DOS lados (así la igualdad no se rompe). En naranja: lo que se hizo.', '÷':'La letra está multiplicada por un número; para dejarla sola se DIVIDE entre ese número, en los DOS lados. En naranja: lo que se hizo.', '×':'Se MULTIPLICA en los DOS lados (así se cancela la división o la fracción). En naranja: lo que se hizo.' }[sOp[0]] || '';
   const svg = `<svg viewBox="0 0 ${W} 104" style="width:100%;max-width:${Math.min(Math.round(W*0.95), 320)}px;height:auto;display:block;margin:4px 0" xmlns="http://www.w3.org/2000/svg"><g font-size="17" fill="currentColor" font-family="inherit">${fila(24, izq, der)}${fila(58, op2(izq), op2(der))}<line x1="6" x2="${W - 6}" y1="70" y2="70" stroke="currentColor" stroke-opacity=".25" stroke-width="1"/>${fila(94, izq2, der2, true)}</g></svg>`;
@@ -5342,21 +5398,90 @@ const _ORD = ['', '1.er', '2.º', '3.er', '4.º', '5.º', '6.º'];
 const _dondeLugar = k => k > 0 ? `el ${_ORD[k]} dígito después del punto` : k === 0 ? 'el último dígito antes del punto' : `el ${_ORD[1 - k]} dígito antes del punto`;
 const _digLugar = (v, k) => Math.floor(dN(Math.abs(v) * P10(k))) % 10;
 const _nomLugar = k => k === 0 ? 'las unidades' : k < 0 ? (k === -3 ? 'el millar' : 'la ' + LUGAR_NOM[k]) : 'la ' + LUGAR_NOM[k];
+// dibujo del redondeo: el dígito del lugar en un cuadro, el de su derecha (el que decide) en naranja con una flecha hacia el del cuadro
+// que dice qué le pasa; lo que está a la derecha del lugar, apagado (se quita). Mismas posiciones que marcaDigito.
+function diagRed(v, k, kk, mas, sube){
+  const t = fd(v, Math.max(kk, 0)), pt = t.indexOf('.') < 0 ? t.length : t.indexOf('.');
+  let i = k > 0 ? pt + k : pt - 1 + k; while(i >= 0 && t[i] === ',') i--;
+  if(k <= 0){ let c = 0; i = pt - 1; while(c < -k){ i--; if(t[i] !== ',') c++; } }
+  let j = i + 1; while(j < t.length && !/\d/.test(t[j])) j++;
+  const cs = (t + (mas ? '…' : '')).split(''), anchoC = c => /\d/.test(c) ? 26 : c === '…' ? 22 : 12, xs = []; let x = 10;
+  cs.forEach(c => { xs.push(x); x += anchoC(c); });
+  const W = x + 10, yB = 84, id = 'dg' + (++_dgId), cx = n => xs[n] + anchoC(cs[n])/2;
+  let g = `<rect x="${xs[i] + 1}" y="${yB - 25}" width="24" height="32" rx="5" fill="none" stroke="#e8a23a" stroke-width="2.2"/>`;
+  cs.forEach((c, n) => { g += `<text x="${cx(n)}" y="${yB}" text-anchor="middle"${n === j ? ' fill="#e8a23a" font-weight="700"' : n > i && /\d|…/.test(c) ? ' opacity=".4"' : ''}>${c}</text>`; });
+  if(j < t.length){
+    const a = cx(j), b = cx(i), txt = sube ? '5 o más: sube' : 'menos de 5: se queda', tx = Math.min(Math.max((a + b)/2, txt.length*3.6 + 4), W - txt.length*3.6 - 4);
+    g += `<path d="M${a} ${yB - 26} Q${(a + b)/2} ${yB - 58} ${b + 3} ${yB - 30}" fill="none" stroke="#e8a23a" stroke-width="2.2" marker-end="url(#${id})"/><text x="${tx}" y="${yB - 52}" text-anchor="middle" font-size="13" font-weight="700" fill="#e8a23a">${txt}</text>`;
+  }
+  return `<svg viewBox="0 0 ${W} ${yB + 12}" style="width:100%;max-width:${W}px;height:auto;display:block;margin:4px 0" xmlns="http://www.w3.org/2000/svg"><defs><marker id="${id}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#e8a23a"/></marker></defs><g font-size="26" fill="currentColor" font-family="inherit">${g}</g></svg>`;
+}
+// tabla de lugares: cada dígito debajo del nombre de su lugar (centenas … unidades . décimas, centésimas…). Varios números = una fila cada uno,
+// con ceros de relleno en gris. modo 'ult' = la última columna decimal en naranja (la que le da el nombre); 'dif' = la primera columna
+// (de izquierda a derecha) donde los números son distintos (la que decide cuál es mayor).
+const _NOM_ENT = ['unidades', 'decenas', 'centenas', 'millares', 'decenas de millar', 'centenas de millar'];
+function tablaLugares(xs, modo){
+  xs = [].concat(xs);
+  const ent = xs.map(x => String(Math.trunc(Math.abs(dN(x))))), E = Math.max(...ent.map(s => s.length)), K = Math.max(...xs.map(lugares));
+  if(E > 6 || K > 6) return '';
+  const neg = xs.some(x => x < 0), filas = xs.map((x, r) => {
+    const d = (fd(Math.abs(x), K).split('.')[1] || ''), kk = lugares(x);
+    return [...Array(E - ent[r].length).fill(''), ...ent[r].split(''), '.', ...d.split('').map((c, i) => i < kk ? c : { c })];   // {c} = cero de relleno
+  });
+  let marca = -1;
+  if(modo === 'ult') marca = E + K;
+  // con negativos la columna no decide sola (−3.4 < 2), así que no se marca
+  if(modo === 'dif' && xs.length > 1 && !neg) for(let j = 0; j <= E + K && marca < 0; j++){ if(j === E) continue; const v = filas.map(f => { const c = f[j]; return typeof c === 'object' ? c.c : c || '0'; }); if(new Set(v).size > 1) marca = j; }
+  const cls = j => j === E ? ' class="pto"' : j === marca ? ' class="ult"' : '';
+  const cab = [...Array(E)].map((_, i) => _NOM_ENT[E - 1 - i]).concat([''], LUGAR_PL.slice(1, K + 1));
+  return `<table class="tLug"><tr>${neg ? '<th></th>' : ''}${cab.map((h, j) => `<th${cls(j)}>${h}</th>`).join('')}</tr>`
+    + filas.map((f, r) => `<tr>${neg ? `<td>${xs[r] < 0 ? '−' : ''}</td>` : ''}${f.map((c, j) => `<td${cls(j)}>${typeof c === 'object' ? `<span style="opacity:.4">${c.c}</span>` : c}</td>`).join('')}</tr>`).join('') + '</table>';
+}
 // el redondeo explicado: qué dígito es el del lugar, cuál decide (el de su derecha), qué le pasa y cómo queda
 function explRed(v, k){
   // se muestran hasta 2 dígitos después del lugar (sin inventar ceros al final: 210.162, no 210.1620)
   const a = Math.abs(dN(v)), kk = Math.max(k + 1, 0, Math.min(k + 2, lugares(a))), corto = Math.floor(dN(a * P10(kk))) / P10(kk), mas = lugares(a) > kk;
   const dig = _digLugar(a, k), der = _digLugar(a, k + 1), r = redondeaK(v, k), sube = der >= 5;
-  return [marcaDigito(corto, k, kk) + (mas ? '…' : ''),
-    `${mayus(_nomLugar(k))} ${k === 0 ? 'son' : 'es'} ${_dondeLugar(k)}: el ${cb(dig)} (subrayado).`,
+  return [diagRed(corto, k, kk, mas, sube),
+    `${mayus(_nomLugar(k))} ${k === 0 ? 'son' : 'es'} ${_dondeLugar(k)}: el ${cb(dig)} (en el cuadro).`,
     `El que decide es el dígito de su DERECHA: el ${der}. ` + (!sube ? `Es menos de 5 → el ${dig} se queda igual.`
       : dig === 9 ? 'Es 5 o más → el 9 sube: 9 + 1 = 10, se escribe 0 y se le suma 1 al dígito de su izquierda.' : `Es 5 o más → el ${dig} sube a ${dig + 1}.`),
     `Todo lo que está a la derecha ${k > 0 ? 'se quita' : k === 0 ? 'se quita (todos los decimales)' : 'se cambia por 0 (y los decimales se quitan)'}${v < 0 ? ' y el signo − se queda' : ''}: ${cb(fd(r, Math.max(k, 0)))}`];
 }
 // porciento → decimal, diciendo de dónde sale: 5.4% = 5.4 ÷ 100 = 0.054
-const pctDec = p => `${fd(p)}% = ${fd(p)} ÷ 100 = ${cb(fd(dN(p / 100)))} (dividir entre 100 es mover el punto 2 lugares a la izquierda)`;
+const pctDec = p => `${fd(p)}% = ${fd(p)} ÷ 100 = ${cb(fd(dN(p / 100)))}` + diagPunto(p, -2);
 // decimal → porciento: 0.4725 × 100 = 47.25%
-const decPct = v => `${fd(v)} × 100 = ${cb(fd(dN(v * 100)) + '%')} (multiplicar por 100 es mover el punto 2 lugares a la derecha)`;
+const decPct = v => `${fd(v)} × 100 = ${cb(fd(dN(v * 100)) + '%')}` + diagPunto(v, 2);
+// una línea sin sus dibujos ni la nota de debajo (para armar textos cortos, como el "Ejemplo con este mismo")
+const _sinDibujo = l => String(l).replace(/<svg[\s\S]*?<\/svg>/g, '').replace(/<div class="dgNota"[^>]*>[\s\S]*?<\/div>/g, '').replace(/<table[\s\S]*?<\/table>/g, '');
+// dibujo: el punto decimal salta k lugares (k > 0 a la derecha = × 10, 100…; k < 0 a la izquierda = ÷), una flecha numerada por lugar.
+// Punto de antes en gris, el de ahora en naranja; los ceros que se agregan en naranja; los ceros que no cuentan (047.25, 0.50), apagados.
+// nota: otra explicación debajo del dibujo ('' = sin nota; se usa cuando van dos dibujos seguidos con una sola nota)
+function diagPunto(v, k, notaPropia){
+  if(!(v >= 0) || !k) return '';
+  const t = fd(v).replace(/,/g, ''), pt = t.indexOf('.');
+  let dig = t.replace('.', ''), p = pt < 0 ? t.length : pt;
+  const zl = Math.max(0, 1 - (p + k)), zr = Math.max(0, p + k - dig.length);
+  dig = '0'.repeat(zl) + dig + '0'.repeat(zr); p += zl;
+  const q = p + k, N = dig.length, nuevo = i => i < zl || i >= N - zr;
+  let ini = 0; while(ini < q - 1 && dig[ini] === '0' && !nuevo(ini)) ini++;
+  let fin = N; while(fin > q && dig[fin - 1] === '0' && !nuevo(fin - 1)) fin--;
+  const cw = 30, X0 = 12, yB = 80, W = X0*2 + N*cw, bx = b => X0 + b*cw, id = 'dg' + (++_dgId), s = k > 0 ? 1 : -1;
+  let g = '';
+  for(let i = 0; i < N; i++) g += `<text x="${bx(i) + cw/2}" y="${yB}" text-anchor="middle"${nuevo(i) ? ' fill="#e8a23a" font-weight="700"' : (i < ini || i >= fin) ? ' opacity=".35"' : ''}>${dig[i]}</text>`;
+  g += `<circle cx="${bx(p)}" cy="${yB - 2}" r="3.6" fill="currentColor" opacity=".35"/><circle cx="${bx(q)}" cy="${yB - 2}" r="4.8" fill="#e8a23a"/>`;
+  for(let j = 0; j < Math.abs(k); j++){
+    const a = bx(p + j*s), b = bx(p + (j + 1)*s), m = (a + b)/2;
+    g += `<path d="M${a} ${yB - 26} Q${m} ${yB - 60} ${b} ${yB - 26}" fill="none" stroke="#e8a23a" stroke-width="2.4" marker-end="url(#${id})"/><text x="${m}" y="${yB - 49}" text-anchor="middle" font-size="14" font-weight="700" fill="#e8a23a">${j + 1}</text>`;
+  }
+  const n = Math.abs(k), lug = n === 1 ? '1 lugar' : `${n} lugares`, pot = '1' + '0'.repeat(n);
+  const nota = (k < 0 ? `Dividir entre ${pot} es correr el punto ${lug} a la IZQUIERDA` : `Multiplicar por ${pot} es correr el punto ${lug} a la DERECHA`) + ' (una flecha por lugar; el punto gris es donde estaba y el naranja donde queda).'
+    + (zl || zr ? ' Si se acaban los dígitos, se ponen ceros (en naranja).' : '') + (ini > 0 || fin < N ? ' Los ceros apagados no cuentan.' : '');
+  const svg = `<svg viewBox="0 0 ${W} ${yB + 14}" style="width:100%;max-width:${W}px;height:auto;display:block;margin:4px 0" xmlns="http://www.w3.org/2000/svg"><defs><marker id="${id}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#e8a23a"/></marker></defs><g font-size="30" fill="currentColor" font-family="inherit">${g}</g></svg>`;
+  if(notaPropia === '') return svg;
+  return notaPropia ? _nota(svg, notaPropia + (zl ? ' Si se acaban los dígitos, se ponen ceros (en naranja).' : '') + (ini > 0 || fin < N ? ' Los ceros apagados no cuentan.' : ''))
+    : _nota(svg, nota, 'punto' + k + (zl || zr ? 'z' : '') + (ini > 0 || fin < N ? 'a' : ''));
+}
 // la división larga de n ÷ d (enteros positivos), cifra por cifra, como se hace a mano: de ahí sale cada dígito del decimal
 const _sobra = r => (r === 1 || r === 0 ? 'sobra ' : 'sobran ') + r;
 function divLarga(n, d, maxDec = 6){
@@ -5392,7 +5517,7 @@ MODULOS.push(
       return { enunciado:`Escribe el número dado en notación decimal:<br><b style="font-size:1.1em">${enun}</b>`, ...numDec(v),
         explicacion: receta({ pide:'el mismo número escrito con punto decimal.',
           pasos:[pasoLug,
-            { t:'El numerador va después del punto, terminando en el último lugar', l:[`${f} ocupa ${String(f).length} lugar${String(f).length>1?'es':''}${ceros ? `; faltan ${ceros}, así que se ponen ${ceros} cero${ceros>1?'s':''} delante: ${cb('.' + sF)}` : `: ${cb('.' + sF)}`}`] },
+            { t:'El numerador va después del punto, terminando en el último lugar', l:[tablaLugares(v, 'ult') + `<div class="dgNota">El último dígito cae en las ${LUGAR_PL[k]} (en naranja): por eso ${miles(den)}.</div>`, `${f} ocupa ${String(f).length} lugar${String(f).length>1?'es':''}${ceros ? `; faltan ${ceros}, así que se ponen ${ceros} cero${ceros>1?'s':''} delante: ${cb('.' + sF)}` : `: ${cb('.' + sF)}`}`] },
             { t:'Delante del punto va la parte entera', l:[e ? `${e} + .${sF} = ${cb(fd(v))}` : `No hay parte entera: se escribe un 0 delante → ${cb(fd(v))}`] }],
           resp: fd(v), comp:`${fd(v)} tiene ${k} lugares decimales, igual que los ${k} ceros de ${miles(den)}.`,
           error:`olvidar los ceros de relleno: ${fr(f, miles(den))} no es .${f} si ${f} tiene menos cifras que ceros tiene ${miles(den)}.`,
@@ -5403,7 +5528,7 @@ MODULOS.push(
       return { enunciado:`Escribe el número decimal como una fracción (no la reduzcas):<br><b>${fd(v)}</b>`,
         tipo:'frac', respuesta:{ n:num, d:den }, ayuda: e ? 'Pon TODO el número arriba (sin el punto) y abajo el 1 con ceros.' : 'Arriba los dígitos después del punto; abajo el 1 con tantos ceros como lugares decimales.',
         explicacion: receta({ pide:'el decimal como fracción con denominador 10, 100, 1000…',
-          pasos:[{ t:'Cuenta los lugares decimales', l:[`${fd(v)} tiene ${k} lugar${k>1?'es':''} decimal${k>1?'es':''} → abajo va 1 con ${k} cero${k>1?'s':''}: ${cb(miles(den))}`] },
+          pasos:[{ t:'Cuenta los lugares decimales', l:[tablaLugares(v, 'ult') + `<div class="dgNota">El último dígito cae en las ${LUGAR_PL[k]} (en naranja): por eso abajo va ${miles(den)}.</div>`, `${fd(v)} tiene ${k} lugar${k>1?'es':''} decimal${k>1?'es':''} → abajo va 1 con ${k} cero${k>1?'s':''}: ${cb(miles(den))}`] },
             { t:'Arriba va el número sin el punto', l:[e ? `${fd(v)} sin el punto es ${num} (o como mixto: ${e} ${tf(f, den)})` : `Los dígitos después del punto: ${f}`] },
             { t:'Escribe la fracción', l:[cb(tf(num, den))] }],
           resp: tf(num, den), comp:`${num} ÷ ${miles(den)} = ${fd(v)}.`, error:'poner abajo un número de ceros distinto al número de lugares decimales.',
@@ -5415,7 +5540,7 @@ MODULOS.push(
         explicacion: receta({ pide:'el número con punto decimal.',
           pasos:[{ t:'Lo que va antes de la "y" es la parte entera', l:[e ? `"${enLetras(e)}" = ${cb(e)}` : 'No hay "y": la parte entera es 0.'] },
             { t:'La "y" se cambia por el punto', l:['La palabra "y" (la que separa el entero de las décimas, centésimas…) es el punto decimal.'] },
-            { t:`La última palabra dice cuántos lugares: ${LUGAR_PL[k]} = ${k}`, l:[`${f} tiene que terminar en el lugar ${k}${ceros ? `, así que se rellena con ${ceros} cero${ceros>1?'s':''}: .${sF}` : `: .${sF}`}`] }],
+            { t:`La última palabra dice cuántos lugares: ${LUGAR_PL[k]} = ${k}`, l:[tablaLugares(v, 'ult') + `<div class="dgNota">El último dígito tiene que caer en las ${LUGAR_PL[k]} (en naranja).</div>`, `${f} tiene que terminar en el lugar ${k}${ceros ? `, así que se rellena con ${ceros} cero${ceros>1?'s':''}: .${sF}` : `: .${sF}`}`] }],
           resp: fd(v), comp:`lee ${fd(v)} en voz alta: "${nom.toLowerCase()}".`, error:`no rellenar con ceros: "${f === 1 ? 'una ' + LUGAR_SG[k] : enLetras(f) + ' ' + LUGAR_PL[k]}" necesita ${k} lugares.`,
           ejemplo:`${nom.toLowerCase()} → ${e} . ${sF} → ${fd(v)}.` }) };
     }
@@ -5428,7 +5553,7 @@ MODULOS.push(
         pasos:[{ t:'Lee la parte entera (lo de antes del punto)', l:[e ? `${e} → "${enLetras(e)}"` : 'Es 0: no se lee (se empieza por la parte decimal).'] },
           { t:'El punto se lee "y"', l:[e ? 'Entre la parte entera y la decimal se dice "y".' : 'Como no hay parte entera, tampoco se dice "y".'] },
           { t:'Lee los dígitos de después del punto como un número entero', l:[`.${sF} → "${f === 1 ? 'una' : enLetras(f)}"`] },
-          { t:'Termina con el nombre del ÚLTIMO lugar', l:[`El último dígito está en el lugar ${k} → ${cb(LUGAR_PL[k])}`] }],
+          { t:'Termina con el nombre del ÚLTIMO lugar', l:[tablaLugares(v, 'ult'), `El último dígito está en el lugar ${k} → ${cb(LUGAR_PL[k])}`] }],
         resp: nom, error:`decir el nombre del lugar equivocado: ${k} lugares son ${LUGAR_PL[k]}, no ${LUGAR_PL[k === 1 ? 2 : k - 1]}.`,
         ejemplo:`${fd(v)} → ${nom.toLowerCase()}.` }) };
   }
@@ -5495,7 +5620,7 @@ MODULOS.push(
         tipo:'orden', opciones: xs.map(x => fd(x)), respuesta: ord,
         explicacion: receta({ pide:'los números de menor a mayor (el menor es el que está más a la izquierda en la recta numérica).',
           pasos:[{ t:'Los negativos van primero', l:[xs.some(x => x < 0) ? `Negativos: ${xs.filter(x => x < 0).map(x => fd(x)).join(', ')}. Entre negativos es MENOR el que está más lejos del 0.` : 'No hay negativos.'] },
-            { t:'Pon todos con los mismos lugares decimales (agrega ceros)', l:[comoSemejantes(xs)] },
+            { t:'Pon todos con los mismos lugares decimales (agrega ceros)', l:[comoSemejantes(xs), tablaLugares(xs, 'dif') + '<div class="dgNota">Cada dígito debajo de su lugar; los ceros que se agregan, en gris. Se compara columna por columna desde la izquierda.</div>'] },
             { t:'Compara como si fueran números enteros', l:[`Orden: ${cb(ord.map(i => fd(xs[i])).join(' < '))}`] }],
           resp: ord.map(i => fd(xs[i])).join(', '), error:'creer que un decimal con más cifras es más grande: 0.5 es mayor que 0.412 (0.500 > 0.412).',
           ejemplo:`${comoSemejantes(xs)} → ${ord.map(i => fd(xs[i])).join(', ')}.` }) };
@@ -5509,7 +5634,7 @@ MODULOS.push(
     return { enunciado:`Escribe el símbolo de desigualdad apropiado entre los dos decimales:<br><b>${fd(a)} &nbsp;___&nbsp; ${fd(b)}</b>`,
       tipo:'cmp', respuesta: r,
       explicacion: receta({ pide:'cuál de los dos es más grande (el de la DERECHA en la recta numérica).',
-        pasos:[{ t:'Hazlos decimales semejantes (mismos lugares decimales)', l:[`${fd(a)} → ${fd(a, k)} y ${fd(b)} → ${fd(b, k)} (agregar ceros a la derecha no cambia el valor)`] },
+        pasos:[{ t:'Hazlos decimales semejantes (mismos lugares decimales)', l:[`${fd(a)} → ${fd(a, k)} y ${fd(b)} → ${fd(b, k)} (agregar ceros a la derecha no cambia el valor)`, tablaLugares([a, b], 'dif') + '<div class="dgNota">Uno debajo del otro, cada dígito en su lugar (los ceros agregados, en gris). La primera columna, desde la izquierda, donde son distintos (en naranja) decide cuál es mayor.</div>'] },
           { t:'Quita el punto y compara los enteros', l:[`${mm(ai)} ${r} ${mm(bi)}${(a < 0 && b < 0) ? ' (los dos son negativos: el que está más cerca del 0 es el MAYOR)' : (a < 0) !== (b < 0) ? ' (todo negativo es menor que cualquier positivo)' : ''}`] },
           { t:'Escribe el símbolo', l:[`${fd(a)} ${cb(r === '<' ? '&lt;' : '&gt;')} ${fd(b)}`] }],
         resp: `${fd(a)} ${r} ${fd(b)}`, error:'comparar por la cantidad de cifras: 2.47 es MAYOR que 2.097 (2.470 > 2.097).',
@@ -5645,7 +5770,7 @@ MODULOS.push(
         explicacion: receta({ pide:'el producto (la multiplicación).',
           pasos:[{ t:'Multiplica sin los puntos, como si fueran enteros', l:[`${ints.join(' × ')} = ${miles(pi)}`] },
             { t:'Cuenta los lugares decimales de TODOS los factores', l:[`${xs.map((x, i) => `${fd(Math.abs(x))} tiene ${ks[i]}`).join(', ')} → en total ${cb(kt)}`] },
-            { t:`Pon el punto: ${kt} lugares desde la derecha`, l:[`${miles(pi)} → ${fd(Math.abs(p), kt)}${lugares(p) < kt ? ` = ${fd(Math.abs(p))} (los ceros del final se pueden quitar)` : ''}`] },
+            { t:`Pon el punto: ${kt} lugares desde la derecha`, l:[diagPunto(pi, -kt, `El punto empieza al final de ${miles(pi)} y salta ${_lug(kt)} a la IZQUIERDA (los que tienen todos los factores juntos), una flecha por lugar.`), `${miles(pi)} → ${fd(Math.abs(p), kt)}${lugares(p) < kt ? ` = ${fd(Math.abs(p))} (los ceros del final se pueden quitar)` : ''}`] },
             ...(negs ? [{ t:'El signo', l:[negs % 2 ? `Hay ${negs} negativo: el producto es ${cb('negativo')}.` : `Hay ${negs} negativos (número par): el producto es ${cb('positivo')}.`] }] : [])],
           resp: fd(p), comp:`estima: ${xs.map(x => fd(redondeaK(x, 0) || (x < 0 ? -1 : 1))).join(' × ')} ≈ ${fd(xs.reduce((a, x) => a * (redondeaK(x, 0) || (x < 0 ? -1 : 1)), 1))}, cerca de ${fd(p)}.`,
           error:'alinear los puntos como en la suma: en la multiplicación NO se alinean, se CUENTAN los lugares.',
@@ -5659,7 +5784,7 @@ MODULOS.push(
         explicacion: receta({ pide:`${mult ? 'multiplicar' : 'dividir'} por ${miles(P10(n))} sin hacer la cuenta.`,
           pasos:[{ t:'Cuenta los ceros', l:[`${forma === miles(P10(n)) ? miles(P10(n)) + ' tiene' : `10<sup>${n}</sup> es 1 seguido de`} ${n} cero${n>1?'s':''} → el punto se mueve ${cb(n + ' lugar' + (n>1?'es':''))}`] },
             { t: mult ? 'Multiplicar: el punto va a la DERECHA (el número crece)' : 'Dividir: el punto va a la IZQUIERDA (el número se achica)',
-              l:[`${fd(x)} → ${cb(fd(r))}${mult ? (lugares(x) < n ? ' (se agregan ceros donde faltan lugares)' : '') : ' (se agregan ceros a la izquierda si faltan lugares)'}`] }],
+              l:[`${fd(x)} → ${cb(fd(r))}`, diagPunto(x, mult ? n : -n)] }],
           resp: fd(r), error: mult ? 'mover el punto a la izquierda: multiplicar por 10, 100… da un número MÁS GRANDE.' : 'mover el punto a la derecha: dividir entre 10, 100… da un número MÁS CHICO.',
           ejemplo:`${fd(x)} ${mult ? '×' : '÷'} ${miles(P10(n))} → ${n} lugar${n>1?'es':''} a la ${mult ? 'derecha' : 'izquierda'} → ${fd(r)}.` }) };
     }
@@ -5671,7 +5796,7 @@ MODULOS.push(
       const dvd = dN(q * div);
       const k = lugares(div), dvdM = dN(dvd * P10(k)), divM = dN(div * P10(k));
       const pasos = [];
-      if(k) pasos.push({ t:`El divisor (${fd(div)}) tiene punto: muévelo ${k} lugar${k>1?'es':''} para que sea entero`, l:[`Y el punto del dividendo se mueve LOS MISMOS ${k} lugar${k>1?'es':''}: ${fd(dvd)} ÷ ${fd(div)} = ${cb(fd(dvdM) + ' ÷ ' + fd(divM))}`] });
+      if(k) pasos.push({ t:`El divisor (${fd(div)}) tiene punto: muévelo ${k} lugar${k>1?'es':''} para que sea entero`, l:[diagCorreDiv(dvd, div), `Y el punto del dividendo se mueve LOS MISMOS ${k} lugar${k>1?'es':''}: ${fd(dvd)} ÷ ${fd(div)} = ${cb(fd(dvdM) + ' ÷ ' + fd(divM))}`] });
       pasos.push({ t:'Divide como con enteros y sube el punto al cociente', l:[`${fd(Math.abs(dvdM))} ÷ ${fd(divM)} = ${fd(Math.abs(q))} (el punto del cociente va justo arriba del punto del dividendo)`] });
       if(q < 0) pasos.push({ t:'El signo', l:['Negativo entre positivo da negativo: ' + cb(fd(q))] });
       return { enunciado:`Halla el cociente:<br><b>${fd(dvd)} ÷ ${fdP(div)}</b>`, ...numDec(q),
@@ -5752,7 +5877,7 @@ MODULOS.push(
     const txtR = e ? `${neg ? '−' : ''}${e} ${tf(s.n, s.d)}` : tf(tot.n, tot.d);
     return { enunciado:`Cambia el número de forma decimal a forma ${e ? 'de número mixto' : 'fraccionaria'} y redúcelo a sus términos más simples:<br><b>${fd(v)}</b>`, ...resp,
       explicacion: receta({ pide:`el decimal como ${e ? 'número mixto' : 'fracción'} simplificada.`,
-        pasos:[{ t:'Lugares decimales = ceros de abajo', l:[`.${String(f).padStart(k, '0')} tiene ${k} lugar${k>1?'es':''} → ${tf(f, P10(k))}`] },
+        pasos:[{ t:'Lugares decimales = ceros de abajo', l:[tablaLugares(v, 'ult') + `<div class="dgNota">El último dígito cae en las ${LUGAR_PL[k]} (en naranja): por eso abajo va ${miles(P10(k))}.</div>`, `.${String(f).padStart(k, '0')} tiene ${k} lugar${k>1?'es':''} → ${tf(f, P10(k))}`] },
           { t:'Simplifica: divide arriba y abajo entre el mismo número', l:[g > 1 ? explSimplif(f, P10(k)) : `${f} y ${miles(P10(k))} no tienen ningún número en común que los divida (aparte del 1): ya está simplificada.`] },
           ...(e ? [{ t:'La parte entera se queda delante', l:[cb(txtR)] }] : neg ? [{ t:'Pon el signo', l:[cb(txtR)] }] : [])],
         resp: txtR, comp:`${s.n} ÷ ${s.d} = ${fd(s.n / s.d)} ✓`, error:'no simplificar: el examen pide los términos más simples.',
@@ -5770,6 +5895,7 @@ MODULOS.push(
       enun = `${fd(a)} − ${fd(b)}(${fd(c)})`;
       pasos = [{ t:'Primero la multiplicación', l:[`${fd(b)} × ${fd(c)} = ${cb(fd(bc))} (lo que está pegado al paréntesis se multiplica)`] },
         { t:'Después la resta', l: a >= bc ? [colDec([a, bc], '−', r)] : sumaSignos(a, dN(-bc)) }];
+      pasos[pasos.length - 1].l.push(_escalera(enun, [['1.º la ×', `${fd(a)} − ${fd(bc)}`], ['2.º la −', fd(r)]]));
     } else if(tipo === 'adivbc'){ // a ÷ b(c) + d: ÷ y × de izquierda a derecha
       const b = pick([0.2, 0.4, 0.5, 0.6, 0.8, 1.2]), q = decK(1, 12, 1), a = dN(q * b), c = d2(), d = decK(1, 10, 1);
       const qc = dN(q * c); r = dN(qc + d);
@@ -5777,6 +5903,7 @@ MODULOS.push(
       pasos = [{ t:'× y ÷ van de IZQUIERDA a DERECHA', l:[`Primero ${fd(a)} ÷ ${fd(b)} = ${cb(fd(q))} (está primero)`] },
         { t:'Después la multiplicación', l:[`${fd(q)} × ${fd(c)} = ${cb(fd(qc))}`] },
         { t:'De último la suma', l:[colDec([qc, d], '+', r)] }];
+      pasos[pasos.length - 1].l.push(_escalera(enun, [['1.º la ÷ (va antes)', `${fd(q)}(${fd(c)}) + ${fd(d)}`], ['2.º la ×', `${fd(qc)} + ${fd(d)}`], ['3.º la +', fd(r)]]));
     } else if(tipo === 'pot'){    // (a)(b) − c ÷ (d)²
       const d = pick([0.2, 0.3, 0.4, 0.5, 1.1, 1.2]), d2v = dN(d * d), q = R(2, 40), c = dN(q * d2v), a = d1(), b = d2(), ab = dN(a * b);
       r = dN(ab - q);
@@ -5784,6 +5911,7 @@ MODULOS.push(
       pasos = [{ t:'Primero el exponente', l:[`(${fd(d)})<sup>2</sup> = ${fd(d)} × ${fd(d)} = ${cb(fd(d2v))}`] },
         { t:'Después × y ÷ (de izquierda a derecha)', l:[`(${fd(a)})(${fd(b)}) = ${fd(ab)}`, `${fd(c)} ÷ ${fd(d2v)} = ${fd(q)}`] },
         { t:'De último la resta', l: sumaSignos(ab, -q) }];
+      pasos[pasos.length - 1].l.push(_escalera(`(${fd(a)})(${fd(b)}) − ${fd(c)} ÷ (${fd(d)})²`, [['1.º el exponente', `(${fd(a)})(${fd(b)}) − ${fd(c)} ÷ ${fd(d2v)}`], ['2.º × y ÷', `${fd(ab)} − ${fd(q)}`], ['3.º la −', fd(r)]]));
     } else if(tipo === 'corchetes'){ // a − [b − c(d − e) + f]
       const d = decK(3, 9, 1), e = decK(0.1, d - 0.5, 1), de = dN(d - e), c = R(2, 5), cde = dN(c * de), b = decK(1, 9, 1), f = decK(0.5, 5, 1);
       const dentro = dN(b - cde + f), a = decK(1, 9, 1); r = dN(a - dentro);
@@ -5792,12 +5920,14 @@ MODULOS.push(
         { t:'Dentro del corchete: la multiplicación', l:[`${c} × ${fd(de)} = ${cb(fd(cde))}`] },
         { t:'Dentro del corchete: + y − de izquierda a derecha', l:[`${fd(b)} − ${fd(cde)} = ${fd(dN(b - cde))}`, `${fd(dN(b - cde))} + ${fd(f)} = ${cb(fd(dentro))}`] },
         { t:'Quita el corchete', l:[`${fd(a)} − ${fdP(dentro)} = ${cb(fd(r))}`] }];
+      pasos[pasos.length - 1].l.push(_escalera(enun, [['1.º el ( )', `${fd(a)} − [${fd(b)} − ${c}(${fd(de)}) + ${fd(f)}]`], ['2.º la ×', `${fd(a)} − [${fd(b)} − ${fd(cde)} + ${fd(f)}]`], ['3.º − y + del [ ]', `${fd(a)} − ${fdP(dentro)}`], ['4.º la −', fd(r)]]));
     } else if(tipo === 'mixta'){  // decimales y fracciones juntos: se pasa todo a decimal
       const [n, d] = pick([[1,2],[1,4],[3,4],[2,5],[3,5],[1,8],[3,8],[5,8],[7,8],[7,20],[9,25]]);
       const a = d2(), b = R(1, 9), fv = dN(n / d); r = dN(a + fv - b);
       enun = `${fd(a)} + ${fr(n, d)} − ${b}`;
       pasos = [{ t:'Pasa la fracción a decimal', l:[`${n}/${d} = ${n} ÷ ${d} = ${cb(fd(fv))}`] },
         { t:'Suma y resta de izquierda a derecha', l:[colDec([a, fv], '+', dN(a + fv)), ...sumaSignos(dN(a + fv), -b)] }];
+      pasos[pasos.length - 1].l.push(_escalera(`${fd(a)} + ${n}/${d} − ${b}`, [['la fracción a decimal', `${fd(a)} + ${fd(fv)} − ${b}`], ['1.º la + (va primero)', `${fd(dN(a + fv))} − ${b}`], ['2.º la −', fd(r)]]));
     } else {                      // evaluar con x = 2.5 y y = 0.75
       const x = pick([2.5, 1.5, 0.5, 1.2]), y = pick([0.75, 0.25, 0.5, 1.5]);
       const forma = pick(['2x − y²', '3x² − 5y + 4', '4.5 − 7x + y', '5x² − 3xy + 1', '2y − 3x − x²', '6 − 3x + y']);
@@ -5816,7 +5946,7 @@ MODULOS.push(
         '2y − 3x − x²': [['Exponente', `(${fd(x)})² = ${fd(x)} × ${fd(x)} = ${fd(X2)}`], ['Multiplicaciones', `2(${fd(y)}) = ${fd(dN(2 * y))} y 3(${fd(x)}) = ${fd(dN(3 * x))}`],
           ['Restas, de izquierda a derecha', `${fd(dN(2 * y))} − ${fd(dN(3 * x))} = ${fd(dN(2 * y - 3 * x))}; ${fd(dN(2 * y - 3 * x))} − ${fd(X2)} = ${fd(r)}`]],
         '6 − 3x + y':   [['Multiplicación', `3(${fd(x)}) = ${fd(dN(3 * x))}`], ['Resta y suma, de izquierda a derecha', `6 − ${fd(dN(3 * x))} = ${fd(dN(6 - 3 * x))}; ${fd(dN(6 - 3 * x))} + ${fd(y)} = ${fd(r)}`]] }[forma];
-      pasos = [{ t:'Cambia cada letra por su valor (entre paréntesis)', l:[sust.replace(/²/g, '<sup>2</sup>')] },
+      pasos = [{ t:'Cambia cada letra por su valor (entre paréntesis)', l:[diagSustituir(forma.includes('y') ? [['x', fd(x)], ['y', fd(y)]] : [['x', fd(x)]], 'Cada letra se cambia por su número (flecha hacia abajo), siempre entre paréntesis.'), sust.replace(/²/g, '<sup>2</sup>')] },
         ...cuentas.map(([t, l], i) => ({ t: `${['Primero', 'Después', 'De último'][Math.min(i, 2) + (cuentas.length === 2 && i === 1 ? 1 : 0)]}: ${t.toLowerCase()}`, l:[l] }))];
       return { enunciado: enun, ...numDec(r),
         explicacion: receta({ pide:'el valor de la expresión con esos números.', pasos, resp: fd(r),
@@ -5857,12 +5987,13 @@ MODULOS.push(
 function despejarDec(L, k, b, rhs){
   const pasos = [], izq = dN(rhs - b);
   if(b !== 0) pasos.push({ t:`Quita el ${b < 0 ? '−' : '+'} ${fd(Math.abs(b))}: ${b < 0 ? 'suma' : 'resta'} ${fd(Math.abs(b))} en los DOS lados`,
-    l:[`${k === 1 ? '' : fd(k)}${L} = ${fd(rhs)} ${b < 0 ? '+' : '−'} ${fd(Math.abs(b))}`, `${k === 1 ? '' : fd(k)}${L} = ${cb(fd(izq))}`] });
+    l:[diagAmbosLados(_term(k, L, true) + _term(b), fd(rhs), (b < 0 ? '+ ' : '− ') + fd(Math.abs(b)), _term(k, L, true), fd(izq)),
+      `${k === 1 ? '' : fd(k)}${L} = ${fd(rhs)} ${b < 0 ? '+' : '−'} ${fd(Math.abs(b))}`, `${k === 1 ? '' : fd(k)}${L} = ${cb(fd(izq))}`] });
   const x = dN(izq / k);
   if(k !== 1){
     const kk = lugares(k);
     pasos.push({ t:`Divide los DOS lados entre ${fd(k)} (el número que acompaña a la ${L})`,
-      l:[`${L} = ${fd(izq)} ÷ ${fdP(k)}`, ...(kk ? [`El divisor tiene punto: se mueve ${kk} lugar${kk>1?'es':''} en los dos números → ${fd(dN(izq * P10(kk)))} ÷ ${fd(dN(k * P10(kk)))}`] : []), `${L} = ${cb(fd(x))}`] });
+      l:[diagAmbosLados(_term(k, L, true), fd(izq), '÷ ' + fdP(k), L, fd(x)), `${L} = ${fd(izq)} ÷ ${fdP(k)}`, ...(kk ? [`El divisor tiene punto: se mueve ${kk} lugar${kk>1?'es':''} en los dos números → ${fd(dN(izq * P10(kk)))} ÷ ${fd(dN(k * P10(kk)))}`] : []), `${L} = ${cb(fd(x))}`] });
   }
   return { x, pasos };
 }
@@ -5902,8 +6033,8 @@ MODULOS.push(
       // L/a − c = d  →  L = (d + c)·a   (se arma desde L para que sea exacto)
       const a = decK(1.1, 9.9, R(1, 2)), q = decK(0.1, 20, 1) * sg(), x2 = dN(q * a), c = decK(0.1, 9, 2), d = dN(q - c);
       const pre = `${fr(L, fd(a))} − ${fd(c)} = ${fd(d)}`;
-      pasos.push({ t:`Quita el − ${fd(c)}: suma ${fd(c)} en los DOS lados`, l:[`${L}/${fd(a)} = ${fd(d)} + ${fd(c)} = ${cb(fd(q))}`] },
-        { t:`La ${L} está DIVIDIDA entre ${fd(a)}: multiplica los DOS lados por ${fd(a)}`, l:[`${L} = ${fdP(q)} × ${fd(a)} = ${cb(fd(x2))}`] });
+      pasos.push({ t:`Quita el − ${fd(c)}: suma ${fd(c)} en los DOS lados`, l:[diagAmbosLados(`${L}/${fd(a)} − ${fd(c)}`, fd(d), '+ ' + fd(c), `${L}/${fd(a)}`, fd(q)), `${L}/${fd(a)} = ${fd(d)} + ${fd(c)} = ${cb(fd(q))}`] },
+        { t:`La ${L} está DIVIDIDA entre ${fd(a)}: multiplica los DOS lados por ${fd(a)}`, l:[diagAmbosLados(`${L}/${fd(a)}`, fd(q), '× ' + fd(a), L, fd(x2)), `${L} = ${fdP(q)} × ${fd(a)} = ${cb(fd(x2))}`] });
       return { enunciado:`Resuelve la ecuación y verifica la respuesta:<br><b>${pre}</b>`, ...numDec(x2), ayuda:`${L} = ___`,
         explicacion: receta({ pide:`el valor de ${L}.`, pasos, resp:`${L} = ${fd(x2)}`, comp:`${fd(x2)} ÷ ${fd(a)} − ${fd(c)} = ${fd(q)} − ${fd(c)} = ${fd(d)} ✓`,
           error:`dividir entre ${fd(a)} en vez de multiplicar: lo contrario de dividir es MULTIPLICAR.`, ejemplo:`${L}/${fd(a)} = ${fd(q)} → ${L} = ${fd(q)} × ${fd(a)} = ${fd(x2)}.` }) };
@@ -5944,7 +6075,8 @@ MODULOS.push(
       b = sg() * decK(0.1, 20, 2); k = dN(a - c);
       const dd = dN(a * x + b - c * x); rhs = dd;
       enun = `${_term(a, L, true)}${_term(b)} = ${_term(c, L, true)}${_term(dd)}`;
-      pasos.push({ t:`Pasa la ${L} de la derecha a la izquierda: ${c < 0 ? 'suma' : 'resta'} ${fd(Math.abs(c))}${L} en los DOS lados`, l:[`${fd(a)} ${c < 0 ? '+' : '−'} ${fd(Math.abs(c))} = ${fd(k)} → ${_term(k, L, true)}${_term(b)} = ${fd(dd)}`] });
+      pasos.push({ t:`Pasa la ${L} de la derecha a la izquierda: ${c < 0 ? 'suma' : 'resta'} ${fd(Math.abs(c))}${L} en los DOS lados`, l:[
+        diagAmbosLados(_term(a, L, true) + _term(b), _term(c, L, true) + _term(dd), (c < 0 ? '+ ' : '− ') + _term(Math.abs(c), L, true), _term(k, L, true) + _term(b), fd(dd)), `${fd(a)} ${c < 0 ? '+' : '−'} ${fd(Math.abs(c))} = ${fd(k)} → ${_term(k, L, true)}${_term(b)} = ${fd(dd)}`] });
       verif = `izquierda: ${fd(a)}(${fd(x)}) ${b < 0 ? '−' : '+'} ${fd(Math.abs(b))} = ${fd(dN(a * x + b))}; derecha: ${fd(c)}(${fd(x)}) ${dd < 0 ? '−' : '+'} ${fd(Math.abs(dd))} = ${fd(dN(c * x + dd))}`;
     }
     const s = despejarDec(L, k, b, rhs);
@@ -5963,19 +6095,19 @@ MODULOS.push(
     if(tipo === 'ln'){
       const a = decK(1, 20, 1), d = decK(0.1, 5, 1), n = R(5, 40); r = dN(a + (n - 1) * d);
       enun = `l = a + (n − 1)d ; halla <b>l</b>, dado n = ${n}, a = ${fd(a)} y d = ${fd(d)}.`;
-      pasos = [{ t:'Sustituye los valores', l:[`l = ${fd(a)} + (${n} − 1)(${fd(d)})`] }, { t:'Paréntesis primero', l:[`${n} − 1 = ${n - 1}`] },
+      pasos = [{ t:'Sustituye los valores', l:[diagSustituir([['l', null], ['a', fd(a)], ['n', n], ['d', fd(d)]]), `l = ${fd(a)} + (${n} − 1)(${fd(d)})`] }, { t:'Paréntesis primero', l:[`${n} − 1 = ${n - 1}`] },
         { t:'Multiplica y después suma', l:[`${n - 1} × ${fd(d)} = ${fd(dN((n - 1) * d))}`, `l = ${fd(a)} + ${fd(dN((n - 1) * d))} = ${cb(fd(r))}`] }];
       pide = 'el valor de l (sustituir y calcular).'; error = 'multiplicar n × d sin restarle 1 a n primero.';
     } else if(tipo === 'Sn'){
       const n = 2 * R(2, 10), a = decK(1, 9, 1), l = decK(10, 40, 1); r = dN(n / 2 * (a + l));
       enun = `S = ${fr('n', 2)}(a + l) ; halla <b>S</b>, dado n = ${n}, a = ${fd(a)} y l = ${fd(l)}.`;
-      pasos = [{ t:'Sustituye', l:[`S = ${n}/2 × (${fd(a)} + ${fd(l)})`] }, { t:'Paréntesis y la fracción', l:[`${fd(a)} + ${fd(l)} = ${fd(dN(a + l))}`, `${n}/2 = ${n / 2}`] },
+      pasos = [{ t:'Sustituye', l:[diagSustituir([['S', null], ['n', n], ['a', fd(a)], ['l', fd(l)]]), `S = ${n}/2 × (${fd(a)} + ${fd(l)})`] }, { t:'Paréntesis y la fracción', l:[`${fd(a)} + ${fd(l)} = ${fd(dN(a + l))}`, `${n}/2 = ${n / 2}`] },
         { t:'Multiplica', l:[`S = ${n / 2} × ${fd(dN(a + l))} = ${cb(fd(r))}`] }];
       pide = 'el valor de S.'; error = 'olvidar dividir n entre 2.';
     } else if(tipo === 'FdeC'){
       const C = decK(-20, 40, 1); r = dN(1.8 * C + 32);
       enun = `Usa la fórmula F = 1.8C + 32 para hallar la temperatura en Fahrenheit que corresponde a <b>${fd(C)}° C</b>.`;
-      pasos = [{ t:'Sustituye C en la fórmula', l:[`F = 1.8(${fd(C)}) + 32`] },
+      pasos = [{ t:'Sustituye C en la fórmula', l:[diagSustituir([['F', null], ['C', fd(C)]]), `F = 1.8(${fd(C)}) + 32`] },
         { t:'Primero la multiplicación (orden de operaciones)', l:[`1.8 × ${fdP(C)}`, ...pasosMultDec(1.8, C), ...(C < 0 ? ['Positivo × negativo = negativo: ' + fd(dN(1.8 * C))] : [])] },
         { t:'Después la suma', l: C < 0 ? sumaSignos(dN(1.8 * C), 32) : [`F = ${fd(dN(1.8 * C))} + 32 = ${cb(fd(r))}`] }];
       pide = 'los grados Fahrenheit: se sustituye C y se calcula.'; error = 'sumar 32 antes de multiplicar.';
@@ -5983,44 +6115,44 @@ MODULOS.push(
     } else if(tipo === 'CdeF'){
       const C = decK(-10, 40, 1), F = dN(1.8 * C + 32); r = C;
       enun = `Usa la fórmula F = 1.8C + 32 para hallar la temperatura en Celsius que corresponde a <b>${fd(F)}° F</b>.`;
-      pasos = [{ t:'Sustituye F en la fórmula', l:[cb(`${fd(F)} = 1.8C + 32`)] },
-        { t:'Quita el + 32: resta 32 en los DOS lados', l:[`1.8C = ${fd(F)} − 32 = ${cb(fd(dN(F - 32)))}`] },
-        { t:'Quita el 1.8 (multiplica a la C): divide los DOS lados entre 1.8', l:[`C = ${fd(dN(F - 32))} ÷ 1.8`, ...pasosDivDec(dN(F - 32), 1.8)] }];
+      pasos = [{ t:'Sustituye F en la fórmula', l:[diagSustituir([['F', fd(F)], ['C', null]]), cb(`${fd(F)} = 1.8C + 32`)] },
+        { t:'Quita el + 32: resta 32 en los DOS lados', l:[diagAmbosLados(fd(F), '1.8C + 32', '− 32', fd(dN(F - 32)), '1.8C'), `1.8C = ${fd(F)} − 32 = ${cb(fd(dN(F - 32)))}`] },
+        { t:'Quita el 1.8 (multiplica a la C): divide los DOS lados entre 1.8', l:[diagAmbosLados(fd(dN(F - 32)), '1.8C', '÷ 1.8', fd(C), 'C'), `C = ${fd(dN(F - 32))} ÷ 1.8`, ...pasosDivDec(dN(F - 32), 1.8)] }];
       pide = 'los grados Celsius (despejar C).'; error = 'dividir antes de restar el 32: primero se quita lo que suma.';
       compF = `1.8 × ${fdP(C)} + 32 = ${fd(dN(1.8 * C))} + 32 = ${fd(F)} ✓`;
     } else if(tipo === 'VCil'){
       const rr = decK(1, 9, 1), h = decK(1, 15, 1), v = PI * rr * rr * h; r = redondeaK(v, 2); red = true;
       enun = `V = πr<sup>2</sup>h ; halla <b>V</b>, dado r = ${fd(rr)}, h = ${fd(h)} y π = 3.14. Redondea a la centésima.`;
-      pasos = [{ t:'Sustituye', l:[`V = 3.14 × (${fd(rr)})<sup>2</sup> × ${fd(h)}`] }, { t:'Primero el exponente: r² es r × r', l:[`(${fd(rr)})<sup>2</sup> = ${fd(rr)} × ${fd(rr)} = ${cb(fd(dN(rr * rr)))}`] },
+      pasos = [{ t:'Sustituye', l:[diagSustituir([['V', null], ['π', '3.14'], ['r', fd(rr)], ['h', fd(h)]]), `V = 3.14 × (${fd(rr)})<sup>2</sup> × ${fd(h)}`] }, { t:'Primero el exponente: r² es r × r', l:[`(${fd(rr)})<sup>2</sup> = ${fd(rr)} × ${fd(rr)} = ${cb(fd(dN(rr * rr)))}`] },
         { t:'Multiplica de izquierda a derecha', l:[`3.14 × ${fd(dN(rr * rr))} = ${fd(dN(3.14 * rr * rr))}`, `${fd(dN(3.14 * rr * rr))} × ${fd(h)} = ${fd(dN(v))}`] }, { t:'Redondea a la centésima', l: explRed(v, 2) }];
       pide = 'el volumen (redondeado a la centésima).'; error = 'multiplicar r × 2 en vez de r × r: r² es r por sí mismo.';
     } else if(tipo === 'hCil'){   // el volumen del cilindro, despejando la altura (EducoSoft 7.1: V = 3.14 r² h, hallar h a dos lugares decimales)
       const rr = R(2, 9), v = decK(5, porNivel(nv, 100, 400, 900), 2), den = dN(3.14 * rr * rr), h = v / den; r = redondeaK(h, 2); red = true;
       enun = `V = 3.14r<sup>2</sup>h ; halla <b>h</b>, dado V = ${fd(v)} cm<sup>3</sup> y r = ${rr} cm. Redondea a la centésima.`;
-      pasos = [{ t:'Sustituye V y r', l:[`${fd(v)} = 3.14 × ${rr}<sup>2</sup> × h`] }, { t:'Primero el exponente y después la multiplicación', l:[`${rr}<sup>2</sup> = ${rr * rr}`, `3.14 × ${rr * rr} = ${fd(den)}, así que ${fd(v)} = ${fd(den)}h`] },
-        { t:`Despeja h: divide los DOS lados entre ${fd(den)}`, l:[`h = ${fd(v)} ÷ ${fd(den)} = ${fd(Math.floor(h * 1000) / 1000, 3)}… (con la calculadora)`] }, { t:'Redondea a la centésima', l: explRed(h, 2) }];
+      pasos = [{ t:'Sustituye V y r', l:[diagSustituir([['V', fd(v)], ['r', rr], ['h', null]]), `${fd(v)} = 3.14 × ${rr}<sup>2</sup> × h`] }, { t:'Primero el exponente y después la multiplicación', l:[`${rr}<sup>2</sup> = ${rr * rr}`, `3.14 × ${rr * rr} = ${fd(den)}, así que ${fd(v)} = ${fd(den)}h`] },
+        { t:`Despeja h: divide los DOS lados entre ${fd(den)}`, l:[diagAmbosLados(fd(v), fd(den) + 'h', '÷ ' + fd(den), fd(Math.floor(h * 1000) / 1000, 3) + '…', 'h'), `h = ${fd(v)} ÷ ${fd(den)} = ${fd(Math.floor(h * 1000) / 1000, 3)}… (con la calculadora)`] }, { t:'Redondea a la centésima', l: explRed(h, 2) }];
       pide = 'la altura h (despejar y redondear a la centésima).'; error = 'multiplicar r × 2 en vez de r × r: r² es r por sí mismo.';
       compF = `${fd(den)} × ${fd(r, 2)} = ${fd(dN(den * r))}, casi ${fd(v)} ✓ (no da exacto porque se redondeó)`;
     } else if(tipo === 'A=P+Prt'){
       const P = 100 * R(5, 60), rt = pick([0.02, 0.03, 0.04, 0.05, 0.06, 0.08]), t = pick([2, 3, 4, 5, 2.5, 1.5, 6]), A = dN(P * (1 + rt * t)); r = P;
       enun = `A = P + Prt ; halla <b>P</b>, dado A = ${fd(A)}, r = ${fd(rt)} y t = ${fd(t)}.`;
       pasos = [{ t:'Saca P como factor común (la P está en los dos términos)', l:['A = P + Prt = P × 1 + P × rt = P(1 + rt)'] },
-        { t:'Sustituye y calcula el paréntesis (primero la multiplicación)', l:[`${fd(rt)} × ${fd(t)} = ${fd(dN(rt * t))}`, `1 + ${fd(dN(rt * t))} = ${fd(dN(1 + rt * t))} → ${cb(`${fd(A)} = ${fd(dN(1 + rt * t))}P`)}`] },
-        { t:`Despeja P: divide los DOS lados entre ${fd(dN(1 + rt * t))}`, l:[`P = ${fd(A)} ÷ ${fd(dN(1 + rt * t))}`, ...pasosDivDec(A, dN(1 + rt * t))] }];
+        { t:'Sustituye y calcula el paréntesis (primero la multiplicación)', l:[diagSustituir([['A', fd(A)], ['P', null], ['r', fd(rt)], ['t', fd(t)]]), `${fd(rt)} × ${fd(t)} = ${fd(dN(rt * t))}`, `1 + ${fd(dN(rt * t))} = ${fd(dN(1 + rt * t))} → ${cb(`${fd(A)} = ${fd(dN(1 + rt * t))}P`)}`] },
+        { t:`Despeja P: divide los DOS lados entre ${fd(dN(1 + rt * t))}`, l:[diagAmbosLados(fd(A), fd(dN(1 + rt * t)) + 'P', '÷ ' + fd(dN(1 + rt * t)), fd(P), 'P'), `P = ${fd(A)} ÷ ${fd(dN(1 + rt * t))}`, ...pasosDivDec(A, dN(1 + rt * t))] }];
       pide = 'el valor de P (despejar).'; error = 'restar A − rt: la P está en los DOS términos, primero se saca como factor común.';
       compF = `${fd(P)} + ${fd(P)} × ${fd(rt)} × ${fd(t)} = ${fd(P)} + ${fd(dN(P * rt * t))} = ${fd(A)} ✓`;
     } else { // A = ½h(b + c) ; halla h
       const h = decK(1, 12, 1), b = decK(2, 15, 1), c = decK(2, 15, 1), A = dN(h * (b + c) / 2); r = h;
       enun = `A = ${fr(1, 2)}h(b + c) ; halla <b>h</b>, dado A = ${fd(A)}, b = ${fd(b)} y c = ${fd(c)}.`;
-      pasos = [{ t:'Sustituye (primero el paréntesis)', l:[`${fd(b)} + ${fd(c)} = ${fd(dN(b + c))} → ${fd(A)} = ½ × h × ${fd(dN(b + c))}`] },
-        { t:'Quita el ½: multiplica los DOS lados por 2', l:[`${fd(A)} × 2 = ${fd(dN(2 * A))} → ${cb(`${fd(dN(2 * A))} = ${fd(dN(b + c))}h`)}`] },
-        { t:`Quita el ${fd(dN(b + c))}: divide los DOS lados entre ${fd(dN(b + c))}`, l:[`h = ${fd(dN(2 * A))} ÷ ${fd(dN(b + c))}`, ...pasosDivDec(dN(2 * A), dN(b + c))] }];
+      pasos = [{ t:'Sustituye (primero el paréntesis)', l:[diagSustituir([['A', fd(A)], ['h', null], ['b', fd(b)], ['c', fd(c)]]), `${fd(b)} + ${fd(c)} = ${fd(dN(b + c))} → ${fd(A)} = ½ × h × ${fd(dN(b + c))}`] },
+        { t:'Quita el ½: multiplica los DOS lados por 2', l:[diagAmbosLados(fd(A), `½ × ${fd(dN(b + c))}h`, '× 2', fd(dN(2 * A)), `${fd(dN(b + c))}h`), `${fd(A)} × 2 = ${fd(dN(2 * A))} → ${cb(`${fd(dN(2 * A))} = ${fd(dN(b + c))}h`)}`] },
+        { t:`Quita el ${fd(dN(b + c))}: divide los DOS lados entre ${fd(dN(b + c))}`, l:[diagAmbosLados(fd(dN(2 * A)), `${fd(dN(b + c))}h`, '÷ ' + fd(dN(b + c)), fd(h), 'h'), `h = ${fd(dN(2 * A))} ÷ ${fd(dN(b + c))}`, ...pasosDivDec(dN(2 * A), dN(b + c))] }];
       pide = 'la altura h (despejar).'; error = 'olvidar el ½: se quita multiplicando por 2.';
       compF = `½ × ${fd(h)} × ${fd(dN(b + c))} = ${fd(A)} ✓`;
     }
     return { enunciado: (tipo === 'FdeC' || tipo === 'CdeF' ? '' : 'Resuelve para la desconocida. ') + enun, ...numDec(r), ...(red ? { ayuda:'Escribe el número con 2 lugares decimales.' } : {}),
       explicacion: receta({ pide, pasos, resp: fd(r, red ? 2 : undefined), comp: compF || 'hazlo otra vez en la calculadora, con los paréntesis tal como quedaron al sustituir: tiene que darte lo mismo.', error,
-        ejemplo:`${pasos.map(p => p.l[p.l.length - 1]).filter(l => !/<div/.test(l)).join(' → ').replace(/<[^>]+>/g, '')}.` }) };
+        ejemplo: _ejDe(pasos) }) };
   }
 },
 {
@@ -6034,14 +6166,14 @@ MODULOS.push(
       const bruto = R(15, 40) * 100 + pick([0, 50, 75]), ded = [['seguro de salud', decK(40, 130, 2)], ['cuota de unión', R(20, 35)], ['retiro', decK(40, 90, 2)], ['impuestos', decK(120, 250, 2)]].slice(0, R(3, 4));
       const tot = dN(ded.reduce((a, d) => a + d[1], 0)); r = dN(bruto - tot);
       enun = `Antes de las deducciones, el ingreso bruto mensual de ${quien} es ${din(bruto)}. Sus deducciones fueron: ${ded.map(d => `${d[0]}, ${din(d[1])}`).join('; ')}. Halla el pago neto que se llevó a su casa.`;
-      pasos = [{ t:'Suma todas las deducciones (lo que le quitan del cheque)', l:[colDec(ded.map(d => d[1]), '+', tot)] }, { t:'Réstaselas al ingreso bruto', l:[colDec([bruto, tot], '−', r)] }];
+      pasos = [{ t:'Suma todas las deducciones (lo que le quitan del cheque)', l:[colDec(ded.map(d => d[1]), '+', tot)] }, { t:'Réstaselas al ingreso bruto', l:[diagCadena(din(bruto), [[`− ${din(tot)} (deducciones)`, din(r)]]), colDec([bruto, tot], '−', r)] }];
       pide = 'el pago neto = ingreso bruto − todas las deducciones.'; error = 'restar solo una deducción: se suman TODAS primero.';
       extra.comp = `${din(r)} + ${din(tot)} = ${din(bruto)} ✓`; extra.ej = `${din(bruto)} − ${din(tot)} = ${din(r)}`;
     } else if(tipo === 'balance'){
       const ini = decK(1500, 9000, 2), ch = Array.from({ length: R(2, 3) }, () => decK(80, 400, 2)), dep = decK(100, 600, 2);
       const sch = dN(ch.reduce((a, b) => a + b, 0)); r = dN(ini - sch + dep);
       enun = `${quien} tenía ${din(ini)} en su cuenta de cheques. Escribió cheques por ${ch.map(din).join(', ')}. Luego hizo un depósito de ${din(dep)}. ¿Cuál es el balance en la cuenta?`;
-      pasos = [{ t:'Suma los cheques (lo que sale)', l:[colDec(ch, '+', sch)] }, { t:'Réstalos del balance', l:[colDec([ini, sch], '−', dN(ini - sch))] }, { t:'Suma el depósito (lo que entra)', l:[colDec([dN(ini - sch), dep], '+', r)] }];
+      pasos = [{ t:'Suma los cheques (lo que sale)', l:[colDec(ch, '+', sch)] }, { t:'Réstalos del balance', l:[colDec([ini, sch], '−', dN(ini - sch))] }, { t:'Suma el depósito (lo que entra)', l:[colDec([dN(ini - sch), dep], '+', r), diagCadena(din(ini), [[`− ${din(sch)} (cheques: SALE)`, din(dN(ini - sch))], [`+ ${din(dep)} (depósito: ENTRA)`, din(r)]])] }];
       pide = 'el balance: lo que había − cheques + depósitos.'; error = 'sumar los cheques al balance: un cheque es dinero que SALE.';
       extra.comp = `${din(r)} + ${din(sch)} − ${din(dep)} = ${din(ini)} ✓ (al revés: se devuelven los cheques y se quita el depósito)`; extra.ej = `${din(ini)} − ${din(sch)} + ${din(dep)} = ${din(r)}`;
     } else if(tipo === 'ganancia'){
@@ -6049,7 +6181,7 @@ MODULOS.push(
       enun = `${quien} vendió camisetas a ${din(pv)} cada una en una feria. ¿Cuánto ganó por la venta de ${n} camisetas, si cada una le costó ${din(cu)} y pagó ${din(renta)} por la renta del kiosco?`;
       pasos = [{ t:'Lo que entró (ventas): precio de una × cuántas vendió', l:[`${fd(pv)} × ${n}`, ...pasosMultDec(pv, n), `Ventas = ${din(ing)}`] },
         { t:'Lo que gastó: lo que le costaron las camisetas + la renta', l:[`Camisetas: ${fd(cu)} × ${n}`, ...pasosMultDec(cu, n), colDec([dN(cu * n), renta], '+', costo)] },
-        { t:'Ganancia = lo que entró − lo que gastó', l:[colDec([ing, costo], '−', r)] }];
+        { t:'Ganancia = lo que entró − lo que gastó', l:[diagCadena(din(ing) + ' (ventas)', [[`− ${din(costo)} (gastos)`, din(r)]]), colDec([ing, costo], '−', r)] }];
       pide = 'la ganancia = lo que entró (ventas) − todo lo que gastó (camisetas + renta).'; error = 'olvidar la renta del kiosco (también es un gasto).';
       extra.comp = `${din(r)} + ${din(costo)} = ${din(ing)} ✓`; extra.ej = `${din(ing)} − ${din(costo)} = ${din(r)}`;
     } else if(tipo === 'unitario'){
@@ -6057,7 +6189,7 @@ MODULOS.push(
         [4.5, 'onzas de oro', 'onza'], [6.3, 'libras de caramelos', 'libra'], [0.75, 'libras de queso', 'libra'], [42.5, 'kg de maní', 'kg']]);
       const tot = decK(n < 10 ? 3 : 50, n < 10 ? 99 : 4000, 2); r = redondeaK(tot / n, 2);
       enun = `Si ${fd(n)} ${cosa} cuestan ${din(tot)}, ¿cuál es el costo por ${una}? Redondea al centavo más cercano.`;
-      pasos = [{ t:`Costo por ${una} = costo total ÷ cantidad`, l:[`${fd(tot)} ÷ ${fd(n)}`, ...pasosDivDec(tot, n).slice(0, -1), `= ${fd(Math.floor(tot / n * 1000) / 1000, 3)}… (con la calculadora)`] },
+      pasos = [{ t:`Costo por ${una} = costo total ÷ cantidad`, l:[diagFilas([fd(n), din(tot)], ['1', '?'], `÷ ${fd(n)}`, `${fd(n)} ${cosa} cuestan ${din(tot)}; para saber cuánto cuesta 1 ${una} se divide entre ${fd(n)} de los DOS lados.`), `${fd(tot)} ÷ ${fd(n)}`, ...pasosDivDec(tot, n).slice(0, -1), `= ${fd(Math.floor(tot / n * 1000) / 1000, 3)}… (con la calculadora)`] },
         { t:'Redondea al centavo (el centavo es la centésima: 2 decimales)', l: explRed(tot / n, 2) }];
       pide = `cuánto cuesta UNA ${una}, al centavo.`; error = 'dividir al revés (cantidad ÷ costo): eso da unidades por dólar, no dólares por unidad.';
       extra.comp = `${din(r)} × ${fd(n)} = ${fd(dN(r * n))}, casi ${din(tot)} ✓`; extra.ej = `${fd(tot)} ÷ ${fd(n)} ≈ ${din(r)}`;
@@ -6077,14 +6209,14 @@ MODULOS.push(
     } else if(tipo === 'escala'){
       const esc = R(20, 150), d = decK(1, 9, 2); r = dN(esc * d); k = undefined;
       enun = `En un mapa, 1 pulgada representa ${esc} millas. La distancia entre dos ciudades en el mapa es ${fd(d)} pulgadas. ¿Cuántas millas hay entre las ciudades?`;
-      pasos = [{ t:'Cada pulgada del mapa vale ' + esc + ' millas', l:[`Hay ${fd(d)} pulgadas y cada una vale ${esc} millas: se multiplica.`] }, { t:'Multiplica', l:[`${fd(d)} × ${esc}`, ...pasosMultDec(d, esc), `= ${cb(fd(r))} millas`] }];
+      pasos = [{ t:'Cada pulgada del mapa vale ' + esc + ' millas', l:[`Hay ${fd(d)} pulgadas y cada una vale ${esc} millas: se multiplica.`] }, { t:'Multiplica', l:[diagFilas(['1 pulg', `${esc} millas`], [`${fd(d)} pulg`, '? millas'], `× ${fd(d)}`), `${fd(d)} × ${esc}`, ...pasosMultDec(d, esc), `= ${cb(fd(r))} millas`] }];
       pide = 'la distancia real en millas.'; error = 'dividir: si 1 pulgada = ' + esc + ' millas, más pulgadas son MÁS millas (se multiplica).';
       extra.comp = `${fd(r)} ÷ ${esc} = ${fd(d)} pulgadas ✓`; extra.ej = `${fd(d)} × ${esc} = ${fd(r)} millas`;
     } else if(tipo === 'libras'){
       const pl = decK(0.39, 2.99, 2), dinero = pick([5, 6.5, 7.5, 8, 10, 12.25]); r = redondeaK(dinero / pl, 2);
       const fruta = pick(['guineos', 'manzanas', 'pollo', 'uvas']);
       enun = `Si ${fruta === 'pollo' ? 'el pollo cuesta' : 'los ' + fruta + ' cuestan'} ${din(pl)} la libra, ¿cuántas libras se pueden comprar con ${din(dinero)}? Redondea a la centésima.`;
-      pasos = [{ t:'Libras = dinero ÷ precio de UNA libra', l:[`${fd(dinero)} ÷ ${fd(pl)}`, ...pasosDivDec(dinero, pl).slice(0, -1), `= ${fd(Math.floor(dinero / pl * 1000) / 1000, 3)}… (con la calculadora)`] },
+      pasos = [{ t:'Libras = dinero ÷ precio de UNA libra', l:[diagFilas([din(pl), '1 libra'], [din(dinero), '? libras'], `× ${fd(dN(dinero / pl), 2)}…`, `${din(dinero)} es ${fd(dinero)} ÷ ${fd(pl)} veces ${din(pl)}: alcanza para esas mismas veces 1 libra.`), `${fd(dinero)} ÷ ${fd(pl)}`, ...pasosDivDec(dinero, pl).slice(0, -1), `= ${fd(Math.floor(dinero / pl * 1000) / 1000, 3)}… (con la calculadora)`] },
         { t:'Redondea a la centésima (2 decimales)', l: explRed(dinero / pl, 2) }];
       pide = 'cuántas libras alcanzan con ese dinero.'; error = 'multiplicar el dinero por el precio.';
       extra.comp = `${fd(r, 2)} libras × ${din(pl)} = ${fd(dN(r * pl))}, casi ${din(dinero)} ✓`; extra.ej = `${fd(dinero)} ÷ ${fd(pl)} ≈ ${fd(r, 2)} libras`;
@@ -6160,7 +6292,7 @@ MODULOS.push(
       return { enunciado:`¿Entre qué dos enteros consecutivos se encuentra <b>√${n}</b>?`, tipo:'angulo2', etiquetas:['menor', 'mayor'], respuesta:{ a, b: a + 1 },
         explicacion: receta({ pide:'los dos enteros seguidos entre los que está la raíz.',
           pasos:[{ t:'Busca los cuadrados perfectos de abajo y de arriba', l:[`${a}² = ${a * a} y ${a + 1}² = ${(a + 1) * (a + 1)}`] },
-            { t:`${n} queda entre ${a * a} y ${(a + 1) ** 2}`, l:[`Entonces √${a * a} < √${n} < √${(a + 1) ** 2} → ${cb(a)} < √${n} < ${cb(a + 1)}`] }],
+            { t:`${n} queda entre ${a * a} y ${(a + 1) ** 2}`, l:[diagEntreRaiz(a, n), `Entonces √${a * a} < √${n} < √${(a + 1) ** 2} → ${cb(a)} < √${n} < ${cb(a + 1)}`] }],
           resp:`${a} y ${a + 1}`, error:'dividir el número entre 2.', ejemplo:`${a * a} < ${n} < ${(a + 1) ** 2} → entre ${a} y ${a + 1}.` }) };
     }
     if(tipo === 'estima'){
@@ -6168,8 +6300,8 @@ MODULOS.push(
       const r = redondeaK(Math.sqrt(n), 1), a = Math.floor(Math.sqrt(n)), d2 = Math.floor(Math.sqrt(n) * 100) / 100;
       return { enunciado:`Estima el valor de la raíz cuadrada a un lugar decimal (redondea a la décima):<br><b>√${n}</b>`, ...numDec(r),
         explicacion: receta({ pide:'√' + n + ' con un decimal.',
-          pasos:[{ t:'Ubícala entre dos enteros', l:[`${a}² = ${a * a} y ${a + 1}² = ${(a + 1) ** 2} → está entre ${a} y ${a + 1}`] },
-            { t:'Prueba decimales (o usa la calculadora)', l:[`${fd(r)}² = ${fd(dN(r * r))}; √${n} = ${fd(d2, 2)}…`] }, { t:'Redondea a la décima', l:[marcaDigito(d2, 1, 2), '→ ' + cb(fd(r, 1))] }],
+          pasos:[{ t:'Ubícala entre dos enteros', l:[`${a}² = ${a * a} y ${a + 1}² = ${(a + 1) ** 2} → está entre ${a} y ${a + 1}`, diagEntreRaiz(a, n)] },
+            { t:'Prueba decimales (o usa la calculadora)', l:[`${fd(r)}² = ${fd(dN(r * r))}; √${n} = ${fd(d2, 2)}…`] }, { t:'Redondea a la décima', l:[diagRed(d2, 1, 2, true, _digLugar(d2, 2) >= 5), '→ ' + cb(fd(r, 1))] }],
           resp: fd(r, 1), comp:`${fd(r)} × ${fd(r)} = ${fd(dN(r * r))}, cerca de ${n} ✓`, error:'dividir entre 2 en vez de buscar la raíz.',
           ejemplo:`√${n} ≈ ${fd(d2, 2)}… ≈ ${fd(r, 1)}.` }) };
     }
@@ -6180,7 +6312,7 @@ MODULOS.push(
       const [a, b, c] = t, ok = a * a + b * b === c * c;
       return { enunciado:`Usa el Teorema de Pitágoras para determinar si el trío de números representa los lados de un triángulo rectángulo:<br><b>(${a}, ${b}, ${c})</b>`, tipo:'sino', respuesta: ok,
         explicacion: receta({ pide:'si a² + b² = c² (c = el lado más largo).',
-          pasos:[{ t:'El más largo es la hipotenusa', l:[`c = ${c}`] }, { t:'Suma los cuadrados de los otros dos', l:[`${a}² + ${b}² = ${a * a} + ${b * b} = ${a * a + b * b}`] },
+          pasos:[{ t:'El más largo es la hipotenusa', l:[_nota(svgTriRect(a, b, 'c = ' + c), 'La hipotenusa (c) es el lado más largo: el que queda frente al ángulo recto (la esquina cuadrada).'), `c = ${c}`] }, { t:'Suma los cuadrados de los otros dos', l:[`${a}² + ${b}² = ${a * a} + ${b * b} = ${a * a + b * b}`] },
             { t:'Compara con el cuadrado del más largo', l:[`${c}² = ${c * c} → ${a * a + b * b} ${ok ? '=' : '≠'} ${c * c} → ${cb(ok ? 'Sí' : 'No')}`] }],
           resp: ok ? 'Sí' : 'No', error:'sumar los lados sin elevarlos al cuadrado.', ejemplo:`${a * a} + ${b * b} = ${a * a + b * b} ${ok ? '=' : '≠'} ${c * c}.` }) };
     }
@@ -6193,7 +6325,7 @@ MODULOS.push(
       r = redondeaK(c, 2);
       enun = `Usa el Teorema de Pitágoras para hallar la hipotenusa del triángulo rectángulo (redondea a dos lugares decimales).`;
       fig = svgTriRect(`${fd(b)} ${u}`, `${fd(a)} ${u}`, 'c = ?');
-      pasos = [{ t:'Pitágoras: c² = a² + b²', l:[`c² = ${fd(a)}² + ${fd(b)}² = ${fd(dN(a * a))} + ${fd(dN(b * b))} = ${fd(dN(a * a + b * b))}`] },
+      pasos = [{ t:'Pitágoras: c² = a² + b²', l:[_nota(svgTriRect(`b = ${fd(b)}`, `a = ${fd(a)}`, 'c = ?'), 'Los dos lados que forman la esquina cuadrada son a y b; la c (hipotenusa) es la que falta.'), `c² = ${fd(a)}² + ${fd(b)}² = ${fd(dN(a * a))} + ${fd(dN(b * b))} = ${fd(dN(a * a + b * b))}`] },
         { t:'Saca la raíz cuadrada', l:[`c = √${fd(dN(a * a + b * b))} = ${fd(Math.floor(c * 1000) / 1000, 3)}…`] }, { t:'Redondea a la centésima', l:[cb(fd(r, 2) + ' ' + u)] }];
     } else {
       const hip = esc ? R(15, 40) : decR(b + 1, b + 20, R(0, 1)); c = hip; const lado = esc ? R(8, hip - 3) : b;
@@ -6201,7 +6333,7 @@ MODULOS.push(
       enun = esc ? `Una escalera de ${hip} pies se usa para alcanzar el tope de una pared de ${lado} pies de altura. Halla la distancia desde la base de la escalera en el piso hasta la pared (redondea a dos lugares decimales).`
                  : `Usa el Teorema de Pitágoras para hallar el lado desconocido del triángulo rectángulo (redondea a dos lugares decimales).`;
       fig = esc ? svgTriRect('x = ?', `pared: ${lado} pies`, `escalera: ${hip} pies`) : svgTriRect('x = ?', `${fd(lado)} ${u}`, `${fd(hip)} ${u}`);
-      pasos = [{ t:'La hipotenusa (la más larga, frente al ángulo recto) va sola: c² = a² + b²', l:[`${fd(hip)}² = x² + ${fd(lado)}²`] },
+      pasos = [{ t:'La hipotenusa (la más larga, frente al ángulo recto) va sola: c² = a² + b²', l:[_nota(svgTriRect('x = ?', `${fd(lado)}`, `c = ${fd(hip)}`), 'La hipotenusa (la más larga) ya se sabe; falta uno de los lados de la esquina cuadrada: por eso se RESTA.'), `${fd(hip)}² = x² + ${fd(lado)}²`] },
         { t:'Despeja x²: resta', l:[`x² = ${fd(dN(hip * hip))} − ${fd(dN(lado * lado))} = ${fd(dN(hip * hip - lado * lado))}`] },
         { t:'Saca la raíz y redondea', l:[`x = √${fd(dN(hip * hip - lado * lado))} = ${fd(Math.floor(otro * 1000) / 1000, 3)}… ≈ ${cb(fd(r, 2))}`] }];
     }
@@ -6209,7 +6341,7 @@ MODULOS.push(
       explicacion: receta({ pide: busca === 'hip' ? 'el lado más largo (la hipotenusa).' : 'el cateto que falta.', pasos, resp: fd(r, 2),
         comp: busca === 'hip' ? 'la hipotenusa tiene que ser más larga que los otros dos lados ✓' : 'el cateto tiene que ser más corto que la hipotenusa ✓',
         error: busca === 'hip' ? 'sumar los lados sin elevar al cuadrado, o olvidar sacar la raíz al final.' : 'SUMAR los cuadrados cuando falta un cateto: se RESTA (hipotenusa² − cateto²).',
-        ejemplo: pasos.map(p => p.l[p.l.length - 1]).filter(l => !/<div/.test(l)).join(' → ').replace(/<[^>]+>/g, '') + '.' }) };
+        ejemplo: _ejDe(pasos) }) };
   }
 },
 {
@@ -6296,7 +6428,7 @@ MODULOS.push(
     return { enunciado: enun, ...numDec(r), ...(red ? { ayuda:'Escribe el número con 2 lugares decimales.' } : {}),
       explicacion: receta({ pide, pasos, resp:`${fd(r, red ? 2 : undefined)} ${uR}`, error,
         comp: uR.endsWith('²') ? 'las áreas van en unidades CUADRADAS (' + uR + ').' : uR.endsWith('³') ? 'los volúmenes van en unidades CÚBICAS (' + uR + ').' : 'el perímetro va en unidades de largo (' + uR + ').',
-        ejemplo: pasos.map(p => p.l[p.l.length - 1]).filter(l => !/<div/.test(l)).join(' → ').replace(/<[^>]+>/g, '') + '.' }) };
+        ejemplo: _ejDe(pasos) }) };
   }
 }
 );
@@ -6319,7 +6451,7 @@ MODULOS.push(
       return { enunciado:`Escribe el porciento como un número decimal:<br><b>${fd(p)}%</b>`, ...numDec(r),
         explicacion: receta({ pide:'el porciento sin el símbolo %, como decimal.',
           pasos:[{ t:'"%" significa "de cada 100": se divide entre 100', l:[`${fd(p)}% = ${fd(p)} ÷ 100`] },
-            { t:'Dividir entre 100 = mover el punto 2 lugares a la IZQUIERDA y quitar el %', l:[`${fd(p)} → ${cb(fd(r))}${lugares(p) + 2 > lugares(r) || p < 10 ? ' (se agregan ceros si faltan lugares)' : ''}`] }],
+            { t:'Dividir entre 100 = mover el punto 2 lugares a la IZQUIERDA y quitar el %', l:[`${fd(p)} → ${cb(fd(r))}`, diagPunto(p, -2)] }],
           resp: fd(r), comp:`${fd(r)} × 100 = ${fd(p)} ✓`, error:'mover el punto hacia la derecha (eso es al revés: de decimal a porciento).',
           ejemplo:`${fd(p)}% → 2 lugares a la izquierda → ${fd(r)}.` }) };
     }
@@ -6327,7 +6459,7 @@ MODULOS.push(
       const v = pick([decK(0.001, 0.999, R(2, 3)), decK(1, 9, 2), R(2, 40), decK(0.0001, 0.009, 4)]), r = dN(v * 100);
       return { enunciado:`Escribe el número decimal como un porciento:<br><b>${fd(v)}</b>`, ...numDec(r), ayuda:'Escribe solo el número (sin el símbolo %).',
         explicacion: receta({ pide:'el número como porciento (de cada 100).',
-          pasos:[{ t:'Multiplica por 100: el punto se mueve 2 lugares a la DERECHA', l:[`${fd(v)} × 100 = ${fd(r)}`] }, { t:'Pon el símbolo %', l:[cb(fd(r) + '%')] }],
+          pasos:[{ t:'Multiplica por 100: el punto se mueve 2 lugares a la DERECHA', l:[`${fd(v)} × 100 = ${fd(r)}`, diagPunto(v, 2)] }, { t:'Pon el símbolo %', l:[cb(fd(r) + '%')] }],
           resp: fd(r) + '%', comp:`${fd(r)}% ÷ 100 = ${fd(v)} ✓`, error:'mover el punto a la izquierda (eso es de porciento a decimal).',
           ejemplo:`${fd(v)} → 2 lugares a la derecha → ${fd(r)}%.` }) };
     }
@@ -6362,7 +6494,7 @@ MODULOS.push(
       return { enunciado:`Escribe el número como un porciento. Redondea a la décima de porciento más cercana:<br><b style="font-size:1.1em">${fr(n, d)}</b>`, ...numDec(r), ayuda:'Escribe solo el número (sin el %).',
         explicacion: receta({ pide:'la fracción como porciento (con un decimal).',
           pasos:[{ t:'Pasa la fracción a decimal: arriba ÷ abajo (hasta 4 decimales)', l:[...divLarga(n, d, 4).lineas, `${n} ÷ ${d} = ${fd(Math.floor(n / d * 1e4) / 1e4, 4)}…`] },
-            { t:'Pásalo a porciento: × 100 (el punto 2 lugares a la derecha)', l:[`${fd(Math.floor(n / d * 1e4) / 1e4, 4)}… × 100 = ${fd(Math.floor(n / d * 1e4) / 100, 2)}…%`] }, { t:'Redondea a la décima de porciento', l: explRed(exacto, 1).map(l => l.replace(/(<b class="cambia">[^<]*)<\/b>$/, '$1%</b>')) }],
+            { t:'Pásalo a porciento: × 100 (el punto 2 lugares a la derecha)', l:[`${fd(Math.floor(n / d * 1e4) / 1e4, 4)}… × 100 = ${fd(Math.floor(n / d * 1e4) / 100, 2)}…%`, diagPunto(Math.floor(n / d * 1e4) / 1e4, 2)] }, { t:'Redondea a la décima de porciento', l: explRed(exacto, 1).map(l => l.replace(/(<b class="cambia">[^<]*)<\/b>$/, '$1%</b>')) }],
           resp: fd(r, 1) + '%', error:'olvidar multiplicar por 100 al final.', ejemplo:`${n}/${d} ≈ ${fd(Math.floor(n / d * 1e4) / 1e4, 4)} ≈ ${fd(r, 1)}%.` }) };
     }
     // inversión: ¿cuál da mayor porciento de ganancia?
@@ -6384,7 +6516,7 @@ MODULOS.push(
   gen(nv){
     const tipo = pick(nv === 'facil' ? ['C','C','T','B'] : nv === 'medio' ? ['C','T','B','B','cambio','problema'] : ['C','T','B','cambio','problema','problema','esp']);
     const formula = 'C = T · B (Cantidad = Tasa × Base). La BASE es el total (va después de "de"), la TASA es el porciento y la CANTIDAD es la parte.';
-    const paso0 = { t:'Identifica Base, Tasa y Cantidad', l:[formula] };
+    const paso0 = (C, T, B) => ({ t:'Identifica Base, Tasa y Cantidad', l:[formula, diagSustituir([['C', C], ['T', T], ['B', B]], 'C = T · B: cada letra con su número (flecha hacia abajo); la del "?" es la que se busca.')] });
     if(tipo === 'C' || tipo === 'esp'){
       let T, Tdec, Thtml, Ttxt, B;
       if(tipo === 'esp'){ const s = pick(PCT_ESP); B = s.f.d * R(5, 60); T = s.v; Tdec = s.f; Thtml = s.html; Ttxt = s.txt; }
@@ -6392,7 +6524,7 @@ MODULOS.push(
       const exacto = Tdec ? B * Tdec.n / Tdec.d : T * B / 100, red = lugares(dN(exacto)) > 2, r = red ? redondeaK(exacto, 2) : dN(exacto);
       return { enunciado:`¿${Thtml} de ${miles(B)} es qué número?${red ? ' Redondea a la centésima.' : ''}`, ...numDec(r),
         explicacion: receta({ pide:'la CANTIDAD (la parte).',
-          pasos:[paso0, { t:'Escribe la ecuación', l:[`C = ${Ttxt} × ${miles(B)}`] },
+          pasos:[paso0(null, Ttxt, miles(B)), { t:'Escribe la ecuación', l:[`C = ${Ttxt} × ${miles(B)}`] },
             { t:'Pasa el porciento a ' + (Tdec ? 'fracción' : 'decimal'), l:[Tdec ? `${Ttxt} = ${tf(Tdec.n, Tdec.d)} (es más fácil que el decimal infinito)` : pctDec(T)] },
             { t:'Multiplica', l: Tdec ? [`${tf(Tdec.n, Tdec.d)} × ${miles(B)}: primero ${miles(B)} ÷ ${Tdec.d} = ${miles(B / Tdec.d)}, después × ${Tdec.n} = ${cb(fd(r))}`] : [`${fd(dN(T / 100))} × ${miles(B)}`, ...pasosMultDec(dN(T / 100), B)] },
             ...(red ? [{ t:'Redondea a la centésima', l: explRed(exacto, 2) }] : [])],
@@ -6405,8 +6537,8 @@ MODULOS.push(
       const forma = Math.random() < 0.5 ? `¿${fd(T)}% de qué número es ${fd(C)}?` : `¿${fd(C)} es ${fd(T)}% de qué número?`;
       return { enunciado: forma, ...numDec(B),
         explicacion: receta({ pide:'la BASE (el total).',
-          pasos:[paso0, { t:'Escribe la ecuación con la B desconocida', l:[`${fd(C)} = ${fd(T)}% × B`, pctDec(T), `→ ${cb(`${fd(C)} = ${fd(dN(T / 100))} × B`)}`] },
-            { t:`Despeja B: divide los DOS lados entre ${fd(dN(T / 100))}`, l:[`B = ${fd(C)} ÷ ${fd(dN(T / 100))}`, ...pasosDivDec(C, dN(T / 100))] }],
+          pasos:[paso0(fd(C), fd(T) + '%', null), { t:'Escribe la ecuación con la B desconocida', l:[`${fd(C)} = ${fd(T)}% × B`, pctDec(T), `→ ${cb(`${fd(C)} = ${fd(dN(T / 100))} × B`)}`] },
+            { t:`Despeja B: divide los DOS lados entre ${fd(dN(T / 100))}`, l:[diagAmbosLados(fd(C), fd(dN(T / 100)) + ' × B', '÷ ' + fd(dN(T / 100)), fd(B), 'B'), `B = ${fd(C)} ÷ ${fd(dN(T / 100))}`, ...pasosDivDec(C, dN(T / 100))] }],
           resp: fd(B), comp:`${fd(T)}% de ${fd(B)} = ${fd(dN(T / 100))} × ${fd(B)} = ${fd(C)} ✓`, error:'multiplicar en vez de dividir: aquí lo que falta es el TOTAL.',
           ejemplo:`B = ${fd(C)} ÷ ${fd(dN(T / 100))} = ${fd(B)}.` }) };
     }
@@ -6415,8 +6547,8 @@ MODULOS.push(
       if(lugares(C) > 2) return this.gen(nv);
       return { enunciado:`¿Qué porciento de ${miles(B)} es ${fd(C)}?`, ...numDec(T), ayuda:'Escribe solo el número (sin el %).',
         explicacion: receta({ pide:'la TASA (el porciento).',
-          pasos:[paso0, { t:'Escribe la ecuación con la T desconocida', l:[`${fd(C)} = T × ${miles(B)}`] },
-            { t:`Despeja T: divide los DOS lados entre ${miles(B)}`, l:[`T = ${fd(C)} ÷ ${miles(B)}`, ...pasosDivDec(C, B)] }, { t:'Pasa el decimal a porciento (× 100)', l:[decPct(dN(T / 100))] }],
+          pasos:[paso0(fd(C), null, miles(B)), { t:'Escribe la ecuación con la T desconocida', l:[`${fd(C)} = T × ${miles(B)}`] },
+            { t:`Despeja T: divide los DOS lados entre ${miles(B)}`, l:[diagAmbosLados(fd(C), 'T × ' + miles(B), '÷ ' + miles(B), fd(dN(T / 100)), 'T'), `T = ${fd(C)} ÷ ${miles(B)}`, ...pasosDivDec(C, B)] }, { t:'Pasa el decimal a porciento (× 100)', l:[decPct(dN(T / 100))] }],
           resp: fd(T) + '%', comp:`${fd(T)}% de ${miles(B)} = ${fd(C)} ✓`, error:`dividir al revés (${miles(B)} ÷ ${fd(C)}): la parte va arriba y el total abajo.`,
           ejemplo:`${fd(C)} ÷ ${miles(B)} = ${fd(dN(T / 100))} = ${fd(T)}%.` }) };
     }
@@ -6426,7 +6558,7 @@ MODULOS.push(
       const cosa = pick([['El costo de cierto artículo', '$'], ['El número de estudiantes admitidos a una escuela', ''], ['La población de un pueblo', ''], ['El precio de un galón de leche', '$']]);
       return { enunciado:`${cosa[0]} ${sube ? 'aumentó' : 'bajó'} de ${cosa[1]}${fd(V)} a ${cosa[1]}${fd(N)}. ¿Cuál es el porciento de ${sube ? 'aumento' : 'disminución'}?`, ...numDec(p), ayuda:'Escribe solo el número (sin el %).',
         explicacion: receta({ pide:`el porciento de ${sube ? 'aumento' : 'disminución'} (siempre comparado con el valor de ANTES).`,
-          pasos:[{ t:`Cuánto ${sube ? 'aumentó' : 'bajó'}: resta`, l:[`${fd(Math.max(V, N))} − ${fd(Math.min(V, N))} = ${fd(Math.abs(dN(N - V)))}`] },
+          pasos:[{ t:`Cuánto ${sube ? 'aumentó' : 'bajó'}: resta`, l:[diagCadena(`${cosa[1]}${fd(V)} (antes)`, [[`${sube ? '+' : '−'} ${fd(Math.abs(dN(N - V)))} (el cambio)`, `${cosa[1]}${fd(N)} (después)`]], `El cambio es lo que hay entre antes y después; el porciento se saca comparándolo con el de ANTES (${fd(V)}).`), `${fd(Math.max(V, N))} − ${fd(Math.min(V, N))} = ${fd(Math.abs(dN(N - V)))}`] },
             { t:'Divide entre el valor ORIGINAL (el de antes)', l:[`${fd(Math.abs(dN(N - V)))} ÷ ${fd(V)}`, ...pasosDivDec(Math.abs(dN(N - V)), V)] }, { t:'Pásalo a porciento (× 100)', l:[decPct(dN(p / 100))] }],
           resp: p + '%', comp:`${p}% de ${fd(V)} = ${fd(dN(p / 100))} × ${fd(V)} = ${fd(Math.abs(dN(N - V)))}, y ${fd(V)} ${sube ? '+' : '−'} ${fd(Math.abs(dN(N - V)))} = ${fd(N)} ✓`, error:'dividir entre el valor NUEVO: el porciento de cambio se compara con el de antes.',
           ejemplo:`${fd(Math.abs(dN(N - V)))} ÷ ${fd(V)} = ${fd(dN(p / 100))} → ${p}%.` }) };
@@ -6438,38 +6570,39 @@ MODULOS.push(
       enun = `En una escuela, el ${p}% de los estudiantes son varones y el número de niñas es ${miles(otros)}. ¿Cuántos varones hay?`;
       pasos = [{ t:'Qué porciento son niñas (lo que falta para el 100%)', l:[`100% − ${p}% = ${cb((100 - p) + '%')}`] },
         { t:'Halla el total con C = T · B (la parte que conoces son las niñas)', l:[`${miles(otros)} = ${100 - p}% × B`, pctDec(100 - p), `B = ${miles(otros)} ÷ ${fd(dN((100 - p) / 100))}`, ...pasosDivDec(otros, dN((100 - p) / 100))] },
-        { t:'Varones = total − niñas', l:[`${miles(tot)} − ${miles(otros)} = ${cb(miles(r))}`] }];
+        { t:'Varones = total − niñas', l:[diagCadena(`${miles(tot)} (todos)`, [[`− ${miles(otros)} (niñas)`, `${miles(r)} (varones)`]]), `${miles(tot)} − ${miles(otros)} = ${cb(miles(r))}`] }];
       comp = `${p}% de ${miles(tot)} = ${fd(dN(p / 100))} × ${miles(tot)} = ${miles(r)} varones ✓`; }
     else if(caso === 2){ const p = pick([12, 14, 15, 20, 25, 8]), B = R(3, 90) * 50; const C = dN(B * p / 100); r = B;
       enun = `Un mineral contiene ${p}% de cobre. ¿Cuántos kilogramos del mineral contienen ${fd(C)} kg de cobre?`;
       pasos = [{ t:'El cobre es la parte (C); el mineral es el total (B)', l:[`${fd(C)} = ${p}% × B`, pctDec(p), `→ ${cb(`${fd(C)} = ${fd(dN(p / 100))} × B`)}`] },
-        { t:`Despeja B: divide los DOS lados entre ${fd(dN(p / 100))}`, l:[`B = ${fd(C)} ÷ ${fd(dN(p / 100))}`, ...pasosDivDec(C, dN(p / 100)), `El mineral pesa ${cb(miles(B) + ' kg')}`] }];
+        { t:`Despeja B: divide los DOS lados entre ${fd(dN(p / 100))}`, l:[diagAmbosLados(fd(C), fd(dN(p / 100)) + ' × B', '÷ ' + fd(dN(p / 100)), fd(B), 'B'), `B = ${fd(C)} ÷ ${fd(dN(p / 100))}`, ...pasosDivDec(C, dN(p / 100)), `El mineral pesa ${cb(miles(B) + ' kg')}`] }];
       comp = `${p}% de ${miles(B)} = ${fd(dN(p / 100))} × ${miles(B)} = ${fd(C)} kg de cobre ✓`; }
     else if(caso === 3){ const P = R(80, 300) * 100, p = pick([10, 12, 15, 20, 25]); r = dN(P * (1 - p / 100));
       enun = `James compró un auto en $${miles(P)}. Hizo un pronto pago de ${p}%. Halla la cantidad del préstamo.`;
       pasos = [{ t:'Pronto pago = ' + p + '% del precio', l:[pctDec(p), `${fd(dN(p / 100))} × ${miles(P)} = $${miles(dN(P * p / 100))}`] },
-        { t:'Préstamo = precio − pronto pago (lo que no pagó al principio)', l:[`${miles(P)} − ${miles(dN(P * p / 100))} = ${cb('$' + fd(r))}`] }];
+        { t:'Préstamo = precio − pronto pago (lo que no pagó al principio)', l:[diagCadena(`$${miles(P)} (precio)`, [[`− $${miles(dN(P * p / 100))} (pronto pago)`, `$${fd(r)} (préstamo)`]]), `${miles(P)} − ${miles(dN(P * p / 100))} = ${cb('$' + fd(r))}`] }];
       comp = `el préstamo es el ${100 - p}% del precio (100% − ${p}%): ${fd(dN((100 - p) / 100))} × ${miles(P)} = $${fd(r)} ✓`; }
     else if(caso === 4){ const V = R(50, 900) * 100, p = pick([12, 15, 16, 20, 11]); const anios = R(1, 2); r = redondeaK(V * Math.pow(1 - p / 100, anios), 2);
       enun = `El valor de una maquinaria deprecia a una tasa de ${p}% por año. Si la maquinaria nueva cuesta $${miles(V)}, ¿cuál será su valor después de ${anios === 1 ? '1 año' : '2 años'}?`;
       const v1 = dN(V * (1 - p / 100)), v2 = dN(v1 * (1 - p / 100));
       pasos = [{ t:`Cada año pierde el ${p}%, así que le queda el ${100 - p}% (100% − ${p}%)`, l:[pctDec(100 - p), `Año 1: ${fd(dN((100 - p) / 100))} × ${miles(V)} = $${fd(v1)}`] },
         ...(anios === 2 ? [{ t:'El segundo año se deprecia el valor que QUEDÓ (no el de nuevo)', l:[`Año 2: ${fd(dN((100 - p) / 100))} × ${fd(v1)} = ${lugares(v2) > 2 ? fd(v2) : cb('$' + fd(r, 2))}`, ...(lugares(v2) > 2 ? explRed(v2, 2) : [])] }] : [])];
+      pasos[pasos.length - 1].l.push(diagCadena(`$${miles(V)} (nueva)`, [[`× ${fd(dN((100 - p) / 100))} (le queda el ${100 - p}%)`, `$${fd(anios === 1 ? v1 : dN(v1))}`], ...(anios === 2 ? [[`× ${fd(dN((100 - p) / 100))} (otra vez, sobre lo que quedó)`, `$${fd(r, 2)}`]] : [])], 'Cada año se multiplica por lo que QUEDA (el de arriba es lo que valía; la flecha, lo que se hace; abajo, lo que vale después).'));
       comp = anios === 1 ? `pierde ${fd(dN(p / 100))} × ${miles(V)} = $${fd(dN(V * p / 100))}, y ${miles(V)} − ${fd(dN(V * p / 100))} = $${fd(v1)} ✓` : `cada año vale menos: $${miles(V)} → $${fd(v1)} → $${fd(r, 2)} ✓`; }
     else { const B = R(50, 2000) * 100, p = pick([5, 8, 12, 15, 20]); r = dN(B * (1 + p / 100));
       enun = `La población de una ciudad aumentó ${p}% desde el último censo. Si la población anterior era de ${miles(B)} habitantes, ¿cuál es la población actual?`;
-      pasos = [{ t:'Aumento = ' + p + '% de la población anterior', l:[pctDec(p), `${fd(dN(p / 100))} × ${miles(B)} = ${miles(dN(B * p / 100))}`] }, { t:'Población actual = anterior + aumento', l:[`${miles(B)} + ${miles(dN(B * p / 100))} = ${cb(miles(r))}`] }];
+      pasos = [{ t:'Aumento = ' + p + '% de la población anterior', l:[pctDec(p), `${fd(dN(p / 100))} × ${miles(B)} = ${miles(dN(B * p / 100))}`] }, { t:'Población actual = anterior + aumento', l:[diagCadena(`${miles(B)} (antes)`, [[`+ ${miles(dN(B * p / 100))} (el ${p}% que aumentó)`, `${miles(r)} (ahora)`]]), `${miles(B)} + ${miles(dN(B * p / 100))} = ${cb(miles(r))}`] }];
       comp = `la actual es el ${100 + p}% de la anterior: ${fd(dN(1 + p / 100))} × ${miles(B)} = ${miles(r)} ✓`; }
     return { enunciado: enun, ...numDec(r),
       explicacion: receta({ pide:'la cantidad que pregunta el problema (usando C = T · B).', pasos, resp: fd(r), comp,
-        error:'usar el porciento que NO es: lee bien a qué parte se refiere el porciento.', ejemplo: pasos.map(p => p.l[p.l.length - 1]).filter(l => !/<div/.test(l)).join(' → ').replace(/<[^>]+>/g, '') + '.' }) };
+        error:'usar el porciento que NO es: lee bien a qué parte se refiere el porciento.', ejemplo: _ejDe(pasos) }) };
   }
 },
 {
   id:'comercial-dec', nombre:'Aplicaciones comerciales: margen, descuento, impuesto, comisión y propina', secciones:['8.3'],
   gen(nv){
     const tipo = pick(nv === 'facil' ? ['descuento','impuesto','margenCosto','comision'] : nv === 'medio' ? ['descuento','impuesto','margenCosto','margenPct','comision','propina','marcado'] : ['sucesivos','impuesto','costoDesdePrecio','margenPct','comision','propina','marcado','pctGanancia']);
-    let enun, r, pasos, pide, error, comp, pct = false;
+    let enun, r, pasos, pide, error, comp, pct = false, cad = '';   // cad = la cadena de toda la cuenta (dibujo), va al final
     // dinero: si quedan más de 2 decimales se redondea al centavo (y se explica); aprox = el número y su redondeo
     const aCent = v => lugares(dN(v)) > 2 ? ['Es dinero: se redondea al centavo (2 decimales).', ...explRed(v, 2)] : [];
     const aprox = v => fd(dN(v)) + (lugares(dN(v)) > 2 ? ' ≈ ' + din2(redondeaK(v, 2)) : '');
@@ -6480,6 +6613,7 @@ MODULOS.push(
       pasos = [{ t:`Pasa el ${m}% a decimal`, l:[pctDec(m)] },
         { t:`Margen = ${m}% del COSTO: multiplica ${fd(dN(m / 100))} × ${fd(c)}`, l:[...pasosMultDec(dN(m / 100), c), ...aCent(mg)] },
         { t:'Precio de venta = costo + margen', l:[`${din2(c)} + ${din2(mgR)} = ${cb(din2(r))}`] }];
+      cad = diagCadena(`${din2(c)} (costo)`, [[`+ ${din2(mgR)} (margen: ${m}% del costo)`, `${din2(r)} (precio de venta)`]]);
       pide = 'el precio de venta.'; error = 'dar el margen como respuesta: el precio de venta es costo + margen.';
       comp = `el precio de venta es el ${100 + m}% del costo (100% + ${m}%): ${fd(dN(1 + m / 100))} × ${fd(c)} = ${aprox(c * (1 + m / 100))} ✓`;
     } else if(tipo === 'margenPct'){
@@ -6500,6 +6634,7 @@ MODULOS.push(
       pasos = [{ t:`Pasa el ${m}% a decimal`, l:[pctDec(m)] },
         { t:`Margen = ${m}% del PRECIO DE VENTA: multiplica ${fd(dN(m / 100))} × ${fd(pv)}`, l: pasosMultDec(dN(m / 100), pv) },
         { t:'Costo = precio de venta − margen', l:[`${fd(pv)} − ${fd(mg)} = ${lugares(cs) > 2 ? fd(cs) : cb(din2(r))}`, ...aCent(cs)] }];
+      cad = diagCadena(`${din2(pv)} (precio de venta)`, [[`− $${fd(mg)} (margen: ${m}% del precio)`, `${din2(r)} (costo)`]]);
       pide = 'el costo (lo que le costó a la tienda).'; error = 'calcular el margen sobre el costo: aquí el porciento es del precio de venta.';
       comp = `el costo es el ${100 - m}% del precio de venta (100% − ${m}%): ${fd(dN(1 - m / 100))} × ${fd(pv)} = ${aprox(pv * (1 - m / 100))} ✓`;
     } else if(tipo === 'descuento'){
@@ -6509,6 +6644,7 @@ MODULOS.push(
       pasos = [{ t:`Pasa el ${d}% a decimal`, l:[pctDec(d)] },
         { t:`Descuento = ${d}% del precio de lista: multiplica ${fd(dN(d / 100))} × ${fd(L)}`, l: pasosMultDec(dN(d / 100), L) },
         { t:'Precio de venta = lista − descuento', l:[`${fd(L)} − ${fd(desc)} = ${lugares(pv) > 2 ? fd(pv) : cb(din2(r))}`, ...aCent(pv)] }];
+      cad = diagCadena(`${din2(L)} (precio de lista)`, [[`− $${fd(desc)} (descuento: ${d}%)`, `${din2(r)} (lo que pagas)`]]);
       pide = 'lo que se paga después del descuento.'; error = 'dar el descuento como respuesta: se le RESTA al precio.';
       comp = `con ${d}% de descuento pagas el ${100 - d}% (100% − ${d}%): ${fd(dN(1 - d / 100))} × ${fd(L)} = ${aprox(L * (1 - d / 100))} ✓`;
     } else if(tipo === 'sucesivos'){
@@ -6518,6 +6654,7 @@ MODULOS.push(
       pasos = [{ t:`Con el primer descuento (${d1}%) se paga el ${100 - d1}% (100% − ${d1}%)`, l:[pctDec(100 - d1)] },
         { t:`Precio después del primer descuento: ${fd(f1)} × ${L}`, l: pasosMultDec(f1, L) },
         { t:`El segundo descuento (${d2}%) es sobre el precio que QUEDÓ (${din2(p1)}): se paga el ${100 - d2}%`, l:[pctDec(100 - d2), ...pasosMultDec(f2, p1), ...aCent(p1 * f2)] }];
+      cad = diagCadena(`${din2(L)} (lista)`, [[`× ${fd(f1)} (quita el ${d1}%)`, `$${fd(p1)}`], [`× ${fd(f2)} (quita el ${d2}% de lo que QUEDÓ)`, `${din2(r)} (final)`]], 'Los descuentos van uno DESPUÉS del otro: el segundo se le hace a lo que quedó del primero (no se suman).');
       pide = 'el precio final.'; error = `sumar los descuentos (${d1}% + ${d2}% = ${d1 + d2}%): el segundo se calcula sobre el precio ya rebajado.`;
       comp = `los dos juntos dejan ${fd(f1)} × ${fd(f2)} = ${fd(f12)} del precio (pagas el ${fd(dN(f12 * 100))}%, NO el ${100 - d1 - d2}%): ${fd(f12)} × ${L} = ${aprox(L * f12)} ✓`;
     } else if(tipo === 'marcado'){
@@ -6526,7 +6663,7 @@ MODULOS.push(
       const f = dN(1 - d / 100);
       enun = `Una tienda anunció un descuento de ${d}% en todo. Halla el precio marcado de una camisa si se vende en ${din2(S)}.`;
       pasos = [{ t:`Con ${d}% de descuento se paga el ${100 - d}% del precio marcado (100% − ${d}%)`, l:[pctDec(100 - d), `Llama M al precio marcado: ${cb(`${fd(S)} = ${fd(f)} × M`)}`] },
-        { t:`Despeja M: divide los DOS lados entre ${fd(f)}`, l:[`M = ${fd(S)} ÷ ${fd(f)}`, ...pasosDivDec(S, f), `El precio marcado es ${cb(din2(M))}`] }];
+        { t:`Despeja M: divide los DOS lados entre ${fd(f)}`, l:[diagAmbosLados(fd(S), `${fd(f)} × M`, `÷ ${fd(f)}`, fd(M), 'M'), `M = ${fd(S)} ÷ ${fd(f)}`, ...pasosDivDec(S, f), `El precio marcado es ${cb(din2(M))}`] }];
       pide = 'el precio ANTES del descuento.'; error = `sumarle el ${d}% al precio de venta: el ${d}% era del precio marcado, no del de venta.`;
       comp = `quítale el ${d}% a ${din2(M)}: ${fd(f)} × ${fd(M)} = ${fd(S)}, lo que se pagó ✓`;
     } else if(tipo === 'impuesto'){
@@ -6541,6 +6678,7 @@ MODULOS.push(
           : [`Los centavos son los 2 primeros dígitos después del punto: ${fd(cent, 2)}. Después todavía hay dígitos (${fd(tx).split('.')[1].slice(2)}), y aunque sea poquito, el impuesto sube 1 centavo (no importa si es menos de 5):`,
              `${fd(cent, 2)} + 0.01 = ${cb(din2(imp))}`] },
         { t:'Costo total = compra + impuesto', l:[`${din2(sub)} + ${din2(imp)} = ${cb(din2(r))}`] }];
+      cad = diagCadena(`${din2(sub)} (compra)`, [[`+ ${din2(imp)} (impuesto: ${fd(t)}%)`, `${din2(r)} (total)`]]);
       pide = 'lo que se paga en total con el impuesto.'; error = 'redondear el impuesto hacia abajo: en el libro (y en las tiendas) el impuesto siempre sube al próximo centavo.';
       comp = `el total menos la compra tiene que dar el impuesto: ${fd(r)} − ${fd(sub)} = ${fd(imp)} ✓`;
     } else if(tipo === 'comision'){
@@ -6551,6 +6689,7 @@ MODULOS.push(
         { t:`Pasa el ${c}% a decimal`, l:[pctDec(c)] },
         { t:`Comisión = ${c}% de ${sobre ? 'eso' : 'las ventas'}: multiplica ${fd(dN(c / 100))} × ${fd(v - sobre)}`, l: pasosMultDec(dN(c / 100), v - sobre) },
         { t:'Ingreso = salario + comisión', l:[`${din2(sal)} + ${din2(com)} = ${cb(din2(r))}`] }];
+      cad = diagCadena(`${din2(sal)} (salario)`, [[`+ ${din2(com)} (comisión: ${c}%)`, `${din2(r)} (ingreso)`]]);
       pide = 'lo que gana en total.'; error = sobre ? `calcular la comisión sobre todas las ventas: solo cuenta lo que pasa de ${din2(sobre)}.` : 'olvidar sumar el salario.';
       comp = `${fd(r)} − ${fd(sal)} = ${fd(com)} de comisión, y ${fd(com)} ÷ ${fd(v - sobre)} = ${fd(dN(c / 100))}, o sea ${c}% ✓`;
     } else if(tipo === 'propina'){
@@ -6560,6 +6699,7 @@ MODULOS.push(
         { t:'El 10%: mueve el punto un lugar a la izquierda (es dividir entre 10)', l:[`10% de $${redd} = ${redd} ÷ 10 = ${din2(diez)}`] },
         { t:'El 5% es la mitad del 10%', l:[`${fd(diez)} ÷ 2 = ${din2(cinco)}`] },
         { t:'Propina (15%) = el 10% + el 5%', l:[`${fd(diez)} + ${fd(cinco)} = ${cb(din2(r))}`] }];
+      cad = diagCadena(`${din2(cuenta)} (cuenta)`, [['redondea al dólar', `$${redd}`], ['÷ 10 (el 10%)', din2(diez)], ['÷ 2 (el 5% es la mitad)', din2(cinco)], [`10% + 5% = ${fd(diez)} + ${fd(cinco)}`, `${din2(r)} (propina)`]], 'La Regla Especial de arriba a abajo: redondea, saca el 10% (÷ 10), la mitad de eso es el 5%, y se suman.');
       pide = 'la propina del 15% con la Regla Especial del libro.'; error = 'no redondear primero la cuenta al dólar: la Regla Especial empieza redondeando.';
       comp = `el 15% de $${redd} con la multiplicación: 0.15 × ${redd} = ${fd(dN(redd * 0.15))}, lo mismo ✓`;
     } else { // porciento de ganancia sobre lo que se pagó
@@ -6569,12 +6709,14 @@ MODULOS.push(
       pasos = [{ t:'Ganancia = venta − compra', l:[`${miles(venta)} − ${miles(compra)} = ${miles(g)}`] },
         { t:'Divide la ganancia entre lo que se PAGÓ (la compra)', l: pasosDivDec(g, compra) },
         { t:'Pásalo a porciento: × 100', l:[decPct(dN(p / 100))] }];
+      cad = diagCadena(`$${miles(compra)} (compra)`, [[`+ $${miles(g)} (ganancia)`, `$${miles(venta)} (venta)`]], `La ganancia es lo que hay entre la compra y la venta; el porciento se saca comparándola con lo que se PAGÓ ($${miles(compra)}).`);
       pide = 'el porciento de ganancia (sobre lo que costó).'; error = 'dividir entre el precio de venta.';
       comp = `${p}% de ${miles(compra)} = ${fd(dN(p / 100))} × ${miles(compra)} = ${miles(g)}, la ganancia ✓`;
     }
+    if(cad) pasos[pasos.length - 1].l.push(cad);
     return { enunciado: enun, ...numDec(r), ...(pct ? { ayuda:'Escribe solo el número (sin el %).' } : {}),
       explicacion: receta({ pide, pasos, resp: pct ? fd(r) + '%' : din2(r), error, comp,
-        ejemplo: pasos.map(p => p.l[p.l.length - 1]).filter(l => !/<div/.test(l)).join(' → ').replace(/<[^>]+>/g, '') + '.' }) };
+        ejemplo: _ejDe(pasos) }) };
   }
 },
 {
@@ -6598,11 +6740,11 @@ MODULOS.push(
       pasos = [{ t:'Pasa la tasa a decimal (r)', l:[pctDec(rr)] },
         { t:'Pon el tiempo en AÑOS (la tasa es por año)', l:[den === 1 ? `El tiempo ya está en años: t = ${fd(t)}`
           : `${tipo === 'meses' ? 'Un año tiene 12 meses' : `El año tiene ${den} días`}: t = ${num} ÷ ${den} = ${num}/${den} de año` + (lugares(dN(t)) <= 3 ? ` = ${fd(dN(t))}` : ' (se deja en fracción: el decimal no termina)')] },
-        { t:'I = P × r × t. Primero P × r (lo que gana en UN año)', l: pasosMultDec(rd, P) },
+        { t:'I = P × r × t. Primero P × r (lo que gana en UN año)', l:[diagSustituir([['I', null], ['P', miles(P)], ['r', fd(rd)], ['t', den === 1 ? fd(t) : `${num}/${den}`]], 'I = P × r × t: cada letra con su número (flecha hacia abajo). La r ya va en decimal y la t en años.'), ...pasosMultDec(rd, P)] },
         den === 1 ? { t:`Multiplica por el tiempo (× ${fd(t)})`, l: t === 1 ? [`× 1 lo deja igual: I = ${fin(Pr)}`] : pasosMultDec(Pr, t).map((l, i, a) => i === a.length - 1 && !esResp ? l.replace(/<b class="cambia">([^<]*)<\/b>$/, '$1') : l) }
           : { t:`Multiplica por el tiempo: × ${num}/${den} (es × ${num} y después ÷ ${den})`, l:[`${fd(Pr)} × ${num} = ${fd(Prn)}`, `${fd(Prn)} ÷ ${den} = ${lugares(dN(I)) > 4 ? _corta(dN(I), 4) + ' (con la calculadora)' : fin(dN(I))}`] },
         ...(redI ? [{ t:'Redondea al centavo (2 decimales)', l: explRed(I, 2) }] : []),
-        ...(tipo === 'cantidad' ? [{ t:'Cantidad = principal + interés', l:[`C = ${miles(P)} + ${fd(Ir)} = ${cb(din2(C))}`] }] : [])];
+        ...(tipo === 'cantidad' ? [{ t:'Cantidad = principal + interés', l:[`C = ${miles(P)} + ${fd(Ir)} = ${cb(din2(C))}`, diagCadena(`$${miles(P)} (principal)`, [[`+ ${din2(Ir)} (interés)`, `${din2(C)} (cantidad)`]])] }] : [])];
       pide = tipo === 'cantidad' ? 'lo que habrá al final: el principal más el interés.' : 'el interés simple.';
       error = tipo === 'anios' || tipo === 'cantidad' ? 'usar el porciento sin pasarlo a decimal (12% es 0.12).' : 'poner los meses o los días como si fueran años: el tiempo SIEMPRE va en años (meses ÷ 12, días ÷ 360 o 365).';
       comp = (t === 1 ? `el tiempo es 1 año: el interés es justo P × r = ${din2(Ir)} ✓`
@@ -6615,7 +6757,7 @@ MODULOS.push(
         const Pt = dN(P * t);
         enun = `¿A qué tasa porcentual $${miles(P)} ganarán un interés simple de ${din2(I)} en ${t < 1 ? t * 12 + ' meses' : fd(t) + ' años'}?`;
         pasos = [...(t < 1 ? [{ t:'Pon el tiempo en AÑOS', l:[`Un año tiene 12 meses: t = ${t * 12} ÷ 12 = ${fd(t)} de año`] }] : []),
-          { t:'De I = P × r × t, despeja r: r = I ÷ (P × t)', l:['Lo que no se sabe es r: se divide el interés entre lo que lo multiplica (P × t).'] },
+          { t:'De I = P × r × t, despeja r: r = I ÷ (P × t)', l:[diagSustituir([['I', fd(I)], ['P', miles(P)], ['r', null], ['t', fd(t)]]), 'Lo que no se sabe es r: se divide el interés entre lo que lo multiplica (P × t).'] },
           { t:'Calcula P × t', l: pasosMultDec(P, t) },
           { t:`Divide: r = ${fd(I)} ÷ ${fd(Pt)}`, l: pasosDivDec(I, Pt) },
           { t:'Pásalo a porciento: × 100', l:[decPct(rd)] }];
@@ -6626,7 +6768,7 @@ MODULOS.push(
         enun = `${pick(['Carmen', 'Arnaldo', 'Rita'])} tomó prestados $${miles(P)} a un interés simple de ${fd(rr)}%. Después de cierto tiempo devolvió ${din2(dN(P + I))} y saldó la cuenta. ¿Por cuánto tiempo (en años) retuvo el dinero?`;
         pasos = [{ t:'El interés es lo que pagó DE MÁS', l:[`I = ${fd(dN(P + I))} − ${miles(P)} = ${fd(I)}`] },
           { t:'Pasa la tasa a decimal (r)', l:[pctDec(rr)] },
-          { t:'De I = P × r × t, despeja t: t = I ÷ (P × r). Calcula P × r', l: pasosMultDec(rd, P) },
+          { t:'De I = P × r × t, despeja t: t = I ÷ (P × r). Calcula P × r', l:[diagSustituir([['I', fd(I)], ['P', miles(P)], ['r', fd(rd)], ['t', null]]), ...pasosMultDec(rd, P)] },
           { t:`Divide: t = ${fd(I)} ÷ ${fd(Pr)}`, l:[...pasosDivDec(I, Pr), `Retuvo el dinero ${cb(fd(t))} año${t === 1 ? '' : 's'}`] }];
         pide = 'el tiempo en años.'; error = 'usar lo que devolvió como si fuera el interés: primero se le resta el principal.';
         comp = `${miles(P)} × ${fd(rd)} × ${fd(t)} = ${fd(I)} de interés, y ${miles(P)} + ${fd(I)} = ${fd(dN(P + I))}, lo que devolvió ✓`; }
@@ -6637,7 +6779,7 @@ MODULOS.push(
       const rc = dN(tasa / 100), rn = dN(tasa / 100 / n), b = dN(1 + rn), pw = Math.pow(1 + tasa / 100 / n, nt), Cx = P * pw;
       const largo = v => lugares(dN(v)) > 6 ? _corta(v, 6) : fd(dN(v));   // en la calculadora se deja completo; aquí se ven 6 decimales
       enun = `Halla ${pideI ? 'el interés compuesto' : 'la cantidad'} sobre $${miles(P)} por ${fd(t)} año${t === 1 ? '' : 's'} al ${tasa}% compuesto ${nom}. Redondea al centavo.`;
-      pasos = [{ t:'Fórmula: C = P(1 + r/n)<sup>nt</sup>. Identifica cada letra', l:[`P = ${miles(P)} (el principal)`, `r = ${pctDec(tasa)}`,
+      pasos = [{ t:'Fórmula: C = P(1 + r/n)<sup>nt</sup>. Identifica cada letra', l:[diagSustituir([['C', null], ['P', miles(P)], ['r', fd(rc)], ['n', n], ['t', fd(t)]], 'C = P(1 + r/n)ⁿᵗ: cada letra con su número (flecha hacia abajo); la C es la que se busca.'), `P = ${miles(P)} (el principal)`, `r = ${pctDec(tasa)}`,
           `n = ${n} (compuesto ${nom}: ${n === 1 ? '1 vez' : n + ' veces'} al año)`, `t = ${fd(t)} (los años)`] },
         { t:'El exponente: nt = n × t (cuántas veces se suma el interés)', l:[`${n} × ${fd(t)} = ${nt}`] },
         { t:'Lo de adentro del paréntesis: 1 + r/n', l:[`r/n = ${fd(rc)} ÷ ${n} = ${largo(rn)}${lugares(rn) > 6 ? ' (no termina: en la calculadora no lo redondees)' : ''}`, `1 + ${largo(rn)} = ${largo(b)}`] },
@@ -6664,7 +6806,7 @@ MODULOS.push(
     }
     return { enunciado: enun, ...numDec(r), ...(ay ? { ayuda: ay } : {}),
       explicacion: receta({ pide, pasos, resp: tipo === 'tasa' ? fd(r) + '%' : tipo === 'tiempo' ? fd(r) + ' años' : din2(r), error, comp,
-        ejemplo: pasos.map(p => p.l[p.l.length - 1]).filter(l => !/<div/.test(l)).join(' → ').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ') + '.' }) };
+        ejemplo: _ejDe(pasos).replace(/\s+/g, ' ') }) };
   }
 },
 {
@@ -6679,7 +6821,7 @@ MODULOS.push(
           pasos:[{ t:`Préstamo = ${pres}% del precio`, l:[pctDec(pres), ...pasosMultDec(dN(pres / 100), P)] },
             { t:'Lo que le falta del precio (lo que NO le prestan)', l:[`${miles(P)} − ${miles(prest)} = $${miles(falta)}`] },
             { t:`Impuesto = ${imp}% del precio`, l:[pctDec(imp), ...pasosMultDec(dN(imp / 100), P)] },
-            { t:'Efectivo = lo que falta + impuesto + licencia', l:[`${miles(falta)} + ${miles(im)} + ${lic} = ${cb('$' + miles(r))}`] }],
+            { t:'Efectivo = lo que falta + impuesto + licencia', l:[`${miles(falta)} + ${miles(im)} + ${lic} = ${cb('$' + miles(r))}`, diagCadena(`$${miles(P)} (precio)`, [[`− $${miles(prest)} (le prestan el ${pres}%)`, `$${miles(falta)}`], [`+ $${miles(im)} (impuesto: ${imp}%)`, `$${miles(dN(falta + im))}`], [`+ $${lic} (licencia)`, `$${miles(r)} (efectivo)`]])] }],
           resp:'$' + miles(r), comp:`lo que no le prestan es el ${100 - pres}% del precio (100% − ${pres}%): ${fd(dN(1 - pres / 100))} × ${miles(P)} = $${miles(falta)} ✓`,
           error:'olvidar el impuesto o la licencia: el préstamo solo cubre parte del PRECIO.', ejemplo:`${miles(falta)} + ${miles(im)} + ${lic} = $${miles(r)}.` }) };
     }
@@ -6695,7 +6837,8 @@ MODULOS.push(
             { t:'(a) Cargo = I = P × r × t', l:[`P × r = ${miles(fin)} × ${fd(rd)} = ${fd(un)} (el cargo de 1 año)`, `× ${fd(anios)} años: ${fd(un)} × ${fd(anios)} = ${cb(din2(cargo))}`] },
             { t:'Total a pagar en los plazos = financiado + cargo', l:[`${miles(fin)} + ${fd(cargo)} = ${fd(tot)}`] },
             { t:`(b) Pago mensual = total ÷ ${meses} meses`, l:[`${fd(tot)} ÷ ${meses} = ${lugares(pm) > 2 ? _corta(pm, 4) + ' (con la calculadora)' : cb(din2(pago))}`,
-              ...(lugares(pm) > 2 ? ['Es dinero: se redondea al centavo (2 decimales).', ...explRed(tot / meses, 2)] : [])] }],
+              ...(lugares(pm) > 2 ? ['Es dinero: se redondea al centavo (2 decimales).', ...explRed(tot / meses, 2)] : []),
+              diagCadena(`$${miles(P)} (precio)`, [[`− $${miles(pronto)} (pronto pago)`, `$${miles(fin)} (se financia)`], [`+ ${din2(cargo)} (cargo)`, `${din2(tot)} (total)`], [`÷ ${meses} meses`, `${din2(pago)} al mes`]])] }],
           resp:`(a) ${din2(cargo)}; (b) ${din2(pago)}`, error:'calcular el cargo sobre el precio completo: el pronto pago no se financia.',
           comp: vuelta === tot ? `${din2(pago)} × ${meses} meses = ${din2(tot)}, el total ✓` : `${din2(pago)} × ${meses} meses = ${din2(vuelta)}, casi el total de ${din2(tot)} (no da exacto porque el pago se redondeó) ✓`,
           ejemplo:`cargo ${din2(cargo)}, pago ${din2(pago)} al mes.` }) };
@@ -6707,7 +6850,7 @@ MODULOS.push(
         tipo:'multi', campos:[{ et:'(a) Pronto pago', u:'$', din:true, tol:0.005 }, { et:'(b) Hipoteca', u:'$', din:true, tol:0.005 }, { et:'(c) Efectivo', u:'$', din:true, tol:0.005 }], respuesta:[pronto, hip, ef],
         explicacion: receta({ pide:'el pronto pago, lo que se presta (hipoteca) y todo el dinero que hay que tener en la mano.',
           pasos:[{ t:`(a) Pronto pago = ${pr}% del precio`, l:[pctDec(pr), ...pasosMultDec(dN(pr / 100), P)] },
-            { t:'(b) Hipoteca = precio − pronto pago (lo que presta el banco)', l:[`${miles(P)} − ${miles(pronto)} = ${cb('$' + miles(hip))}`] },
+            { t:'(b) Hipoteca = precio − pronto pago (lo que presta el banco)', l:[diagCadena(`$${miles(P)} (precio)`, [[`− $${miles(pronto)} (pronto pago: ${pr}%)`, `$${miles(hip)} (hipoteca)`]]), `${miles(P)} − ${miles(pronto)} = ${cb('$' + miles(hip))}`] },
             { t:'Cargo de préstamo = 1.5% de la HIPOTECA (no del precio)', l:[pctDec(cp), ...pasosMultDec(0.015, hip)] },
             { t:'(c) Efectivo = pronto pago + cargo + todos los gastos', l:['La hipoteca NO se suma: esa la paga el banco.', `${miles(pronto)} + ${fd(cargo)} + ${seg} + ${reg} + ${imp} + ${leg} = ${cb(din2(ef))}`] }],
           resp:`(a) $${miles(pronto)}; (b) $${miles(hip)}; (c) ${din2(ef)}`, error:'calcular el 1.5% sobre el precio de la casa: es sobre la hipoteca.',
@@ -6717,7 +6860,7 @@ MODULOS.push(
     const V = R(30, 200) * 1000, p = pick([20, 35, 40, 60, 75]), r = dN(V * p / 100);
     return { enunciado:`Hace cinco años Juan compró una casa valorada en $${miles(V)}. Cuando la vendió este año, la propiedad había apreciado un ${p}% del valor de compra. ¿Cuál fue su ganancia en la venta?`, ...numDec(r),
       explicacion: receta({ pide:'cuánto ganó: lo que subió el valor.',
-        pasos:[{ t:`Pasa el ${p}% a decimal`, l:[pctDec(p)] }, { t:`La ganancia es el ${p}% del valor de compra: multiplica`, l: pasosMultDec(dN(p / 100), V) }],
+        pasos:[{ t:`Pasa el ${p}% a decimal`, l:[pctDec(p)] }, { t:`La ganancia es el ${p}% del valor de compra: multiplica`, l:[...pasosMultDec(dN(p / 100), V), diagCadena(`$${miles(V)} (compra)`, [[`+ $${miles(r)} (subió el ${p}%)`, `$${miles(dN(V + r))} (venta)`]], 'La ganancia es lo que subió: lo que hay entre la compra y la venta.')] }],
         resp:'$' + miles(r), comp:`la vendió en ${miles(V)} + ${miles(r)} = $${miles(dN(V + r))}, y ${miles(dN(V + r))} − ${miles(V)} = $${miles(r)} de ganancia ✓`,
         error:`dar el precio de venta ($${miles(dN(V + r))}): la pregunta es solo la ganancia.`, ejemplo:`${p}% de $${miles(V)} = $${miles(r)}.` }) };
   }
@@ -6766,7 +6909,8 @@ function pasosDivDec(a, b){
   const L = [], k = lugares(b), A = dN(Math.abs(a) * P10(k)), B = dN(Math.abs(b) * P10(k)), q = dN(Math.abs(a) / Math.abs(b));
   const sg = a !== 0 && (a < 0) !== (b < 0) ? '−' : '';   // con signos distintos el resultado es negativo (se divide sin signos y se le pone al final)
   if(sg) L.push('Signos: uno negativo y el otro positivo → el resultado es NEGATIVO (se divide sin los signos y al final se le pone el −).');
-  if(k) L.push(`El divisor (${fd(Math.abs(b))}) tiene ${_dec(k)}: se mueve el punto ${_lug(k)} a la DERECHA en los DOS números → ${fd(Math.abs(b))} pasa a ${fd(B)} y ${fd(Math.abs(a))} pasa a ${fd(A)}.`);
+  if(k) L.push(`El divisor (${fd(Math.abs(b))}) tiene ${_dec(k)}: se mueve el punto ${_lug(k)} a la DERECHA en los DOS números → ${fd(Math.abs(b))} pasa a ${fd(B)} y ${fd(Math.abs(a))} pasa a ${fd(A)}.`,
+    diagCorreDiv(a, b));
   const kA = lugares(A), Ai = Math.round(A * P10(kA)), qi = Ai / B;
   if(Number.isInteger(B) && Number.isInteger(qi) && lugares(q) <= kA)
     L.push(kA ? `Se divide como si no hubiera punto: ${miles(Ai)} ÷ ${miles(B)} = ${miles(qi)}. El punto del cociente va justo arriba del punto del dividendo (${_lug(kA)} desde la derecha) → ${cb(sg + fd(q))}`
@@ -6783,7 +6927,8 @@ function pasosMultDec(a, b){
   const K = ka + kb, s = String(ia * ib).padStart(K + 1, '0'), crudo = miles(Number(s.slice(0, -K))) + '.' + s.slice(-K);
   return [`Sin los puntos: ${miles(ia)} × ${miles(ib)} = ${miles(ia * ib)}`,
     `Lugares decimales: ${fd(Math.abs(a))} tiene ${ka} y ${fd(Math.abs(b))} tiene ${kb} → ${ka} + ${kb} = ${K}. Se cuenta${K === 1 ? '' : 'n'} ${_lug(K)} desde la derecha${String(ia * ib).length < K ? ' (no alcanzan los dígitos: se ponen ceros a la izquierda)' : String(ia * ib).length === K ? ' (se pone un 0 antes del punto)' : ''}: ${miles(ia * ib)} → `
-      + (crudo === fd(p) ? cb(fd(p)) : `${crudo} = ${cb(fd(p))} (los ceros del final de los decimales se pueden quitar)`)];
+      + (crudo === fd(p) ? cb(fd(p)) : `${crudo} = ${cb(fd(p))} (los ceros del final de los decimales se pueden quitar)`),
+    diagPunto(ia * ib, -K, `El punto empieza al final de ${miles(ia * ib)} y salta ${_lug(K)} a la IZQUIERDA (${ka} de ${fd(Math.abs(a))} + ${kb} de ${fd(Math.abs(b))}), una flecha por lugar.`)];
 }
 const bResta = (a, b) => { const r = dN(a - b);
   return { enunciado:`Halla la diferencia:<br><b>${px(a)} − ${px(b)}</b>`, ...numDec(r),
@@ -7012,7 +7157,7 @@ const bRazU = (frase, a, b, pasos, nombre) => { const f = Fq(a, b);
 const bProp1 = (a, c, n, d) => { const x = dN((a * d) / n - c), q = dN(a * d / n);
   return { enunciado:`Halla el valor de <i>x</i> en la siguiente proporción.<br><b>${fr(a, `<i>x</i> + ${c}`)} = ${fr(n, d)}</b>`, ...numDec(x), ayuda:'x = ___',
     explicacion: receta({ pide:'el valor de x que hace iguales las dos razones.',
-      pasos:[{ t:'Multiplica en cruz (productos cruzados)', l:[`El de arriba de cada lado × el de abajo del otro: ${n}(x + ${c}) = ${a} × ${d}`, `${a} × ${d} = ${cb(a * d)}`] },
+      pasos:[{ t:'Multiplica en cruz (productos cruzados)', l:[diagCruzados(a, `x + ${c}`, n, d), `El de arriba de cada lado × el de abajo del otro: ${n}(x + ${c}) = ${a} × ${d}`, `${a} × ${d} = ${cb(a * d)}`] },
         { t:`Quita el ${n} que multiplica al paréntesis: divide los DOS lados entre ${n}`, l:[`x + ${c} = ${a * d} ÷ ${n} = ${cb(px(q))}`] },
         { t:`Quita el + ${c}: resta ${c} en los DOS lados`, l:[`x = ${px(q)} − ${c} = ${cb(px(x))}`] }],
       resp:`x = ${px(x)}`, comp:`${a}/(${px(x)} + ${c}) = ${a}/${px(q)} = ${fd(dN(a / q), 4)} y ${n}/${d} = ${fd(dN(n / d), 4)}: iguales ✓`, error:'multiplicar arriba con arriba: en una proporción se multiplica en CRUZ.',
@@ -7020,7 +7165,7 @@ const bProp1 = (a, c, n, d) => { const x = dN((a * d) / n - c), q = dN(a * d / n
 const bProp2 = (a, p, q) => { const x = dN(a * q / p), aq = dN(a * q);
   return { enunciado:`Resuelve la proporción.<br><b>${fr(a, '<i>x</i>')} = ${fr(p, px(q))}</b>`, ...numDec(x), ayuda:'x = ___',
     explicacion: receta({ pide:'el valor de x que hace iguales las dos razones.',
-      pasos:[{ t:'Multiplica en cruz (productos cruzados)', l:[`${p} · x = ${a} × ${px(q)}`, ...pasosMultDec(a, q),`→ ${cb(`${p}x = ${px(aq)}`)}`] },
+      pasos:[{ t:'Multiplica en cruz (productos cruzados)', l:[diagCruzados(a, 'x', p, px(q)), `${p} · x = ${a} × ${px(q)}`, ...pasosMultDec(a, q),`→ ${cb(`${p}x = ${px(aq)}`)}`] },
         { t:`Quita el ${p}: divide los DOS lados entre ${p}`, l:[`x = ${px(aq)} ÷ ${p}`, ...pasosDivDec(aq, p)] }],
       resp:`x = ${px(x)}`, comp:`${a}/${px(x)} = ${fd(dN(a / x), 4)} y ${p}/${px(q)} = ${fd(dN(p / q), 4)}: iguales ✓`, error:'multiplicar arriba con arriba: en una proporción se multiplica en CRUZ.',
       ejemplo:`${p}x = ${px(aq)} → x = ${px(x)}.`, truco:'en una proporción los productos cruzados son iguales.' }) }; };
@@ -7029,7 +7174,7 @@ const bMaq = (a1, e, p, q, a2) => { const h = (e + p / q) * a2 / a1, r = redonde
     explicacion: receta({ pide:`las horas para ${a2} acres (redondeadas a un número entero).`,
       pasos:[{ t:'Arma la proporción con las mismas unidades en el mismo lugar (acres arriba, horas abajo)', l:[`${a1} acres / ${e} ${p}/${q} horas = ${a2} acres / x horas`] },
         { t:'Pasa el mixto a fracción impropia', l:[`${e} ${p}/${q} = (${e} × ${q} + ${p})/${q} = ${cb(tf(imp, q))}`] },
-        { t:'Multiplica en cruz', l:[`${a1} · x = ${a2} × ${tf(imp, q)} = ${tf(a2 * imp, q)}`] },
+        { t:'Multiplica en cruz', l:[diagCruzados(a1, `${imp}/${q}`, a2, 'x'), `${a1} · x = ${a2} × ${tf(imp, q)} = ${tf(a2 * imp, q)}`] },
         { t:`Divide los DOS lados entre ${a1}`, l:[`x = ${tf(a2 * imp, q)} ÷ ${a1} = ${tf(a2 * imp, q * a1)} = ${a2 * imp} ÷ ${q * a1} = ${_corta(h, 2)}`] },
         { t:'Redondea al número entero (cardinal) más cercano', l: explRed(h, 0) }],
       resp:`${r} horas`, comp:`más acres (${a2} > ${a1}) tiene que dar más horas: ${r} > ${e} ${p}/${q} ✓`, error:'poner acres arriba de un lado y horas arriba del otro.',
@@ -7039,7 +7184,7 @@ const bImp = (t, g, inc) => { const r = dN(t * (g + inc) / g), n2 = g + inc;
     explicacion: receta({ pide:'el impuesto nuevo, con la misma razón impuesto/ganancia.',
       pasos:[{ t:'"Aumentan EN" = se suma a la ganancia de antes', l:[`Ganancia nueva = ${g} + ${inc} = ${cb(n2)}`] },
         { t:'Arma la proporción (impuesto arriba, ganancia abajo)', l:[`${t}/${g} = x/${n2}`] },
-        { t:'Multiplica en cruz y despeja x', l:[`${g} · x = ${t} × ${n2} = ${miles(t * n2)}`, `x = ${miles(t * n2)} ÷ ${g} = ${cb(fd(r))}`] }],
+        { t:'Multiplica en cruz y despeja x', l:[diagCruzados(t, g, 'x', n2), `${g} · x = ${t} × ${n2} = ${miles(t * n2)}`, `x = ${miles(t * n2)} ÷ ${g} = ${cb(fd(r))}`] }],
       resp: din$(r), comp:`la ganancia subió, así que el impuesto también: ${din$(r)} > $${t} ✓`, error:`usar $${inc} como si fuera la ganancia nueva: la ganancia nueva es ${g} + ${inc}.`,
       ejemplo:`${t}/${g} = x/${n2} → x = ${din$(r)}.`, truco:'"aumentan en" = se SUMA a la ganancia de antes (no es la ganancia nueva).' }) }; };
 
@@ -7169,7 +7314,7 @@ _modEducoTQ('educo-hw8', 'Tarea 8.1 de EducoSoft (las 10 exactas)', '8.9', 'Tare
     [{ t:'Halla cuántos niños hay', l:['niños = todos − niñas = 46 − 12 = 34'] }], 'lo que se nombra PRIMERO (niñas) va arriba.'),
   () => bProp1(3, 2, 8, 40), () => ({ enunciado:`Hallar <i>x</i>:<br><b>${fr(16, 14)} = ${fr('<i>x</i>', 8)}</b>`, tipo:'frac', respuesta:{ n:64, d:7 }, pedirSimple:true, ayuda:'x = ___ (como fracción)',
     explicacion: receta({ pide:'el valor de x que hace iguales las dos razones (como fracción simplificada).',
-      pasos:[{ t:'Multiplica en cruz (productos cruzados)', l:[`14 · x = 16 × 8 = ${cb(128)}`] },
+      pasos:[{ t:'Multiplica en cruz (productos cruzados)', l:[diagCruzados(16, 14, 'x', 8), `14 · x = 16 × 8 = ${cb(128)}`] },
         { t:'Quita el 14: divide los DOS lados entre 14', l:[`x = ${cb('128/14')}`] },
         { t:'Simplifica', l:[explSimplif(128, 14)] }],
       resp:'x = 64/7', comp:'16/14 = 1.142… y (64/7)/8 = 64/56 = 1.142…: iguales ✓', error:'multiplicar arriba con arriba: se multiplica en CRUZ.',
@@ -7177,14 +7322,14 @@ _modEducoTQ('educo-hw8', 'Tarea 8.1 de EducoSoft (las 10 exactas)', '8.9', 'Tare
   () => ({ enunciado:'Verificar Cierto o Falso: <b>2.1</b> es a <b>1.5</b> como <b>7</b> es a <b>5</b>', tipo:'opciones', opciones:['Cierta', 'Falsa'], respuesta:'Cierta',
     explicacion: receta({ pide:'si las dos razones son iguales (si forman una proporción).',
       pasos:[{ t:'Escribe las dos razones como fracciones', l:['"2.1 es a 1.5" → 2.1/1.5 y "7 es a 5" → 7/5'] },
-        { t:'Multiplica en cruz', l:['2.1 × 5: sin el punto 21 × 5 = 105; con 1 decimal → 10.5', '1.5 × 7: sin el punto 15 × 7 = 105; con 1 decimal → 10.5'] },
+        { t:'Multiplica en cruz', l:[diagCruzados(2.1, 1.5, 7, 5), '2.1 × 5: sin el punto 21 × 5 = 105; con 1 decimal → 10.5', '1.5 × 7: sin el punto 15 × 7 = 105; con 1 decimal → 10.5'] },
         { t:'Compara los dos productos', l:[`10.5 = 10.5 → son iguales → ${cb('Cierta')}`] }],
       resp:'Cierta', comp:'2.1 ÷ 1.5 = 1.4 y 7 ÷ 5 = 1.4 ✓', error:'comparar sumando o restando: en una proporción se comparan los productos cruzados.',
       ejemplo:'2.1 × 5 = 10.5 = 1.5 × 7.', truco:'en una proporción los productos cruzados son iguales.' }) }),
   () => bProp2(4, 6, 4.8),
   () => ({ enunciado:`Resuelve la proporción.<br><b>${fr('<i>x</i> + 1', 3)} = ${fr(1, 2)}</b>`, tipo:'frac', respuesta:{ n:1, d:2 }, pedirSimple:true, signo:true, ayuda:'x = ___ (como fracción)',
     explicacion: receta({ pide:'el valor de x.',
-      pasos:[{ t:'Multiplica en cruz', l:[`2(x + 1) = 3 × 1 = ${cb(3)}`] },
+      pasos:[{ t:'Multiplica en cruz', l:[diagCruzados('x + 1', 3, 1, 2), `2(x + 1) = 3 × 1 = ${cb(3)}`] },
         { t:'Quita el paréntesis: el 2 multiplica a los dos de adentro', l:[`2 × x + 2 × 1 = ${cb('2x + 2 = 3')}`] },
         { t:'Quita el + 2: resta 2 en los DOS lados', l:[`2x = 3 − 2 = ${cb(1)}`] },
         { t:'Quita el 2: divide los DOS lados entre 2', l:[`x = ${cb('1/2')}`] }],
@@ -7194,7 +7339,7 @@ _modEducoTQ('educo-hw8', 'Tarea 8.1 de EducoSoft (las 10 exactas)', '8.9', 'Tare
   () => { const x = 3 * 220 / 610, r = redondeaK(x, 0); return { enunciado:'La distancia entre Glendale, Arizona y Henderson, Nevada, es <b>610 millas</b>. En cierto mapa esto está representado por una longitud de <b>3 pulgadas</b>. Bakersfield, California y Stockton, California, están separados por <b>220 millas</b>. Halla la longitud de la línea que conecta estas dos ciudades en el mapa.<br><small>(Redondea la respuesta al número entero más cercano)</small>', ...numDec(r), ayuda:'pulgadas (entero)',
     explicacion: receta({ pide:'cuántas pulgadas del mapa son 220 millas (redondeado al entero).',
       pasos:[{ t:'Arma la proporción con las mismas unidades en el mismo lugar (pulgadas arriba, millas abajo)', l:[cb('3/610 = x/220')] },
-        { t:'Multiplica en cruz', l:[`610 · x = 3 × 220 = ${cb(660)}`] },
+        { t:'Multiplica en cruz', l:[diagCruzados(3, 610, 'x', 220), `610 · x = 3 × 220 = ${cb(660)}`] },
         { t:'Quita el 610: divide los DOS lados entre 610', l:[`x = 660 ÷ 610 = ${_corta(x, 3)}`] },
         { t:'Redondea al entero más cercano', l: explRed(x, 0) }],
       resp:`${r} pulg`, comp:`220 millas es como un tercio de 610, así que en el mapa es como un tercio de 3 pulgadas: ≈ 1 ✓`, error:'poner millas arriba de un lado y pulgadas arriba del otro.',
@@ -7212,11 +7357,11 @@ _modEducoTQ('educo-qp8', 'Quiz de práctica 8.1 de EducoSoft (las 10 exactas)', 
     comp:'3 barras × 33 niños = 99 barras ✓', error:'dividir al revés (33 ÷ 99): eso da niños por barra.', ejemplo:'99 ÷ 33 = 3 barras por niño.', truco:'razón unitaria = algo "por 1".' }),
   () => ({ enunciado:`Identifica si el siguiente enunciado es una proporción:<br><b>${fr(4, 6)} = ${fr(2, 3)}</b>`, tipo:'sino', respuesta:true,
     explicacion: receta({ pide:'si las dos razones son iguales.',
-      pasos:[{ t:'Multiplica en cruz', l:['4 × 3 = 12 y 6 × 2 = 12'] }, { t:'Compara los dos productos', l:[`12 = 12 → son iguales → ${cb('Sí')} es una proporción`] }],
+      pasos:[{ t:'Multiplica en cruz', l:[diagCruzados(4, 6, 2, 3), '4 × 3 = 12 y 6 × 2 = 12'] }, { t:'Compara los dos productos', l:[`12 = 12 → son iguales → ${cb('Sí')} es una proporción`] }],
       resp:'Sí', comp:'4/6 simplificada (÷ 2) es 2/3 ✓', error:'decir que no porque los números son distintos: lo que importa es que los productos cruzados sean iguales.',
       ejemplo:'4 × 3 = 12 = 6 × 2.', truco:'en una proporción los productos cruzados son iguales.' }) }),
   () => MCx('<b>Si ' + fr(5, '<i>a</i>') + ' = ' + fr(7, 5) + ', entonces a = ?</b>', [frS(25, 7), '7', '5', frS(7, 25), NING], frS(25, 7), { pide:'el valor de a.',
-    pasos:[{ t:'Multiplica en cruz', l:[`7 · a = 5 × 5 = ${cb(25)}`] }, { t:'Quita el 7: divide los DOS lados entre 7', l:[`a = ${cb('25/7')} (25 y 7 no tienen ningún número en común: ya está simplificada)`] }],
+    pasos:[{ t:'Multiplica en cruz', l:[diagCruzados(5, 'a', 7, 5), `7 · a = 5 × 5 = ${cb(25)}`] }, { t:'Quita el 7: divide los DOS lados entre 7', l:[`a = ${cb('25/7')} (25 y 7 no tienen ningún número en común: ya está simplificada)`] }],
     comp:'5 ÷ (25/7) = 5 × 7/25 = 35/25 = 7/5 ✓', error:'escoger 7/25 (dividir al revés).', ejemplo:'7a = 25 → a = 25/7.', truco:'en una proporción los productos cruzados son iguales.' }),
   () => MCx('<b>Resuelve para <i>x</i>: ' + fr(2, 5) + '<i>x</i> = ' + fr(3, 20) + '</b>', [frS(1, 8), frS(5, 8), frS(1, 4), frS(3, 4), NING], NING, { pide:'el valor de x.',
     pasos:[{ t:'Quita el 2/5: multiplica los DOS lados por su recíproco (la fracción volteada: 5/2)', l:['(5/2) × (2/5)x = x, y del otro lado: x = 3/20 × 5/2'] },
@@ -7249,12 +7394,12 @@ _modEducoTQ('educo-qz8', 'Quiz 8.1 de EducoSoft (las 10 exactas)', '8.9', 'Quiz 
     comp:'(1/5)(−210) + 10 = −42 + 10 = −32 ✓', error:'dividir −42 entre 5: la x está DIVIDIDA entre 5, así que se MULTIPLICA por 5.', ejemplo:'(1/5)x = −42 → x = −210.', truco:'primero se quita lo que suma, después lo que multiplica.' }),
   () => bProp2(4, 6, 2.4),
   () => MCx('<b>Martín puede escribir 240 palabras en 6 minutos. A esta razón, ¿cuántas palabras puede escribir en 10 minutos?</b>', ['6,000', '600', '400', '4,800', NING], '400', { pide:'las palabras en 10 minutos, a la misma razón.',
-    pasos:[{ t:'Palabras en UN minuto (razón unitaria)', l:[`240 ÷ 6 = ${cb(40)} palabras por minuto`] }, { t:'En 10 minutos: multiplica', l:[`40 × 10 = ${cb(400)}`] }],
+    pasos:[{ t:'Palabras en UN minuto (razón unitaria)', l:[diagFilas(['6 min', '240 palabras'], ['1 min', '40 palabras'], '÷ 6'), `240 ÷ 6 = ${cb(40)} palabras por minuto`] }, { t:'En 10 minutos: multiplica', l:[diagFilas(['1 min', '40 palabras'], ['10 min', '400 palabras'], '× 10'), `40 × 10 = ${cb(400)}`] }],
     comp:'400 ÷ 10 = 40 = 240 ÷ 6: misma razón ✓', error:'multiplicar 240 × 10 (sin dividir antes entre 6).', ejemplo:'240 ÷ 6 = 40 → 40 × 10 = 400.', truco:'saca primero cuánto es en 1 minuto.' }),
   () => MCx('<b>Asume que en la escala de un mapa ' + fr(1, 2) + ' pulgada representa 25 millas. ¿Cuántas pulgadas representan 87 ' + fr(1, 2) + ' millas?</b>', ['13 pulg', mixS(1, 3, 4) + ' pulg', '7 pulg', 'Ninguna'], mixS(1, 3, 4) + ' pulg', { pide:'las pulgadas del mapa para 87 1/2 millas.',
     pasos:[{ t:'Pasa las fracciones a decimal', l:['1/2 = 0.5 y 87 1/2 = 87.5'] },
       { t:'Arma la proporción (pulgadas arriba, millas abajo)', l:[cb('0.5/25 = x/87.5')] },
-      { t:'Multiplica en cruz', l:[`25 · x = 0.5 × 87.5 = ${cb('43.75')}`] },
+      { t:'Multiplica en cruz', l:[diagCruzados(0.5, 25, 'x', 87.5), `25 · x = 0.5 × 87.5 = ${cb('43.75')}`] },
       { t:'Quita el 25: divide los DOS lados entre 25', l:[`x = 43.75 ÷ 25 = ${cb('1.75')}`] },
       { t:'Escribe 1.75 como número mixto', l:['1.75 = 1 + 0.75 y 0.75 = 75/100 = 3/4 (÷ 25) → 1 3/4'] }],
     comp:'87.5 ÷ 25 = 3.5 veces la escala; 3.5 × 1/2 pulgada = 1.75 = 1 3/4 ✓', error:'poner millas arriba de un lado y pulgadas del otro.', ejemplo:'0.5/25 = x/87.5 → x = 43.75 ÷ 25 = 1.75 = 1 3/4.', truco:'cuenta cuántas veces cabe la escala y multiplica por la medida del mapa: 87.5 ÷ 25 = 3.5 medias pulgadas = 1 3/4 pulg.' }),
@@ -7314,12 +7459,14 @@ function ecL(cab, enun, pre, a, b, c, d, k, L = 'x'){
   const pasos = pre.map(p => { if(typeof p !== 'string') return p; const i = p.indexOf(': ');
     return i > 0 && i < 70 ? { t: mayus(p.slice(0, i)), l:[p.slice(i + 2)] } : { t:'Prepara la ecuación', l:[p] }; });
   if(c !== 0) pasos.push({ t:`Pasa las ${L} al lado izquierdo`, l:[`A la derecha hay ${T(c)}. Para quitarlo de ahí se ${c > 0 ? 'RESTA' : 'SUMA'} ${T(Math.abs(c))} en los DOS lados.`,
+    diagAmbosLados(lado(a, b), lado(c, d), (c > 0 ? '− ' : '+ ') + T(Math.abs(c)), lado(dif, b), fd(d)),
     `${fd(a)} ${c > 0 ? '−' : '+'} ${fd(Math.abs(c))} = ${fd(dif)} → queda ${cb(lado(dif, b) + ' = ' + fd(d))}`] });
   if(b !== 0) pasos.push({ t:'Pasa el número al lado derecho', l:[`A la izquierda está el ${b < 0 ? '−' : '+'} ${fd(Math.abs(b))}. Para quitarlo se ${b < 0 ? 'SUMA' : 'RESTA'} ${fd(Math.abs(b))} en los DOS lados.`,
+    diagAmbosLados(lado(dif, b), fd(d), (b < 0 ? '+ ' : '− ') + fd(Math.abs(b)), T(dif), fd(der)),
     `${fd(d)} ${b < 0 ? '+' : '−'} ${fd(Math.abs(b))} = ${fd(der)} → queda ${cb(T(dif) + ' = ' + fd(der))}`] });
   if(dif !== 1){
     const kk = lugares(dif), sig = der === 0 ? '' : dif < 0 && der < 0 ? 'negativo ÷ negativo = POSITIVO' : (dif < 0) !== (der < 0) ? 'uno negativo y el otro positivo = NEGATIVO' : '';
-    pasos.push({ t:`Quita el ${fd(dif)} que multiplica a la ${L}: divide los DOS lados entre ${fd(dif)}`, l:[`${L} = ${fd(der)} ÷ ${fdP(dif)}`,
+    pasos.push({ t:`Quita el ${fd(dif)} que multiplica a la ${L}: divide los DOS lados entre ${fd(dif)}`, l:[diagAmbosLados(T(dif), fd(der), '÷ ' + fdP(dif), L, exacto ? fd(x) : _corta(x, k + 2)), `${L} = ${fd(der)} ÷ ${fdP(dif)}`,
       ...(sig ? [`Signos: ${sig}.`] : []),
       ...(kk ? [`El ${fd(Math.abs(dif))} tiene ${kk} decimal${kk > 1 ? 'es' : ''}: se mueve el punto ${kk} lugar${kk > 1 ? 'es' : ''} a la derecha en los dos números → ${fd(dN(Math.abs(der) * P10(kk)))} ÷ ${fd(dN(Math.abs(dif) * P10(kk)))}`] : []),
       exacto ? `${L} = ${cb(fd(x))}` : lugares(x) <= 6 ? `${L} = ${fd(x)} (tiene más decimales de los que pide: se redondea)` : `${L} = ${fd(Math.trunc(x * 1e5) / 1e5, 5)}… (la división no termina)`] });
@@ -7339,7 +7486,8 @@ const TR_DEC = 'TRUCO: en la suma y la resta de decimales los puntos van alinead
 // ── Repasos y Autoevaluaciones de los caps. 6, 7 y 8 (pedido de la usuaria 2026-10-21: "que tenga todos los pasos de donde se saca las cosas"):
 // la explicación va en pasos con título (receta) y cada número sale de su cuenta (pasosMultDec, pasosDivDec, explRed, colDec, divLarga…).
 const _pa = (t, ...l) => ({ t, l: l.flat() });                                                       // un paso: título y sus líneas
-const _ejDe = pasos => pasos.map(p => p.l[p.l.length - 1]).filter(l => typeof l === 'string' && !/^<(div|svg)/.test(l)).join(' → ').replace(/<[^>]+>/g, '') + '.';
+// la última línea de cada paso (saltando los dibujos con flechas, que van al final); las cuentas en columna (<div>) no entran
+const _ejDe = pasos => pasos.map(p => [...p.l].reverse().find(l => typeof l !== 'string' || !/^<(svg|table)/.test(l))).filter(l => typeof l === 'string' && !/^<div/.test(l)).map(_sinDibujo).join(' → ').replace(/<[^>]+>/g, '') + '.';
 const _pideR = enun => { const p = _pideDe(enun); return p + (/[?!.]$/.test(p) ? '' : '.'); };
 const _sinT = t => String(t || '').replace(/^TRUCO:\s*/, '');
 // un ejercicio del libro: R = { pasos, resp, comp, error, truco }
@@ -8813,6 +8961,7 @@ let historial = leer('mate_historial_v1', {});      // { "YYYY-MM-DD": cantidad 
 let rachaDias = leer('mate_racha_dias_v1', { actual:0, mejor:0, ultimoDia:null });
 let agruparTema = leer('mate_agrupar_v1', false);   // true = las repeticiones de un mismo tema salen juntas, no mezcladas
 let repetirFallo = leer('mate_repetir_v1', false);  // true = una pregunta fallada vuelve a salir, igual, más adelante en la ronda
+let unoPorTema = leer('mate_uno_v1', false);        // true = la mezcla trae 1 ejercicio de cada tema en vez de VECES_POR_TEMA (los bancos fijos del examen/ayudante no cambian); al tocarlo rehace lo que falta de la ronda en curso (_replanearRonda)
 // [{fecha, correctas, total}], tope 30 — historial de resultados de "Modo examen" (ver
 // finalizarExamen). El modo en sí no tiene botón que lo abra ahora mismo (ver CLAUDE.md,
 // "Modo examen"); esto solo asegura que el resultado quede guardado el día que se reexponga.
@@ -9108,7 +9257,7 @@ const SESION_TEMA = 20;   // tamaño de ronda cuando el tema está fijo (no hay 
 const VECES_POR_TEMA = 2; // mezcla: mínimo garantizado de repeticiones de cada tema activo en la ronda
 // veces que entra el tema m en una mezcla de ms: normal = 2; si lo elegido son SOLO prácticas del examen (ej. el grupo "Examen 1"), entra completa
 // Repaso de ayudante: son bancos fijos y TODAS las preguntas pueden salir en el examen, así que la mezcla trae cada banco entero (una vez cada pregunta, ver _ayElegir)
-const vecesDe = (ms, m) => (m.clase === 'ayud' || ms.every(x => x.nuevaRonda)) ? m.banco : VECES_POR_TEMA;
+const vecesDe = (ms, m) => (m.clase === 'ayud' || ms.every(x => x.nuevaRonda)) ? m.banco : (unoPorTema ? 1 : VECES_POR_TEMA);
 // para mostrarlo en los botones sin arrancar la ronda; acepta módulos o ids (los grupos y "Elegir temas" guardan ids)
 const tamanoMezcla = lista => { const ms = lista.map(m => typeof m === 'string' ? MOD_POR_ID[m] : m).filter(Boolean); return ms.reduce((s, m) => s + vecesDe(ms, m), 0); };
 const nTemas = n => n === 1 ? '1 tema' : `${n} temas`;
@@ -9116,12 +9265,54 @@ function construirCola(cap){
   const delCap = typeof cap === 'number' ? _modsCap(cap) : null;
   const marcados = delCap && _conCasillas() ? delCap.filter(m => selTemas.includes(m.id)) : [];   // casillas de la lista de Temas
   const ms = delCap ? (marcados.length ? marcados : delCap.filter(m => !m.extra)) : modulosActivos();
-  // agrupada: se mezcla el ORDEN de los temas, pero las repeticiones de cada uno quedan juntas.
-  // no agrupada (por defecto): se mezclan las repeticiones sueltas, así que pueden salir intercaladas.
-  if(agruparTema) return shuffle(ms).flatMap(m => Array(vecesDe(ms, m)).fill(m.id));
+  return _colaDe(ms, m => vecesDe(ms, m));
+}
+// veces(m) = cuántas copias de cada tema entran.
+// agrupada: se mezcla el ORDEN de los temas, pero las repeticiones de cada uno quedan juntas.
+// no agrupada (por defecto): se mezclan las repeticiones sueltas, así que pueden salir intercaladas.
+function _colaDe(ms, veces){
+  if(agruparTema) return shuffle(ms).flatMap(m => Array(veces(m)).fill(m.id));
   const cola = [];
-  ms.forEach(m => { for(let k = 0; k < vecesDe(ms, m); k++) cola.push(m.id); });
+  ms.forEach(m => { for(let k = 0; k < veces(m); k++) cola.push(m.id); });
   return shuffle(cola);
+}
+// al prender/apagar "1 ejercicio por tema" a mitad de ronda: lo ya abierto no se toca, solo lo que falta.
+// Si sobran puestos sin abrir se quitan (los de más de un tema ya cubierto) y los números de página se
+// corren; si faltan se agregan al final. Devuelve true si cambió algo.
+function _replanearRonda(){
+  if(esTemaFijo || modoErrores || modoRepasoRonda || examen || !sesionOrden.length) return false;
+  const ms = [...new Set(sesionOrden.filter(id => id !== '*'))].map(id => MOD_POR_ID[id]).filter(Boolean);   // los temas de ESTA ronda
+  const obj = {}; ms.forEach(m => obj[m.id] = vecesDe(ms, m));
+  const cuenta = {};   // cuántos puestos lleva cada tema (lo abierto cuenta primero)
+  sesionOrden.forEach((id, i) => { if(sesionAbiertos[i] && obj[id] != null) cuenta[id] = (cuenta[id] || 0) + 1; });
+  const keep = sesionOrden.map((id, i) => i).filter(i => {
+    const id = sesionOrden[i];
+    if(sesionAbiertos[i] || id === '*' || obj[id] == null) return true;
+    if((cuenta[id] || 0) >= obj[id]) return false;
+    cuenta[id] = (cuenta[id] || 0) + 1; return true;
+  });
+  const faltan = ms.filter(m => obj[m.id] > (cuenta[m.id] || 0));
+  const extra = _colaDe(faltan, m => obj[m.id] - (cuenta[m.id] || 0));
+  if(keep.length === sesionOrden.length && !extra.length) return false;
+  if(keep.length < sesionOrden.length){   // quitar puestos: cada página abierta pasa a su número nuevo (la actual siempre se queda)
+    const nuevo = new Map(keep.map((v, k) => [v, k]));
+    const re = o => { const n = {}; Object.keys(o).forEach(k => { if(nuevo.has(+k)) n[nuevo.get(+k)] = o[k]; }); return n; };
+    const ejs = []; keep.forEach((v, k) => { if(sesionEjs[v]) ejs[k] = sesionEjs[v]; });
+    sesionEjs = ejs; sesionAbiertos = re(sesionAbiertos); sesionVistos = re(sesionVistos); sesionRes = re(sesionRes);
+    sesionOrden = keep.map(v => sesionOrden[v]); sesionIdx = nuevo.get(sesionIdx);
+    _borrarPaginasSesion(); _ejsSucios = new Set(); ejs.forEach((e, i) => _ejsSucios.add(i));
+  }
+  sesionOrden.push(...extra);
+  sesionCola = sesionOrden.filter((id, i) => !sesionAbiertos[i] && id !== '*');   // lo que todavía no salió
+  sesionTotal = sesionOrden.length + sesionPendientes.length;                     // cada repetición pendiente ya tenía su puesto
+  main.dataset.ej = sesionIdx;
+  return true;
+}
+// el selector "Pág." de arriba lista todos los puestos: si cambió el total hay que dibujarlo otra vez
+function _repintarPagina(){
+  const cab = document.querySelector('#main .cabEj'); if(!cab) return;
+  const l = cab.querySelector('.irPreg'); if(l) l.remove();
+  cab.insertAdjacentHTML('beforeend', selectorPregunta());
 }
 // la fila de abajo de la práctica (te faltan / racha / agrupar / repetir). Los dos botones solo
 // repintan ESTA fila: repintar todo el ejercicio borraba la respuesta, "Siguiente" y Tu proceso.
@@ -9130,7 +9321,9 @@ const _filaProgresoHTML = () => `<div class="racha">
         <div><b>${racha.actual}</b><span>racha actual</span></div>
         <button class="${agruparTema?'on':''}" onclick="toggleAgrupar()"><b>${agruparTema?'Sí':'No'}</b><span>agrupar</span></button>
         <button class="${repetirFallo?'on':''}" onclick="toggleRepetir()"><b>${repetirFallo?'Sí':'No'}</b><span>repetir</span></button>
-      </div>`;
+      </div>${esTemaFijo || modoErrores || modoRepasoRonda || examen ? '' : `<div class="racha">
+        <button class="${unoPorTema?'on':''}" onclick="toggleUnoPorTema()"><b>${unoPorTema?'Sí':'No'}</b><span>1 ejercicio por tema</span></button>
+      </div>`}`;
 // mapa de las preguntas de la ronda, solo en las prácticas del Examen Departamental: verde = bien, rojo = mal,
 // amarillo = viste la explicación sin contestar. Tocar un número va a esa pregunta.
 let _mapaAbierto = false;
@@ -9151,6 +9344,12 @@ function toggleAgrupar(){
 function toggleRepetir(){
   repetirFallo = !repetirFallo; guardar('mate_repetir_v1', repetirFallo);
   _repintarFilaProgreso();
+}
+function toggleUnoPorTema(){
+  unoPorTema = !unoPorTema; guardar('mate_uno_v1', unoPorTema);
+  const cambio = _replanearRonda();   // a diferencia de agrupar, esto SÍ rehace lo que falta de la ronda en curso
+  _repintarFilaProgreso();
+  if(cambio){ _repintarPagina(); guardarSesion(); }
 }
 // agenda la pregunta fallada para que vuelva a salir, igual (mismo enunciado y números), más
 // adelante en la misma ronda — nunca la próxima (esperar arranca en 2 como mínimo), y la ronda
@@ -9197,9 +9396,10 @@ function procesoHTML(){
   const texto = (_borradorPend && _borradorPend.proceso) || ((respondido || vioExpl) && ultimoProceso) || '';
   const guardados = texto ? texto.split('\n') : [];
   const n = Math.max(3, guardados.length);
+  const abierto = !!texto;   // oculto por defecto; se ve solo si ya hay algo escrito (borrador o proceso de un intento anterior)
   return `<div class="procesoCaja"><div class="procesoTit"><span>Tu proceso</span>
-      <button type="button" id="btnOcultarProceso" class="procesoOcultar" onclick="toggleProceso()">▲ Ocultar</button></div>
-    <div id="cuerpoProceso"><div id="listaPasos">${Array.from({length:n}, (_, i) => pasoFilaHTML(i, guardados[i] || '')).join('')}</div>
+      <button type="button" id="btnOcultarProceso" class="procesoOcultar" onclick="toggleProceso()">${abierto ? '▲ Ocultar' : '▼ Mostrar'}</button></div>
+    <div id="cuerpoProceso"${abierto ? '' : ' style="display:none"'}><div id="listaPasos">${Array.from({length:n}, (_, i) => pasoFilaHTML(i, guardados[i] || '')).join('')}</div>
     <button type="button" class="btn sec chico" onclick="agregarPaso()">+ Agregar paso</button></div></div>`;
 }
 // esconde / muestra solo la caja de "Tu proceso" (lo que escribiste se queda guardado)
@@ -10610,11 +10810,9 @@ function entradaHTML(ej){
           <button type="button" class="btn sec signo" onclick="toggleSigno('inNum')">±</button>
           <input class="campo" id="inNum" inputmode="decimal" autocomplete="off" placeholder="Tu respuesta">
         </div>
-        ${ej.ayuda ? `<div class="nota">${ej.ayuda}</div>` : ''}
         <button class="btn amar" style="margin-top:10px" onclick="responder()">Comprobar</button>`;
     case 'texto': return `
         <input class="campo" id="inTexto" autocomplete="off" placeholder="ej. 2^3 * 5">
-        ${ej.ayuda ? `<div class="nota">${ej.ayuda}</div>` : ''}
         <button class="btn amar" style="margin-top:10px" onclick="responder()">Comprobar</button>`;
     case 'frac': return `
         <div class="fracIn">
@@ -10623,7 +10821,6 @@ function entradaHTML(ej){
           <div class="barra"></div>
           <input class="campo" id="inD" inputmode="numeric" autocomplete="off" placeholder="abajo">
         </div>
-        ${ej.ayuda ? `<div class="nota">${ej.ayuda}</div>` : ''}
         <button class="btn amar" style="margin-top:12px" onclick="responder()">Comprobar</button>`;
     case 'mixto': return `
         <div class="mixIn">
@@ -10716,11 +10913,11 @@ function pintarEjercicio(){
       <div id="zonaEntrada">${entradaHTML(ejActual)}</div>
       <div id="zonaIA">${aiBoxHTML()}</div>
       <div id="zonaFb"></div>
-      <div class="row" id="accionesPre">
+      <div class="row tres" id="accionesPre">
         <button class="btn sec chico" onclick="saltarEjercicio()">Saltar</button>
         <button class="btn sec chico" onclick="verExplicacion()">Ver explicación</button>
+        <button class="btn sec chico" onclick="reiniciarEjercicio()" title="Borra tu respuesta y tu proceso" aria-label="Reiniciar este ejercicio: borra tu respuesta y tu proceso">↺ Reiniciar</button>
       </div>
-      <button class="btn sec chico" style="margin-top:8px" onclick="reiniciarEjercicio()">↺ Reiniciar este ejercicio<small>borra tu respuesta y tu proceso</small></button>
     </div>
     <div class="card" id="cardProgreso" style="padding:14px 20px">${_filaProgresoHTML()}${_mapaHTML()}</div>`;
   const primero = $('inNum') || $('inTexto') || $('inE') || $('inN') || $('inA2') || $('inBase') || $('inCoef') || $('inM0');
@@ -11862,6 +12059,7 @@ function autotest(){
     salioDe('razones', 'medio', 900, e => /Cambia/.test(e.enunciado)) && salioDe('formulas-dec', 'dificil', 900, e => /dado V = .* y r = \d+ cm/.test(limpiaTxt(e.enunciado))) && salioDe('aplicaciones-dec', 'medio', 900, e => /<svg/.test(e.enunciado))
     && salioDe('ecuaciones-dec', 'dificil', 900, e => /class="fr"/.test(e.enunciado) && e.tipo === 'num') && salioDe('ecuaciones-dec', 'dificil', 1500, e => /class="fr"/.test(e.enunciado) && e.tipo === 'frac'));
   chk('cada tema fijo va justo debajo de su tema al azar en la lista', _EDU_TEMAS.filter(t => t[4].length === 1).every(t => MODULOS.findIndex(m => m.id === t[1]) === MODULOS.findIndex(m => m.id === t[4][0]) + 1));
+  const unoAntes = unoPorTema; unoPorTema = false;   // lo de abajo es con el botón "1 ejercicio por tema" apagado (el de la usuaria puede estar prendido)
   selTemas = ['suma-resta-dec', 'educo-suma-resta'];
   const col6 = construirCola(6);
   chk('Mezcla del cap. 6 con 2 casillas (uno al azar y uno "— EducoSoft"): solo esos 2 temas (2 veces cada uno)', col6.length === 4 && col6.every(id => id === 'suma-resta-dec' || id === 'educo-suma-resta'));
@@ -11872,7 +12070,15 @@ function autotest(){
   selTemas = [];
   const col6s = construirCola(6);
   chk('Mezcla del cap. 6 sin casillas: todos los temas del capítulo, sin los "— EducoSoft" (extra)', new Set(col6s).size === _modsCap(6).filter(m => !m.extra).length && !col6s.some(id => MOD_POR_ID[id].extra));
+  unoPorTema = true; const col6u = construirCola(6);
+  chk('"1 ejercicio por tema" prendido: la mezcla del cap. 6 trae cada tema UNA vez', col6u.length === new Set(col6u).size && col6u.length === _modsCap(6).filter(m => !m.extra).length);
+  unoPorTema = unoAntes;
   selTemas = selAntes;
+  // el dibujo del punto que salta (diagPunto): leyendo los dígitos que no están apagados y poniendo el punto naranja, tiene que salir el resultado de la cuenta
+  const leePunto = svg => { const ds = [...svg.matchAll(/<text x="[\d.]+" y="80" text-anchor="middle"([^>]*)>(\d)<\/text>/g)].map(m => ({ d:m[2], ap:/opacity/.test(m[1]) }));
+    const q = (+svg.match(/<circle cx="([\d.]+)" cy="78" r="4.8"/)[1] - 12) / 30; let s = ''; ds.forEach((x, i) => { if(i === q) s += '.'; if(!x.ap) s += x.d; }); return s.replace(/\.$/, '').replace(/^\./, '0.'); };
+  chk('dibujo del punto que salta: el número que queda es el de la cuenta (÷ 100, × 100, ceros que se agregan y ceros apagados)',
+    [[47.25, -2], [5, -2], [0.5, -2], [50, -2], [100, -2], [0.4725, 2], [0.05, 2], [2.2, 2], [0.006, 2], [35, -1], [1250, -2]].every(([v, k]) => leePunto(diagPunto(v, k)) === fd(dN(v * Math.pow(10, k))).replace(/,/g, '')));
 
   lineas.push('', '── verificación (casos borde) ──');
   const ejS = { tipo:'frac', respuesta:{n:3,d:4}, pedirSimple:true };

@@ -118,6 +118,8 @@
   .btn small{display:block;font-weight:500;font-size:.79rem;opacity:.6;margin-top:2px}
   .row{display:flex;gap:9px;flex-wrap:wrap}
   .row .btn{flex:1;min-width:120px}
+  .row.tres{flex-wrap:nowrap}
+  .row.tres .btn{min-width:0;padding:11px 4px;font-size:.84rem}
   .back{background:none;border:none;color:var(--texto);cursor:pointer;font-size:.94rem;
     padding:5px 2px;margin-bottom:6px;opacity:.65;font-family:inherit;font-weight:600}
   .back:hover{opacity:1}
@@ -205,6 +207,12 @@
   .procesoOcultar{flex:none;background:none;border:0;color:var(--texto);text-decoration:underline;font-family:inherit;font-size:.85rem;cursor:pointer;padding:4px 2px;white-space:nowrap}
   .procesoTit small{font-weight:400;opacity:.7}
   .dgNota{font-size:.92em;opacity:.85;margin:0 0 10px;line-height:1.35}
+  .dgEtiq{font-size:.85em;opacity:.8;margin:8px 0 -2px;font-weight:600}
+  .tLug{display:block;overflow-x:auto;max-width:100%;border-collapse:collapse;margin:6px 0 4px;text-align:center}
+  .tLug th{font-size:.72rem;font-weight:600;opacity:.8;padding:4px 2px;line-height:1;white-space:nowrap;writing-mode:vertical-rl;transform:rotate(180deg);text-align:left;vertical-align:bottom}
+  .tLug td{font-size:1.25rem;font-weight:700;padding:3px 7px;border-top:1px solid rgba(127,127,127,.4)}
+  .tLug .pto{min-width:0;padding:3px 0}
+  .tLug .ult{color:#e8a23a}
   .pasoFila{display:flex;align-items:center;gap:8px;margin-bottom:8px}
   .pasoFila > span{min-width:18px;font-weight:700;opacity:.7;text-align:center}
   .pasoFila .campo{flex:1;min-width:0;margin:0;text-align:left}
@@ -570,6 +578,6 @@
 </div>
 
 <!-- todo el JavaScript vive en app.js (Chrome lo guarda ya compilado y no lo vuelve a analizar en cada apertura). El ?v= es el MISMO número que CACHE en sw.js: se suben juntos en cada deploy. -->
-<script src="app.js?v=168"></script>
+<script src="app.js?v=169"></script>
 </body>
 </html>
