@@ -5454,6 +5454,42 @@ const pctDec = p => `${fd(p)}% = ${fd(p)} ÷ 100 = ${cb(fd(dN(p / 100)))}` + dia
 const decPct = v => `${fd(v)} × 100 = ${cb(fd(dN(v * 100)) + '%')}` + diagPunto(v, 2);
 // una línea sin sus dibujos ni la nota de debajo (para armar textos cortos, como el "Ejemplo con este mismo")
 const _sinDibujo = l => String(l).replace(/<svg[\s\S]*?<\/svg>/g, '').replace(/<div class="dgNota"[^>]*>[\s\S]*?<\/div>/g, '').replace(/<table[\s\S]*?<\/table>/g, '');
+// recta numérica con decimales (libro 6.1 C): una marca cada 0.1 si el tramo es corto (la del .5 más alta), los enteros rotulados
+// y los puntos en naranja con su número arriba. pts: [{ v, et }] (sin et = punto solo). o.lo / o.hi = tramo (enteros);
+// o.dist = flecha naranja desde el 0 hasta el primer punto (valor absoluto). Devuelve '' si el tramo es muy largo para dibujarlo.
+function rectaDec(pts, o = {}){
+  const vs = pts.map(p => p.v).concat(o.dist ? [0] : []);
+  const lo = o.lo !== undefined ? o.lo : Math.floor(Math.min(...vs));
+  let hi = o.hi !== undefined ? o.hi : Math.ceil(Math.max(...vs));
+  if(hi <= lo) hi = lo + 1;
+  const span = hi - lo; if(span > 12) return '';
+  const X0 = 18, X1 = 282, x = v => dN(X0 + (v - lo) / span * (X1 - X0)), id = 'dg' + (++_dgId);
+  const rot = pts.filter(p => p.et).sort((a, b) => a.v - b.v);
+  const dos = rot.some((p, j) => j && x(p.v) - x(rot[j - 1].v) < 56);   // rótulos pegados: unos arriba y otros más arriba
+  const yL = rot.length ? (dos ? 54 : 36) : 16, dec = span <= 3;
+  let g = `<path d="M8 ${yL} L292 ${yL}" stroke="currentColor" stroke-width="2"/><path d="M3 ${yL} l9 -4.5 v9 z M297 ${yL} l-9 -4.5 v9 z" fill="currentColor"/>`;
+  for(let k = 0; k <= span * (dec ? 10 : 1); k++){
+    const v = dN(lo + (dec ? k / 10 : k)), ent = !dec || k % 10 === 0, h = ent ? 7 : k % 10 === 5 ? 5 : 3;
+    g += `<path d="M${x(v)} ${yL - h} L${x(v)} ${yL + h}" stroke="currentColor" stroke-width="${ent ? 2 : 1.2}"/>`;
+    if(ent) g += `<text x="${x(v)}" y="${yL + 25}" text-anchor="middle">${fd(v)}</text>`;
+  }
+  if(o.dist){
+    const a = x(0), b = x(pts[0].v), s = b >= a ? 1 : -1;
+    if(Math.abs(b - a) > 9) g += `<path d="M${a} ${yL} L${b - s * 8} ${yL}" fill="none" stroke="#e8a23a" stroke-width="4" marker-end="url(#${id})"/>`;
+  }
+  pts.forEach(p => {
+    const px = x(p.v), j = rot.indexOf(p), alto = dos && j % 2 === 1;
+    g += `<circle cx="${px}" cy="${yL}" r="5.5" fill="#e8a23a"/>`;
+    if(p.et){
+      const ty = yL - 14 - (alto ? 19 : 0), an = px < 34 ? 'start' : px > 266 ? 'end' : 'middle';
+      g += (alto ? `<path d="M${px} ${ty + 4} L${px} ${yL - 8}" stroke="currentColor" stroke-width="1" opacity=".5"/>` : '')
+        + `<text x="${px}" y="${ty}" text-anchor="${an}" font-weight="700">${p.et}</text>`;
+    }
+  });
+  return _dgSvg(id, 300, yL + 32, g, 14, 300);
+}
+// la recta con una nota debajo ('' si no se pudo dibujar)
+const rectaNota = (pts, nota, o) => { const s = rectaDec(pts, o); return s && _nota(s, nota); };
 // dibujo: el punto decimal salta k lugares (k > 0 a la derecha = × 10, 100…; k < 0 a la izquierda = ÷), una flecha numerada por lugar.
 // Punto de antes en gris, el de ahora en naranja; los ceros que se agregan en naranja; los ceros que no cuentan (047.25, 0.50), apagados.
 // nota: otra explicación debajo del dibujo ('' = sin nota; se usa cuando van dos dibujos seguidos con una sola nota)
@@ -5607,7 +5643,7 @@ MODULOS.push(
       const v = Math.random() < 0.7 ? -decK(0.1, 99, R(1, 3)) : decK(0.1, 99, R(1, 3));
       return { enunciado:`Halla el valor absoluto del número:<br><b>|${fd(v)}|</b>`, ...numDec(Math.abs(v)),
         explicacion: receta({ pide:'la distancia del número al 0 en la recta numérica.',
-          pasos:[{ t:'El valor absoluto es una distancia', l:['Una distancia nunca es negativa: el valor absoluto quita el signo menos y deja todo lo demás igual.'] },
+          pasos:[{ t:'El valor absoluto es una distancia', l:['Una distancia nunca es negativa: el valor absoluto quita el signo menos y deja todo lo demás igual.', rectaNota([{ v, et: fd(v) }], 'La flecha naranja mide cuánto hay del 0 al número: eso es el valor absoluto.', { dist:true })] },
             { t:'Quita el signo', l:[`|${fd(v)}| = ${cb(fd(Math.abs(v)))}`] }],
           resp: fd(Math.abs(v)), error:'cambiar los dígitos o el punto: solo se quita el signo.',
           ejemplo:`|${fd(v)}| = ${fd(Math.abs(v))}.` }) };
@@ -5621,7 +5657,7 @@ MODULOS.push(
         explicacion: receta({ pide:'los números de menor a mayor (el menor es el que está más a la izquierda en la recta numérica).',
           pasos:[{ t:'Los negativos van primero', l:[xs.some(x => x < 0) ? `Negativos: ${xs.filter(x => x < 0).map(x => fd(x)).join(', ')}. Entre negativos es MENOR el que está más lejos del 0.` : 'No hay negativos.'] },
             { t:'Pon todos con los mismos lugares decimales (agrega ceros)', l:[comoSemejantes(xs), tablaLugares(xs, 'dif') + '<div class="dgNota">Cada dígito debajo de su lugar; los ceros que se agregan, en gris. Se compara columna por columna desde la izquierda.</div>'] },
-            { t:'Compara como si fueran números enteros', l:[`Orden: ${cb(ord.map(i => fd(xs[i])).join(' < '))}`] }],
+            { t:'Compara como si fueran números enteros', l:[`Orden: ${cb(ord.map(i => fd(xs[i])).join(' < '))}`, rectaNota(xs.map(x => ({ v: x, et: fd(x) })), 'En la recta quedan de izquierda a derecha, de menor a mayor.')] }],
           resp: ord.map(i => fd(xs[i])).join(', '), error:'creer que un decimal con más cifras es más grande: 0.5 es mayor que 0.412 (0.500 > 0.412).',
           ejemplo:`${comoSemejantes(xs)} → ${ord.map(i => fd(xs[i])).join(', ')}.` }) };
     }
@@ -5636,9 +5672,43 @@ MODULOS.push(
       explicacion: receta({ pide:'cuál de los dos es más grande (el de la DERECHA en la recta numérica).',
         pasos:[{ t:'Hazlos decimales semejantes (mismos lugares decimales)', l:[`${fd(a)} → ${fd(a, k)} y ${fd(b)} → ${fd(b, k)} (agregar ceros a la derecha no cambia el valor)`, tablaLugares([a, b], 'dif') + '<div class="dgNota">Uno debajo del otro, cada dígito en su lugar (los ceros agregados, en gris). La primera columna, desde la izquierda, donde son distintos (en naranja) decide cuál es mayor.</div>'] },
           { t:'Quita el punto y compara los enteros', l:[`${mm(ai)} ${r} ${mm(bi)}${(a < 0 && b < 0) ? ' (los dos son negativos: el que está más cerca del 0 es el MAYOR)' : (a < 0) !== (b < 0) ? ' (todo negativo es menor que cualquier positivo)' : ''}`] },
-          { t:'Escribe el símbolo', l:[`${fd(a)} ${cb(r === '<' ? '&lt;' : '&gt;')} ${fd(b)}`] }],
+          { t:'Escribe el símbolo', l:[`${fd(a)} ${cb(r === '<' ? '&lt;' : '&gt;')} ${fd(b)}`, rectaNota([{ v: a, et: fd(a) }, { v: b, et: fd(b) }], 'En la recta, el que queda más a la DERECHA es el mayor.')] }],
         resp: `${fd(a)} ${r} ${fd(b)}`, error:'comparar por la cantidad de cifras: 2.47 es MAYOR que 2.097 (2.470 > 2.097).',
         ejemplo:`${fd(a, k)} y ${fd(b, k)} → ${mm(ai)} ${r} ${mm(bi)} → ${fd(a)} ${r} ${fd(b)}.` }) };
+  }
+},
+{
+  id:'dec-grafica', nombre:'Graficar decimales en la recta numérica', secciones:['6.1'],
+  gen(nv){
+    // el libro: "traza la gráfica": se redondea a la décima más cercana y se cuentan las marcas desde el entero
+    const neg = nv !== 'facil' && Math.random() < (nv === 'medio' ? .3 : .5);
+    const ent = R(0, porNivel(nv, 5, 9, 9));
+    let t = R(0, 9); if(!ent && !t || nv === 'facil') t = R(1, 9);
+    const u = nv === 'facil' ? 0 : pick([1, 2, 3, 4, 6, 7, 8, 9]), w = nv === 'dificil' ? R(1, 9) : 0;
+    const m = dN(ent + t / 10 + u / 100 + w / 1000), subeU = u >= 5;
+    const r0 = dN((ent * 10 + t + (subeU ? 1 : 0)) / 10), x = neg ? -m : m, r = neg ? -r0 : r0;
+    const T = Math.round(r * 10), fl = Math.floor(r), lo = fl - (Math.random() < .5 ? 1 : 0), hi = lo + 2;
+    const base = Math.trunc(r), k = Math.round(Math.abs(r - base) * 10);   // marcas desde el entero más cercano al 0
+    const enVentana = v => v >= lo * 10 && v <= hi * 10 && v !== T;
+    const swap = neg ? 0 : Math.round((ent + u / 10 + t / 100) * 10);     // errores típicos: otra décima, el otro lado del entero, las cifras cambiadas
+    let malas = [...new Set([T + 1, T - 1, -T, T + 2, T - 2, swap].filter(enVentana))];
+    malas = shuffle(malas).slice(0, 3);
+    while(malas.length < 3){ const v = R(lo * 10, hi * 10); if(enVentana(v) && !malas.includes(v)) malas.push(v); }
+    const todas = shuffle([T, ...malas]), L = ['A', 'B', 'C', 'D'], letra = L[todas.indexOf(T)];
+    const dib = todas.map((v, i) => _dgEtiq(`<b>${L[i]}</b>`) + rectaDec([{ v: v / 10 }], { lo, hi })).join('');
+    const enunciado = `Traza la gráfica de <b>${fd(x)}</b> en la recta numérica. ¿En cuál recta quedó bien puesto el punto?<br>Cada marca chiquita vale 0.1.` + dib;
+    const entre = `${fd(x)} está entre ${fd(Math.floor(x))} y ${fd(Math.floor(x) + 1)}`;
+    const pasos = [{ t:'Redondea a la décima más cercana (la recta se cuenta de 0.1 en 0.1)', l:[
+        u ? `${entre}. Mira la centésima: es ${cb(u)}. ${subeU ? 'Es 5 o más: la décima SUBE' : 'Es menor que 5: la décima se QUEDA igual'} → ${cb(fd(r))}.` : `${fd(x)} ya tiene una sola décima: ${cb(fd(r))}.`] },
+      { t:'Cuenta las marcas desde el entero', l:[
+        k ? `Entre ${fd(neg ? base - 1 : base)} y ${fd(neg ? base : base + 1)} hay 10 marcas. ${fd(r)} está ${cb(k + (k === 1 ? ' marca' : ' marcas'))} después del ${fd(base)}, hacia la ${neg ? 'IZQUIERDA (los negativos se alejan del 0 hacia la izquierda)' : 'DERECHA'}.` : `${fd(r)} cae justo sobre el ${fd(base)}.`,
+        _nota(rectaDec([{ v: r, et: fd(r) }], { lo, hi }), 'El punto naranja es la respuesta: cuenta las marcas chiquitas desde el entero.')] },
+      { t:'Busca la recta que lo tenga', l:[`La recta ${cb(letra)} tiene el punto en ${fd(r)}.`] }];
+    return { enunciado, tipo:'opciones', opciones: L, respuesta: letra,
+      explicacion: receta({ pide:'dónde queda el número en la recta (redondeado a la décima más cercana).', pasos,
+        resp: `${fd(r)}: la recta ${letra}`, comp: `${fd(r)} está a ${k} ${k === 1 ? 'marca' : 'marcas'} del ${fd(base)}, ${neg ? 'a la izquierda' : 'a la derecha'}: coincide con el punto ✓`,
+        error: neg ? 'poner el punto del lado derecho: los negativos van a la izquierda del 0.' : 'contar la centésima como si fuera una marca: la recta va de 0.1 en 0.1, así que primero se redondea a la décima.',
+        ejemplo: `${fd(x)} → ${fd(r)} → ${k} ${k === 1 ? 'marca' : 'marcas'} desde el ${fd(base)}.` }) };
   }
 },
 {
@@ -6342,7 +6412,26 @@ MODULOS.push(
         { t:'Redondea a la décima', l: explRed(dist / t, 1) }];
       pide = 'las millas que recorre en UNA hora, a la décima.'; error = 'multiplicar distancia × tiempo.';
       extra.comp = `${fd(r, 1)} mph × ${fd(t)} h = ${fd(dN(r * t))} millas, casi ${fd(dist)} ✓`; extra.ej = `${fd(dist)} ÷ ${fd(t)} ≈ ${fd(r, 1)} mph`;
-    } else if(tipo === 'figura'){   // razón de la altura a la base en un paralelogramo: la altura es la línea punteada, NO el lado inclinado (EducoSoft 7.2)
+    } else if(tipo === 'figura'){   // 7.2 del libro: razón de la altura a la base (paralelogramo: la altura es la línea punteada, NO el lado inclinado), del lado al perímetro de un cuadrado y de la base a la diagonal
+      const fig = pick(['para', 'para', 'cuad', 'diag']);
+      if(fig === 'cuad'){
+        const s = decK(1, 9, 1), un = pick(['cm', 'm', 'pulg']), n = Math.round(s * 10), d = 4 * n, f = Fq(n, d);
+        return { enunciado:`¿Cuál es la razón de la medida del <b>lado</b> al <b>perímetro</b> del cuadrado que se muestra? Escríbela como una fracción en términos simples.${svgCuadrado(`${fd(s)} ${un}`)}`,
+          tipo:'frac', respuesta:{ n:f.n, d:f.d }, pedirSimple:true, ayuda:'La razón a : b se escribe con a arriba y b abajo.',
+          explicacion: receta({ pide:'la razón lado/perímetro como fracción simplificada.',
+            pasos:[{ t:'Halla el perímetro: el cuadrado tiene 4 lados iguales', l:[`Perímetro = 4 × ${fd(s)} = ${cb(fd(dN(4 * s)) + ' ' + un)}`] },
+              { t:'Escribe la razón: lado arriba, perímetro abajo', l:[cb(`${fd(s)}/${fd(dN(4 * s))}`)] }, { t:'Quita el punto decimal: multiplica arriba y abajo por 10', l:[`${fd(s)}/${fd(dN(4 * s))} = ${n}/${d}`] }, pasoSimplif(n, d)],
+            resp:`${f.n} : ${f.d}`, comp:'el lado cabe 4 veces en el perímetro, así que la razón siempre es 1 a 4, mida lo que mida el lado ✓', error:'poner el lado entre el lado: el denominador es el PERÍMETRO (4 lados).', ejemplo:`${n}/${d} = ${f.n}/${f.d}.` }) };
+      }
+      if(fig === 'diag'){
+        const bs = decK(2, 9, 1), dg = dN(bs + decK(0.5, 4, 1)), un = pick(['cm', 'm', 'pulg']), n = Math.round(bs * 10), d = Math.round(dg * 10), f = Fq(n, d), dec = Math.round(bs / dg * 10) / 10;
+        return { enunciado:`Para la siguiente figura, halla la razón de la <b>base</b> a la <b>diagonal</b>. Escríbela como una fracción en su forma más simple.${svgRectDiag(`${fd(bs)} ${un}`, `${fd(dg)} ${un}`)}`,
+          tipo:'frac', respuesta:{ n:f.n, d:f.d }, pedirSimple:true, ayuda:'La razón a : b se escribe con a arriba y b abajo.',
+          explicacion: receta({ pide:'la razón base/diagonal como fracción simplificada.',
+            pasos:[{ t:'Escoge las medidas correctas', l:[`La BASE es el lado de abajo: ${fd(bs)} ${un}. La DIAGONAL es la línea punteada que cruza la figura de esquina a esquina: ${fd(dg)} ${un}.`] },
+              { t:'Escribe la razón: base arriba, diagonal abajo', l:[cb(`${fd(bs)}/${fd(dg)}`)] }, { t:'Quita el punto decimal: multiplica arriba y abajo por 10', l:[`${fd(bs)}/${fd(dg)} = ${n}/${d}`] }, pasoSimplif(n, d)],
+            resp:`${f.n} : ${f.d}`, comp:`en decimal, ${fd(bs)} ÷ ${fd(dg)} ≈ ${fd(dec, 1)} (a la décima), menor que 1 porque la diagonal es más larga que la base ✓`, error:'poner la diagonal arriba: la razón base a diagonal lleva la base ARRIBA.', ejemplo:`${n}/${d} = ${f.n}/${f.d}.` }) };
+      }
       const h = decK(1, 9, 1), lado = dN(h + decK(0.1, 3, 1)), b = R(3, 12), u = pick(['cm', 'm', 'pulg']), n = Math.round(h * 10), d = b * 10, f = Fq(n, d);
       return { enunciado:`Para la siguiente figura, halla la razón de la <b>altura</b> a la <b>base</b>, como una fracción en términos simples.${svgParalelo(fd(h), fd(lado), b, u)}`,
         tipo:'frac', respuesta:{ n:f.n, d:f.d }, pedirSimple:true, ayuda:'La razón a : b se escribe con a arriba y b abajo.',
@@ -7034,6 +7123,13 @@ const optFr = f => f.d === 1 ? mm(f.n) : Math.abs(f.n) < f.d ? frS(f.n, f.d) : m
 const svgParalelo = (h, lado, b, u) => `<svg viewBox="0 0 300 120" style="width:100%;max-width:300px;height:auto;display:block;margin:8px auto;color:var(--texto)" xmlns="http://www.w3.org/2000/svg">
   <polygon points="40,95 200,95 250,25 90,25" fill="none" stroke="currentColor" stroke-width="2"/><line x1="90" y1="25" x2="90" y2="95" stroke="currentColor" stroke-dasharray="4 3"/>
   <g fill="currentColor" font-size="13" font-weight="700"><text x="96" y="64">${h} ${u}</text><text x="232" y="66">${lado} ${u}</text><text x="120" y="113" text-anchor="middle">${b} ${u}</text></g></svg>`;
+// cuadrado con su lado rotulado (razón del lado al perímetro) y rectángulo con su diagonal (razón de la base a la diagonal): 7.2 del libro
+const svgCuadrado = t => `<svg viewBox="0 0 300 120" style="width:100%;max-width:300px;height:auto;display:block;margin:8px auto;color:var(--texto)" xmlns="http://www.w3.org/2000/svg">
+  <rect x="105" y="12" width="90" height="90" fill="none" stroke="currentColor" stroke-width="2"/>
+  <text x="150" y="116" text-anchor="middle" font-size="13" font-weight="700" fill="currentColor">${t}</text></svg>`;
+const svgRectDiag = (b, d) => `<svg viewBox="0 0 300 130" style="width:100%;max-width:300px;height:auto;display:block;margin:8px auto;color:var(--texto)" xmlns="http://www.w3.org/2000/svg">
+  <rect x="40" y="12" width="220" height="86" fill="none" stroke="currentColor" stroke-width="2"/><line x1="40" y1="98" x2="260" y2="12" stroke="currentColor" stroke-dasharray="4 3"/>
+  <g fill="currentColor" font-size="13" font-weight="700"><text x="150" y="116" text-anchor="middle">${b}</text><text transform="translate(135,46) rotate(-21)" text-anchor="middle">${d}</text></g></svg>`;
 
 /* ── Tareas y Quizzes de EducoSoft de los caps. 6, 7 y 8: las preguntas EXACTAS de las 9 evaluaciones de la usuaria (Homework, Quiz de
    práctica y Quiz de 6.2–6.4, 7.1–7.2 y 8.1), sacadas de sus páginas de resultados el 2026-10-20: mismos números, mismas opciones a)–e) y
@@ -8817,7 +8913,7 @@ const SECMAP = {
   '5.6': ['autoeval-cap5'],
   '5.7': ['educo-cap5'],
   '5.9': ['educo-dep-exacto','educo-dep-exacto2'],
-  '6.1': ['dec-palabras','dec-redondear','dec-comparar'],
+  '6.1': ['dec-palabras','dec-redondear','dec-comparar','dec-grafica'],
   '6.6': ['repaso-cap6'],
   '6.7': ['autoeval-cap6'],
   '7.6': ['repaso-cap7'],
@@ -8897,7 +8993,8 @@ const CLAVES = {
   'semejantes':       ['figuras semejantes','triángulos semejantes','semejantes','similar figures','similar triangles','ampliación'],
   'dec-palabras':     ['números decimales','notación decimal','nombre en palabras','lectura y escritura de números decimales','decimal notation','word name','reading and writing decimals'],
   'dec-redondear':    ['redondeo de decimales','redondea el número decimal','rounding decimals'],
-  'dec-comparar':     ['comparación de decimales','valor absoluto de un número decimal','gráficas de decimales','comparing decimals','graphing decimals'],
+  'dec-comparar':     ['comparación de decimales','valor absoluto de un número decimal','comparing decimals'],
+  'dec-grafica':      ['gráficas de decimales','traza la gráfica','graficar decimales','recta numérica','graphing decimals'],
   'suma-resta-dec':   ['suma y resta de decimales','adding decimals','subtracting decimals','addition and subtraction of decimals'],
   'mult-div-dec':     ['multiplicación y división de decimales','multiplying decimals','dividing decimals','multiplication and division of decimals','estimación frontal','estimado frontal'],
   'dec-fraccion':     ['decimales y fracciones','decimal periódico','decimal infinito','decimal finito','repeating decimal','terminating decimal','decimals and fractions'],
