@@ -7684,6 +7684,133 @@ const _debajoDe = (id, ref) => { const [m] = MODULOS.splice(MODULOS.findIndex(x 
  ['educo-promedio', 'promedio-dec'], ['educo-ecuaciones', 'ecuaciones-dec'], ['educo-formulas', 'formulas-dec'], ['educo-aplicaciones', 'aplicaciones-dec'], ['educo-razones-prop', 'compras-grandes']]
   .forEach(([id, ref]) => _debajoDe(id, ref));
 
+/* ── Examen Parcial 2 (capítulos 6, 7 y 8) de EducoSoft: la PRÁCTICA, las 25 preguntas EXACTAS en orden (mismos números, mismas opciones y la misma
+   forma de contestar). Intento 1 de la usuaria, 2026-10-22 (attempt 467035583, 25/25). EducoSoft cambia los números en cada intento: el próximo es otro módulo. ── */
+function _modParcial(id, nombre, banco, cual){
+  return { id, nombre, secciones:['8.9'], banco:banco.length, _sig:0, extra:true,   // extra: preguntas fijas, fuera de la mezcla (se mete con su casilla)
+    nuevaRonda(){ this._sig = 0; },
+    gen(){
+      const i = this._sig % banco.length; this._sig++;
+      const ej = banco[i]();
+      ej.explicacion = ej.explicacion.map(l => typeof l !== 'string' || /^§|^TRUCO:/.test(l) || l.includes('<svg') ? l
+        : l.replace(/(= −?[\d.,/]+) → (?=−?[\d(][\d.,/)]* [+−×÷] )/g, '$1<br>').replace(/, y (?=[\d−(])/g, '<br>y '));
+      ej.enunciado = `<small>Pregunta ${i+1} de ${banco.length} · ${cual} del Examen Parcial 2 (caps. 6, 7 y 8)</small><br>` + ej.enunciado;
+      ej.__n = i;
+      return ej;
+    } };
+}
+// un ayudante de los de arriba (que da una respuesta numérica) pasado a opción múltiple con las opciones de EducoSoft
+const _aMC = (ej, enun, ops, ok) => ({ enunciado:enun, tipo:'opciones', opciones:ops, respuesta:ok, explicacion:ej.explicacion });
+const _P2 = [
+  // 1
+  () => _aMC(bSuma([2.19, 0.21, 25.6]), '<b>Suma : 2.19 + 0.21 + 25.6</b>', ['27.9', '28', '4.96', '49.6', NING], '28'),
+  // 2, 3, 4
+  () => bSumaRed([499.37, 49.4527, 442.5]),
+  () => bDecFrac(0.115),
+  () => bProd(-0.339, 0.001),
+  // 5
+  () => _aMC(bDivMov(3567.23, 2), '<b>Divide: 3,567.23 ÷ 10<sup>2</sup></b>', ['.356723', '35.6723', '356,723', '35,672,300', NING], '35.6723'),
+  // 6: evalúa 4x² − 5x + 3y para x = 1/2 y y = 0.2
+  () => ({ enunciado:`Evalúa la expresión y escribe la respuesta en forma decimal.<br><b>4<i>x</i><sup>2</sup> − 5<i>x</i> + 3<i>y</i></b> &nbsp;para&nbsp; <b><i>x</i> = ${fr(1, 2)}</b> &nbsp;y&nbsp; <b><i>y</i> = 0.2</b><br><small>(Redondea la respuesta hasta 2 lugares decimales)</small>`,
+    ...numDec(-0.9), ayuda:'Redondea a 2 lugares decimales.',
+    explicacion: receta({ pide:'el valor de la expresión cuando x = 1/2 y y = 0.2 (en decimal).',
+      pasos:[{ t:'Sustituye x y y por sus números', l:['Cada letra se cambia por su número: 4(1/2)² − 5(1/2) + 3(0.2)', 'Conviene pasar 1/2 a decimal: 1/2 = 0.5 → 4(0.5)² − 5(0.5) + 3(0.2)'] },
+        { t:'Primero el exponente', l:['(0.5)² = 0.5 × 0.5 = 0.25'] },
+        { t:'Después las multiplicaciones', l:[`4 × 0.25 = ${cb(1)}`, `5 × 0.5 = ${cb('2.5')}`, `3 × 0.2 = ${cb('0.6')}`, 'La expresión queda 1 − 2.5 + 0.6'] },
+        { t:'Suma y resta de izquierda a derecha', l:['1 − 2.5 = −1.5 (le quitas más de lo que tienes: sale negativo)', `−1.5 + 0.6 = ${cb('−0.9')}`] }],
+      resp:'−0.9', comp:'con la calculadora: 4(0.25) − 2.5 + 0.6 = −0.9 ✓ (ya tiene un solo decimal, no hace falta redondear)', error:'hacer (4x)² o 4 × 0.5² = 1: el exponente es solo de la x. También: restar 5 × 0.5 − 0.6 en vez de sumar el 0.6.',
+      ejemplo:'4(0.5)² − 5(0.5) + 3(0.2) = 1 − 2.5 + 0.6 = −0.9.', truco:'primero el exponente, después × y ÷, y de último + y − de izquierda a derecha.' }) }),
+  // 7: promedio
+  () => ({ enunciado:'<b>El promedio de 4.67 , 6.6 y 1.99 es :</b>', tipo:'opciones', opciones:['10.26', '3.42', '4.42', '5.42', NING], respuesta:'4.42',
+    explicacion: receta({ pide:'el promedio = la suma de los números ÷ cuántos números son.',
+      pasos:[{ t:'Suma los 3 números (en columna con los puntos alineados)', l:[colDec([4.67, 6.6, 1.99], '+', 13.26)] },
+        { t:'Divide la suma entre 3 (son 3 números)', l: pasosDivDec(13.26, 3) }],
+      resp:'4.42', comp:'4.42 × 3 = 13.26 ✓ y queda entre el más chico (1.99) y el más grande (6.6)', error:'dividir la suma entre otro número: se divide entre CUÁNTOS números son (3). La opción 10.26 sale de sumar mal (no alinear los puntos).',
+      ejemplo:'(4.67 + 6.6 + 1.99) ÷ 3 = 13.26 ÷ 3 = 4.42.', truco:'promedio = suma ÷ cuántos números son.' }) }),
+  // 8: 9/8 − 9x = 0.5
+  () => ({ enunciado:`Resuelve la ecuación para <i>x</i>:<br><b>${fr(9, 8)} − 9<i>x</i> = 0.5</b>`, tipo:'frac', respuesta:{ n:5, d:72 }, pedirSimple:true, signo:true, ayuda:'x = ___ (como fracción; con el ± para el signo)',
+    explicacion: receta({ pide:'el valor de x (como hay una fracción, se trabaja todo en fracciones).',
+      pasos:[{ t:'Pasa el decimal a fracción', l:[`0.5 = 5/10 = ${cb('1/2')} (5 ÷ 5 = 1 y 10 ÷ 5 = 2) → 9/8 − 9x = 1/2`] },
+        { t:'Quita el 9/8: réstalo en los DOS lados', l:['−9x = 1/2 − 9/8'] },
+        { t:'Resta las fracciones con denominador común (8)', l:['1/2 = 4/8 (arriba y abajo × 4)', `4/8 − 9/8 = (4 − 9)/8 = ${cb('−5/8')} → −9x = −5/8`] },
+        { t:'Quita el −9: divide los DOS lados entre −9 (dividir entre −9 = multiplicar por −1/9)', l:[`x = −5/8 × (−1/9) = (5 × 1)/(8 × 9) = ${cb('5/72')}`, 'Negativo × negativo = positivo.'] }],
+      resp:'x = 5/72', comp:'9/8 − 9(5/72) = 9/8 − 45/72 = 81/72 − 45/72 = 36/72 = 1/2 = 0.5 ✓', error:'dejar el signo negativo al final: −5/8 dividido entre −9 da positivo; o restar 9/8 solo de un lado.',
+      ejemplo:'−9x = −5/8 → x = 5/72.', truco:'si hay una fracción, pasa el decimal a fracción y trabaja todo en fracciones.' }) }),
+  // 9: 1.5x − 18.4 = 0.6x − 22.9 (opción múltiple)
+  () => _aMC(ecL('', '1.5<i>x</i> − 18.4 = 0.6<i>x</i> − 22.9', [], 1.5, -18.4, 0.6, -22.9, 3), '<b>Resuelve : 1.5x - 18.4 = 0.6x - 22.9</b>', ['-5', '4.5', '5', '-4.5', NING], '-5'),
+  // 10
+  () => bCamisas(4, 245),
+  // 11: mejor compra, dos casillas: precio y onzas
+  () => ({ enunciado:'<b>30</b> onzas de líquido de fregar cuestan <b>$4.05</b>, mientras que <b>40</b> onzas cuestan <b>$4.2</b>, y <b>50</b> onzas cuestan <b>$3.95</b>. ¿Cuál es la mejor compra?',
+    tipo:'multi', campos:[{ et:'Precio', u:'$' }, { et:'por', u:'onzas' }], respuesta:[3.95, 50],
+    explicacion: receta({ pide:'cuál presentación sale más barata POR ONZA (precio por unidad).',
+      pasos:[{ t:'Precio por onza de cada una: precio ÷ onzas', l:['30 onzas: 4.05 ÷ 30 = $0.135 por onza', '40 onzas: 4.2 ÷ 40 = $0.105 por onza', '50 onzas: 3.95 ÷ 50 = $0.079 por onza'] },
+        { t:'La mejor compra es la que cuesta MENOS por onza', l:[`$0.079 es el menor → ${cb('$3.95 por 50 onzas')}`] }],
+      resp:'$3.95 por 50 onzas', comp:'la más grande (50 onzas) es también la más barata en total, así que gana por mucho ✓', error:'escoger por el precio total: se compara el precio de UNA onza (precio ÷ onzas).',
+      ejemplo:'4.05 ÷ 30 = 0.135; 4.2 ÷ 40 = 0.105; 3.95 ÷ 50 = 0.079 → $3.95 por 50 onzas.', truco:'mejor compra = el menor precio por unidad (precio ÷ cantidad).' }) }),
+  // 12
+  () => MCx('<b>Halla la comparación porcentual de la razón de 60 a 75.</b>', ['60 es 75 % de 75', '60 es 65 % de 75', '60 es 80 % de 75', '60 es 60 % de 75', NING], '60 es 80 % de 75', { pide:'qué porciento de 75 es 60.',
+    pasos:[{ t:'Escribe la razón 60 a 75 como fracción y divide', l:['60/75 = 60 ÷ 75 = 0.8'] }, { t:'Pasa el decimal a porciento: × 100 (el punto 2 lugares a la derecha)', l:[`0.8 × 100 = ${cb('80%')}`] }],
+    comp:'80% de 75 = 0.8 × 75 = 60 ✓', error:'escoger 75 %: ese es el 75 de la razón, no un porciento.', ejemplo:'60 ÷ 75 = 0.8 = 80% → 60 es 80 % de 75.', truco:'parte ÷ total, y × 100.' }),
+  // 13
+  () => MCx('<b>Escribe 0.12 % como un decimal.</b>', ['0.0012', '120', '1,200', '0.012', NING], '0.0012', { pide:'0.12% como número decimal.',
+    pasos:[{ t:'Quita el %: divide entre 100 (el punto 2 lugares a la IZQUIERDA)', l:[pctDec(0.12)] }],
+    comp:'0.12% es menos de 1%, así que el decimal tiene que ser menor que 0.01 ✓', error:'mover el punto solo 1 lugar (0.012) o hacia la derecha (120, 1,200): un porciento SIEMPRE se achica 2 lugares.', ejemplo:'0.12% = 0.12 ÷ 100 = 0.0012.', truco:'del % al decimal: el punto 2 lugares a la izquierda (agrega ceros si hace falta).' }),
+  // 14
+  () => MCx('<b>¿Cuál es mayor : 60% de 250 ó 70% de 200 ?</b>', ['60% de 250', '70% de 200', 'Ambos son iguales', 'No se puede determinar', NING], '60% de 250', { pide:'cuál de las dos cantidades es mayor: calcula cada una.',
+    pasos:[{ t:'Calcula 60% de 250: pasa el 60% a decimal y multiplica', l:[`60% = 0.6 → 0.6 × 250 = ${cb(150)}`] }, { t:'Calcula 70% de 200', l:[`70% = 0.7 → 0.7 × 200 = ${cb(140)}`] },
+      { t:'Compara', l:['150 es mayor que 140 → el mayor es 60% de 250'] }],
+    comp:'el 10% de 250 es 25 (60% = 150) y el 10% de 200 es 20 (70% = 140) ✓', error:'escoger el porciento más grande (70%): hay que calcular cuánto es cada uno.', ejemplo:'0.6 × 250 = 150 y 0.7 × 200 = 140 → 150 > 140.', truco:'un porciento más grande de una cantidad más chica puede dar menos: calcula los dos.' }),
+  // 15: ¿qué por ciento de 25 es 53?  (se contesta con el %)
+  () => ({ enunciado:'¿Qué por ciento de <b>25</b> es <b>53</b>?', ...numDec(212), pct:true, ayuda:'Escribe el número (el % es opcional).',
+    explicacion: receta({ pide:'qué porciento de 25 es 53.',
+      pasos:[{ t:'"Qué porciento de 25 es 53": la parte (53) ÷ el total (25)', l:['53 ÷ 25 = 2.12'] }, { t:'Pasa el decimal a porciento: × 100 (el punto 2 lugares a la derecha)', l:[`2.12 × 100 = ${cb('212%')}`] }],
+      resp:'212%', comp:'212% de 25 = 2.12 × 25 = 53 ✓ (53 es más que 25, así que el porciento pasa de 100%)', error:'dividir al revés (25 ÷ 53 = 0.47): el total es 25, la parte es 53.', ejemplo:'53 ÷ 25 = 2.12 = 212%.', truco:'parte ÷ total, y × 100.' }) }),
+  // 16
+  () => MCx('<b>Pedro sembró 100 semillas y solamente 61% de ellas germinaron.  ¿Cuántas semillas no germinaron?</b>', ['49', '100', '27', '61', NING], NING, { pide:'cuántas semillas NO germinaron.',
+    pasos:[{ t:'61% de 100 son las que sí germinaron', l:['0.61 × 100 = 61 semillas germinaron'] }, { t:'Las que NO germinaron son el resto', l:[`100 − 61 = ${cb(39)}`, 'También: 100% − 61% = 39% de 100 = 39.'] },
+      { t:'Busca el 39 en las opciones', l:['49, 100, 27 y 61 no son 39 → Ninguno de los anteriores'] }],
+    comp:'61 + 39 = 100 ✓', error:'escoger 61: esas son las que SÍ germinaron.', ejemplo:'100 − 61 = 39 → Ninguno de los anteriores.', truco:'"no germinaron" = el total menos las que sí; si tu resultado no está, es "Ninguno de los anteriores".' }),
+  // 17
+  () => MCx('<b>Jay gastó 30% de su mesada de $50 , y Mike gastó 20% de su mesada de $30.  ¿Quién gastó menos?</b>', ['Jay', 'Mike', 'Ambos gastaron lo mismo', 'No se puede determinar'], 'Mike', { pide:'cuánto gastó cada uno, para ver quién gastó menos.',
+    pasos:[{ t:'Jay: 30% de $50', l:[`30% = 0.3 → 0.3 × 50 = ${cb('$15')}`] }, { t:'Mike: 20% de $30', l:[`20% = 0.2 → 0.2 × 30 = ${cb('$6')}`] }, { t:'Compara', l:['$6 es menos que $15 → gastó menos Mike'] }],
+    comp:'el 10% de 50 es 5 (30% = 15) y el 10% de 30 es 3 (20% = 6) ✓', error:'escoger por el porciento (20% es menor): cada uno tiene una mesada distinta, hay que calcular los dólares.', ejemplo:'0.3 × 50 = 15 y 0.2 × 30 = 6 → Mike.', truco:'con cantidades distintas no se comparan porcientos: se convierten a dólares.' }),
+  // 18
+  () => MCx('<b>Siete octavos del volumen de cierta mezcla de cemento es arena. ¿Qué porciento de la mezcla es arena? 4/9/2020</b>', ['87.5%', '0.875%', '65%', '0.00875%', NING], '87.5%', { pide:'7/8 como porciento.',
+    pasos:[{ t:'La fracción es una división: 7 ÷ 8', l:['7 ÷ 8 = 0.875'] }, { t:'Pasa el decimal a porciento: × 100 (el punto 2 lugares a la derecha)', l:[`0.875 × 100 = ${cb('87.5%')}`] }],
+    comp:'7/8 es casi 1 entero (le falta 1/8 = 12.5%), así que 100% − 12.5% = 87.5% ✓', error:'escoger 0.875%: el decimal pasa a porciento moviendo el punto 2 lugares a la DERECHA.', ejemplo:'7 ÷ 8 = 0.875 = 87.5%.', truco:'fracción → decimal (arriba ÷ abajo) → porciento (× 100).' }),
+  // 19
+  () => MCx('<b>Escribe una razón expresada en sus términos más simples para la razón de 6 pies a 7 yardas .</b>', [frS(7, 2), frS(6, 7), frS(7, 6), frS(2, 7)], frS(2, 7), { pide:'la razón 6 pies a 7 yardas, simplificada (lo que se nombra primero va arriba).',
+    pasos:[{ t:'Pasa las dos cantidades a la MISMA unidad (pies)', l:['1 yarda = 3 pies → 7 yardas = 7 × 3 = 21 pies'] }, { t:'Escribe la razón: pies arriba, pies abajo', l:[cb('6/21')] },
+      { t:'Simplifica: divide arriba y abajo entre el mismo número', l:[explSimplif(6, 21)] }],
+    comp:'6/21 = 0.2857… y 2/7 = 0.2857…: valen lo mismo ✓', error:'dejar 6/7 (comparar 6 pies con 7 yardas sin pasar a la misma unidad).', ejemplo:'6 pies / (7 × 3 pies) = 6/21 = 2/7.', truco:'para comparar cosas distintas, pásalas a la MISMA unidad primero.' }),
+  // 20, 21
+  () => bRazU('La longitud de una varilla es de <b>32</b> pulgadas y la de otra varilla es de <b>14</b> pulgadas. Compara la longitud de la segunda varilla a la primera y expresa el resultado como una razón.', 14, 32, [],
+    'la segunda varilla (14) se compara CON la primera (32): lo que se nombra primero va arriba.'),
+  () => bRazU('La clase del Sr. Resto tiene <b>42</b> estudiantes de los cuales <b>27</b> son niñas. Escribe la razón de niñas a niños.', 27, 15,
+    [{ t:'Halla cuántos niños hay', l:['niños = todos − niñas = 42 − 27 = 15'] }], 'lo que se nombra PRIMERO (niñas) va arriba.'),
+  // 22: ¿es una proporción? 2/3 = 4/6
+  () => ({ enunciado:`Identifica si el siguiente enunciado es una proporción:<br><b>${fr(2, 3)} = ${fr(4, 6)}</b>`, tipo:'sino', respuesta:true,
+    explicacion: receta({ pide:'si las dos razones son iguales (una proporción es una igualdad de dos razones).',
+      pasos:[{ t:'Multiplica en cruz', l:[diagCruzados(2, 3, 4, 6), '2 × 6 = 12 y 3 × 4 = 12'] }, { t:'Compara los dos productos', l:[`12 = 12 → son iguales → ${cb('Sí, es una proporción')}`] }],
+      resp:'Sí', comp:'4/6 se simplifica (÷ 2) a 2/3: son la misma razón ✓', error:'comparar solo los números de arriba: se multiplica en CRUZ.', ejemplo:'2 × 6 = 12 = 3 × 4 → Sí.', truco:'en una proporción los productos cruzados son iguales.' }) }),
+  // 23: cierta o falsa: 4 es a 6 como 1.2 es a 1.8
+  () => ({ enunciado:'Determina si la proporción dada a continuación es cierta o falsa.<br><b>4</b> es a <b>6</b> como <b>1.2</b> es a <b>1.8</b>', tipo:'opciones', opciones:['Cierta', 'Falsa'], respuesta:'Cierta',
+    explicacion: receta({ pide:'si las dos razones son iguales (si forman una proporción).',
+      pasos:[{ t:'Escribe las dos razones como fracciones', l:['"4 es a 6" → 4/6 y "1.2 es a 1.8" → 1.2/1.8'] },
+        { t:'Multiplica en cruz', l:[diagCruzados(4, 6, 1.2, 1.8), '4 × 1.8: sin el punto 4 × 18 = 72; con 1 decimal → 7.2', '6 × 1.2: sin el punto 6 × 12 = 72; con 1 decimal → 7.2'] },
+        { t:'Compara los dos productos', l:[`7.2 = 7.2 → son iguales → ${cb('Cierta')}`] }],
+      resp:'Cierta', comp:'4 ÷ 6 = 0.666… y 1.2 ÷ 1.8 = 0.666…: iguales ✓', error:'comparar sumando o restando: en una proporción se comparan los productos cruzados.', ejemplo:'4 × 1.8 = 7.2 = 6 × 1.2.', truco:'en una proporción los productos cruzados son iguales.' }) }),
+  // 24
+  () => bMaq(2, 8, 1, 2, 10),
+  // 25
+  () => MCx('<b>Una tabla de 18 pies de largo se cortó en dos pedazos cuyas longitudes tienen una razón de 1 a 8. Halla el largo de cada pedazo.</b>', ['1, 17', '2, 16', '3, 15', '4, 14'], '2, 16', { pide:'el largo de cada pedazo (la razón 1 a 8 reparte la tabla en partes iguales).',
+    pasos:[{ t:'Cuenta las partes en total', l:['La razón es 1 a 8 → 1 parte + 8 partes = 9 partes'] }, { t:'Cuánto mide cada parte: el largo ÷ las partes', l:['18 ÷ 9 = 2 pies cada parte'] },
+      { t:'El largo de cada pedazo', l:[`1 parte = 1 × 2 = ${cb(2)} pies`, `8 partes = 8 × 2 = ${cb(16)} pies`] }],
+    comp:'2 + 16 = 18 ✓ y 16 ÷ 2 = 8 (razón 1 a 8) ✓', error:'escoger 1, 17: eso suma 18 pero la razón sería 1 a 17.', ejemplo:'18 ÷ (1 + 8) = 2 → 2 y 8 × 2 = 16.', truco:'suma las partes de la razón, divide el total entre esa suma, y multiplica por cada parte.' })
+];
+MODULOS.push(_modParcial('educo-parcial2-p1', 'Examen Parcial 2 (caps. 6, 7 y 8): práctica 1 (las 25 exactas)', _P2, 'práctica 1'));
+
 /* ── Capítulos 6, 7 y 8: Ejercicios de Repaso y Autoevaluación — ejercicios EXACTOS del E-Book (pág. 348-351, 403-406, 456-458) ──
    Un número del libro = un ejercicio; los que piden (a)(b)(c) usan 'multi'. Las respuestas salen del código (no de la clave del libro,
    que solo trae los impares): el autotest/verificador las compara con la clave de los impares. Faltan a propósito (ambiguos o sin medidas
@@ -8659,6 +8786,7 @@ MODULOS.push(
 // todo módulo sin "clase" explícita es de matemáticas — así los módulos de Álgebra de arriba no
 // necesitan tocarse uno por uno al agregar otras materias
 MODULOS.forEach(m => { if(!m.clase) m.clase = 'mate'; });
+_debajoDe('educo-parcial2-p1', 'autoeval-cap8');   // la práctica del Examen Parcial 2 va al final del capítulo 8 (ya existen el repaso y la autoevaluación)
 // etiqueta de cada tema de Álgebra en la lista de Temas (misma burbuja que Repaso de ayudante): EducoSoft | del libro | al azar. "Al azar" solo la lleva un tema que
 // se repite (otro tema fijo lo copia: `cubre`); un tema con una sola versión no lleva etiqueta.
 const _cubiertos = new Set(MODULOS.flatMap(m => m.cubre || []));
@@ -8740,6 +8868,7 @@ function verificar(ej, ent){
           ? { ok:false, incompleto:true, msg:`El número está bien, pero el signo va ANTES del $: ${din$(ej.respuesta)}. EducoSoft marca mal "$−…" (te pasó en el Quiz 7.1–7.2).` } : { ok:false };
         ent = s.replace(/^(-?)\$/, '$1');
       }
+      if(ej.pct) ent = String(ent).replace(/s*%s*$/, '');   // la casilla de EducoSoft trae la tecla % ("212%"): el % es opcional
       const v = numLimpio(ent);
       if(String(ent).trim() === '') return { ok:false, vacio:true };
       if(!isFinite(v)) return { ok:false, aviso:true, msg: /\//.test(ent) ? 'Aquí va un número, no una fracción: escríbelo con punto decimal (por ejemplo 1/2 = 0.5).' : 'Eso no es un número. Escribe solo el número (por ejemplo -12 o 3.5).' };
@@ -8920,6 +9049,7 @@ const SECMAP = {
   '7.7': ['autoeval-cap7'],
   '8.7': ['repaso-cap8'],
   '8.8': ['autoeval-cap8'],
+  '8.9': ['educo-parcial2-p1'],
   '6.2': ['suma-resta-dec'],
   '6.3': ['mult-div-dec'],
   '6.4': ['dec-fraccion','orden-op-dec','promedio-dec'],
@@ -8987,6 +9117,7 @@ const CLAVES = {
   'repaso-cap4':      ['repaso del capítulo 4','4.5 ejercicios de repaso'],
   'autoeval-cap4':    ['autoevaluación del capítulo 4','4.6 autoevaluación'],
   'educo-dep-exacto': ['examen departamental','midterm','departmental'],
+  'educo-parcial2-p1': ['examen parcial 2','parcial 2','capítulos 6, 7 y 8','partial exam'],
   'educo-cap5':       ['tarea y quiz de 5.1','homework on 5.1','quiz on 5.1'],
   'repaso-cap5':      ['ejercicios de repaso','repaso del capítulo 5','review exercises'],
   'autoeval-cap5':    ['autoevaluación','autoevaluacion','self-test','self test'],
