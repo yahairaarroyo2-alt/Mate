@@ -464,7 +464,7 @@ opciones, `_ayFotosTodas` = foto → nombre (materiales y conduletos juntos)) y 
 `pantallaAyGaleria()` (rutas `ir('ayLeer',k)` e `ir('ayGaleria')`; sus botones salen en Inicio
 y Temas vía `ayudMaterialHTML()`, solo con `materia==='ayud'`). Las preguntas con "Todas las
 anteriores" / "Ninguna" / "Ambas" NO se barajan (`_ayBarajar`). Fotos: `ayudante/` (184
-archivos, ~1.3 MB en WebP); el `sw.js` las guarda en su propia caché `mate-fotos-ayudante-v2`, que no se
+archivos, ~1.3 MB en WebP); el `sw.js` las guarda en su propia caché `mate-fotos-ayudante-v3`, que no se
 borra al subir de versión (si cambias una foto, sube ese número). Las fotos NO van en base64
 dentro del HTML a propósito.
 
