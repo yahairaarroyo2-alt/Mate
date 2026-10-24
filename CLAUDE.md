@@ -269,6 +269,7 @@ real. Los dos helpers viven junto a `guardar`/`leer`, arriba del todo de "ALMACE
 | `mate_sesion_v1` | la ronda en curso para retomarla (no se sincroniza — a propósito): página actual (`sesionIdx`), páginas abiertas/vistas/resultado (`sesionAbiertos`/`sesionVistos`/`sesionRes`), orden sorteado (`sesionOrden`), y `borrador` = lo escrito sin comprobar (Tu proceso y casillas), que se guarda solo al escribir (700 ms) y al salir de la app |
 | `mate_sesion_ej_N` | el ejercicio de la página N de la ronda, guardado UNA vez al sacarlo (antes `mate_sesion_ejs_v1` reescribía la ronda entera, hasta 365 KB, en cada respuesta; se migra sola). Las de las prácticas del examen no se guardan (se rearman iguales), salvo las repeticiones (`__rep`). `borrarSesion()` las quita todas |
 | `mate_materia_v1` | la materia activa (`mate`/`wc`/`circ`/`ayud`), se valida contra `MATERIAS` |
+| `mate_ay_vistas_v1` | Repaso de ayudante: qué preguntas de cada banco ya salieron en la ronda (`_ayRecientes`, índices por tema; `id:mezcla` = la lista sin gemelas). Se borra para los temas de cada ronda nueva |
 | `mate_examen_v1` | el SIMULACRO en curso: tema, página, reloj y respuestas (las preguntas se rearman con `_armarSimulacro`); al abrir la app `restaurarExamen()` sigue (o da la nota si ya se acabó el tiempo) |
 | `mate_sync_code_v1` | el código de sincronización de ESTE aparato, si está conectado |
 | `mate_tema_v1` | `'auto-system'` (por defecto) / `'auto-hour'` / `'light'` / `'dark'` — preferencia de claro/oscuro (Ajustes → Tema); **no sincroniza entre aparatos**, a propósito: es una preferencia de pantalla, no de progreso |
@@ -464,9 +465,16 @@ opciones, `_ayFotosTodas` = foto → nombre (materiales y conduletos juntos)) y 
 `pantallaAyGaleria()` (rutas `ir('ayLeer',k)` e `ir('ayGaleria')`; sus botones salen en Inicio
 y Temas vía `ayudMaterialHTML()`, solo con `materia==='ayud'`). Las preguntas con "Todas las
 anteriores" / "Ninguna" / "Ambas" NO se barajan (`_ayBarajar`). Fotos: `ayudante/` (184
-archivos, ~1.3 MB en WebP); el `sw.js` las guarda en su propia caché `mate-fotos-ayudante-v3`, que no se
+archivos, ~1.3 MB en WebP); el `sw.js` las guarda en su propia caché `mate-fotos-ayudante-v4`, que no se
 borra al subir de versión (si cambias una foto, sube ese número). Las fotos NO van en base64
 dentro del HTML a propósito.
+
+**Revisión de fotos y repetidas (2026-10-23, pedido: "verifica que los nombres sean el de la foto… se han repetido algunas preguntas")**:
+- Cada una de las 139 fotos `mat-*` se ubicó en su hoja (`hoja-01…09`, correlación por escalas) y se leyó el rótulo de al lado: todas son lo que dice la hoja. Nombres puestos IGUAL que la hoja (antes había inventos para distinguirlas): 7 piezas salen 2 veces con otra foto porque la hoja las repite (Conector EMT a Flex, Conector EMT de compresión, Split Bolt, Conduleto tipo TA, Reducing bushing, Conector 90° liquidtight, Ground para tanque de transformadores); el quiz nunca pone dos opciones iguales (`_ayOpciones` usa Set). "Breaker un polo ½ pulgada fino" y "Receptáculo 120V 15A (NEMA 5-15)" como en la hoja 8.
+- 52 fotos traían pedazos de los rótulos de la hoja ("BLB", "tipo OET", "Welding Cable" daban la respuesta; "Receptáculo" bajo un interruptor o "rador" bajo el Locknut confundían): tapados con blanco sin tocar la pieza (caché de fotos v4).
+- **Tubería ENT** (hoja 8): azul o gris = electricidad, **amarillo = comunicaciones, rojo = señales de seguridad**. Las preguntas y la lectura decían gris/amarillo y contradecían las fotos.
+- **Preguntas repetidas**: (1) `_ayRecientes` vivía solo en memoria y la ronda se retoma al reabrir la app (`restaurarSesion`), así que tras cerrar la app o una actualización volvían preguntas ya contestadas → ahora se guarda en `mate_ay_vistas_v1` (probado: ronda del cap. 2 de 311, recargada a la mitad, 0 repetidas). (2) Las tarjetas de "conceptos" repiten datos de "preguntas de práctica" (Materiales: 23 de 27): `_ayFicha(id, nombre, sec, fichas, pareja, gemelas)` no saca las gemelas cuando su tema pareja está en la misma ronda (`sesionOrden.includes(pareja)`; `vecesDe` usa `bancoMezcla`); el tema de conceptos solo trae todas. Todo mezclado: 709 → 648 preguntas, 0 repetidas. Si agregas una tarjeta que repite una pregunta, ponla en `gemelas`.
+- **"O ring"** (hoja 2): el rótulo está sobre un terminal de ojo (anillo azul); la pregunta y la tabla de la lectura ahora dicen eso (antes: anillo de goma para sellar), por pedido de la usuaria.
 
 **Materia 4 y "libro vs. ley actual" (2026-10-16):** la Ley 115 vigente (texto OGP, rev. 17-jul-2024,
 art. 8-B) pide 4 materias al ayudante: Ohm, materiales, leyes y **reglamentos (Reglamento de Peritos, NEC,
