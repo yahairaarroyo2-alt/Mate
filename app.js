@@ -5179,11 +5179,16 @@ const AYUD = {"ohm":{"fc":[{"q":"¿Cuál es la fórmula de la Ley de Ohm para el
 // la ronda se retoma al reabrir la app y, si esto viviera solo en memoria, volverían las que ya salieron.
 const _AY_VISTAS = 'mate_ay_vistas_v1';
 const _ayRecientes = (() => { try{ return JSON.parse(localStorage.getItem(_AY_VISTAS)) || {}; }catch(e){ return {}; } })();
-function _ayElegir(id, lista){
+// asuntos = una letra por pregunta (AY_ORDEN_ASUNTOS): con "agrupar" prendido salen todas las de un asunto seguidas,
+// en el orden de AY_ORDEN_ASUNTOS y, dentro de cada asunto, en el orden del banco (libro del maestro primero)
+const AY_ORDEN_ASUNTOS = 'HJCLMS';   // Leyes: H historia y enmiendas · J la Junta · C el Colegio y los sellos · L licencias y examen · M multas y sanciones · S supervisión y alcance
+const AY_ASUNTOS_LEYES = { fc:'HHHHHHHHHHLCCCCLLLLMJJJJSLCLLLLMJJJJLLLLLSLMMCCCCCCLLLJJ', q:'HHHHCCLLLCMJHHHJJJJHHLSLJCLMLHLLLMMJJJLLLLLSLMMMCCCCHHHHHHHHJJJJJJLLCCSSSCCCCL' };
+function _ayElegir(id, lista, asuntos){
   let rec = (_ayRecientes[id] || []).filter(i => i < lista.length);
   if(rec.length >= lista.length) rec = [rec[rec.length - 1]];   // vuelta nueva: solo evita repetir la última
   const libres = lista.map((_, i) => i).filter(i => !rec.includes(i));
-  const i = libres[Math.floor(Math.random() * libres.length)];
+  const rango = i => { const k = AY_ORDEN_ASUNTOS.indexOf((asuntos || '')[i]); return k < 0 ? 99 : k; };
+  const i = agruparTema && asuntos ? libres.slice().sort((a, b) => rango(a) - rango(b) || a - b)[0] : libres[Math.floor(Math.random() * libres.length)];
   rec.push(i); _ayRecientes[id] = rec;
   try{ localStorage.setItem(_AY_VISTAS, JSON.stringify(_ayRecientes)); }catch(e){}
   return lista[i];
@@ -5201,18 +5206,19 @@ const _ayFoto = src => `<br><img class="ayFoto" src="${src}" alt="Foto para iden
 // tarjetas (pregunta/respuesta) → opción múltiple.
 // gemelas = tarjetas con el mismo dato que una pregunta del tema "pareja" (sus preguntas de práctica):
 // si la pareja está en la misma ronda no salen (el dato saldría dos veces); solas, salen todas.
-function _ayFicha(id, nombre, sec, fichas, pareja, gemelas = []){
+function _ayFicha(id, nombre, sec, fichas, pareja, gemelas = [], asuntos){
   const resp = fichas.map(f => f.a), enMezcla = fichas.filter((_, i) => !gemelas.includes(i));
+  const asuntosMezcla = asuntos && [...asuntos].filter((_, i) => !gemelas.includes(i)).join('');
   return { id, nombre, clase:'ayud', secciones:[sec], banco:fichas.length, pareja, bancoMezcla:enMezcla.length, gen(){
-    const f = sesionOrden.includes(pareja) ? _ayElegir(id + ':mezcla', enMezcla) : _ayElegir(id, fichas);
+    const f = sesionOrden.includes(pareja) ? _ayElegir(id + ':mezcla', enMezcla, asuntosMezcla) : _ayElegir(id, fichas, asuntos);
     return { enunciado:f.q, tipo:'opciones', opciones:_ayOpciones(f.a, resp), respuesta:f.a,
       explicacion:[`La respuesta es: ${f.a}.`, _ayTrucoFicha(f.q, f.a)] };
   } };
 }
 // preguntas con 4 opciones ya escritas ({p, o, c, e, f?})
-function _ayPregunta(id, nombre, sec, preguntas){
+function _ayPregunta(id, nombre, sec, preguntas, asuntos){
   return { id, nombre, clase:'ayud', secciones:[sec], banco:preguntas.length, gen(){
-    const q = _ayElegir(id, preguntas);
+    const q = _ayElegir(id, preguntas, asuntos);
     return { enunciado:q.p, tipo:'opciones', opciones:_ayBarajar(q.o), respuesta:q.o[q.c],
       explicacion:[q.e, `→ ${q.o[q.c]}.`, _ayTrucoQuiz(q)] };
   } };
@@ -5244,8 +5250,8 @@ MODULOS.push(
   _ayFotosTodas(),
   _ayPregunta('ayud-lib-disp', 'Dispositivos, cajas y conexiones (libro, cap. E–F)', '2.4', AYUD.libro.disp),
   _ayPregunta('ayud-lib-paneles', 'Paneles, cargas y circuitos (libro, cap. G)', '2.5', AYUD.libro.paneles),
-  _ayFicha('ayud-leyes-conceptos', 'Las Leyes: conceptos', '3.1', AYUD.leyes.fc, 'ayud-leyes-preguntas', [0, 1, 2, 11, 12, 15, 16, 17, 19, 20, 21, 22, 23, 24, 25, 26, 28, 30, 31, 33, 34, 35, 38, 39, 41, 44, 45]),
-  _ayPregunta('ayud-leyes-preguntas', 'Las Leyes: preguntas de práctica', '3.2', AYUD.leyes.quiz),
+  _ayFicha('ayud-leyes-conceptos', 'Las Leyes: conceptos', '3.1', AYUD.leyes.fc, 'ayud-leyes-preguntas', [0, 1, 2, 11, 12, 15, 16, 17, 19, 20, 21, 22, 23, 24, 25, 26, 28, 30, 31, 33, 34, 35, 38, 39, 41, 44, 45], AY_ASUNTOS_LEYES.fc),
+  _ayPregunta('ayud-leyes-preguntas', 'Las Leyes: preguntas de práctica', '3.2', AYUD.leyes.quiz, AY_ASUNTOS_LEYES.q),
   _ayFicha('ayud-reg-conceptos', 'Reglamentos (NEC y AEE): conceptos', '4.1', AYUD.reglam.fc, 'ayud-reg-preguntas', [0, 2, 5, 21, 22, 24]),
   _ayPregunta('ayud-reg-preguntas', 'Reglamentos (NEC y AEE): preguntas de práctica', '4.2', AYUD.reglam.quiz),
   // Extra: no está en el material del maestro; no entra en la mezcla (m.extra, ver construirCola/modulosActivos)
@@ -9821,7 +9827,7 @@ const _filaProgresoHTML = () => `<div class="racha">
         <div><b>${racha.actual}</b><span>racha actual</span></div>
         <button class="${agruparTema?'on':''}" onclick="toggleAgrupar()"><b>${agruparTema?'Sí':'No'}</b><span>agrupar</span></button>
         <button class="${repetirFallo?'on':''}" onclick="toggleRepetir()"><b>${repetirFallo?'Sí':'No'}</b><span>repetir</span></button>
-      </div>${esTemaFijo || modoErrores || modoRepasoRonda || examen ? '' : `<div class="racha">
+      </div>${esTemaFijo || modoErrores || modoRepasoRonda || examen || materia === 'ayud' ? '' : `<div class="racha">
         <button class="${unoPorTema?'on':''}" onclick="toggleUnoPorTema()"><b>${unoPorTema?'Sí':'No'}</b><span>1 ejercicio por tema</span></button>
       </div>`}`;
 // mapa de las preguntas de la ronda (en toda ronda, no solo en las del Examen Departamental): verde = bien, rojo = mal,
