@@ -1500,7 +1500,6 @@ function _modExamen(id, nombre, banco, cual){
       // una cuenta por renglón: "a → b → c" y "…, y …" se separan para que no quede todo pegado
       ej.explicacion = ej.explicacion.map(l => typeof l !== 'string' || /^§|^TRUCO:/.test(l) || l.includes('<svg') ? l
         : l.replace(/(= −?[\d.,/]+) → (?=−?[\d(][\d.,/)]* [+−×÷] )/g, '$1<br>').replace(/, y (?=[\d−(])/g, '<br>y '));
-      ej.enunciado =`<small>Pregunta ${i+1} de ${banco.length} · ${cual} del Examen Departamental</small><br>` + ej.enunciado;
       ej.__n = i;
       return ej;
     } };
@@ -7783,7 +7782,6 @@ function _modParcial(id, nombre, banco, cual, facil){
       ej.explicacion = ej.explicacion.map(l => typeof l !== 'string' || /^§|^TRUCO:/.test(l) || l.includes('<svg') ? l
         : l.replace(/(= −?[\d.,/]+) → (?=−?[\d(][\d.,/)]* [+−×÷] )/g, '$1<br>').replace(/, y (?=[\d−(])/g, '<br>y '));
       if(facil && facil[i]) ej.facil = receta({ ...facil[i], resp: fmtRespuesta(ej) });
-      ej.enunciado = `<small>Pregunta ${i+1} de ${banco.length} · ${cual} del Examen Parcial 2 (caps. 6, 7 y 8)</small><br>` + ej.enunciado;
       ej.__n = i;
       return ej;
     } };
@@ -11801,7 +11799,9 @@ function _siguienteEjercicio(){
 function _ponerRespuesta(ok){
   const ent = $('zonaEntrada'), ej = ejActual; if(!ent) return '';
   const linea = () => `<div class="respLinea">${ok ? '✓ Correcto' : `Respuesta: <b>${fmtRespuesta(ej)}</b>`}</div>`;
-  if(ent.querySelector('.respSola, .respLado, .opOk')) return '';
+  if(ent.querySelector('.respSola, .respLado, .opOk')){   // ya puesta al abrir la explicación: si ahora acertó, pasa a ✓ (no repite lo que escribió)
+    if(ok) ent.querySelectorAll('.respSola, .respLado').forEach(x => { x.textContent = '✓'; });
+    return ''; }
   const fila = ent.querySelector('.numRow'), caja = ent.querySelector('.mixIn') || ent.querySelector('.fracIn');
   if(ej.tipo === 'num' && fila){ fila.insertAdjacentHTML('beforeend', `<span class="respSola">${ok ? '✓' : fmtRespuesta(ej)}</span>`); ent.classList.add('conRespSola'); return ''; }
   if((ej.tipo === 'frac' || ej.tipo === 'mixto') && caja){ const r = ej.respuesta;
@@ -11849,6 +11849,7 @@ function _iluminarCasillas(ok){
   else if(ej.tipo === 'basexp') bien = { inBase: v(e.b) === R.b, inExp: v(e.e) === R.e, inVal: v(e.v) === R.v };
   else if(ej.tipo === 'coefvar') bien = { inCoef: v(e.coef) === R.coef, inVariable: normVar(e.variable) === R.variable };
   else if(ej.tipo === 'multi') bien = _bienMulti(ej, e);
+  else if(ej.tipo === 'num') bien = { inNum: ok };   // la casilla del número: verde si acertó, roja si no
   if(!bien) return false;
   let n = 0;
   Object.entries(bien).forEach(([id, b]) => { const c = $(id); if(c){ c.classList.add(ok || b ? 'bien' : 'mal'); n++; } });
