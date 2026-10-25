@@ -7697,7 +7697,9 @@ const _debajoDe = (id, ref) => { const [m] = MODULOS.splice(MODULOS.findIndex(x 
 
 /* ── Examen Parcial 2 (capítulos 6, 7 y 8) de EducoSoft: la PRÁCTICA, las 25 preguntas EXACTAS en orden (mismos números, mismas opciones y la misma
    forma de contestar). Intento 1 de la usuaria, 2026-10-22 (attempt 467035583, 25/25). EducoSoft cambia los números en cada intento: el próximo es otro módulo. ── */
-function _modParcial(id, nombre, banco, cual){
+// facil[i] = la explicación corta de la pregunta i (con el truco), en forma de receta(); sale con el botón "Fácil" (ver explPorQue)
+const _F = (pide, pasos, ejemplo, truco) => ({ pide, pasos: pasos.map(([t, ...l]) => ({ t, l })), ejemplo, truco });
+function _modParcial(id, nombre, banco, cual, facil){
   return { id, nombre, secciones:['8.9'], banco:banco.length, _sig:0, extra:true,   // extra: preguntas fijas, fuera de la mezcla (se mete con su casilla)
     nuevaRonda(){ this._sig = 0; },
     gen(){
@@ -7705,6 +7707,7 @@ function _modParcial(id, nombre, banco, cual){
       const ej = banco[i]();
       ej.explicacion = ej.explicacion.map(l => typeof l !== 'string' || /^§|^TRUCO:/.test(l) || l.includes('<svg') ? l
         : l.replace(/(= −?[\d.,/]+) → (?=−?[\d(][\d.,/)]* [+−×÷] )/g, '$1<br>').replace(/, y (?=[\d−(])/g, '<br>y '));
+      if(facil && facil[i]) ej.facil = receta({ ...facil[i], resp: fmtRespuesta(ej) });
       ej.enunciado = `<small>Pregunta ${i+1} de ${banco.length} · ${cual} del Examen Parcial 2 (caps. 6, 7 y 8)</small><br>` + ej.enunciado;
       ej.__n = i;
       return ej;
@@ -7831,7 +7834,54 @@ const _P2 = [
       { t:'El largo de cada pedazo', l:[`El chico tiene 1 parte: 1 × 2 = ${cb(2)} pies`, diagFilas(['1 parte', '2 pies'], ['8 partes', '16 pies'], '× 8', 'El grande tiene 8 partes: se multiplica por 8 a los dos lados.'), `El grande tiene 8 partes: 8 × 2 = ${cb(16)} pies`] }],
     comp:'2 + 16 = 18 ✓ y 16 ÷ 2 = 8 (razón 1 a 8) ✓', error:'escoger 1, 17: eso suma 18 pero la razón sería 1 a 17.', ejemplo:'18 ÷ (1 + 8) = 2 → 2 y 8 × 2 = 16.', truco:'suma las partes de la razón, divide el total entre esa suma, y multiplica por cada parte.' })
 ];
-MODULOS.push(_modParcial('educo-parcial2-p1', 'Examen Parcial 2 (caps. 6, 7 y 8): práctica 1 (las 25 exactas)', _P2, 'práctica 1'));
+// versión FÁCIL de cada pregunta (botón "Fácil"): el camino más corto, con el truco cuando lo hay; la completa sigue en _P2
+const _P2F = [
+  _F('la suma.', [['Junta primero los que se completan', `2.19 + 0.21: las centésimas 19 + 21 = 40 → ${cb('2.40')}`], ['Súmale el 25.6', `2.4 + 25.6: las décimas 4 + 6 = 10 = 1 entero → 2 + 25 + 1 = ${cb(28)}`]],
+    '2.19 + 0.21 = 2.4; 2.4 + 25.6 = 28.', 'busca los decimales que juntos hacen un entero (.4 + .6, .19 + .21…) y súmalos primero.'),
+  _F('la suma, redondeada a la décima.', [['Suma con la calculadora', `499.37 + 49.4527 + 442.5 = ${cb('991.3227')}`], ['Redondea a la décima: mira el 2.º dígito después del punto', `991.3<b>2</b>27: el 2 es menos de 5 → se queda: ${cb('991.3')}`]],
+    '991.3227 ≈ 991.3.'),
+  _F('0.115 como fracción simplificada.', [['3 decimales → abajo va 1000', cb('115/1000')], ['Los dos terminan en 5 o 0: divide entre 5', `115 ÷ 5 = 23 y 1000 ÷ 5 = 200 → ${cb('23/200')}`]],
+    '0.115 = 115/1000 = 23/200.'),
+  _F('−0.339 × 0.001.', [['× 0.001 = el punto 3 lugares a la IZQUIERDA (0.001 tiene 3 decimales)', `0.339 → ${cb('0.000339')}`, diagPunto(0.339, -3, '')], ['Un negativo → la respuesta es negativa', cb('−0.000339')]],
+    '0.339 → 0.000339, con el signo −0.000339.', 'multiplicar por 0.1, 0.01, 0.001 = correr el punto a la izquierda tantos lugares como decimales tiene.'),
+  _F('3,567.23 ÷ 10².', [['10² = 100 tiene 2 ceros → el punto 2 lugares a la IZQUIERDA', `3,567.23 → ${cb('35.6723')}`, diagPunto(3567.23, -2, '')]],
+    '3,567.23 ÷ 100 = 35.6723.', 'dividir entre 10, 100, 1000… = el punto a la izquierda tantos lugares como ceros.'),
+  _F('el valor de 4x² − 5x + 3y con x = 0.5 (1/2) y y = 0.2.', [['Cambia cada letra por su número', '4(0.5)² − 5(0.5) + 3(0.2)'], ['Saca cada pedazo', `4 × 0.25 = ${cb(1)}`, `5 × 0.5 = ${cb('2.5')}`, `3 × 0.2 = ${cb('0.6')}`], ['Junta de izquierda a derecha', `1 − 2.5 + 0.6 = −1.5 + 0.6 = ${cb('−0.9')}`]],
+    '1 − 2.5 + 0.6 = −0.9.', '1/2 = 0.5, y (0.5)² = 0.25 (un cuarto).'),
+  _F('el promedio: suma ÷ cuántos son.', [['Suma los 3', `4.67 + 6.6 + 1.99 = ${cb('13.26')}`], ['Divide entre 3', `13.26 ÷ 3 = ${cb('4.42')}`]],
+    '13.26 ÷ 3 = 4.42.', 'el promedio queda entre el más chico (1.99) y el más grande (6.6): 10.26 no puede ser.'),
+  _F('x en 9/8 − 9x = 0.5.', [['0.5 = 1/2, y pasa el 9/8 al otro lado (restando)', '−9x = 1/2 − 9/8 = 4/8 − 9/8 = −5/8'], ['Divide entre −9 (− ÷ − = +)', `x = 5/(8 × 9) = ${cb('5/72')}`]],
+    '−9x = −5/8 → x = 5/72.'),
+  _F('x en 1.5x − 18.4 = 0.6x − 22.9.', [['Las x a la izquierda y los números a la derecha (cambian de signo al pasar)', '1.5x − 0.6x = −22.9 + 18.4 → 0.9x = −4.5'], ['Divide entre 0.9', `x = −4.5 ÷ 0.9 = ${cb('−5')}`]],
+    '0.9x = −4.5 → x = −5.', 'en opción múltiple también puedes PROBAR una opción: con x = −5 los dos lados dan −25.9.'),
+  _F('lo que cuesta UNA camisa.', [['Total ÷ camisas', `245 ÷ 4 = ${cb('61.25')}`]], '245 ÷ 4 = $61.25.'),
+  _F('la mejor compra (la más barata por onza).', [['Fíjate en la de 50 onzas', 'Trae MÁS onzas que las otras y cuesta MENOS ($3.95): seguro es la más barata por onza.'], ['Si quieres comprobar: precio ÷ onzas', '4.05 ÷ 30 = 0.135 · 4.2 ÷ 40 = 0.105 · 3.95 ÷ 50 = 0.079 (la menor)', cb('$3.95 por 50 onzas')]],
+    'la de 50 onzas es la más grande y la más barata → $3.95 por 50 onzas.', 'si una trae más y cuesta menos, ni hay que dividir.'),
+  _F('qué porciento de 75 es 60.', [['Simplifica 60/75: divide entre 15', '60 ÷ 15 = 4 y 75 ÷ 15 = 5 → 4/5'], ['1/5 = 20%, así que 4/5 = 4 × 20%', cb('80% → 60 es 80 % de 75')]],
+    '60/75 = 4/5 = 80%.', 'quintos: 1/5 = 20%, 2/5 = 40%, 3/5 = 60%, 4/5 = 80%.'),
+  _F('0.12% en decimal.', [['Quita el %: el punto 2 lugares a la IZQUIERDA', `0.12 → ${cb('0.0012')}`, diagPunto(0.12, -2, '')]], '0.12% = 0.0012.', 'del % al decimal siempre son 2 lugares a la izquierda.'),
+  _F('cuál de las dos cantidades es mayor.', [['Saca el 10% de cada número: quítale un 0', `10% de 250 = ${cb(25)}`, `10% de 200 = ${cb(20)}`], ['60% son 6 veces el 10%, y 70% son 7 veces', `6 × 25 = ${cb(150)}`, `7 × 20 = ${cb(140)}`], ['Compara', '150 es más que 140 → el mayor es 60% de 250']],
+    '25 × 6 = 150 y 20 × 7 = 140 → 60% de 250.', 'el 10% se saca quitando un 0; 20%, 30%, 60%… son 2, 3, 6 veces ese 10%.'),
+  _F('qué porciento de 25 es 53.', [['Pon la fracción con 100 abajo: 25 × 4 = 100, así que × 4 arriba y abajo', '53/25 = 212/100'], ['Sobre 100 = porciento', cb('212%')]],
+    '53/25 = 212/100 = 212%.', 'si abajo hay 25, 50 o 20, multiplica para que quede 100: lo de arriba es el porciento.'),
+  _F('cuántas semillas NO germinaron.', [['De 100, el 61% son 61 (con 100, el porciento es el mismo número)', 'Germinaron 61.'], ['Las que no: 100 − 61', cb(39)], ['39 no está en las opciones', cb(NING)]],
+    '100 − 61 = 39 → Ninguno de los anteriores.'),
+  _F('quién gastó menos.', [['Jay: 10% de $50 = $5, y 30% son 3 veces', `3 × 5 = ${cb('$15')}`], ['Mike: 10% de $30 = $3, y 20% son 2 veces', `2 × 3 = ${cb('$6')}`], ['$6 es menos', cb('Mike')]],
+    '30% de 50 = 15 y 20% de 30 = 6 → Mike.', 'el 10% se saca quitando un 0.'),
+  _F('7/8 en porciento.', [['1/8 = 12.5% (apréndetelo)', 'Entonces 7/8 = 100% − 1/8'], ['Réstale 12.5 a 100', `100 − 12.5 = ${cb('87.5%')}`]],
+    '7/8 = 100% − 12.5% = 87.5%.', 'octavos: 1/8 = 12.5%, 3/8 = 37.5%, 5/8 = 62.5%, 7/8 = 87.5%.'),
+  _F('la razón 6 pies a 7 yardas, simplificada.', [['Todo en pies: 1 yarda = 3 pies', '7 yardas = 7 × 3 = 21 pies'], ['6/21: divide entre 3', cb('2/7')]],
+    '6/21 = 2/7.'),
+  _F('la razón de la segunda varilla (14) a la primera (32).', [['La que se nombra primero va arriba', '14/32'], ['Los dos son pares: divide entre 2', cb('7/16')]], '14/32 = 7/16.'),
+  _F('la razón de niñas a niños.', [['Niños = todos − niñas', '42 − 27 = 15'], ['Niñas arriba, niños abajo: 27/15, divide entre 3', cb('9/5')]], '27/15 = 9/5.'),
+  _F('si 2/3 = 4/6 es una proporción.', [['Simplifica 4/6: divide entre 2', '4/6 = 2/3'], ['Es la misma fracción', cb('Sí')]], '4/6 = 2/3 → Sí.', 'simplificar es más rápido que multiplicar en cruz cuando una se ve "más grande".'),
+  _F('si 4 a 6 es igual que 1.2 a 1.8.', [['4/6 = 2/3 (÷ 2)', '1.2/1.8 = 12/18 = 2/3 (sin el punto, y ÷ 6)'], ['Las dos dan 2/3', cb('Cierta')]], '4/6 = 2/3 y 12/18 = 2/3 → Cierta.'),
+  _F('las horas para 10 acres.', [['10 acres son 5 veces 2 acres (10 ÷ 2 = 5)', 'Entonces toma 5 veces el tiempo.'], ['8 1/2 horas = 8.5 horas, × 5', '8.5 × 5 = 42.5'], ['Redondea al entero: .5 sube', cb('43 horas')]],
+    '8.5 × 5 = 42.5 ≈ 43.', 'busca cuántas veces cabe lo de antes en lo nuevo y multiplica el tiempo por eso.'),
+  _F('el largo de cada pedazo.', [['Busca la opción donde el pedazo grande sea 8 veces el chico', '2 × 8 = 16 ✓ (1 × 8 = 8, 3 × 8 = 24 y 4 × 8 = 32 no cuadran)'], ['Y que sumen 18', `2 + 16 = 18 ✓ → ${cb('2, 16')}`]],
+    '2 × 8 = 16 y 2 + 16 = 18.', 'en opción múltiple, prueba cada opción con lo que dice el problema.')
+];
+MODULOS.push(_modParcial('educo-parcial2-p1', 'Examen Parcial 2 (caps. 6, 7 y 8): práctica 1 (las 25 exactas)', _P2, 'práctica 1', _P2F));
 
 // ── Examen Parcial 2: práctica, INTENTO 2 de la usuaria (attempt 467037067, 2026-10-23, 25/25). Otros números y otros tipos que el intento 1. ──
 const _P2B = [
@@ -7952,7 +8002,44 @@ const _P2B = [
   // 25
   () => bImp(600, 50000, 1000)
 ];
-MODULOS.push(_modParcial('educo-parcial2-p2', 'Examen Parcial 2 (caps. 6, 7 y 8): práctica 2 (las 25 exactas)', _P2B, 'práctica 2'));
+const _P2BF = [
+  _F('el total de los cheques.', [['Suma solo los centavos', '.90 + .54 + .87 + .05 = 2.36 → la respuesta termina en .36: queda $588.36 o $558.36'], ['Estima los dólares: 353 + 66 + 150 + 20 ≈ 589', cb('$ 588.36')]],
+    'los centavos terminan en .36 y el total anda por 589 → $588.36.', 'con la calculadora es una suma; sin ella, los centavos y un estimado eliminan opciones.'),
+  _F('el peso de la botella vacía.', [['Llena − a la mitad = la mitad del refresco', '53.7 − 37.4 = 16.3'], ['A la mitad le quitas esa mitad de refresco: queda la botella sola', `37.4 − 16.3 = ${cb('21.1 gramos')}`]],
+    '53.7 − 37.4 = 16.3; 37.4 − 16.3 = 21.1.'),
+  _F('14.16 como número mixto.', [['El 14 se queda', '.16 = 16/100'], ['Divide 16/100 entre 4', `16/100 = 4/25 → ${cb('14 4/25')}`]], '14.16 = 14 16/100 = 14 4/25.'),
+  _F('el producto 5(−3.3)(5.1).', [['Un solo negativo → la respuesta es NEGATIVA', 'Quedan −84.15 y −13.31.'], ['Estima: 5 × 3 × 5 = 75', `El que se acerca a 75 es ${cb('−84.15')}`]],
+    'negativo y cerca de 75 → −84.15.', 'cuenta los negativos para el signo y estima con números redondos para escoger.'),
+  _F('32.7 ÷ 5 a la centésima.', [['Dividir entre 5 = multiplicar por 2 y dividir entre 10', '32.7 × 2 = 65.4 → ÷ 10 = 6.54'], ['6.54 no está (6.45 tiene los números cambiados)', cb(NING)]],
+    '32.7 × 2 ÷ 10 = 6.54 → Ninguno de los anteriores.', '÷ 5 es lo mismo que × 2 y ÷ 10.'),
+  _F('5 − {0.92 − [0.5 − 0.4]}, de adentro hacia afuera.', [['[0.5 − 0.4]', '= 0.1'], ['{0.92 − 0.1}', '= 0.82'], ['5 − 0.82', `= ${cb('4.18')}`]], '5 − 0.82 = 4.18.'),
+  _F('el promedio, a dos decimales.', [['4 1/2 = 4.5', 'Suma: 4.5 + 3.7 + 8.5 = 16.7'], ['Divide entre 3 (son 3 números)', '16.7 ÷ 3 = 5.566…'], ['A la centésima: el 3.er decimal es 6 → sube', cb('5.57')]],
+    '16.7 ÷ 3 = 5.566… ≈ 5.57.'),
+  _F('x en 7x − 6(x − 2/3) = 7.', [['El −6 multiplica a los dos de adentro', '−6 × x = −6x y −6 × (−2/3) = +4 → 7x − 6x + 4 = 7'], ['x + 4 = 7', `x = 7 − 4 = ${cb(3)}`]], 'x + 4 = 7 → x = 3.'),
+  _F('x, a dos decimales.', [['Quita los paréntesis', '0.56x + 3.5 − 1.04x + 0.56 = x'], ['Junta: −0.48x + 4.06 = x → pasa las x a la derecha', '4.06 = 1.48x'], ['Divide entre 1.48', `x = 4.06 ÷ 1.48 = 2.743… ≈ ${cb('2.74')}`]],
+    '4.06 = 1.48x → x ≈ 2.74.'),
+  _F('la tasa pulgadas / horas, simplificada.', [['Quita los puntos: × 10 arriba y abajo', '5.4/1.2 = 54/12'], ['Divide entre 6', cb('9/2')]], '54/12 = 9/2.'),
+  _F('el precio de UN dulce.', [['Libra ÷ dulces', `1.98 ÷ 33 = ${cb('$0.06')}`]], '1.98 ÷ 33 = 0.06.', 'estima: $2 entre 33 dulces es menos de 10 centavos → solo $0.06 sirve.'),
+  _F('26% como fracción.', [['% = sobre 100', '26/100'], ['Divide entre 2', cb('13/50')]], '26/100 = 13/50.'),
+  _F('430% como número mixto.', [['Quita el %: el punto 2 lugares a la izquierda', '430% = 4.30'], ['4.3 = 4 enteros y 3 décimas', cb('4 3/10')]], '430% = 4.3 = 4 3/10.'),
+  _F('el número del que 46.5 es el 7.5%.', [['Total = parte ÷ porciento (en decimal)', '7.5% = 0.075'], ['46.5 ÷ 0.075', cb(620)]], '46.5 ÷ 0.075 = 620.', 'si te dan la parte y el %, se DIVIDE.'),
+  _F('qué porciento es 2.8 de 40.', [['Parte ÷ total', '2.8 ÷ 40 = 0.07'], ['× 100', cb('7%')]], '2.8 ÷ 40 = 0.07 = 7%.'),
+  _F('qué porciento de $5000 son $900.', [['Pon la fracción con 100 abajo: 5000 ÷ 50 = 100, así que ÷ 50 arriba y abajo', '900/5000 = 18/100'], ['Sobre 100 = porciento', cb('18%')]],
+    '900/5000 = 18/100 = 18%.'),
+  _F('el porciento del medio.', [['Todo es 100%: quítale el 25%', '100 − 25 = 75'], ['Quítale el 20 1/3 %', `75 − 20 = 55, y quitar 1/3 más da ${cb('54 2/3')} %`]], '100 − 25 − 20 1/3 = 54 2/3.'),
+  _F('9 2/5 en porciento.', [['Cada entero es 100%', '9 enteros = 900%'], ['2/5 = 40% (1/5 = 20%)', `900 + 40 = ${cb('940%')}`]], '900% + 40% = 940%.', 'quintos: 1/5 = 20%, 2/5 = 40%, 3/5 = 60%, 4/5 = 80%.'),
+  _F('la razón 9 pies a 5 yardas, simplificada.', [['Todo en pies: 5 yardas = 5 × 3 = 15 pies', '9/15'], ['Divide entre 3', cb('3/5')]], '9/15 = 3/5.'),
+  _F('la razón 16 a 18, simplificada.', [['Los dos son pares: divide entre 2', `16/18 = 8/9 → ${cb('8 lápices : 9 libretas')}`]], '16 : 18 = 8 : 9.'),
+  _F('millas ÷ horas, a la décima.', [['Estima: 560 ÷ 8 = 70', 'La única opción cerca de 70 es 70.1.'], ['Con la calculadora: 560.9 ÷ 8 = 70.11… → a la décima', cb('70.1 millas por hora')]],
+    '560.9 ÷ 8 ≈ 70.1.', 'estima con números redondos para escoger la opción.'),
+  _F('si 4/5 = 15/20.', [['Simplifica 15/20: divide entre 5', '15/20 = 3/4'], ['4/5 no es 3/4', cb('Falso')]], '15/20 = 3/4 ≠ 4/5 → Falso.'),
+  _F('si 8/7 es a 6 como 4 es a 28.', [['Multiplica en cruz', '(8/7) × 28 = 8 × 4 = 32 (28 ÷ 7 = 4)', '6 × 4 = 24'], ['32 no es 24', cb('Falsa')]], '32 ≠ 24 → Falsa.'),
+  _F('las onzas para 4,040 calorías.', [['Onzas = calorías ÷ 270', '4040/270 = 404/27 (quita un 0 arriba y abajo)'], ['404 ÷ 27 = 14 y sobran 26 (27 × 14 = 378)', cb('14 26/27')]],
+    '404/27 = 14 26/27.'),
+  _F('el impuesto con la ganancia nueva.', [['La ganancia sube $1000, que es 1/50 de $50,000', 'Entonces el impuesto también sube 1/50: 600 ÷ 50 = 12'], ['600 + 12', cb('$612')]],
+    '600 + 600 ÷ 50 = 612.', 'si la razón se mantiene, lo que crece la ganancia (en fracción) crece el impuesto.')
+];
+MODULOS.push(_modParcial('educo-parcial2-p2', 'Examen Parcial 2 (caps. 6, 7 y 8): práctica 2 (las 25 exactas)', _P2B, 'práctica 2', _P2BF));
 
 /* ── Capítulos 6, 7 y 8: Ejercicios de Repaso y Autoevaluación — ejercicios EXACTOS del E-Book (pág. 348-351, 403-406, 456-458) ──
    Un número del libro = un ejercicio; los que piden (a)(b)(c) usan 'multi'. Las respuestas salen del código (no de la clave del libro,
@@ -11228,7 +11315,7 @@ function _pintarEjemploTema(m){
       <div class="enunciado">${ej.enunciado}</div>
       <div class="nota" style="margin-top:10px">Respuesta: <b>${fmtRespuesta(ej)}</b></div>
     </div>
-    <div class="expl"><h3>Por qué</h3>${explPasos(ej.explicacion, ej.sinNumeros)}</div>
+    <div class="expl">${explPorQue(ej)}</div>
     <button class="btn amar" onclick="_seguirTrasEjemplo()">Continuar</button>`;
 }
 function _seguirTrasEjemplo(){ pintarEjercicio(); guardarSesion(); }
@@ -11424,7 +11511,7 @@ function _notaPreviaHTML(){
   if(!r || respondido || modoErrores || modoRepasoRonda || examen) return '';
   const t = { ok:'Ya la contestaste: <b>estaba bien</b> ✓. Si la repites, no cuenta otra vez.', mal:'Ya la contestaste: <b>la fallaste</b>. Inténtala de nuevo; no cuenta otra vez en tus estadísticas.',
     vista:'Ya <b>viste la explicación</b> de esta. Si la contestas ahora, no cuenta.' }[r];
-  return t ? `<div class="nota" id="notaPrevia" style="margin:0 0 12px">${t}</div>` : '';
+  return t ? `<div class="fbTxt" id="notaPrevia">${t}</div>` : '';
 }
 function pintarEjercicio(){
   _barra(null);
@@ -11623,37 +11710,45 @@ function _siguienteEjercicio(){
   if(modoRepasoRonda) return _pintarSiguienteRepasoRonda();
   return ir('practica', esTemaFijo ? modActual.id : (capFijo || undefined), true);
 }
+// Sin recuadros (pedido de la usuaria 2026-10-25): la respuesta (o ✓ si acertó) va AL LADO de lo que contestó —dentro del campo (número),
+// a la derecha de la fracción (fracción/mixto) o en los botones (verde la correcta, rojo la que escogió)—. En los demás tipos devuelve
+// una línea verde (sin recuadro) para poner debajo; si no, ''. Si ya está puesta (vio la explicación y después contestó), no repite.
+function _ponerRespuesta(ok){
+  const ent = $('zonaEntrada'), ej = ejActual; if(!ent) return '';
+  const linea = () => `<div class="respLinea">${ok ? '✓ Correcto' : `Respuesta: <b>${fmtRespuesta(ej)}</b>`}</div>`;
+  if(ent.querySelector('.respSola, .respLado, .opOk')) return '';
+  const fila = ent.querySelector('.numRow'), caja = ent.querySelector('.mixIn') || ent.querySelector('.fracIn');
+  if(ej.tipo === 'num' && fila){ fila.insertAdjacentHTML('beforeend', `<span class="respSola">${ok ? '✓' : fmtRespuesta(ej)}</span>`); ent.classList.add('conRespSola'); return ''; }
+  if((ej.tipo === 'frac' || ej.tipo === 'mixto') && caja){ const r = ej.respuesta;
+    caja.insertAdjacentHTML('beforeend', `<span class="respLado">${ok ? '✓' : ej.tipo === 'frac' ? (r.d === 1 ? mm(r.n) : frS(r.n, r.d)) : mixS(r.e, r.n, r.d)}</span>`); return ''; }
+  const bs = ['opciones', 'sino', 'cmp'].includes(ej.tipo) ? [...ent.querySelectorAll('button[onclick^="responder("]')] : [];
+  if(bs.length){
+    const val = b => ej.tipo === 'opciones' ? ej.opciones[+b.dataset.o] : ej.tipo === 'sino' ? /true/.test(b.getAttribute('onclick')) : (b.getAttribute('onclick').match(/'(.)'/) || [])[1];
+    bs.forEach(b => { const v = val(b); if(v === ej.respuesta) b.classList.add('opOk'); else if(respondido && v === ultimaEntrada) b.classList.add('opMal'); });
+    ent.classList.add('conMarcas'); return ''; }
+  return linea();
+}
+// avisos que acompañan al resultado (Casi, "vuelve a salir…", "no cuenta para las estadísticas"): texto suelto, sin recuadro
+const _fbTxt = ls => (ls = ls.filter(Boolean)).length ? `<div class="fbTxt">${ls.join('<br>')}</div>` : '';
 function mostrarFb(res, soloAviso){
   const zona = $('zonaFb');
-  if(soloAviso){ zona.innerHTML = `<div class="fb medio">${res.msg}</div>`; return; }
+  if(soloAviso){ zona.innerHTML = `<div class="fbTxt aviso">${res.msg}</div>`; return; }
 
   _feedbackHaptico(res.ok);
   const np = $('notaPrevia'); if(np) np.remove();   // el aviso de "ya la contestaste" cede su lugar al resultado de ahora
-  const clase_ = res.ok ? 'ok' : res.incompleto ? 'medio' : 'mal';
-  const titulo = res.ok ? '¡Correcto!' : res.incompleto ? 'Casi' : 'No es esa';
-  const ent = $('zonaEntrada'), fila = !res.ok && ejActual.tipo === 'num' ? ent.querySelector('.numRow') : null;   // fallaste un numérico: la respuesta sale SOLA dentro del campo (a la derecha), no en el recuadro
-  const btns = !res.ok && ejActual.tipo === 'opciones' ? [...ent.querySelectorAll('button[data-o]')] : [];   // fallaste una de opciones: la correcta en verde y la tuya en rojo, sin recuadro
-  const solo = !!fila || btns.length > 0;
-  zona.innerHTML = `
-    ${solo && !res.msg && !vioExpl ? '' : `<div class="fb ${clase_}">${titulo}
-      ${res.msg ? `<small>${res.msg}</small>` : ''}
-      ${!res.ok ? (solo ? '' : `<small>La respuesta es <b>${fmtRespuesta(ejActual)}</b>.</small>`)
-        : (ejActual.campos && ejActual.campos.some(c => c.fs)) ? `<small>Compara tu sustitución: <b>${fmtRespuesta(ejActual)}</b></small>` : ''}
-      ${vioExpl ? `<small>Este no cuenta para las estadísticas (${_reintento ? 'es un ejercicio que repetiste' : 'viste la explicación antes'}).</small>` : ''}
-    </div>`}
+  const ent = $('zonaEntrada'), linea = _ponerRespuesta(res.ok);
+  zona.innerHTML = `${linea}
+    ${_fbTxt([!res.ok && res.incompleto ? '<b>Casi</b>' : '', res.msg,
+      res.ok && ejActual.campos && ejActual.campos.some(c => c.fs) ? `Compara tu sustitución: <b>${fmtRespuesta(ejActual)}</b>` : '',
+      vioExpl ? `Este no cuenta para las estadísticas (${_reintento ? 'es un ejercicio que repetiste' : 'viste la explicación antes'}).` : ''])}
     ${explHTML()}
     <button class="btn amar" onclick="_siguienteEjercicio()">Siguiente ejercicio</button>
     ${(!modoErrores && !modoRepasoRonda) ? `<div class="row tres" style="margin-top:8px"><button class="btn sec chico" onclick="reiniciarEjercicio()" title="Hazlo otra vez desde cero (con tu proceso vacío)" aria-label="Reiniciar este ejercicio: hazlo otra vez desde cero, con tu proceso vacío">↺ Reiniciar</button>${modActual.nuevaRonda ? '' : `<button class="btn sec chico" onclick="otroDelMismoTema()" title="Otro ejercicio del mismo tema; no gasta tu ronda" aria-label="Otro ejercicio de este tema: no gasta tu ronda">Otro parecido</button>`}</div>` : ''}`;
-  if(fila){   // sin atenuar toda la zona (la respuesta no debe verse apagada): el CSS atenúa lo demás con .conRespSola
-    if(!fila.querySelector('.respSola')) fila.insertAdjacentHTML('beforeend', `<span class="respSola">${fmtRespuesta(ejActual)}</span>`);
-    ent.classList.add('conRespSola');
-  } else if(btns.length){
-    btns.forEach(b => { const o = ejActual.opciones[+b.dataset.o]; if(o === ejActual.respuesta) b.classList.add('opOk'); else if(o === ultimaEntrada) b.classList.add('opMal'); });
-    ent.classList.add('conMarcas');
-  } else ent.style.opacity = '.5';
+  // la respuesta quedó al lado de lo que contestó: se apaga lo demás (no la respuesta). Si va en una línea debajo, se apaga toda la zona como antes.
+  if(linea) ent.style.opacity = '.5'; else ent.classList.add('respondida');
   ent.style.pointerEvents = 'none';
   $('accionesPre').style.display = 'none';
-  (fila || (btns.length ? ent : zona)).scrollIntoView({behavior:'smooth', block:'start'});   // con la respuesta dentro del campo, el campo es lo que hay que ver
+  (linea ? zona : ent).scrollIntoView({behavior:'smooth', block:'start'});
 }
 
 // Una línea que empieza con "TRUCO:" no es un paso más: sale de la lista numerada y se
@@ -11815,13 +11910,29 @@ function toggleRespuesta(){
   const btn = $('btnOcultarResp'); if(!btn) return;
   const ocultar = btn.dataset.oculto !== '1'; btn.dataset.oculto = ocultar ? '1' : '';
   ['zonaEntrada', 'cardProgreso'].forEach(id => { const e = $(id); if(e) e.style.display = ocultar ? 'none' : ''; });   // cardProgreso = te faltan / racha / agrupar / repetir
-  const fb = document.querySelector('#zonaFb .fb'); if(fb) fb.style.display = ocultar ? 'none' : '';
+  document.querySelectorAll('#zonaFb .fbTxt, #zonaFb .respLinea').forEach(fb => { fb.style.display = ocultar ? 'none' : ''; });
   btn.textContent = ocultar ? '▼ Mostrar respuesta' : '▲ Ocultar respuesta';
   btn.scrollIntoView({ block:'nearest' });
 }
+// dos explicaciones cuando el ejercicio trae ej.facil (la corta, con el truco): botones Fácil / Completa arriba del "Por qué".
+// Se recuerda la última que escogió (mate_expl_modo_v1).
+var _explModo = leer('mate_expl_modo_v1', 'facil');   // var: se puede leer al retomar una sesión mientras arranca la app
+function explPorQue(ej){
+  const comp = explPasos(ej.explicacion, ej.sinNumeros);
+  if(!ej.facil) return `<h3>Por qué</h3>${comp}`;
+  const f = _explModo !== 'completa', b = (m, txt) => `<button type="button" class="chip${(m === 'facil') === f ? ' on' : ''}" aria-pressed="${(m === 'facil') === f}" onclick="explModo(this, '${m}')">${txt}</button>`;
+  return `<div class="chips explModo" role="group" aria-label="Cómo ver la explicación">${b('facil', 'Fácil')}${b('completa', 'Completa')}</div>
+    <h3>Por qué</h3><div class="explV" data-v="facil"${f ? '' : ' hidden'}>${explPasos(ej.facil)}</div><div class="explV" data-v="completa"${f ? ' hidden' : ''}>${comp}</div>`;
+}
+function explModo(btn, m){
+  _explModo = m; guardar('mate_expl_modo_v1', m);
+  const caja = btn.closest('.expl');
+  caja.querySelectorAll('.explModo .chip').forEach(x => { x.classList.toggle('on', x === btn); x.setAttribute('aria-pressed', x === btn); });
+  caja.querySelectorAll('.explV').forEach(d => { d.hidden = d.dataset.v !== m; });
+}
 const explHTML = () => `
   <button type="button" id="btnOcultarResp" class="btn sec chico" style="margin-bottom:10px" onclick="toggleRespuesta()">▲ Ocultar respuesta</button>
-  <div class="expl"><h3>Por qué</h3>${explPasos(ejActual.explicacion, ejActual.sinNumeros)}</div>
+  <div class="expl">${explPorQue(ejActual)}</div>
   ${getAiKey() ? '<div id="aiOtra">' + _aiOtraBtn() + '</div>' : ''}`;
 
 function saltarEjercicio(){
@@ -11856,9 +11967,7 @@ function _pintarVistaExplicacion(){
     if(modActual.nuevaRonda) bv.style.display = 'none';
     else { bv.textContent = 'Otro parecido'; bv.setAttribute('onclick', 'otroDelMismoTema()'); }
   }
-  zona.innerHTML = `
-    <div class="fb medio">Respuesta: <b>${fmtRespuesta(ejActual)}</b>
-      <small>Este ejercicio no cuenta para las estadísticas.</small></div>
+  zona.innerHTML = `${_ponerRespuesta(false)}${_fbTxt(['Este ejercicio no cuenta para las estadísticas.'])}
     ${explHTML()}
     <button class="btn amar" onclick="ir('practica',${esTemaFijo ? `'${modActual.id}'` : capFijo ? capFijo : 'undefined'},true)">Siguiente ejercicio</button>`;
   zona.scrollIntoView({behavior:'smooth', block:'start'});
