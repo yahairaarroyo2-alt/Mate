@@ -157,8 +157,7 @@
     .mapaPreg summary,.mapaLeyenda{display:none}   /* solo los números */
   }
   .ayFoto{display:block;width:100%;max-width:300px;margin:12px auto 0;border-radius:12px;background:#fff;border:1px solid rgba(128,128,128,.3)}
-  .nota{background:rgba(255,255,255,.22);border:1px solid rgba(255,255,255,.4);padding:11px 14px;
-    border-radius:14px;margin:10px 0;font-size:.9rem;color:var(--muted)}
+  .nota{padding:2px 0;margin:10px 0;font-size:.9rem;color:var(--muted)}   /* sin tarjeta ni borde: solo texto (pedido de la usuaria 2026-10-25) */
   /* confirmación propia en vez de confirm() nativo — ver confirmarAccion() */
   /* z-index arriba del de .bottom-nav (400, copiado tal cual de Fit-F) — si no, un diálogo
      en una pantalla con la barra visible queda tapado por ella */
@@ -482,7 +481,6 @@
   body.night .btn.amar{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.16)}
   body.night .btn.sec{background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.10);color:var(--muted)}
   body.night .pill{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.18);color:var(--texto)}
-  body.night .nota{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.1)}
   body.night .chip{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.14);color:var(--muted)}
   body.night .banner{background:rgba(255,255,255,.10);border-color:rgba(255,255,255,.18)}
   body.night .modCheck{border-color:rgba(255,255,255,.18)}
@@ -613,6 +611,6 @@
 </div>
 
 <!-- todo el JavaScript vive en app.js (Chrome lo guarda ya compilado y no lo vuelve a analizar en cada apertura). El ?v= es el MISMO número que CACHE en sw.js: se suben juntos en cada deploy. -->
-<script src="app.js?v=184"></script>
+<script src="app.js?v=185"></script>
 </body>
 </html>

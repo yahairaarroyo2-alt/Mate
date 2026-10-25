@@ -7775,7 +7775,7 @@ const _debajoDe = (id, ref) => { const [m] = MODULOS.splice(MODULOS.findIndex(x 
 // facil[i] = la explicación corta de la pregunta i (con el truco), en forma de receta(); sale con el botón "Fácil" (ver explPorQue)
 const _F = (pide, pasos, ejemplo, truco) => ({ pide, pasos: pasos.map(([t, ...l]) => ({ t, l })), ejemplo, truco });
 function _modParcial(id, nombre, banco, cual, facil){
-  return { id, nombre, secciones:['8.9'], banco:banco.length, _sig:0, extra:true,   // extra: preguntas fijas, fuera de la mezcla (se mete con su casilla)
+  return { id, nombre, secciones:['8.9'], banco:banco.length, _sig:0, extra:true, sinReloj:true,   // extra: preguntas fijas, fuera de la mezcla (se mete con su casilla)
     nuevaRonda(){ this._sig = 0; },
     gen(){
       const i = this._sig % banco.length; this._sig++;
