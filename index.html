@@ -214,6 +214,11 @@
   #zonaEntrada.conRespSola .campo{padding-right:6.5rem}
   /* ya contestó: se apaga lo que escribió y los botones, no la respuesta que quedó al lado */
   #zonaEntrada.respondida .campo, #zonaEntrada.respondida .signo, #zonaEntrada.respondida .barra, #zonaEntrada.respondida>.btn{opacity:.5}
+  /* casillas iluminadas al comprobar una fracción o un mixto: verde = bien, rojo = mal */
+  .campo.bien{border-color:var(--verde);background:var(--verde-bg);color:#1e7a48}
+  .campo.mal{border-color:var(--rojo);background:var(--rojo-bg);color:#b03a2e}
+  body.night .campo.bien{color:#7be3a8} body.night .campo.mal{color:#f19c92}
+  #zonaEntrada.respondida .campo.bien, #zonaEntrada.respondida .campo.mal{opacity:1}
   /* respuesta a la derecha de la fracción o del número mixto */
   .fracIn{position:relative}
   .respLado{font-size:1.25rem;font-weight:700;color:#1e7a48;white-space:nowrap}
@@ -271,10 +276,10 @@
     width:24px;height:24px;border-radius:50%;font-size:.8rem;font-weight:700;
     display:flex;align-items:center;justify-content:center}
   /* feedback */
-  .fb{border-radius:12px;padding:13px 15px;margin-bottom:12px;font-weight:600}
-  .fb.ok{background:var(--verde-bg);color:#1e7a48;border-left:5px solid var(--verde)}
-  .fb.mal{background:var(--rojo-bg);color:#b03a2e;border-left:5px solid var(--rojo)}
-  .fb.medio{background:var(--ambar-bg);color:#9c6410;border-left:5px solid var(--ambar)}
+  .fb{padding:4px 0;margin-bottom:12px;font-weight:600}   /* sin recuadro: solo texto de color */
+  .fb.ok{color:#1e7a48}
+  .fb.mal{color:#b03a2e}
+  .fb.medio{color:#9c6410}
   .fb small{display:block;font-weight:400;margin-top:4px}
   .expl{background:var(--gris);border-radius:12px;padding:14px 16px;margin-bottom:12px}
   .expl h3{margin-top:0}
@@ -608,6 +613,6 @@
 </div>
 
 <!-- todo el JavaScript vive en app.js (Chrome lo guarda ya compilado y no lo vuelve a analizar en cada apertura). El ?v= es el MISMO número que CACHE en sw.js: se suben juntos en cada deploy. -->
-<script src="app.js?v=183"></script>
+<script src="app.js?v=184"></script>
 </body>
 </html>

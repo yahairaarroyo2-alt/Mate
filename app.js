@@ -11813,6 +11813,47 @@ function _ponerRespuesta(ok){
     ent.classList.add('conMarcas'); return ''; }
   return linea();
 }
+// al comprobar, cada casilla se ilumina: verde = esa parte está bien, rojo = mal (si todo está bien, todas verdes). Cubre fracción, mixto, ángulos,
+// base/exponente/valor, coeficiente/variable y los de varios campos (con los mismos criterios que verificar). Devuelve true si iluminó algo.
+function _bienMulti(ej, e){
+  const b = {};
+  if(ej.pares){   // pares de ángulos: cada par vale en cualquier orden, y ∠AOC = ∠COA
+    const ang = s => { const t = String(s).toUpperCase().replace(/[^A-Z]/g, ''); return t.length === 3 ? [t, [...t].reverse().join('')].sort()[0] : t; };
+    const par = (x, y) => [ang(x), ang(y)].sort().join('|'), buenos = ej.pares.map(p => par(...p));
+    ej.pares.forEach((_, k) => { const ok = buenos.includes(par(e[2*k], e[2*k+1])); b['inM' + 2*k] = ok; b['inM' + (2*k + 1)] = ok; });
+    return b;
+  }
+  const fs = e.f || [];
+  ej.campos.forEach((c, i) => {
+    let ok;
+    if(c.ops) ok = e[i] === ej.respuesta[i];
+    else if(c.q){ const v = leerQ(e[i]); ok = !!v && v.d > 0 && v.n*c.q.d === c.q.n*v.d && !(v.d !== 1 && (mcd(v.fn, v.d) !== 1 || (v.mixto && v.fn >= v.d))); }
+    else if(c.ex){ const s = String(e[i]).toLowerCase().replace(/\s+/g, ''); ok = c.ex === 'No definido' ? NO_DEF.test(s) : !NO_DEF.test(s) && mismaExpr(e[i], c.ex); }
+    else {
+      const vIn = c.din ? Number(String(e[i]).replace(/[\s$,]/g, '').replace('−', '-')) : numLimpio(e[i]);
+      ok = Math.abs(vIn - ej.respuesta[i]) < (c.tol ?? 0.01);
+      if(c.fs && String(fs[i] || '').trim() !== '') b['inF' + i] = formulaOk(fs[i], c);   // la fórmula (opcional) solo si la escribió
+    }
+    b['inM' + i] = ok;
+  });
+  return b;
+}
+function _iluminarCasillas(ok){
+  const ej = ejActual, e = ultimaEntrada, R = ej.respuesta, v = numLimpio;
+  if(!respondido || e == null) return false;
+  let bien = null;
+  if(ej.tipo === 'frac'){ let n = v(e.n), d = v(e.d); if(d < 0){ n = -n; d = -d; }   // signo delante = signo arriba, como en verificar
+    bien = { inN: n === R.n, inD: d === R.d }; }
+  else if(ej.tipo === 'mixto') bien = { inE: v(e.e) === R.e, inN: v(e.n) === R.n, inD: v(e.d) === R.d };
+  else if(ej.tipo === 'angulo2') bien = { inA2: v(e.a) === R.a, inA3: v(e.b) === R.b };
+  else if(ej.tipo === 'basexp') bien = { inBase: v(e.b) === R.b, inExp: v(e.e) === R.e, inVal: v(e.v) === R.v };
+  else if(ej.tipo === 'coefvar') bien = { inCoef: v(e.coef) === R.coef, inVariable: normVar(e.variable) === R.variable };
+  else if(ej.tipo === 'multi') bien = _bienMulti(ej, e);
+  if(!bien) return false;
+  let n = 0;
+  Object.entries(bien).forEach(([id, b]) => { const c = $(id); if(c){ c.classList.add(ok || b ? 'bien' : 'mal'); n++; } });
+  return n > 0;
+}
 // avisos que acompañan al resultado (Casi, "vuelve a salir…", "no cuenta para las estadísticas"): texto suelto, sin recuadro
 const _fbTxt = ls => (ls = ls.filter(Boolean)).length ? `<div class="fbTxt">${ls.join('<br>')}</div>` : '';
 function mostrarFb(res, soloAviso){
@@ -11822,6 +11863,7 @@ function mostrarFb(res, soloAviso){
   _feedbackHaptico(res.ok);
   const np = $('notaPrevia'); if(np) np.remove();   // el aviso de "ya la contestaste" cede su lugar al resultado de ahora
   const ent = $('zonaEntrada'), linea = _ponerRespuesta(res.ok);
+  const luz = _iluminarCasillas(res.ok);
   zona.innerHTML = `${linea}
     ${_fbTxt([!res.ok && res.incompleto ? '<b>Casi</b>' : '', res.msg,
       res.ok && ejActual.campos && ejActual.campos.some(c => c.fs) ? `Compara tu sustitución: <b>${fmtRespuesta(ejActual)}</b>` : '',
@@ -11830,7 +11872,7 @@ function mostrarFb(res, soloAviso){
     <button class="btn amar" onclick="_siguienteEjercicio()">Siguiente ejercicio</button>
     ${(!modoErrores && !modoRepasoRonda) ? `<div class="row tres" style="margin-top:8px"><button class="btn sec chico" onclick="reiniciarEjercicio()" title="Hazlo otra vez desde cero (con tu proceso vacío)" aria-label="Reiniciar este ejercicio: hazlo otra vez desde cero, con tu proceso vacío">↺ Reiniciar</button>${modActual.nuevaRonda ? '' : `<button class="btn sec chico" onclick="otroDelMismoTema()" title="Otro ejercicio del mismo tema; no gasta tu ronda" aria-label="Otro ejercicio de este tema: no gasta tu ronda">Otro parecido</button>`}</div>` : ''}`;
   // la respuesta quedó al lado de lo que contestó: se apaga lo demás (no la respuesta). Si va en una línea debajo, se apaga toda la zona como antes.
-  if(linea) ent.style.opacity = '.5'; else ent.classList.add('respondida');
+  if(linea && !luz) ent.style.opacity = '.5'; else ent.classList.add('respondida');   // con casillas iluminadas, solo se apaga lo demás (no las que tienen luz)
   ent.style.pointerEvents = 'none';
   $('accionesPre').style.display = 'none';
   (linea ? zona : ent).scrollIntoView({behavior:'smooth', block:'start'});
@@ -11984,8 +12026,7 @@ function _explPasos(lista, sinNumeros){
   const cuerpo = sinNumeros
     ? `<div class="pasosLibres">${pasos.map(l => `<div class="${/^(→|[IVX]+\. |[a-z]\. |Método|Fórmula|Calcular|Comprobación)/.test(l) ? 'pasoTit' : 'pasoLin'}">${l}</div>`).join('')}</div>`
     : `<ol>${pasos.map(l => l.startsWith('<svg') ? `<li style="display:block">${l}</li>` : `<li>${l}</li>`).join('')}</ol>`;
-  return cuerpo +
-    trucos.map(t=>`<div class="truco"><b>TRUCO PARA QUE SEA MÁS FÁCIL</b>${t}</div>`).join('');
+  return cuerpo;   // los TRUCO ya no se pintan en recuadro (pedido de la usuaria 2026-10-25)
 }
 
 // botón para esconder la casilla de respuesta, el aviso (¡Correcto!) y el progreso, y ver mejor la explicación ("Tu proceso" tiene su propio botón)
