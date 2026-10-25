@@ -7209,7 +7209,7 @@ const bProd = (a, m) => { const r = dN(a * m), n = lugares(m);
   return { enunciado:`Efectúa la operación indicada.<br><b>${px(a)} × ${px(m)}</b>`, ...numDec(r),
     explicacion: receta({ pide:`${px(a)} × ${px(m)}.`,
       pasos:[{ t:`Cuenta los decimales de ${px(m)}`, l:[`${px(m)} tiene ${_dec(n)}: multiplicar por ${px(m)} es lo mismo que dividir entre ${miles(P10(n))}.`] },
-        { t:`Mueve el punto ${_lug(n)} a la IZQUIERDA (el número se achica)`, l:[`${px(Math.abs(a))} → ${cb(px(Math.abs(r)))}${Math.abs(a) < P10(n) ? ' (se agregan ceros delante para tener donde mover el punto)' : ''}`] },
+        { t:`Mueve el punto ${_lug(n)} a la IZQUIERDA (el número se achica)`, l:[`${px(Math.abs(a))} → ${cb(px(Math.abs(r)))}${Math.abs(a) < P10(n) ? ' (se agregan ceros delante para tener donde mover el punto)' : ''}`, diagPunto(Math.abs(a), -n)] },
         ...(a < 0 ? [{ t:'El signo', l:[`Negativo × positivo = negativo: ${cb(px(r))}`] }] : [])],
       resp: px(r), comp:`al revés: ${px(r)} × ${miles(P10(n))} = ${px(a)} ✓`, error:'mover el punto a la derecha: multiplicar por un número menor que 1 da un número MÁS CHICO.',
       ejemplo:`${px(a)} × ${px(m)} = ${px(r)}.`, truco:'× 0.1, × 0.01, × 0.001 = el punto se corre 1, 2 o 3 lugares a la izquierda (tantos como decimales tiene).' }) }; };
@@ -7223,8 +7223,8 @@ const bCoc = (a, b) => { const r = dN(a / b);
 const bDivMov = (x, n) => { const r = dN(x / P10(n)), f = n === 1 ? '10' : `10<sup>${n}</sup>`;
   return { enunciado:`Divide moviendo el punto decimal:<br><b>${px(x)} ÷ ${f}</b>`, ...numDec(r),
     explicacion: receta({ pide:`${px(x)} ÷ ${miles(P10(n))} sin hacer la cuenta larga.`,
-      pasos:[{ t:'Cuenta los ceros', l:[n === 1 ? '10 tiene 1 cero.' : `10<sup>${n}</sup> = ${miles(P10(n))}: tiene ${n} ceros.`] },
-        { t:`Dividir: mueve el punto ${_lug(n)} a la IZQUIERDA (tantos lugares como ceros)`, l:[`${px(x)} → ${cb(px(r))}`] }],
+      pasos:[{ t:'Cuenta los ceros', l:[n === 1 ? '10 tiene 1 cero.' : `10<sup>${n}</sup> = ${Array(n).fill(10).join(' × ')} = ${miles(P10(n))}: tiene ${n} ceros.`] },
+        { t:`Dividir: mueve el punto ${_lug(n)} a la IZQUIERDA (tantos lugares como ceros)`, l:[`${px(x)} → ${cb(px(r))}`, diagPunto(x, -n)] }],
       resp: px(r), comp:`al revés: ${px(r)} × ${miles(P10(n))} = ${px(x)} ✓`, error:'mover el punto a la derecha: dividir entre 10, 100, 1000… achica el número.',
       ejemplo:`${px(x)} ÷ ${miles(P10(n))} = ${px(r)}.`, truco:'dividir entre 10, 100, 1000… = el punto va a la izquierda tantos lugares como ceros.' }) }; };
 const bEfec = (a, b) => { const r = dN(a / b), k = lugares(b);
@@ -7725,10 +7725,12 @@ const _P2 = [
   () => ({ enunciado:`Evalúa la expresión y escribe la respuesta en forma decimal.<br><b>4<i>x</i><sup>2</sup> − 5<i>x</i> + 3<i>y</i></b> &nbsp;para&nbsp; <b><i>x</i> = ${fr(1, 2)}</b> &nbsp;y&nbsp; <b><i>y</i> = 0.2</b><br><small>(Redondea la respuesta hasta 2 lugares decimales)</small>`,
     ...numDec(-0.9), ayuda:'Redondea a 2 lugares decimales.',
     explicacion: receta({ pide:'el valor de la expresión cuando x = 1/2 y y = 0.2 (en decimal).',
-      pasos:[{ t:'Sustituye x y y por sus números', l:['Cada letra se cambia por su número: 4(1/2)² − 5(1/2) + 3(0.2)', 'Conviene pasar 1/2 a decimal: 1/2 = 0.5 → 4(0.5)² − 5(0.5) + 3(0.2)'] },
-        { t:'Primero el exponente', l:['(0.5)² = 0.5 × 0.5 = 0.25'] },
-        { t:'Después las multiplicaciones', l:[`4 × 0.25 = ${cb(1)}`, `5 × 0.5 = ${cb('2.5')}`, `3 × 0.2 = ${cb('0.6')}`, 'La expresión queda 1 − 2.5 + 0.6'] },
-        { t:'Suma y resta de izquierda a derecha', l:['1 − 2.5 = −1.5 (le quitas más de lo que tienes: sale negativo)', `−1.5 + 0.6 = ${cb('−0.9')}`] }],
+      pasos:[{ t:'Sustituye x y y por sus números', l:[diagSustituir([['x', '1/2'], ['y', '0.2']], 'Cada letra se cambia por su número (flecha hacia abajo), dentro de un paréntesis.'), 'Cada letra se cambia por su número: 4(1/2)² − 5(1/2) + 3(0.2)',
+          '1/2 es 1 ÷ 2 = 0.5. Conviene pasarlo a decimal porque la y ya está en decimal → 4(0.5)² − 5(0.5) + 3(0.2)'] },
+        { t:'Primero el exponente: (0.5)² = 0.5 × 0.5', l:pasosMultDec(0.5, 0.5).concat(['La expresión queda 4(0.25) − 5(0.5) + 3(0.2)']) },
+        { t:'Después las multiplicaciones (el número pegado al paréntesis multiplica)', l:[`4 × 0.25 = ${cb(1)} (4 cuartos = 1 entero)`, `5 × 0.5 = ${cb('2.5')} (5 mitades = 2 y media)`, `3 × 0.2 = ${cb('0.6')}`, 'La expresión queda 1 − 2.5 + 0.6'] },
+        { t:'Suma y resta de izquierda a derecha: primero 1 − 2.5', l:sumaSignos(1, -2.5).concat(['La expresión queda −1.5 + 0.6']) },
+        { t:'Por último −1.5 + 0.6', l:sumaSignos(-1.5, 0.6).concat([_escalera('4(0.5)² − 5(0.5) + 3(0.2)', [['0.5² = 0.25', '4(0.25) − 5(0.5) + 3(0.2)'], ['las multiplicaciones', '1 − 2.5 + 0.6'], ['1 − 2.5 = −1.5', '−1.5 + 0.6'], ['−1.5 + 0.6', '−0.9']])]) }],
       resp:'−0.9', comp:'con la calculadora: 4(0.25) − 2.5 + 0.6 = −0.9 ✓ (ya tiene un solo decimal, no hace falta redondear)', error:'hacer (4x)² o 4 × 0.5² = 1: el exponente es solo de la x. También: restar 5 × 0.5 − 0.6 en vez de sumar el 0.6.',
       ejemplo:'4(0.5)² − 5(0.5) + 3(0.2) = 1 − 2.5 + 0.6 = −0.9.', truco:'primero el exponente, después × y ÷, y de último + y − de izquierda a derecha.' }) }),
   // 7: promedio
@@ -7741,10 +7743,12 @@ const _P2 = [
   // 8: 9/8 − 9x = 0.5
   () => ({ enunciado:`Resuelve la ecuación para <i>x</i>:<br><b>${fr(9, 8)} − 9<i>x</i> = 0.5</b>`, tipo:'frac', respuesta:{ n:5, d:72 }, pedirSimple:true, signo:true, ayuda:'x = ___ (como fracción; con el ± para el signo)',
     explicacion: receta({ pide:'el valor de x (como hay una fracción, se trabaja todo en fracciones).',
-      pasos:[{ t:'Pasa el decimal a fracción', l:[`0.5 = 5/10 = ${cb('1/2')} (5 ÷ 5 = 1 y 10 ÷ 5 = 2) → 9/8 − 9x = 1/2`] },
-        { t:'Quita el 9/8: réstalo en los DOS lados', l:['−9x = 1/2 − 9/8'] },
-        { t:'Resta las fracciones con denominador común (8)', l:['1/2 = 4/8 (arriba y abajo × 4)', `4/8 − 9/8 = (4 − 9)/8 = ${cb('−5/8')} → −9x = −5/8`] },
-        { t:'Quita el −9: divide los DOS lados entre −9 (dividir entre −9 = multiplicar por −1/9)', l:[`x = −5/8 × (−1/9) = (5 × 1)/(8 × 9) = ${cb('5/72')}`, 'Negativo × negativo = positivo.'] }],
+      pasos:[{ t:'Pasa el decimal a fracción', l:['0.5 tiene 1 decimal → abajo va 10: 0.5 = 5/10', explSimplif(5, 10), `→ la ecuación queda ${cb('9/8 − 9x = 1/2')}`] },
+        { t:'Quita el 9/8: réstalo en los DOS lados', l:[diagAmbosLados('9/8 − 9x', '1/2', '− 9/8', '−9x', '1/2 − 9/8'), '9/8 − 9/8 = 0, así que a la izquierda solo queda −9x.'] },
+        { t:'Resta las fracciones: primero el mismo de abajo (8)', l:['1/2 y 9/8 tienen distinto de abajo. 8 es múltiplo de 2 (2 × 4 = 8), así que el común es 8.', diagConvertir({ n:1, d:2 }, 4, 8),
+          '4/8 − 9/8: ya tienen el mismo de abajo; se restan los de arriba y el 8 se queda.', '4 − 9: le quitas más de lo que tienes → se resta 9 − 4 = 5 y se pone el − → −5', `4/8 − 9/8 = ${cb('−5/8')} → la ecuación queda −9x = −5/8`] },
+        { t:'Quita el −9 que multiplica a la x: divide los DOS lados entre −9', l:[diagAmbosLados('−9x', '−5/8', '÷ (−9)', 'x', '−5/8 ÷ (−9)'), '−9 es lo mismo que la fracción −9/1:',
+          ...pasosDivF({ n:-5, d:8 }, { n:-9, d:1 }).lineas, 'Arriba: −5 × −1 = 5. Abajo: 8 × 9 = 72.', `x = ${cb('5/72')}`] }],
       resp:'x = 5/72', comp:'9/8 − 9(5/72) = 9/8 − 45/72 = 81/72 − 45/72 = 36/72 = 1/2 = 0.5 ✓', error:'dejar el signo negativo al final: −5/8 dividido entre −9 da positivo; o restar 9/8 solo de un lado.',
       ejemplo:'−9x = −5/8 → x = 5/72.', truco:'si hay una fracción, pasa el decimal a fracción y trabaja todo en fracciones.' }) }),
   // 9: 1.5x − 18.4 = 0.6x − 22.9 (opción múltiple)
@@ -7756,12 +7760,14 @@ const _P2 = [
     tipo:'multi', campos:[{ et:'Precio', u:'$' }, { et:'por', u:'onzas' }], respuesta:[3.95, 50],
     explicacion: receta({ pide:'cuál presentación sale más barata POR ONZA (precio por unidad).',
       pasos:[{ t:'Precio por onza de cada una: precio ÷ onzas', l:['30 onzas: 4.05 ÷ 30 = $0.135 por onza', '40 onzas: 4.2 ÷ 40 = $0.105 por onza', '50 onzas: 3.95 ÷ 50 = $0.079 por onza'] },
-        { t:'La mejor compra es la que cuesta MENOS por onza', l:[`$0.079 es el menor → ${cb('$3.95 por 50 onzas')}`] }],
+        { t:'La mejor compra es la que cuesta MENOS por onza', l:[tablaLugares([0.135, 0.105, 0.079], 'dif') + '<div class="dgNota">Se comparan columna por columna, de izquierda a derecha. En las décimas (en naranja) hay 1, 1 y 0: el que tiene 0 es el más chico.</div>',
+          `$0.079 es el menor → ${cb('$3.95 por 50 onzas')}`] }],
       resp:'$3.95 por 50 onzas', comp:'la más grande (50 onzas) es también la más barata en total, así que gana por mucho ✓', error:'escoger por el precio total: se compara el precio de UNA onza (precio ÷ onzas).',
       ejemplo:'4.05 ÷ 30 = 0.135; 4.2 ÷ 40 = 0.105; 3.95 ÷ 50 = 0.079 → $3.95 por 50 onzas.', truco:'mejor compra = el menor precio por unidad (precio ÷ cantidad).' }) }),
   // 12
   () => MCx('<b>Halla la comparación porcentual de la razón de 60 a 75.</b>', ['60 es 75 % de 75', '60 es 65 % de 75', '60 es 80 % de 75', '60 es 60 % de 75', NING], '60 es 80 % de 75', { pide:'qué porciento de 75 es 60.',
-    pasos:[{ t:'Escribe la razón 60 a 75 como fracción y divide', l:['60/75 = 60 ÷ 75 = 0.8'] }, { t:'Pasa el decimal a porciento: × 100 (el punto 2 lugares a la derecha)', l:[`0.8 × 100 = ${cb('80%')}`] }],
+    pasos:[{ t:'Escribe la razón 60 a 75 como fracción: el primero (60) arriba', l:[cb('60/75')] }, { t:'La raya de fracción es una división', l:['60 ÷ 75 = 0.8'] },
+      { t:'Pasa el decimal a porciento: × 100 (el punto 2 lugares a la derecha)', l:[decPct(0.8)] }],
     comp:'80% de 75 = 0.8 × 75 = 60 ✓', error:'escoger 75 %: ese es el 75 de la razón, no un porciento.', ejemplo:'60 ÷ 75 = 0.8 = 80% → 60 es 80 % de 75.', truco:'parte ÷ total, y × 100.' }),
   // 13
   () => MCx('<b>Escribe 0.12 % como un decimal.</b>', ['0.0012', '120', '1,200', '0.012', NING], '0.0012', { pide:'0.12% como número decimal.',
@@ -7769,30 +7775,34 @@ const _P2 = [
     comp:'0.12% es menos de 1%, así que el decimal tiene que ser menor que 0.01 ✓', error:'mover el punto solo 1 lugar (0.012) o hacia la derecha (120, 1,200): un porciento SIEMPRE se achica 2 lugares.', ejemplo:'0.12% = 0.12 ÷ 100 = 0.0012.', truco:'del % al decimal: el punto 2 lugares a la izquierda (agrega ceros si hace falta).' }),
   // 14
   () => MCx('<b>¿Cuál es mayor : 60% de 250 ó 70% de 200 ?</b>', ['60% de 250', '70% de 200', 'Ambos son iguales', 'No se puede determinar', NING], '60% de 250', { pide:'cuál de las dos cantidades es mayor: calcula cada una.',
-    pasos:[{ t:'Calcula 60% de 250: pasa el 60% a decimal y multiplica', l:[`60% = 0.6 → 0.6 × 250 = ${cb(150)}`] }, { t:'Calcula 70% de 200', l:[`70% = 0.7 → 0.7 × 200 = ${cb(140)}`] },
+    pasos:[{ t:'Pasa el 60% a decimal', l:[pctDec(60)] }, { t:'60% DE 250 = multiplica 0.6 × 250', l:pasosMultDec(0.6, 250) },
+      { t:'Pasa el 70% a decimal', l:[pctDec(70)] }, { t:'70% DE 200 = multiplica 0.7 × 200', l:pasosMultDec(0.7, 200) },
       { t:'Compara', l:['150 es mayor que 140 → el mayor es 60% de 250'] }],
     comp:'el 10% de 250 es 25 (60% = 150) y el 10% de 200 es 20 (70% = 140) ✓', error:'escoger el porciento más grande (70%): hay que calcular cuánto es cada uno.', ejemplo:'0.6 × 250 = 150 y 0.7 × 200 = 140 → 150 > 140.', truco:'un porciento más grande de una cantidad más chica puede dar menos: calcula los dos.' }),
   // 15: ¿qué por ciento de 25 es 53?  (se contesta con el %)
   () => ({ enunciado:'¿Qué por ciento de <b>25</b> es <b>53</b>?', ...numDec(212), pct:true, ayuda:'Escribe el número (el % es opcional).',
     explicacion: receta({ pide:'qué porciento de 25 es 53.',
-      pasos:[{ t:'"Qué porciento de 25 es 53": la parte (53) ÷ el total (25)', l:['53 ÷ 25 = 2.12'] }, { t:'Pasa el decimal a porciento: × 100 (el punto 2 lugares a la derecha)', l:[`2.12 × 100 = ${cb('212%')}`] }],
+      pasos:[{ t:'Escoge la parte y el total', l:['"de 25" → 25 es el total (va después de la palabra "de"). La otra cantidad, 53, es la parte.'] },
+        { t:'La parte (53) ÷ el total (25)', l:['53 ÷ 25 = 2.12'] }, { t:'Pasa el decimal a porciento: × 100 (el punto 2 lugares a la derecha)', l:[decPct(2.12)] }],
       resp:'212%', comp:'212% de 25 = 2.12 × 25 = 53 ✓ (53 es más que 25, así que el porciento pasa de 100%)', error:'dividir al revés (25 ÷ 53 = 0.47): el total es 25, la parte es 53.', ejemplo:'53 ÷ 25 = 2.12 = 212%.', truco:'parte ÷ total, y × 100.' }) }),
   // 16
   () => MCx('<b>Pedro sembró 100 semillas y solamente 61% de ellas germinaron.  ¿Cuántas semillas no germinaron?</b>', ['49', '100', '27', '61', NING], NING, { pide:'cuántas semillas NO germinaron.',
-    pasos:[{ t:'61% de 100 son las que sí germinaron', l:['0.61 × 100 = 61 semillas germinaron'] }, { t:'Las que NO germinaron son el resto', l:[`100 − 61 = ${cb(39)}`, 'También: 100% − 61% = 39% de 100 = 39.'] },
+    pasos:[{ t:'Pasa el 61% a decimal', l:[pctDec(61)] }, { t:'61% DE 100 son las que sí germinaron: multiplica', l:[`0.61 × 100 = ${cb(61)} semillas germinaron` + diagPunto(0.61, 2)] },
+      { t:'Las que NO germinaron son el resto: todas − las que sí', l:[colDec([100, 61], '−', 39), 'También: 100% − 61% = 39% de 100 = 39.'] },
       { t:'Busca el 39 en las opciones', l:['49, 100, 27 y 61 no son 39 → Ninguno de los anteriores'] }],
     comp:'61 + 39 = 100 ✓', error:'escoger 61: esas son las que SÍ germinaron.', ejemplo:'100 − 61 = 39 → Ninguno de los anteriores.', truco:'"no germinaron" = el total menos las que sí; si tu resultado no está, es "Ninguno de los anteriores".' }),
   // 17
   () => MCx('<b>Jay gastó 30% de su mesada de $50 , y Mike gastó 20% de su mesada de $30.  ¿Quién gastó menos?</b>', ['Jay', 'Mike', 'Ambos gastaron lo mismo', 'No se puede determinar'], 'Mike', { pide:'cuánto gastó cada uno, para ver quién gastó menos.',
-    pasos:[{ t:'Jay: 30% de $50', l:[`30% = 0.3 → 0.3 × 50 = ${cb('$15')}`] }, { t:'Mike: 20% de $30', l:[`20% = 0.2 → 0.2 × 30 = ${cb('$6')}`] }, { t:'Compara', l:['$6 es menos que $15 → gastó menos Mike'] }],
+    pasos:[{ t:'Jay: pasa el 30% a decimal', l:[pctDec(30)] }, { t:'Jay gastó 30% DE $50: multiplica 0.3 × 50', l:pasosMultDec(0.3, 50).concat(['Jay gastó $15']) },
+      { t:'Mike: pasa el 20% a decimal', l:[pctDec(20)] }, { t:'Mike gastó 20% DE $30: multiplica 0.2 × 30', l:pasosMultDec(0.2, 30).concat(['Mike gastó $6']) }, { t:'Compara', l:['$6 es menos que $15 → gastó menos Mike'] }],
     comp:'el 10% de 50 es 5 (30% = 15) y el 10% de 30 es 3 (20% = 6) ✓', error:'escoger por el porciento (20% es menor): cada uno tiene una mesada distinta, hay que calcular los dólares.', ejemplo:'0.3 × 50 = 15 y 0.2 × 30 = 6 → Mike.', truco:'con cantidades distintas no se comparan porcientos: se convierten a dólares.' }),
   // 18
   () => MCx('<b>Siete octavos del volumen de cierta mezcla de cemento es arena. ¿Qué porciento de la mezcla es arena? 4/9/2020</b>', ['87.5%', '0.875%', '65%', '0.00875%', NING], '87.5%', { pide:'7/8 como porciento.',
-    pasos:[{ t:'La fracción es una división: 7 ÷ 8', l:['7 ÷ 8 = 0.875'] }, { t:'Pasa el decimal a porciento: × 100 (el punto 2 lugares a la derecha)', l:[`0.875 × 100 = ${cb('87.5%')}`] }],
+    pasos:[{ t:'"Siete octavos" es la fracción 7/8', l:[cb('7/8')] }, { t:'La fracción es una división: 7 ÷ 8', l:['7 ÷ 8 = 0.875'] }, { t:'Pasa el decimal a porciento: × 100 (el punto 2 lugares a la derecha)', l:[decPct(0.875)] }],
     comp:'7/8 es casi 1 entero (le falta 1/8 = 12.5%), así que 100% − 12.5% = 87.5% ✓', error:'escoger 0.875%: el decimal pasa a porciento moviendo el punto 2 lugares a la DERECHA.', ejemplo:'7 ÷ 8 = 0.875 = 87.5%.', truco:'fracción → decimal (arriba ÷ abajo) → porciento (× 100).' }),
   // 19
   () => MCx('<b>Escribe una razón expresada en sus términos más simples para la razón de 6 pies a 7 yardas .</b>', [frS(7, 2), frS(6, 7), frS(7, 6), frS(2, 7)], frS(2, 7), { pide:'la razón 6 pies a 7 yardas, simplificada (lo que se nombra primero va arriba).',
-    pasos:[{ t:'Pasa las dos cantidades a la MISMA unidad (pies)', l:['1 yarda = 3 pies → 7 yardas = 7 × 3 = 21 pies'] }, { t:'Escribe la razón: pies arriba, pies abajo', l:[cb('6/21')] },
+    pasos:[{ t:'Pasa las dos cantidades a la MISMA unidad (pies)', l:[diagFilas(['1 yarda', '3 pies'], ['7 yardas', '21 pies'], '× 7', '1 yarda son 3 pies. Si son 7 yardas, se multiplica por 7 a los dos lados.'), '7 yardas = 7 × 3 = 21 pies'] }, { t:'Escribe la razón: pies arriba, pies abajo', l:[cb('6/21')] },
       { t:'Simplifica: divide arriba y abajo entre el mismo número', l:[explSimplif(6, 21)] }],
     comp:'6/21 = 0.2857… y 2/7 = 0.2857…: valen lo mismo ✓', error:'dejar 6/7 (comparar 6 pies con 7 yardas sin pasar a la misma unidad).', ejemplo:'6 pies / (7 × 3 pies) = 6/21 = 2/7.', truco:'para comparar cosas distintas, pásalas a la MISMA unidad primero.' }),
   // 20, 21
@@ -7816,8 +7826,9 @@ const _P2 = [
   () => bMaq(2, 8, 1, 2, 10),
   // 25
   () => MCx('<b>Una tabla de 18 pies de largo se cortó en dos pedazos cuyas longitudes tienen una razón de 1 a 8. Halla el largo de cada pedazo.</b>', ['1, 17', '2, 16', '3, 15', '4, 14'], '2, 16', { pide:'el largo de cada pedazo (la razón 1 a 8 reparte la tabla en partes iguales).',
-    pasos:[{ t:'Cuenta las partes en total', l:['La razón es 1 a 8 → 1 parte + 8 partes = 9 partes'] }, { t:'Cuánto mide cada parte: el largo ÷ las partes', l:['18 ÷ 9 = 2 pies cada parte'] },
-      { t:'El largo de cada pedazo', l:[`1 parte = 1 × 2 = ${cb(2)} pies`, `8 partes = 8 × 2 = ${cb(16)} pies`] }],
+    pasos:[{ t:'Cuenta las partes en total', l:['La razón es 1 a 8 → un pedazo tiene 1 parte y el otro 8 partes iguales: 1 + 8 = 9 partes'] },
+      { t:'Cuánto mide cada parte: el largo ÷ las partes', l:[diagFilas(['9 partes', '18 pies'], ['1 parte', '2 pies'], '÷ 9', 'Las 9 partes juntas miden 18 pies. Para saber UNA parte, se divide entre 9 a los dos lados.'), '18 ÷ 9 = 2 pies cada parte'] },
+      { t:'El largo de cada pedazo', l:[`El chico tiene 1 parte: 1 × 2 = ${cb(2)} pies`, diagFilas(['1 parte', '2 pies'], ['8 partes', '16 pies'], '× 8', 'El grande tiene 8 partes: se multiplica por 8 a los dos lados.'), `El grande tiene 8 partes: 8 × 2 = ${cb(16)} pies`] }],
     comp:'2 + 16 = 18 ✓ y 16 ÷ 2 = 8 (razón 1 a 8) ✓', error:'escoger 1, 17: eso suma 18 pero la razón sería 1 a 17.', ejemplo:'18 ÷ (1 + 8) = 2 → 2 y 8 × 2 = 16.', truco:'suma las partes de la razón, divide el total entre esa suma, y multiplica por cada parte.' })
 ];
 MODULOS.push(_modParcial('educo-parcial2-p1', 'Examen Parcial 2 (caps. 6, 7 y 8): práctica 1 (las 25 exactas)', _P2, 'práctica 1'));
@@ -7844,15 +7855,19 @@ const _P2B = [
     comp:'6.54 × 5 = 32.7 ✓', error:'poner el punto en otro lugar (65.4, 654) o escoger 6.45 (cifras cambiadas de orden).', ejemplo:'32.7 ÷ 5 = 6.54 → Ninguno de los anteriores.', truco:'si tu resultado no está entre las opciones, es "Ninguno de los anteriores".' }),
   // 6: 5 − {0.92 − [0.5 − 0.4]}
   () => MCx('<b>Calcula: 5 - {0.92 - [0.5 - 0.4]}</b>', ['4.99', '4.88', '4.98', '4.18', NING], '4.18', { pide:'el valor de la expresión: se resuelve de adentro hacia afuera (corchete, llave, y de último la resta de afuera).',
-    pasos:[{ t:'Primero lo de adentro del corchete', l:[`0.5 − 0.4 = ${cb('0.1')} → la expresión queda 5 − {0.92 − 0.1}`] }, { t:'Después la llave', l:[`0.92 − 0.1 = ${cb('0.82')} → queda 5 − 0.82`] }, { t:'De último, la resta de afuera', l:[colDec([5, 0.82], '−', 4.18)] }],
+    pasos:[{ t:'Primero lo de adentro del corchete [ ]', l:[colDec([0.5, 0.4], '−', 0.1), `0.5 − 0.4 = ${cb('0.1')} → la expresión queda 5 − {0.92 − 0.1}`] }, { t:'Después la llave { }', l:[colDec([0.92, 0.1], '−', 0.82), `0.92 − 0.1 = ${cb('0.82')} → queda 5 − 0.82`] },
+      { t:'De último, la resta de afuera', l:[colDec([5, 0.82], '−', 4.18), _escalera('5 − {0.92 − [0.5 − 0.4]}', [['[0.5 − 0.4] = 0.1', '5 − {0.92 − 0.1}'], ['{0.92 − 0.1} = 0.82', '5 − 0.82'], ['5 − 0.82', '4.18']])] }],
     comp:'con la calculadora, de adentro hacia afuera: 5 − (0.92 − 0.1) = 4.18 ✓', error:'quitar los signos de agrupación sin cuidado: el − antes de la llave cambia lo de adentro (5 − 0.92 + 0.1 = 4.18 también, pero 5 − 0.92 − 0.1 = 3.98 está mal).', ejemplo:'5 − {0.92 − 0.1} = 5 − 0.82 = 4.18.', truco:'resuelve de adentro hacia afuera: [ ] primero, después { }.' }),
   // 7
   () => bProm(4, 1, 2, 3.7, 8.5),
   // 8: 7x − 6(x − 2/3) = 7
   () => ({ enunciado:`Si <b>7<i>x</i> − 6(<i>x</i> − ${fr(2, 3)}) = 7</b> entonces, halla el valor de <i>x</i>.`, ...numDec(3), ayuda:'x = ___',
     explicacion: receta({ pide:'el valor de x.',
-      pasos:[{ t:'Quita el paréntesis: el −6 multiplica a los DOS de adentro', l:['−6 × x = −6x', `−6 × (−2/3) = +12/3 = ${cb('+4')} (negativo × negativo = positivo)`, `→ ${cb('7x − 6x + 4 = 7')}`] },
-        { t:'Junta los términos con x', l:[`7x − 6x = x → ${cb('x + 4 = 7')}`] }, { t:'Quita el + 4: resta 4 en los DOS lados', l:[`x = 7 − 4 = ${cb(3)}`] }],
+      pasos:[{ t:'Quita el paréntesis: el −6 multiplica a los DOS de adentro', l:[_nota(diagFrac([_tx('−6'), _tx('('), _tx('x'), _tx('−'), _tx('2/3'), _tx(')'), _op('='), _tx('−6x'), _tx('+'), _tx('4')],
+          [{ de:[0,'n'], a:[2,'n'], txt:'×' }, { de:[0,'n'], a:[4,'n'], txt:'×', nivel:2 }]), 'El −6 (con su signo) multiplica a CADA término de adentro del paréntesis.'),
+          '−6 × x = −6x', '−6 × (−2/3): negativo × negativo = positivo → 6 × 2/3 = (6 × 2)/3 = 12/3', `12/3 = 12 ÷ 3 = ${cb('4')} → +4`, `→ ${cb('7x − 6x + 4 = 7')}`] },
+        { t:'Junta los términos con x', l:[`7x − 6x = (7 − 6)x = 1x = x → ${cb('x + 4 = 7')}`] },
+        { t:'Quita el + 4: resta 4 en los DOS lados', l:[diagAmbosLados('x + 4', '7', '− 4', 'x', '3'), `7 − 4 = 3 → x = ${cb(3)}`] }],
       resp:'x = 3', comp:'7(3) − 6(3 − 2/3) = 21 − 6(7/3) = 21 − 14 = 7 ✓', error:'olvidar que el −6 también multiplica al 2/3 (y que menos por menos da más).', ejemplo:'7x − 6x + 4 = 7 → x = 3.', truco:'el número de afuera multiplica a TODO lo de adentro del paréntesis, con su signo.' }) }),
   // 9: 0.7(0.8x + 5) − 0.8(1.3x − 0.7) = x
   () => bEq('Resuelve la ecuación :', '0.7 (0.8<i>x</i> + 5) − 0.8 (1.3<i>x</i> − 0.7) = <i>x</i>', '<br><small>( Redondea a 2 lugares decimales )</small>',
@@ -7861,7 +7876,8 @@ const _P2B = [
   // 10: tasa de lluvia
   () => ({ enunciado:'Durante una tormenta se registraron <b>5.4</b> pulgadas de lluvia en <b>1.2</b> horas. ¿Cuál fue la tasa de lluvia durante este tiempo?', tipo:'frac', respuesta:{ n:9, d:2 }, pedirSimple:true, ayuda:'pulgadas arriba y horas abajo, en su forma más simple.',
     explicacion: receta({ pide:'la tasa pulgadas / horas como fracción simplificada (una tasa compara cantidades de unidades distintas).',
-      pasos:[{ t:'Escribe la tasa: pulgadas arriba, horas abajo', l:[cb('5.4 pulgadas / 1.2 horas')] }, { t:'Quita los puntos: multiplica arriba y abajo por 10', l:['5.4 × 10 = 54 y 1.2 × 10 = 12 → 54/12'] },
+      pasos:[{ t:'Escribe la tasa: pulgadas arriba, horas abajo', l:[cb('5.4 pulgadas / 1.2 horas')] }, { t:'Quita los puntos: multiplica arriba y abajo por 10', l:[_nota(diagFrac([{ t:'f', n:'5.4', d:'1.2' }, _op('='), _fT(54, 12)], _par(0, 2, '× 10', true)),
+          'Los dos tienen 1 decimal: × 10 corre el punto 1 lugar a la derecha. Se hace arriba Y abajo, así la fracción vale lo mismo.'), '5.4 × 10 = 54 y 1.2 × 10 = 12 → 54/12'] },
         { t:'Simplifica', l:[explSimplif(54, 12)] }],
       resp:'9/2 (9 pulgadas por 2 horas)', comp:'54 ÷ 12 = 4.5 y 9 ÷ 2 = 4.5: valen lo mismo ✓ (4.5 pulgadas por hora)', error:'poner las horas arriba: lo que se nombra primero (la lluvia) va arriba.', ejemplo:'5.4/1.2 = 54/12 = 9/2.', truco:'en una tasa se escriben las unidades: 9 pulgadas / 2 horas.' }) }),
   // 11: precio de cada dulce
@@ -7874,7 +7890,7 @@ const _P2B = [
     comp:'13 ÷ 50 = 0.26 = 26% ✓', error:'escoger 26/100: está bien pero NO es la forma más reducida (se pueden dividir entre 2).', ejemplo:'26% = 26/100 = 13/50.', truco:'% = sobre 100; después simplifica.' }),
   // 13
   () => MCx('<b>Escribe 430 % como un número mixto con la parte fraccionaria en su forma más simple.</b>', ['4.30', '430', frS(430, 100), mixS(4, 3, 10), NING], mixS(4, 3, 10), { pide:'430% como número mixto (entero + fracción simplificada).',
-    pasos:[{ t:'Quita el %: pon 100 abajo', l:[`430% = ${cb(tf(430, 100))}`] }, { t:'Pásala a mixto: cuántas veces cabe el 100 en 430', l:['430 ÷ 100 = 4 y sobran 30 → 4 y 30/100'] }, { t:'Simplifica la parte fraccionaria', l:[explSimplif(30, 100)] }],
+    pasos:[{ t:'Quita el %: pon 100 abajo', l:[`430% = ${cb(tf(430, 100))}`] }, { t:'Pásala a mixto: cuántas veces cabe el 100 en 430', l:[diagAMixto(430, 100, 4, 30), '4 × 100 = 400 y 430 − 400 = 30 → 4 y 30/100'] }, { t:'Simplifica la parte fraccionaria', l:[explSimplif(30, 100)] }],
     comp:'4 3/10 = 4.3 = 430% ✓', error:'escoger 4.30 (eso es un decimal, no un mixto) o 430/100 (no es mixto ni simplificado).', ejemplo:'430% = 430/100 = 4 30/100 = 4 3/10.', truco:'% → sobre 100 → mixto → simplifica.' }),
   // 14: 7.5% del número es 46.5
   () => ({ enunciado:'¿Cuál es el número si <b>7.5%</b> del número es <b>46.5</b>?', ...numDec(620), ayuda:'Escribe el número con punto decimal si hace falta.',
@@ -7884,27 +7900,29 @@ const _P2B = [
   // 15: ¿Qué porciento de 2.8 es el número 40?  (EducoSoft lo escribe así y marca 7%)
   () => ({ enunciado:'¿Qué porciento de <b>2.8</b> es el número <b>40</b>?', ...numDec(7), pct:true, ayuda:'Escribe el número (el % es opcional).',
     explicacion: receta({ pide:'el porciento que EducoSoft marca correcto en esta pregunta: 7% (la redacción trae los dos números en ese orden, pero 2.8 es el 7% de 40).',
-      pasos:[{ t:'Escoge cuál es la parte y cuál el total', l:['Aquí 2.8 es la parte (lo chiquito) y 40 es el total: 2.8 es una parte de 40.'] }, { t:'Parte ÷ total', l:['2.8 ÷ 40 = 0.07'] }, { t:'Pasa el decimal a porciento: × 100 (el punto 2 lugares a la derecha)', l:[`0.07 × 100 = ${cb('7%')}`] }],
+      pasos:[{ t:'Escoge cuál es la parte y cuál el total', l:['Aquí 2.8 es la parte (lo chiquito) y 40 es el total: 2.8 es una parte de 40.'] }, { t:'Parte ÷ total', l:['2.8 ÷ 40 = 0.07'] }, { t:'Pasa el decimal a porciento: × 100 (el punto 2 lugares a la derecha)', l:[decPct(0.07)] }],
       resp:'7%', comp:'7% de 40 = 0.07 × 40 = 2.8 ✓', error:'dividir 40 ÷ 2.8 (da 1,428.6%): EducoSoft espera 2.8 ÷ 40.', ejemplo:'2.8 ÷ 40 = 0.07 = 7%.', truco:'parte ÷ total, y × 100. La parte es la cantidad MÁS CHICA.' }) }),
   // 16: presupuesto, salidas
   () => ({ enunciado:'En un mes particular, el presupuesto total de una familia fue de <b>$5000</b>. De éstos, <b>$900</b> fueron asignados para salidas. ¿Qué por ciento del presupuesto total fue asignado para salidas?', ...numDec(18), pct:true, ayuda:'Escribe el número (el % es opcional).',
     explicacion: receta({ pide:'qué porciento de $5000 son $900.',
-      pasos:[{ t:'Parte ÷ total', l:['900 ÷ 5000 = 0.18'] }, { t:'Pasa el decimal a porciento: × 100 (el punto 2 lugares a la derecha)', l:[`0.18 × 100 = ${cb('18%')}`] }],
+      pasos:[{ t:'Escoge la parte y el total', l:['El total es todo el presupuesto ($5000). La parte es lo de salidas ($900).'] }, { t:'Parte ÷ total', l:['900 ÷ 5000 = 0.18'] },
+        { t:'Pasa el decimal a porciento: × 100 (el punto 2 lugares a la derecha)', l:[decPct(0.18)] }],
       resp:'18%', comp:'18% de 5000 = 0.18 × 5000 = 900 ✓', error:'dividir al revés (5000 ÷ 900): la parte (salidas) va arriba.', ejemplo:'900 ÷ 5000 = 0.18 = 18%.', truco:'parte ÷ total, y × 100.' }) }),
   // 17: censo (resultado como número mixto con %)
   () => ({ enunciado:`Un censo determina que el <b>25%</b> de los residentes de cierta ciudad son de <b>59</b> años de edad o mayores, mientras que el <b>${mixS(20, 1, 3)} %</b> son de <b>30</b> años de edad o menores. ¿Cuál es el por ciento de residentes entre las edades de <b>59</b> y <b>30</b>?`,
     tipo:'mixto', respuesta:{ e:54, n:2, d:3 }, ayuda:'Escribe el número mixto (el % ya está puesto): entero, y la fracción arriba y abajo.',
     explicacion: receta({ pide:'el porciento que queda en el medio (entre 30 y 59 años), como número mixto.',
-      pasos:[{ t:'Todos los residentes son el 100%', l:['Los de 59 o más son 25% y los de 30 o menos son 20 1/3 %: el resto está en el medio.'] }, { t:'Suma los dos porcientos de las orillas', l:[`25 + 20 1/3 = ${cb('45 1/3')}`] },
-        { t:'Réstalos del 100%', l:['100 − 45 1/3 = 99 3/3 − 45 1/3 (se "presta" 1 entero = 3/3)', `= ${cb('54 2/3')} %`] }],
+      pasos:[{ t:'Todos los residentes son el 100%', l:['Los de 59 o más son 25% y los de 30 o menos son 20 1/3 %: el resto está en el medio.'] }, { t:'Suma los dos porcientos de las orillas', l:['Enteros con enteros: 25 + 20 = 45. La fracción 1/3 se queda.', `25 + 20 1/3 = ${cb('45 1/3')}`] },
+        { t:'Réstalos del 100%: "presta" 1 entero', l:['A 100 no le puedes quitar 1/3 directo (no tiene fracción). Se presta 1 entero y se escribe como 3/3: 100 = 99 3/3',
+          'Enteros con enteros: 99 − 45 = 54', 'Fracción con fracción: 3/3 − 1/3 = 2/3', `100 − 45 1/3 = ${cb('54 2/3')} %`, diagCadena('100%', [['− 25%', '75%'], ['− 20 1/3 %', '54 2/3 %']], 'Del 100% se quitan las dos orillas, una por una: lo que queda abajo (en naranja) es el medio.')] }],
       resp:'54 2/3 %', comp:'25 + 20 1/3 + 54 2/3 = 100 ✓', error:'restar solo uno de los dos porcientos: hay que quitar los DOS del 100%.', ejemplo:'100 − 25 − 20 1/3 = 54 2/3 %.', truco:'las partes de un todo suman 100%: lo que falta es 100 menos lo que ya está.' }) }),
   // 18: 9 2/5 como porciento
   () => MCx(`<b>El porciento equivalente al número mixto ${mixS(9, 2, 5)} es</b>`, ['9.4%', '.094%', '9.40%', '940%', NING], '940%', { pide:'9 2/5 como porciento.',
-    pasos:[{ t:'Pasa el mixto a decimal', l:['2/5 = 2 ÷ 5 = 0.4 → 9 2/5 = 9 + 0.4 = 9.4'] }, { t:'Pasa el decimal a porciento: × 100 (el punto 2 lugares a la derecha)', l:[`9.4 × 100 = ${cb('940%')}`] }],
+    pasos:[{ t:'Pasa la fracción a decimal: arriba ÷ abajo', l:['2/5 = 2 ÷ 5 = 0.4'] }, { t:'Súmale el entero', l:[`9 2/5 = 9 + 0.4 = ${cb('9.4')}`] }, { t:'Pasa el decimal a porciento: × 100 (el punto 2 lugares a la derecha)', l:[decPct(9.4)] }],
     comp:'9 2/5 es casi 10 enteros, y 10 enteros son 1000%: 940% es razonable ✓', error:'escoger 9.4% (se le olvidó multiplicar por 100) o 9.40% (es lo mismo que 9.4%).', ejemplo:'9 2/5 = 9.4 = 940%.', truco:'mixto → decimal → × 100.' }),
   // 19: 9 pies a 5 yardas
   () => MCx('<b>Escribe una razón expresada en sus términos más simple para la razón de 9 pies a 5 yardas .</b>', [frS(3, 5), frS(36, 5), frS(5, 3), frS(5, 36)], frS(3, 5), { pide:'la razón 9 pies a 5 yardas, simplificada (lo que se nombra primero va arriba).',
-    pasos:[{ t:'Pasa las dos cantidades a la MISMA unidad (pies)', l:['1 yarda = 3 pies → 5 yardas = 5 × 3 = 15 pies'] }, { t:'Escribe la razón: pies arriba, pies abajo', l:[cb('9/15')] }, { t:'Simplifica: divide arriba y abajo entre el mismo número', l:[explSimplif(9, 15)] }],
+    pasos:[{ t:'Pasa las dos cantidades a la MISMA unidad (pies)', l:[diagFilas(['1 yarda', '3 pies'], ['5 yardas', '15 pies'], '× 5', '1 yarda son 3 pies. Si son 5 yardas, se multiplica por 5 a los dos lados.'), '5 yardas = 5 × 3 = 15 pies'] }, { t:'Escribe la razón: pies arriba, pies abajo', l:[cb('9/15')] }, { t:'Simplifica: divide arriba y abajo entre el mismo número', l:[explSimplif(9, 15)] }],
     comp:'9/15 = 0.6 y 3/5 = 0.6: valen lo mismo ✓', error:'escoger 5/3 (al revés: lo que se nombra primero, los pies, va arriba).', ejemplo:'9 pies / (5 × 3 pies) = 9/15 = 3/5.', truco:'para comparar cosas distintas, pásalas a la MISMA unidad primero.' }),
   // 20: 16 lápices a 18 libretas
   () => MCx('<b>La razón de 16 lápices a 18 libretas es:</b>', ['4 lápices : 3 libretas', '3 lápices : 4 libretas', '8 lápices : 9 libretas', '9 lápices : 8 libretas', NING], '8 lápices : 9 libretas', { pide:'la razón 16 a 18 en sus términos más simples (con sus unidades).',
@@ -7928,7 +7946,8 @@ const _P2B = [
   () => ({ enunciado:'Si <b>1</b> onza de papitas fritas contiene <b>270</b> calorías, ¿cuántas onzas contendrían <b>4,040</b> calorías?', tipo:'mixto', respuesta:{ e:14, n:26, d:27 }, ayuda:'Escribe el número mixto: entero, y la fracción arriba y abajo.',
     explicacion: receta({ pide:'las onzas para 4,040 calorías, como número mixto.',
       pasos:[{ t:'Arma la proporción con las mismas unidades en el mismo lugar (onzas arriba, calorías abajo)', l:[cb('1/270 = x/4040')] }, { t:'Multiplica en cruz', l:[diagCruzados(1, 270, 'x', 4040), `270 · x = 1 × 4040 = ${cb('4040')}`] },
-        { t:'Quita el 270: divide los DOS lados entre 270', l:['x = 4040/270 = 404/27 (÷ 10 arriba y abajo)'] }, { t:'Pásala a mixto: cuántas veces cabe el 27 en 404', l:['404 ÷ 27 = 14 y sobran 26 (27 × 14 = 378; 404 − 378 = 26)', `x = ${cb('14 26/27')} onzas`] }],
+        { t:'Quita el 270: divide los DOS lados entre 270', l:[diagAmbosLados('270x', '4040', '÷ 270', 'x', '4040/270'), 'Simplifica: los dos terminan en 0, se divide arriba y abajo entre 10.', explSimplif(4040, 270)] },
+        { t:'Pásala a mixto: cuántas veces cabe el 27 en 404', l:[diagAMixto(404, 27, 14, 26), '27 × 14 = 378 (es lo más cerca de 404 sin pasarse) y 404 − 378 = 26', `x = ${cb('14 26/27')} onzas`] }],
       resp:'14 26/27 onzas', comp:'14.96 onzas × 270 ≈ 4,040 calorías ✓ (casi 15 onzas)', error:'poner las calorías arriba de un lado y las onzas arriba del otro.', ejemplo:'x = 4040 ÷ 270 = 404/27 = 14 26/27.', truco:'misma unidad arriba en los dos lados (onzas) y misma abajo (calorías).' }) }),
   // 25
   () => bImp(600, 50000, 1000)
@@ -11310,7 +11329,7 @@ function entradaHTML(ej){
         <button class="btn" onclick="responder('=')">=</button>
         <button class="btn" onclick="responder('>')">&gt;</button></div>`;
     case 'opciones': { const bs = ej.opciones.map((o,i)=>
-        `<button class="btn" onclick="responder(ejActual.opciones[${i}])">${o}</button>`);
+        `<button class="btn" data-o="${i}" onclick="responder(ejActual.opciones[${i}])">${o}</button>`);
       if(ej.opciones.length === 2 && _invPos(ej)) bs.reverse();   // el índice de cada botón no cambia: solo su lugar
       return `<div role="group" aria-label="Opciones de respuesta">${bs.join('')}</div>`; }
     case 'num': return `
@@ -11612,20 +11631,29 @@ function mostrarFb(res, soloAviso){
   const np = $('notaPrevia'); if(np) np.remove();   // el aviso de "ya la contestaste" cede su lugar al resultado de ahora
   const clase_ = res.ok ? 'ok' : res.incompleto ? 'medio' : 'mal';
   const titulo = res.ok ? '¡Correcto!' : res.incompleto ? 'Casi' : 'No es esa';
+  const ent = $('zonaEntrada'), fila = !res.ok && ejActual.tipo === 'num' ? ent.querySelector('.numRow') : null;   // fallaste un numérico: la respuesta sale SOLA dentro del campo (a la derecha), no en el recuadro
+  const btns = !res.ok && ejActual.tipo === 'opciones' ? [...ent.querySelectorAll('button[data-o]')] : [];   // fallaste una de opciones: la correcta en verde y la tuya en rojo, sin recuadro
+  const solo = !!fila || btns.length > 0;
   zona.innerHTML = `
-    <div class="fb ${clase_}">${titulo}
+    ${solo && !res.msg && !vioExpl ? '' : `<div class="fb ${clase_}">${titulo}
       ${res.msg ? `<small>${res.msg}</small>` : ''}
-      ${!res.ok ? `<small>La respuesta es <b>${fmtRespuesta(ejActual)}</b>.</small>`
+      ${!res.ok ? (solo ? '' : `<small>La respuesta es <b>${fmtRespuesta(ejActual)}</b>.</small>`)
         : (ejActual.campos && ejActual.campos.some(c => c.fs)) ? `<small>Compara tu sustitución: <b>${fmtRespuesta(ejActual)}</b></small>` : ''}
       ${vioExpl ? `<small>Este no cuenta para las estadísticas (${_reintento ? 'es un ejercicio que repetiste' : 'viste la explicación antes'}).</small>` : ''}
-    </div>
+    </div>`}
     ${explHTML()}
     <button class="btn amar" onclick="_siguienteEjercicio()">Siguiente ejercicio</button>
     ${(!modoErrores && !modoRepasoRonda) ? `<div class="row tres" style="margin-top:8px"><button class="btn sec chico" onclick="reiniciarEjercicio()" title="Hazlo otra vez desde cero (con tu proceso vacío)" aria-label="Reiniciar este ejercicio: hazlo otra vez desde cero, con tu proceso vacío">↺ Reiniciar</button>${modActual.nuevaRonda ? '' : `<button class="btn sec chico" onclick="otroDelMismoTema()" title="Otro ejercicio del mismo tema; no gasta tu ronda" aria-label="Otro ejercicio de este tema: no gasta tu ronda">Otro parecido</button>`}</div>` : ''}`;
-  $('zonaEntrada').style.opacity = '.5';
-  $('zonaEntrada').style.pointerEvents = 'none';
+  if(fila){   // sin atenuar toda la zona (la respuesta no debe verse apagada): el CSS atenúa lo demás con .conRespSola
+    if(!fila.querySelector('.respSola')) fila.insertAdjacentHTML('beforeend', `<span class="respSola">${fmtRespuesta(ejActual)}</span>`);
+    ent.classList.add('conRespSola');
+  } else if(btns.length){
+    btns.forEach(b => { const o = ejActual.opciones[+b.dataset.o]; if(o === ejActual.respuesta) b.classList.add('opOk'); else if(o === ultimaEntrada) b.classList.add('opMal'); });
+    ent.classList.add('conMarcas');
+  } else ent.style.opacity = '.5';
+  ent.style.pointerEvents = 'none';
   $('accionesPre').style.display = 'none';
-  zona.scrollIntoView({behavior:'smooth', block:'start'});
+  (fila || (btns.length ? ent : zona)).scrollIntoView({behavior:'smooth', block:'start'});   // con la respuesta dentro del campo, el campo es lo que hay que ver
 }
 
 // Una línea que empieza con "TRUCO:" no es un paso más: sale de la lista numerada y se

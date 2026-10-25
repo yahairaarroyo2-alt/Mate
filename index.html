@@ -200,8 +200,19 @@
   .campo{width:100%;border:1.5px solid rgba(255,255,255,.5);border-radius:16px;padding:13px;
     font-size:1.15rem;text-align:center;font-family:inherit;color:var(--texto);background:var(--superficie)}
   .campo:focus{outline:none;border-color:var(--texto)}
-  .numRow{display:flex;gap:8px}
+  .numRow{display:flex;gap:8px;position:relative}
   .numRow .campo{flex:1;min-width:0}
+  /* respuesta correcta tras fallar un ejercicio numérico: sola, dentro del campo, a la derecha */
+  .respSola{position:absolute;right:14px;top:50%;transform:translateY(-50%);max-width:6rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:1.15rem;font-weight:700;color:#1e7a48}
+  body.night .respSola{color:#7be3a8}
+  /* opciones falladas: la correcta en verde, la elegida en rojo, el resto apagado */
+  #zonaEntrada.conMarcas .btn{opacity:.5}
+  #zonaEntrada.conMarcas .btn.opOk{opacity:1;background:var(--verde-bg);border-color:var(--verde);color:#1e7a48}
+  #zonaEntrada.conMarcas .btn.opMal{opacity:1;background:var(--rojo-bg);border-color:var(--rojo);color:#b03a2e}
+  body.night #zonaEntrada.conMarcas .btn.opOk{color:#7be3a8}
+  body.night #zonaEntrada.conMarcas .btn.opMal{color:#f19c92}
+  #zonaEntrada.conRespSola .campo{padding-right:6.5rem}
+  #zonaEntrada.conRespSola .numRow>:not(.respSola), #zonaEntrada.conRespSola>.btn{opacity:.5}
   .signo{flex:none;width:52px;padding:0;font-size:1.3rem;font-weight:700;margin-bottom:0}
   .fracIn{display:flex;flex-direction:column;align-items:center;gap:6px;max-width:150px;margin:0 auto}
   .fracIn .campo{width:110px}
@@ -585,6 +596,6 @@
 </div>
 
 <!-- todo el JavaScript vive en app.js (Chrome lo guarda ya compilado y no lo vuelve a analizar en cada apertura). El ?v= es el MISMO número que CACHE en sw.js: se suben juntos en cada deploy. -->
-<script src="app.js?v=180"></script>
+<script src="app.js?v=181"></script>
 </body>
 </html>
