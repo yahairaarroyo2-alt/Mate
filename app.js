@@ -11611,7 +11611,7 @@ function pintarEjercicio(){
       <div id="zonaIA">${aiBoxHTML()}</div>
       <div id="zonaFb"></div>
       <div class="row tres" id="accionesPre">
-        <button class="btn sec chico" onclick="saltarEjercicio()">Saltar</button>
+        <button class="btn sec chico" id="btnSaltar" onclick="saltarEjercicio()">Saltar</button>
         <button class="btn sec chico" id="btnVerExpl" onclick="verExplicacion()">Ver explicación</button>
         <button class="btn sec chico" onclick="reiniciarEjercicio()" title="Borra tu respuesta y tu proceso" aria-label="Reiniciar este ejercicio: borra tu respuesta y tu proceso">↺ Reiniciar</button>
       </div>
@@ -12087,6 +12087,7 @@ function verExplicacion(){
 function _pintarVistaExplicacion(){
   const zona = $('zonaFb');
   // la explicación ya está abierta: "Ver explicación" sobra y en su lugar va "Otro parecido" (el mismo de "Otro de este tema"); en las prácticas del examen cada página es SU pregunta, ahí solo se oculta
+  const bs = $('btnSaltar'); if(bs) bs.style.display = 'none';   // ya viste la explicación: "Saltar" sobra (queda "Siguiente ejercicio")
   const bv = $('btnVerExpl');
   if(bv){
     if(modActual.nuevaRonda) bv.style.display = 'none';
