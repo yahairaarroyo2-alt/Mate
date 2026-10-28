@@ -1491,7 +1491,7 @@ const DEP_EXACTO2 = [
       ejemplo:'10 ÷ 5 = 2 → x = 24, y = 26.' }) })
 ];
 // tema con un banco fijo de preguntas que salen EN ORDEN (una práctica de examen copiada tal cual)
-function _modExamen(id, nombre, banco, cual){
+function _modExamen(id, nombre, banco, cual, facilFn){
   return { id, nombre, secciones:['5.9'], banco:banco.length, _sig:0,
     nuevaRonda(){ this._sig = 0; },
     gen(){
@@ -1500,6 +1500,8 @@ function _modExamen(id, nombre, banco, cual){
       // una cuenta por renglón: "a → b → c" y "…, y …" se separan para que no quede todo pegado
       ej.explicacion = ej.explicacion.map(l => typeof l !== 'string' || /^§|^TRUCO:/.test(l) || l.includes('<svg') ? l
         : l.replace(/(= −?[\d.,/]+) → (?=−?[\d(][\d.,/)]* [+−×÷] )/g, '$1<br>').replace(/, y (?=[\d−(])/g, '<br>y '));
+      const fa = facilFn && facilFn();   // versión Fácil (el atajo, corta): botones Fácil / Completa arriba del "Por qué"
+      if(fa && fa[i]) ej.facil = receta({ ...fa[i], resp: fmtRespuesta(ej) });
       ej.__n = i;
       return ej;
     } };
@@ -4517,8 +4519,8 @@ const MODULOS = [
 },
 // Las prácticas del Examen Departamental de EducoSoft, cada una con sus 30 preguntas EXACTAS (mismos números,
 // mismas opciones a)–e) y mismo orden). Una ronda = las 30 en orden (banco + nuevaRonda). Ver _modExamen.
-_modExamen('educo-dep-exacto', 'Examen Departamental: práctica 1 (las 30 exactas)', DEP_EXACTO, 'práctica 1'),
-_modExamen('educo-dep-exacto2', 'Examen Departamental: práctica 2 (las 30 exactas)', DEP_EXACTO2, 'práctica 2'),
+_modExamen('educo-dep-exacto', 'Examen Departamental: práctica 1 (las 30 exactas)', DEP_EXACTO, 'práctica 1', () => DEP_F1),
+_modExamen('educo-dep-exacto2', 'Examen Departamental: práctica 2 (las 30 exactas)', DEP_EXACTO2, 'práctica 2', () => DEP_F2),
 /* ══════════════════════════════════════════════════════════
    WORLD CULTURE I (HUGS 101) — clase:'wc'. Contenido sacado de las 3 presentaciones de
    Blackboard: "Conceptos Básicos" (secciones ['1.x']), "Orígenes del ser humano" (['2.x']),
@@ -7437,13 +7439,19 @@ const bLibra = (lb, tot) => { const u = dN(tot / lb);
         { t:'Divide', l: pasosDivDec(tot, lb) }],
       resp:`${din$(u)} por libra`, comp:`${din$(u)} × ${lb} = ${din$(tot)} ✓`, error:'dividir al revés (libras ÷ dinero).',
       ejemplo:`${fd(tot, 2)} ÷ ${lb} = ${din$(u)}.`, truco:'"por" = dividir entre esa cantidad.' }) }; };
-const bYardas = (yd, tot, n) => { const u = dN(tot / yd), r = dN(u * n);
+const bYardas = (yd, tot, n) => { const u = dN(tot / yd), r = dN(tot * n / yd), k = dN(n / yd);
+  const exacto = Math.abs(u * 100 - Math.round(u * 100)) < 1e-9;   // el precio de 1 yarda sale en centavos exactos; si no (24.80 ÷ 4.4 = 5.636…), se usa cuántas veces cabe
   return { enunciado:`Si <b>${yd}</b> yardas de tela de satín cuestan <b>$${fd(tot, 2)}</b>, ¿cuál sería el costo de <b>${n}</b> yardas?`, ...numDec(r), dinero:true, ayuda:DIN_AYUDA,
-    explicacion: receta({ pide:`el costo de ${n} yardas: primero lo que cuesta UNA yarda.`,
+    explicacion: exacto ? receta({ pide:`el costo de ${n} yardas: primero lo que cuesta UNA yarda.`,
       pasos:[{ t:'Costo de UNA yarda = costo ÷ yardas', l:[`${fd(tot, 2)} ÷ ${yd}`, ...pasosDivDec(tot, yd)] },
         { t:`Por ${n} yardas: multiplica`, l:[`${fd(u, 2)} × ${n}`, ...pasosMultDec(u, n)] }],
-      resp: din$(r), comp:`${n} yardas son ${fd(dN(n / yd), 2)} veces ${yd} yardas: ${fd(tot, 2)} × ${fd(dN(n / yd))} = ${din$(r)} ✓`, error:'dividir el costo entre las yardas nuevas: primero se saca el precio de 1 yarda.',
-      ejemplo:`${din$(u)} × ${n} = ${din$(r)}.`, truco:'primero el precio de 1 (razón unitaria) y después multiplica.' }) }; };
+      resp: din$(r), comp:`${n} yardas son ${fd(k, 2)} veces ${yd} yardas: ${fd(tot, 2)} × ${fd(k)} = ${din$(r)} ✓`, error:'dividir el costo entre las yardas nuevas: primero se saca el precio de 1 yarda.',
+      ejemplo:`${din$(u)} × ${n} = ${din$(r)}.`, truco:'primero el precio de 1 (razón unitaria) y después multiplica.' })
+      : receta({ pide:`el costo de ${n} yardas.`,
+      pasos:[{ t:`¿Cuántas veces cabe ${yd} yardas en ${n} yardas?`, l:[`${n} ÷ ${yd}`, ...pasosDivDec(n, yd)] },
+        { t:'Esas veces multiplican el costo', l:[`${fd(tot, 2)} × ${fd(k)}`, ...pasosMultDec(tot, k)] }],
+      resp: din$(r), comp:`${yd} × ${fd(k)} = ${n} yardas, así que el costo también se multiplica por ${fd(k)} ✓`, error:'sacar el precio de 1 yarda y redondearlo: 24.80 ÷ 4.4 no sale exacto y la cuenta se descuadra.',
+      ejemplo:`${fd(tot, 2)} × ${fd(k)} = ${din$(r)}.`, truco:'si el precio de 1 no sale redondo, mira cuántas veces cabe la cantidad y multiplica el costo por eso.' }) }; };
 const bCamisas = (n, tot) => { const u = dN(tot / n);
   return { enunciado:`<b>${n}</b> camisas de cierta marca cuestan <b>$${tot}</b>. Halla el costo por camisa.`, ...numDec(u), dinero:true, ayuda:DIN_AYUDA,
     explicacion: receta({ pide:'cuánto cuesta UNA camisa.',
@@ -8120,6 +8128,133 @@ const _P2BF = [
     '600 + 600 ÷ 50 = 612.', 'si la razón se mantiene, lo que crece la ganancia (en fracción) crece el impuesto.')
 ];
 MODULOS.push(_modParcial('educo-parcial2-p2', 'Examen Parcial 2 (caps. 6, 7 y 8): práctica 2 (las 25 exactas)', _P2B, 'práctica 2', _P2BF));
+
+// ── Examen Departamental (caps. 1-5): versión FÁCIL de cada pregunta (el atajo, corta); la Completa es la receta de siempre ──
+// Se arman al generar cada pregunta (_modExamen recibe una función) porque _F está más abajo que las prácticas.
+const _DEP_F_UNO = _F('83 − (−31).', [['Menos menos = más', '83 + 31'], ['Suma', `83 + 31 = ${cb(114)}`]],
+  '83 − (−31) = 83 + 31 = 114.', 'dos signos menos seguidos se vuelven un + (quitar una deuda es ganar).');
+const _DEP_F_PROM = _F('el número que falta para que el promedio sea 85.', [['Suma total = promedio × cuántos son', '85 × 4 = 340'], ['Resta lo que ya tienes', `79 + 80 + 65 = 224 → 340 − 224 = ${cb(116)}`]],
+  '(79 + 80 + 65 + 116) ÷ 4 = 340 ÷ 4 = 85 ✓.', 'promedio × cuántos son = suma total; lo que falta es la diferencia.');
+const DEP_F1 = [
+  _DEP_F_UNO,
+  _F('los dos números de los espacios.', [['El de afuera se repite delante de cada término', '4(6 + 5) = 4(6) + 4(5)'], ['Copia los de adentro, sin multiplicar', `${cb('6')} y ${cb('5')}`]],
+    '4(6 + 5) = 4(6) + 4(5).', 'el de afuera se repite delante de cada término y el signo del medio se queda igual.'),
+  _F('(−5)³.', [['Cuenta los negativos: 3 (impar) → el resultado es NEGATIVO', '5 × 5 × 5 = 125'], ['Pon el signo', cb('−125')]],
+    '(−5)(−5)(−5) = −125.', 'exponente impar → sale negativo; exponente par → sale positivo.'),
+  _F('$620,000,000 como (número) × 10 con exponente.', [['Cuenta los ceros del final', '620000000 → 62 y 7 ceros'], ['El 62 va delante; los ceros son el exponente', cb('62 × 10⁷')]],
+    '620,000,000 = 62 × 10⁷.', 'los ceros que quitas son el exponente del 10.'),
+  _F('un solo número, de adentro hacia afuera.', [['Exponente primero', '(−6)² = 36'], ['Dentro del corchete', '9 × 36 = 324 → 6 − 324 = −318'], ['Afuera', '−5(4) = −20 y 2(−318) = −636'], ['Junta', `−20 − 636 = ${cb('−656')}`]],
+    '−20 + 2(−318) = −656.', 'orden: adentro de paréntesis o corchete → exponentes → × y ÷ → + y −.'),
+  _F('la expresión con x que dice la frase.', [['"tres veces un número"', '3x'], ['"5 menos QUE 3x" se escribe al revés', `3x − 5`], ['3x − 5 no está en las opciones', cb('Ninguno de los anteriores')]],
+    '"cinco menos que 3x" = 3x − 5.', '"A menos que B" se escribe B − A: lo que va después del "que" va primero.'),
+  _F('cuántos ángulos agudos y cuántos rectos hay en la casita.', [['Rectos = las esquinas del cuadrado', `4 esquinas de 90° → ${cb(4)} rectos`], ['Agudos = más cerrados que una esquina de cuadrado', `punta del techo 1 + esquinas de arriba 2 + aleros 2 = ${cb(5)} agudos`]],
+    '4 rectos y 5 agudos.', 'esquina de cuadrado = recto; más cerrado que eso = agudo.'),
+  _F('el complemento del ángulo.', [['Atajo: complemento = suplemento − 90', `140 − 90 = ${cb(50)}`], ['Comprueba con el ángulo', 'el ángulo es 180 − 140 = 40°: 40 + 50 = 90 ✓']],
+    'suplemento 140° → complemento 140 − 90 = 50°.', 'complemento = suplemento − 90 (no hace falta hallar el ángulo).'),
+  _F('revisar P y Q.', [['P: la parte variable es la letra con su exponente', 'en 7x³ es x³ → cierta'], ['Q: un término no lo separa un signo pegado al número', '−4x² no tiene + ni − que separe → 1 término → cierta'], ['Las dos', cb('Ambos P y Q')]],
+    'P cierta y Q cierta → Ambos P y Q.', 'los términos se separan con + o −; el signo pegado al número no separa.'),
+  _F('x en 7x + 7 = 21.', [['Pasa el 7 restando', '7x = 21 − 7 = 14'], ['Divide entre 7', `x = 14 ÷ 7 = ${cb(2)}`]],
+    '7x = 14 → x = 2.', 'en opción múltiple prueba una opción: x = 2 → 7(2) + 7 = 21 ✓.'),
+  _F('el perímetro del triángulo.', [['Suma los tres lados', '5 + 4 + 3 = 12 cm'], ['12 no está en las opciones', cb('Ninguno de los anteriores')]],
+    '5 + 4 + 3 = 12 cm → Ninguno.', 'si tu resultado no aparece en las opciones, es "Ninguno de los anteriores".'),
+  _F('(3x + 2)² + 7 con x = 4.', [['Pon el 4 y resuelve lo de adentro', '(3 · 4 + 2) = 12 + 2 = 14'], ['Exponente y suma', `14² = 196 → 196 + 7 = ${cb(203)}`]],
+    '(3 · 4 + 2)² + 7 = 14² + 7 = 203.', 'el ² es 14 × 14, no 14 × 2.'),
+  _DEP_F_PROM,
+  _F('si 225 se divide exacto entre 3.', [['Suma las cifras', '2 + 2 + 5 = 9'], ['9 es de la tabla del 3', cb('Sí')]],
+    '2 + 2 + 5 = 9 → sí.', 'regla del 3: si las cifras suman un múltiplo de 3, sí se divide.'),
+  _F('si 57 es primo o compuesto.', [['Prueba el 3: suma las cifras', '5 + 7 = 12 → entra el 3'], ['57 = 3 × 19', cb('Compuesto')]],
+    '57 = 3 × 19 → compuesto.', 'un número que "se ve" primo prueba con 2 (par), 3 (suma de cifras) y 5 (termina en 0 o 5) antes de decir primo.'),
+  _F('el MCM de 15 y 45.', [['Mira si el grande es múltiplo del chico', '45 ÷ 15 = 3, exacto'], ['Entonces el MCM es el grande', cb(45)]],
+    'MCM de 15 y 45 = 45.', 'si el grande es múltiplo del chico, el MCM es el grande.'),
+  _F('cuántas pizzas completas como mínimo.', [['Divide 19 ÷ 9', `9 × 2 = 18 y sobra 1 → ${mixS(2, 1, 9)}`], ['Sobra un pedacito: hace falta otra pizza', `2 + 1 = ${cb(3)}`]],
+    '19/9 = 2 1/9 → 3 pizzas.', 'si sobra aunque sea un poquito, se redondea hacia ARRIBA.'),
+  _F('lo leído sobre el total, simplificado.', [['Arma la fracción', '84/135'], ['Las cifras suman múltiplo de 3 (8 + 4 = 12 y 1 + 3 + 5 = 9): ÷ 3', `84 ÷ 3 = 28 y 135 ÷ 3 = 45 → ${cb('28/45')}`]],
+    '84/135 ÷ 3 = 28/45.', 'si las cifras de los dos suman múltiplo de 3, divide entre 3.'),
+  _F('cuántas barras le tocan a UN niño.', [['Razón unitaria = primera cantidad ÷ segunda', `96 ÷ 32 = ${cb(3)}`]],
+    '96 ÷ 32 = 3 barras de dulce por niño.', 'razón unitaria = "por uno": divide lo de arriba entre lo de abajo.'),
+  _F('lo leído sobre el total, simplificado.', [['Los dos son pares: ÷ 2', '168/294 → 84/147'], ['Las cifras suman 12 y 12: ÷ 3', '84/147 → 28/49'], ['28 y 49 están en la tabla del 7: ÷ 7', cb('4/7')]],
+    '168/294 → 84/147 → 28/49 → 4/7.', 'simplifica poco a poco con números chicos (2, 3, 5, 7) hasta que ya no se pueda.'),
+  _F('350 como multiplicación de primos.', [['Termina en 0: saca 10 = 2 × 5', '350 = 10 × 35'], ['Factoriza el 35', '35 = 5 × 7'], ['Junta todos los primos', `350 = 2 × 5 × 5 × 7 = ${cb('2 × 5² × 7')}`]],
+    '350 = 2 × 5 × 5 × 7.', 'un número que termina en 0 siempre tiene un 2 y un 5.'),
+  _F('si 3,620 es múltiplo de 5.', [['Mira la última cifra: 0 o 5 → sí', `termina en 0 → ${cb('Sí')}`]],
+    '3,620 termina en 0 → múltiplo de 5.', 'regla del 5: si termina en 0 o en 5, sí.'),
+  _F('sacar el FCM y dejar lo demás en el paréntesis.', [['Números: el mayor que entra en 40 y en 25', '5'], ['Letras: la MENOR potencia de cada una', 'r³ y r → r;  s y s³ → s'], ['FCM = 5rs. Divide cada término', '40r³s ÷ 5rs = 8r²  y  25rs³ ÷ 5rs = 5s²'], ['Respuesta', cb('5rs(8r² + 5s²)')]],
+    '5rs · 8r² = 40r³s y 5rs · 5s² = 25rs³ ✓.', 'comprueba repartiendo el FCM: tiene que dar los términos del principio.'),
+  _F('la suma como número mixto.', [['Suma el entero aparte', `${mixS(2, 1, 7)} + ${fr(3, 4)}: el 2 se queda y se suman ${fr(1, 7)} + ${fr(3, 4)}`], ['Denominador común 28', `${fr(1, 7)} = ${fr(4, 28)}  y  ${fr(3, 4)} = ${fr(21, 28)} → 4 + 21 = ${fr(25, 28)}`], ['Pega el entero', cb(mixS(2, 25, 28))]],
+    `2 + ${fr(25, 28)} = ${mixS(2, 25, 28)}.`, 'suma el entero aparte: así no hace falta pasar el mixto a impropia.'),
+  _F('el producto de las tres fracciones, simplificado.', [['Tacha antes de multiplicar (en cruz)', `9 con 45 (÷ 9) → 1 y 5;  28 con 4 (÷ 4) → 7 y 1;  18 con 24 (÷ 6) → 3 y 4`], ['Multiplica lo que quedó', `arriba 1 × 7 × 3 = 21 · abajo 1 × 5 × 4 = 20 → ${cb(fr(21, 20))}`]],
+    `${fr(9, 4)} × ${fr(28, 45)} × ${fr(18, 24)} = ${fr(21, 20)}.`, 'simplifica ANTES de multiplicar: los números quedan chicos.'),
+  _F('un solo número, con la multiplicación primero.', [['Multiplicación primero, tachando', `${fr(3, 4)} × ${fr(8, 9)}: 8 con 4 (÷ 4) → 2 y 1;  3 con 9 (÷ 3) → 1 y 3 → ${fr(2, 3)}`], ['Suma', `${fr(1, 2)} + ${fr(2, 3)} = ${fr(3, 6)} + ${fr(4, 6)} = ${fr(7, 6)}`], ['A mixto', cb(mixS(1, 1, 6))]],
+    `${fr(3, 4)} × ${fr(8, 9)} = ${fr(2, 3)}; ${fr(1, 2)} + ${fr(2, 3)} = ${mixS(1, 1, 6)}.`, 'la multiplicación va antes que la suma, aunque la suma esté escrita primero.'),
+  _F('qué propiedad hace que la suma dé 0.', [['Un número más su OPUESTO da 0', `−${fr(1, 8)} y ${fr(1, 8)} son opuestos`], ['Esa es la propiedad del', cb('Inverso')]],
+    `(−${fr(1, 8)}) + ${fr(1, 8)} = 0 → Inverso.`, 'la suma da 0 → Inverso; sumar 0 y que quede igual → Identidad.'),
+  _F('el resultado como número mixto.', [['Simplifica la fracción', `${fr(10, 14)} ÷ 2 = ${fr(5, 7)}`], ['Como 3 es más grande, resta al revés y pon el −', `3 = ${fr(21, 7)} → ${fr(21, 7)} − ${fr(5, 7)} = ${fr(16, 7)}`], ['A mixto y con el signo', cb('−' + mixS(2, 2, 7))]],
+    `${fr(5, 7)} − 3 = −${fr(16, 7)} = −${mixS(2, 2, 7)}.`, 'si lo que restas es más grande, resta el grande menos el chico y pon el signo −.'),
+  _F('x en la proporción.', [['Multiplica en cruz', `(x + 3) × 4 = 5 × 3 → 4(x + 3) = 15`], ['Reparte y despeja', `4x + 12 = 15 → 4x = 3 → x = ${cb(fr(3, 4))}`]],
+    `4(x + 3) = 15 → 4x = 3 → x = ${fr(3, 4)}.`, 'en una proporción se multiplica en X (cruzado), no en paralelo.'),
+  _F('x y y en el triángulo grande.', [['Saca la razón con el par que ya tiene los dos números', '6 ÷ 3 = 2 (el grande es 2 veces el chico)'], ['Multiplica los otros lados por 2', `x = 4 × 2 = ${cb(8)}  y  y = 5 × 2 = ${cb(10)}`]],
+    '6 ÷ 3 = 2 → x = 8, y = 10.', 'en figuras semejantes se MULTIPLICA todo por el mismo número (no se suma).')
+];
+const DEP_F2 = [
+  _DEP_F_UNO,
+  _F('la pérdida por mes y por accionista.', [['Por mes: divide entre los 11 meses', `358,435 ÷ 11 = 32,585 → una pérdida es negativa: ${cb('−32,585')}`], ['Por accionista: divide entre 19', `32,585 ÷ 19 = 1,715 → ${cb('−1,715')}`]],
+    '358,435 ÷ 11 = 32,585 y 32,585 ÷ 19 = 1,715 (con signo −).', 'una pérdida va con signo −, y "por" = dividir.'),
+  _F('la base, el exponente y el valor de 6².', [['Base = el de abajo; exponente = el chiquito de arriba', 'base 6 y exponente 2'], ['Valor: la base por sí misma, 2 veces', `6 × 6 = ${cb(36)}`]],
+    '6² = 6 × 6 = 36.', 'el exponente dice cuántas veces se escribe la base, no por cuánto se multiplica.'),
+  _F('27,200 ÷ 10².', [['10² = 100 tiene 2 ceros → el punto 2 lugares a la IZQUIERDA', `27,200 → ${cb(272)}`, diagPunto(27200, -2, '')]],
+    '27,200 ÷ 100 = 272.', 'dividir entre 10, 100, 1000… = el punto a la izquierda tantos lugares como ceros.'),
+  _F('un solo número, siguiendo el orden.', [['Dentro de las barras', '4² = 16 y 5² = 25 → 16 − 25 = −9'], ['El valor absoluto quita el signo', '|−9| = 9'], ['Divide ANTES de restar', '12 ÷ 12 = 1'], ['Resta', `9 − 1 = ${cb(8)}`]],
+    '|16 − 25| − 1 = 9 − 1 = 8.', 'valor absoluto = distancia al cero: nunca da negativo.'),
+  _F('la expresión con y que dice la frase.', [['"seis veces el número"', '6y'], ['"13 MÁS que 6y": en la suma el orden no importa', cb('13 + 6y')]],
+    '13 + 6y (o 6y + 13).', '"más que" no cambia el orden; "menos que" sí.'),
+  _F('el tipo de ángulo entre las manecillas.', [['Una apunta al 12 y la otra al 6: línea recta', 'cada hora son 30° → 6 horas = 180°'], ['180° es', cb('Ángulo llano')]],
+    '12 y 6 → línea recta → 180° → llano.', 'agudo < 90° · recto = 90° (esquina) · obtuso entre 90° y 180° · llano = 180° (recta).'),
+  _F('dos pares de ángulos opuestos por el vértice.', [['Busca las dos RECTAS que se cruzan en O', 'A–O–D y E–O–C (el rayo OB no cuenta: no sigue del otro lado)'], ['Los opuestos son los que quedan frente a frente', `${cb('∠AOC y ∠DOE')}  ·  ${cb('∠AOE y ∠COD')}`]],
+    '∠AOC y ∠DOE; ∠AOE y ∠COD.', 'opuestos por el vértice = los de una X, frente a frente (y miden lo mismo).'),
+  _F('3(−8k − 6) + 3 simplificado.', [['Reparte el 3 a cada término', '3(−8k) = −24k  y  3(−6) = −18'], ['Junta los números', `−18 + 3 = −15 → ${cb('−24k − 15')}`]],
+    '3(−8k − 6) + 3 = −24k − 18 + 3 = −24k − 15.', 'el de afuera multiplica CADA término, con su signo pegado.'),
+  _F('x en 5x + 2 = 12.', [['Pasa el 2 restando', '5x = 12 − 2 = 10'], ['Divide entre 5', `x = ${cb(2)}`]],
+    '5x = 10 → x = 2.', 'en opción múltiple prueba x = 2: 5(2) + 2 = 12 ✓.'),
+  _F('el perímetro del rectángulo.', [['Base + altura, y ese total × 2', `18 + 15 = 33 → 33 × 2 = ${cb(66)}`]],
+    '2(18 + 15) = 66 m.', 'perímetro del rectángulo = (base + altura) × 2.'),
+  _F('el valor del polinomio con x = −3.', [['Pon (−3) con paréntesis', '(−3)³ + 5(−3)² + 3(−3) + 1'], ['Saca cada pedazo', '(−3)³ = −27 · 5(−3)² = 5(9) = 45 · 3(−3) = −9'], ['Junta', `−27 + 45 − 9 + 1 = ${cb(10)}`]],
+    '−27 + 45 − 9 + 1 = 10.', 'un negativo siempre con paréntesis: (−3)² = 9, pero −3² = −9.'),
+  _DEP_F_PROM,
+  _F('si 43,792 se divide exacto entre 10.', [['Mira la última cifra: debe ser 0', `termina en 2 → ${cb('No')}`]],
+    '43,792 termina en 2, no en 0 → no.', 'regla del 10: solo si termina en 0.'),
+  _F('si 55 es primo o compuesto.', [['Termina en 5: entra el 5', '55 = 5 × 11'], ['Tiene otro divisor', cb('Compuesto')]],
+    '55 = 5 × 11 → compuesto.', 'termina en 0 o 5 (y no es el 5) → compuesto.'),
+  _F('el MCM de 16, 28 y 90.', [['Factoriza cada uno', '16 = 2⁴ · 28 = 2² × 7 · 90 = 2 × 3² × 5'], ['Cada primo con su MAYOR exponente', '2⁴ × 3² × 5 × 7'], ['Multiplica', `16 × 9 = 144 → 144 × 5 = 720 → 720 × 7 = ${cb('5,040')}`]],
+    'MCM = 2⁴ × 3² × 5 × 7 = 5,040.', 'en el MCM cada primo va con el exponente MAYOR (en el FCM, con el menor).'),
+  _F('el mixto como fracción impropia.', [['Entero × abajo + arriba', `4 × 8 = 32 → 32 + 5 = 37`], ['El de abajo se queda', cb(fr(37, 8))]],
+    `${mixS(4, 5, 8)} = ${fr(37, 8)}.`, 'entero × denominador + numerador; el denominador no cambia.'),
+  _F('lo leído sobre el total, simplificado.', [['Los dos son pares: ÷ 2', '70/126 → 35/63'], ['35 y 63 están en la tabla del 7: ÷ 7', cb('5/9')]],
+    '70/126 → 35/63 → 5/9.', 'simplifica poco a poco con números chicos (2, 3, 5, 7).'),
+  _F('la razón de niños a niñas, simplificada.', [['Niños arriba, niñas abajo', '94/14'], ['Los dos son pares: ÷ 2', `${cb('47/7')} (47 es primo: ya no se puede más)`]],
+    '94/14 = 47/7.', 'en una razón, lo que nombra primero va arriba.'),
+  _F('48/16 simplificado.', [['Si el de arriba es múltiplo del de abajo, sale un entero', `48 ÷ 16 = ${cb(3)}`]],
+    '16 × 3 = 48 → 48/16 = 3.', 'si arriba es múltiplo de abajo, la fracción es un número entero.'),
+  _F('168 como multiplicación de primos.', [['Divide entre el primo más chico que entre, hasta llegar a 1', '168 ÷ 2 = 84 → 84 ÷ 2 = 42 → 42 ÷ 2 = 21 → 21 ÷ 3 = 7 → 7 ÷ 7 = 1'], ['Junta los primos', `2 × 2 × 2 × 3 × 7 = ${cb('2³ × 3 × 7')}`]],
+    '168 = 2³ × 3 × 7.', 'divide siempre entre el primo MÁS chico que entre exacto.'),
+  _F('el 5.º múltiplo de 56.', [['5.º múltiplo = 56 × 5', `56 × 5 = ${cb(280)}`]],
+    '56 × 5 = 280.', 'el n-ésimo múltiplo de un número es ese número × n.'),
+  _F('sacar el FCM y dejar lo demás en el paréntesis.', [['Números: el mayor que entra en 30 y en 20', '10'], ['Letras: la MENOR potencia', 'a² y a → a;  b³ y b⁴ → b³'], ['FCM = 10ab³. Divide cada término', '30a²b³ ÷ 10ab³ = 3a  y  20ab⁴ ÷ 10ab³ = 2b'], ['Respuesta', cb('10ab³(3a − 2b)')]],
+    '10ab³ · 3a = 30a²b³ y 10ab³ · 2b = 20ab⁴ ✓.', 'las opciones parecidas no sacaron TODO el FCM: la correcta ya no se puede reducir más.'),
+  _F('la suma de las tres fracciones.', [['Denominador común 20', `${fr(1, 4)} = ${fr(5, 20)} · ${fr(1, 2)} = ${fr(10, 20)} · ${fr(2, 5)} = ${fr(8, 20)}`], ['Suma los de arriba', `5 + 10 + 8 = 23 → ${cb(fr(23, 20))}`]],
+    `${fr(5, 20)} + ${fr(10, 20)} + ${fr(8, 20)} = ${fr(23, 20)}.`, 'el denominador común es el MCM de los de abajo (4, 2 y 5 → 20).'),
+  _F('el producto, simplificado.', [['Tacha antes de multiplicar', `5 con 5 → 1 y 1;  2 con 8 (÷ 2) → 1 y 4`], ['Multiplica lo que quedó', `1 × 1 = 1 y 1 × 4 = 4 → ${cb(fr(1, 4))}`]],
+    `${fr(5, 8)} × ${fr(2, 5)} = ${fr(1, 4)}.`, 'simplifica ANTES de multiplicar: los números quedan chicos.'),
+  _F('un solo número mixto, de adentro hacia afuera.', [['Exponente primero', `(${fr(1, 2)})² = ${fr(1, 4)}`], ['Dividir = voltear la segunda y multiplicar', `${fr(8, 15)} × (−${fr(9, 5)}) = −${fr(72, 75)} = −${fr(24, 25)}`], ['Multiplica', `${fr(1, 4)} × (−${fr(2, 7)}) = −${fr(2, 28)} = −${fr(1, 14)}`], ['Suma con denominador 350 (25 × 14)', `−${fr(336, 350)} − ${fr(25, 350)} = −${fr(361, 350)}`], ['A mixto', `361 ÷ 350 = 1 y sobran 11 → ${cb('−' + mixS(1, 11, 350))}`]],
+    `−${fr(24, 25)} − ${fr(1, 14)} = −${mixS(1, 11, 350)}.`, 'primero el exponente, y dividir entre una fracción es voltearla y multiplicar.'),
+  _F('qué propiedad es 0 + una fracción = esa fracción.', [['Sumar 0 deja el número igual', `0 + ${fr(1, 7)} = ${fr(1, 7)}`], ['Esa es la propiedad de', cb('Identidad')]],
+    `0 + ${fr(1, 7)} = ${fr(1, 7)} → Identidad.`, 'sumar 0 y queda igual → Identidad; la suma da 0 → Inverso.'),
+  _F('la resta como número mixto.', [['Denominador común 18', `${fr(17, 6)} = ${fr(51, 18)}  y  ${fr(7, 9)} = ${fr(14, 18)}`], ['Resta los de arriba', `51 − 14 = 37 → ${fr(37, 18)}`], ['A mixto', `37 ÷ 18 = 2 y sobra 1 → ${cb(mixS(2, 1, 18))}`]],
+    `${fr(51, 18)} − ${fr(14, 18)} = ${fr(37, 18)} = ${mixS(2, 1, 18)}.`, 'denominador común = MCM de los de abajo (6 y 9 → 18).'),
+  _F('x en la ecuación con fracciones.', [['Multiplica TODO por 35 (el MCM de 5 y 7) para quitar las fracciones', '70x − 7x − 15 = 35'], ['Junta las x', '63x − 15 = 35'], ['Despeja', `63x = 50 → x = ${cb(fr(50, 63))}`]],
+    `35 · 2x − 35 · ${fr('x', 5)} − 35 · ${fr(3, 7)} = 35 · 1 → 63x = 50.`, 'multiplica TODOS los términos (también el 1) por el MCM de los de abajo.'),
+  _F('x y y en el triángulo grande.', [['Saca la razón con el par que ya tiene los dos números', '10 ÷ 5 = 2 (el grande es 2 veces el chico)'], ['Multiplica los otros lados por 2', `x = 12 × 2 = ${cb(24)}  y  y = 13 × 2 = ${cb(26)}`]],
+    '10 ÷ 5 = 2 → x = 24, y = 26.', 'en figuras semejantes se MULTIPLICA todo por el mismo número (no se suma).')
+];
 
 /* ── Capítulos 6, 7 y 8: Ejercicios de Repaso y Autoevaluación — ejercicios EXACTOS del E-Book (pág. 348-351, 403-406, 456-458) ──
    Un número del libro = un ejercicio; los que piden (a)(b)(c) usan 'multi'. Las respuestas salen del código (no de la clave del libro,
@@ -9302,11 +9437,11 @@ function respuestaComoEntrada(ej){
     case 'texto': return fmtFactoresPlano(ej.respuesta);
   }
 }
-function fmtRespuesta(ej){
+function fmtRespuesta(ej){ // dinero: $124.00 como lo escribe EducoSoft (si tiene más de 2 decimales se deja tal cual)
   switch(ej.tipo){
     case 'sino':  return ej.respuesta ? 'Sí' : 'No';
     case 'cmp':   return ej.respuesta;
-    case 'num':   return String(ej.respuesta);
+    case 'num':   return ej.dinero && Math.abs(ej.respuesta * 100 - Math.round(ej.respuesta * 100)) < 1e-6 ? din$(ej.respuesta) : String(ej.respuesta);
     case 'frac':  return `${ej.respuesta.n}/${ej.respuesta.d}`;
     case 'mixto': return `${ej.respuesta.e} ${ej.respuesta.n}/${ej.respuesta.d}`;
     case 'angulo2': return ej.etiquetas
@@ -10114,7 +10249,7 @@ const leerProceso = () => [...document.querySelectorAll('#listaPasos .pasoPartes
 // lo escrito y todavía sin comprobar (Tu proceso y las casillas de respuesta), si en pantalla está ESTE ejercicio
 function _borradorActual(){
   const z = $('zonaEntrada');
-  if(respondido || !z || main.dataset.ej !== String(sesionIdx)) return null;
+  if(!z || main.dataset.ej !== String(sesionIdx)) return null;   // también ya contestado: al retomar, las casillas vuelven a tener lo que escribió (verdes o rojas)
   const entrada = {};
   z.querySelectorAll('input[id], select[id]').forEach(x => { if(x.value !== '') entrada[x.id] = x.value; });
   const proceso = leerProceso();
@@ -10175,12 +10310,12 @@ function restaurarSesion(){
   if(Array.isArray(viejas)){ try{ localStorage.removeItem('mate_sesion_ejs_v1'); }catch(e){} sesionEjs.forEach((e, i) => { if(e) _ejsSucios.add(i); }); }
   sesionEjs[sesionIdx] = ejActual;
   sesionPendientes = _desCompactarEj(s.sesionPendientes); sesionFallos = _desCompactarEj(s.sesionFallos);   // los que solo guardaron su número de página (p) recuperan su ejercicio
-  _borradorPend = !respondido && s.borrador ? s.borrador : null;
+  _borradorPend = s.borrador || null;
   ordenSel = s.ordenSel || []; ultimoFeedback = s.ultimoFeedback || null;
   if(modActual.nuevaRonda && ejActual && ejActual.__n != null){   // las 30 del examen: sigue desde donde ibas
     // la explicación guardada puede ser de una versión vieja de la app: se vuelve a sacar la de ahora (la pregunta es la misma)
     modActual._sig = ejActual.__n; const fresco = modActual.gen(nivel);
-    ejActual.explicacion = fresco.explicacion; ejActual.enunciado = fresco.enunciado;
+    ejActual.explicacion = fresco.explicacion; ejActual.enunciado = fresco.enunciado; ejActual.facil = fresco.facil;
   }
   ultimoProceso = s.ultimoProceso || '';
   ultimaEntrada = s.ultimaEntrada === undefined ? null : s.ultimaEntrada;
@@ -11800,10 +11935,12 @@ function _ponerRespuesta(ok){
   const ent = $('zonaEntrada'), ej = ejActual; if(!ent) return '';
   const linea = () => `<div class="respLinea">${ok ? '✓ Correcto' : `Respuesta: <b>${fmtRespuesta(ej)}</b>`}</div>`;
   if(ent.querySelector('.respSola, .respLado, .opOk')){   // ya puesta al abrir la explicación: si ahora acertó, pasa a ✓ (no repite lo que escribió)
-    if(ok) ent.querySelectorAll('.respSola, .respLado').forEach(x => { x.textContent = '✓'; });
+    if(ok){ ent.querySelectorAll('.respSola, .respLado').forEach(x => { x.textContent = '✓'; }); ent.style.setProperty('--rs', '4.5rem'); }
     return ''; }
   const fila = ent.querySelector('.numRow'), caja = ent.querySelector('.mixIn') || ent.querySelector('.fracIn');
-  if(ej.tipo === 'num' && fila){ fila.insertAdjacentHTML('beforeend', `<span class="respSola">${ok ? '✓' : fmtRespuesta(ej)}</span>`); ent.classList.add('conRespSola'); return ''; }
+  if(ej.tipo === 'num' && fila){ const t = ok ? '✓' : fmtRespuesta(ej);
+    ent.style.setProperty('--rs', Math.min(11, Math.max(4.5, String(t).length * 0.72 + 1)) + 'rem');   // el campo deja sitio según lo largo de la respuesta (antes 6.5rem fijo: '$2,698,310.60' salía cortado con …)
+    fila.insertAdjacentHTML('beforeend', `<span class="respSola">${t}</span>`); ent.classList.add('conRespSola'); return ''; }
   if((ej.tipo === 'frac' || ej.tipo === 'mixto') && caja){ const r = ej.respuesta;
     caja.insertAdjacentHTML('beforeend', `<span class="respLado">${ok ? '✓' : ej.tipo === 'frac' ? (r.d === 1 ? mm(r.n) : frS(r.n, r.d)) : mixS(r.e, r.n, r.d)}</span>`); return ''; }
   const bs = ['opciones', 'sino', 'cmp'].includes(ej.tipo) ? [...ent.querySelectorAll('button[onclick^="responder("]')] : [];

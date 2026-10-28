@@ -202,7 +202,7 @@
   .numRow{display:flex;gap:8px;position:relative}
   .numRow .campo{flex:1;min-width:0}
   /* respuesta correcta tras fallar un ejercicio numérico: sola, dentro del campo, a la derecha */
-  .respSola{position:absolute;right:14px;top:50%;transform:translateY(-50%);max-width:6rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:1.15rem;font-weight:700;color:#1e7a48}
+  .respSola{position:absolute;right:14px;top:50%;transform:translateY(-50%);max-width:var(--rs,6rem);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:1.15rem;font-weight:700;color:#1e7a48}
   body.night .respSola{color:#7be3a8}
   /* opciones falladas: la correcta en verde, la elegida en rojo, el resto apagado */
   #zonaEntrada.conMarcas .btn{opacity:.5}
@@ -210,7 +210,7 @@
   #zonaEntrada.conMarcas .btn.opMal{opacity:1;background:var(--rojo-bg);border-color:var(--rojo);color:#b03a2e}
   body.night #zonaEntrada.conMarcas .btn.opOk{color:#7be3a8}
   body.night #zonaEntrada.conMarcas .btn.opMal{color:#f19c92}
-  #zonaEntrada.conRespSola .campo{padding-right:6.5rem}
+  #zonaEntrada.conRespSola .campo{padding-right:calc(var(--rs, 6rem) + .6rem)}
   /* ya contestó: se apaga lo que escribió y los botones, no la respuesta que quedó al lado */
   #zonaEntrada.respondida .campo, #zonaEntrada.respondida .signo, #zonaEntrada.respondida .barra, #zonaEntrada.respondida>.btn{opacity:.5}
   /* casillas iluminadas al comprobar una fracción o un mixto: verde = bien, rojo = mal */
@@ -303,10 +303,6 @@
   .receta .rPie{display:flex;align-items:center;justify-content:space-between;margin-top:6px;font-size:.85rem;opacity:.85}
   .receta .rModo{background:none;border:0;color:var(--texto);text-decoration:underline;font-family:inherit;font-size:.85rem;cursor:pointer;padding:6px 2px}
   .cambia{color:#e8a23a;font-weight:700}
-  /* atajo para resolverlo más rápido — sale del <ol> y se pinta aparte (ver explPasos) */
-  .truco{background:var(--superficie);border-left:4px solid var(--acento);border-radius:8px;
-    padding:9px 12px;margin-top:11px;font-size:.9rem;line-height:1.5}
-  .truco b{display:block;color:var(--titulo2);font-size:.8rem;letter-spacing:.3px;margin-bottom:2px}
   /* Chat de IA (burbuja AI → hoja tipo chat). Mismo motor que Fit-F/Fit-M. --aiborde = borde suave de claro/noche */
   :root{--aiborde:rgba(0,0,0,.14)}
   body.night{--aiborde:rgba(255,255,255,.16)}
@@ -425,7 +421,7 @@
   .racha b{display:block;font-size:1.6rem;color:var(--texto);line-height:1.2;font-weight:800}
   .racha span{font-size:.78rem;color:var(--muted)}
   /* clase */
-  .banner{background:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.6);border-radius:16px;padding:11px 14px;margin-bottom:12px;
+  .banner{padding:4px 2px;margin-bottom:12px;   /* sin tarjeta ni borde: solo texto y el botón (pedido de la usuaria 2026-10-25) */
     display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:.9rem;font-weight:700;color:var(--texto)}
   .banner button{background:var(--contraste);color:var(--contraste-texto);border:none;border-radius:12px;
     padding:6px 11px;font-size:.8rem;cursor:pointer;font-family:inherit}
@@ -482,7 +478,6 @@
   body.night .btn.sec{background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.10);color:var(--muted)}
   body.night .pill{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.18);color:var(--texto)}
   body.night .chip{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.14);color:var(--muted)}
-  body.night .banner{background:rgba(255,255,255,.10);border-color:rgba(255,255,255,.18)}
   body.night .modCheck{border-color:rgba(255,255,255,.18)}
   body.night .modCheck.on{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.32)}
   /* mismo blanco translúcido que .btn.amar, pero con más opacidad — en oscuro el amar
@@ -611,6 +606,6 @@
 </div>
 
 <!-- todo el JavaScript vive en app.js (Chrome lo guarda ya compilado y no lo vuelve a analizar en cada apertura). El ?v= es el MISMO número que CACHE en sw.js: se suben juntos en cada deploy. -->
-<script src="app.js?v=188"></script>
+<script src="app.js?v=189"></script>
 </body>
 </html>
