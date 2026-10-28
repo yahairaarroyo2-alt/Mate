@@ -62,19 +62,29 @@
   .app{max-width:720px;margin:0 auto;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 140px)}
   /* barra flotante de navegación, abajo — copiada tal cual de Fit-F (pastilla vidrio +
      lente Liquid Glass que se desliza sobre la pestaña activa), sin los emoji de sus iconos */
-  .bottom-nav{position:fixed;left:50%;transform:translateX(-50%);
+  .bottom-nav{position:fixed;left:50%;transform:translateX(var(--nx,-50%));   /* --nx lo fija _bnMin mientras se encoge/abre */
     bottom:calc(env(safe-area-inset-bottom,0px) + 10px);
     z-index:400;display:flex;gap:2px;max-width:calc(100% - 24px);
     background:rgba(255,255,255,.12);border:1.5px solid rgba(255,255,255,.3);border-radius:28px;
     padding:8px 10px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.4)}
+    box-shadow:0 8px 28px rgba(0,0,0,.12),0 1px 4px rgba(0,0,0,.06),inset 0 1px 0 rgba(255,255,255,.4);   /* sombra suave como la del iPhone */
+    --bn-ease:cubic-bezier(.25,.8,.25,1);   /* una sola curva para todo el encogerse/abrirse */
+    transition:transform .45s var(--bn-ease),padding .45s var(--bn-ease),gap .45s var(--bn-ease);
+    touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}   /* el dedo arrastra la pastilla, no la página */
   .bottom-nav.oculta{display:none}
+  /* encogida al bajar (_bnMin, como Fit): solo la pestaña activa, en la esquina izquierda; tocarla la abre.
+     Sin íconos (pedido), así que encogida conserva su nombre */
+  .bottom-nav.bn-min{transform:translateX(calc(16px - 50vw));gap:0;padding:6px}
+  .bn-min .bn-item:not(.active){max-width:0;min-width:0;padding-left:0;padding-right:0;opacity:0;overflow:hidden;pointer-events:none}
+  .bn-min .bn-item.active{min-width:0}
+  .bn-min .bn-lens{opacity:0 !important}
   .bn-item{position:relative;z-index:1;font-family:inherit;background:none;border:none;cursor:pointer;
     display:flex;flex-direction:column;align-items:center;gap:3px;
-    padding:6px 13px;border-radius:22px;min-width:62px;
-    color:var(--muted);transition:color .25s,transform .15s}
+    padding:6px 13px;border-radius:22px;min-width:62px;max-width:var(--w,160px);overflow:hidden;   /* al abrirse, el nombre no se sale mientras la pestaña crece */
+       /* --w = su ancho real, lo mide _bnMin */
+    color:var(--muted);transition:color .25s,transform .15s,max-width .45s var(--bn-ease),min-width .45s var(--bn-ease),padding .45s var(--bn-ease),opacity .25s}
   .bn-item:active{transform:scale(.9)}
-  .bn-lbl{font-size:13px;font-weight:700;letter-spacing:.2px;transition:font-weight .2s}
+  .bn-lbl{font-size:13px;font-weight:700;letter-spacing:.2px;white-space:nowrap;transition:font-weight .2s}
   .bn-item.active{color:var(--texto)}
   .bn-item.active .bn-lbl{font-weight:800}
   /* lente Liquid Glass (iOS 26) — se desliza sobre la pestaña activa */
@@ -87,8 +97,12 @@
     box-shadow:inset 0 1.5px 1px rgba(255,255,255,.45),inset 0 -3px 6px rgba(255,255,255,.15),
       inset 3px 0 7px rgba(0,190,255,.03),inset -3px 0 7px rgba(255,40,150,.03),
       0 3px 10px rgba(0,0,0,.14);
-    transition:left .5s cubic-bezier(.32,1.45,.5,1),width .5s cubic-bezier(.32,1.45,.5,1),
-      top .5s cubic-bezier(.32,1.45,.5,1),height .5s cubic-bezier(.32,1.45,.5,1),opacity .3s}
+    /* la posición va en transform (--x, lo pone _bnLenteA), no en left. --sx/--sy = inflarse (.press) o estirarse al viajar */
+    transform:translateX(var(--x,0px)) scale(var(--sx,1),var(--sy,1));
+    transition:width .5s cubic-bezier(.32,1.45,.5,1),top .5s cubic-bezier(.32,1.45,.5,1),
+      height .5s cubic-bezier(.32,1.45,.5,1),opacity .3s,transform .5s cubic-bezier(.32,1.45,.5,1)}
+  .bn-lens.press{--sx:1.18;--sy:1.12}   /* al tocar la barra se infla como gota */
+  .bn-lens.drag{transition:width .25s var(--bn-ease),opacity .3s,transform .12s ease-out}   /* arrastrando sigue el dedo */
   /* sin backdrop-filter: las tarjetas están sobre el fondo liso, y desenfocar un degradado liso no cambia
      nada a la vista pero el teléfono lo recalculaba en cada cuadro al hacer scroll (batería, tirones).
      Solo lo conservan las que flotan ENCIMA del contenido (diálogos, calculadora, menú de grupos). */
@@ -606,6 +620,6 @@
 </div>
 
 <!-- todo el JavaScript vive en app.js (Chrome lo guarda ya compilado y no lo vuelve a analizar en cada apertura). El ?v= es el MISMO número que CACHE en sw.js: se suben juntos en cada deploy. -->
-<script src="app.js?v=189"></script>
+<script src="app.js?v=190"></script>
 </body>
 </html>

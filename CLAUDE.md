@@ -392,6 +392,10 @@ más en la barra no saque a media pregunta (por la misma razón que ya motivó l
 cuelgan de ellas (elegir temas, grupos, material de clase, sincronizar, selector de tema),
 resaltando la pestaña "padre" (`temas` o `ajustes`) aunque no sea literalmente esa pantalla.
 
+**Estilo iPhone (2026-10-28, portado de Fit):** se encoge al bajar (`_bnMin`, `.bn-min`: queda la pastilla con el NOMBRE de la pestaña activa en la esquina izquierda, porque no hay íconos), se abre al subir, al tocarla (no cambia de pestaña) y cuando `_barra` cambia de pestaña o estás arriba del todo (`_bnPestana`). El `scroll` ignora la barra `.oculta`, recorta el rebote del iPhone y no cuenta si la página cambió de alto. Se mueve SOLO con `transform` (`--nx` mientras se encoge/abre). La lente se mueve con `transform` (`--x`, `--sx/--sy`) por `_bnLenteA` y se estira al viajar; arrastrar el dedo = pointer events en `#bn` (`touch-action:none`, `.drag`, al soltar `b.click()` y `_bnTragarClick`). Todo el estado nuevo es `var` (`_barra` corre al arrancar). `.bn-item` lleva `overflow:hidden` para que el nombre no se salga mientras la pestaña crece.
+
+**Ajustes agrupado (2026-10-28, como Fit):** Nivel + una tarjeta "Ajustes" (Tema, Inteligencia artificial, Datos). Datos es su propia pantalla (`pantallaDatos`, `ir('datos')`: Material de clase, Sincronizar, Exportar, Importar) y la ← de Material de clase y Sincronizar dice "← Datos". Fila nueva en Ajustes → en su grupo.
+
 Si agregas una pantalla nueva: decide si es una "pestaña" (llama a `_barra('esa-pestaña')`)
 o es parte del flujo de responder preguntas (llama a `_barra(null)`) — no la dejes sin
 llamar a ninguna, o hereda el estado de la pantalla anterior por error.

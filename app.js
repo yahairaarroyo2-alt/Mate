@@ -10332,27 +10332,120 @@ function restaurarSesion(){
 // barra flotante de abajo — cada pantalla llama esto con su pestaña (o con null para
 // ocultarla durante una ronda/examen, donde un toque de más te sacaría a media pregunta)
 const bn = $('bn');
-// lente Liquid Glass que se desliza sobre la pestaña activa — igual que positionBnLens() de Fit-F
-let _bnLenteLista = false;
+// lente Liquid Glass que se desliza sobre la pestaña activa — igual que positionBnLens() de Fit-F.
+// var (no let): _barra corre al arrancar y una let más abajo cortaría el arranque.
+var _bnLenteLista = false, _bnEstiraT = 0;
+// Mueve la pastilla con transform (--x); si viaja de una pestaña a otra se estira como líquido (--sx/--sy un momento). Arrastrando no.
+function _bnLenteA(lente, x, w){
+  const d = Math.abs(x - (parseFloat(lente.style.getPropertyValue('--x')) || 0));
+  lente.style.setProperty('--x', x + 'px'); lente.style.width = w + 'px';
+  if(!_bnLenteLista || d < 20 || lente.classList.contains('drag') || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  lente.style.setProperty('--sx', (1 + Math.min(.22, d / 500)).toFixed(3));
+  lente.style.setProperty('--sy', (1 - Math.min(.1, d / 1000)).toFixed(3));
+  clearTimeout(_bnEstiraT);
+  _bnEstiraT = setTimeout(() => { lente.style.removeProperty('--sx'); lente.style.removeProperty('--sy'); }, 160);
+}
 function _posicionarLente(){
   const lente = $('bnLens');
   const activo = bn.querySelector('.bn-item.active');
   if(!lente || !activo){ if(lente) lente.style.opacity = '0'; return; }
   if(!_bnLenteLista) lente.style.transition = 'none';   // el primer posicionamiento no se anima
   lente.style.opacity = '1';
-  lente.style.left = activo.offsetLeft + 'px';
+  _bnLenteA(lente, activo.offsetLeft, activo.offsetWidth);
   lente.style.top = activo.offsetTop + 'px';
-  lente.style.width = activo.offsetWidth + 'px';
   lente.style.height = activo.offsetHeight + 'px';
   if(!_bnLenteLista){ void lente.offsetWidth; lente.style.transition = ''; _bnLenteLista = true; }
 }
 window.onresize = () => { _bnLenteLista = false; _posicionarLente(); };
+var _bnPestana = null;
 function _barra(activa){
   delete main.dataset.ej;   // pintarEjercicio la vuelve a poner: así el borrador nunca se toma de otra pantalla
   bn.classList.toggle('oculta', !activa);
   bn.querySelectorAll('.bn-item').forEach(b => b.classList.toggle('active', b.dataset.tab === activa));
+  // otra pestaña o arriba del todo: la barra entera; repintar la misma pantalla más abajo la deja como estaba
+  if(activa && (activa !== _bnPestana || window.scrollY <= 40)) _bnMin(false);
+  _bnPestana = activa;
   if(activa) _posicionarLente();
 }
+// La barra se encoge al bajar y vuelve al subir (como iOS 26, igual que Fit): queda solo la pestaña activa; tocarla la abre (no cambia de pestaña).
+var _bnUltY = 0, _bnAncho = 0, _bnUltAlto = 0;
+function _bnSinAnim(el, fn){ el.style.transition = 'none'; fn(); void getComputedStyle(el).transform; el.style.transition = ''; }   // cambia algo de la barra sin que se anime
+function _bnMin(min){
+  if(bn.classList.contains('bn-min') === min) return;
+  if(min && !bn.style.getPropertyValue('--nx')){   // solo abierta del todo: el max-width se anima desde el ancho real de cada pestaña
+    _bnAncho = bn.offsetWidth;
+    bn.querySelectorAll('.bn-item').forEach(b => b.style.setProperty('--w', b.offsetWidth + 'px'));
+  }
+  // con -50% la mitad es del ancho que va CAMBIANDO y la barra se pasaba de lado: mientras se encoge/abre, la mitad del ancho ABIERTO en px
+  _bnSinAnim(bn, () => bn.style.setProperty('--nx', -_bnAncho / 2 + 'px'));
+  bn.classList.toggle('bn-min', min);
+  if(!min) setTimeout(() => {   // ya abierta: suelta los anchos y mide la pastilla
+    if(bn.classList.contains('bn-min')) return;
+    bn.querySelectorAll('.bn-item').forEach(b => b.style.removeProperty('--w'));
+    _bnSinAnim(bn, () => bn.style.removeProperty('--nx'));
+    _posicionarLente();
+  }, 470);
+}
+window.addEventListener('scroll', () => {
+  if(bn.classList.contains('oculta')) return;   // practicando: no hay barra
+  // rebote del iPhone: lo pasado del final cuenta como el final (si no, la vuelta parecía "subir")
+  const alto = document.documentElement.scrollHeight;
+  const y = Math.max(0, Math.min(window.scrollY, alto - innerHeight)), dy = y - _bnUltY;
+  if(alto !== _bnUltAlto){ _bnUltAlto = alto; _bnUltY = y; return; }   // la página cambió de alto: el navegador movió el scroll, no la usuaria
+  if(Math.abs(dy) < 10 && y > 40) return;
+  _bnUltY = y;
+  _bnMin(dy > 0 && y > 40);
+}, { passive:true });
+// Arrastrar el dedo por la barra (como iOS 26, igual que Fit): la pastilla se infla, sigue el dedo y al soltar abre la pestaña de debajo.
+var _bnToque = null, _bnTragarClick = false;
+function _bnItems(){ return [...bn.querySelectorAll('.bn-item')].filter(b => b.offsetWidth > 0); }
+function _bnBajo(x){   // la pestaña bajo el dedo (o la más cercana)
+  let mejor = null, dist = Infinity;
+  for(const b of _bnItems()){ const r = b.getBoundingClientRect(); const d = x < r.left ? r.left - x : x > r.right ? x - r.right : 0; if(d < dist){ dist = d; mejor = b; } }
+  return mejor;
+}
+function _bnLenteEn(b, x){   // la pastilla sobre b; con x, centrada en el dedo (sin salirse de la barra)
+  const lente = $('bnLens'); if(!lente || !b) return;
+  const items = _bnItems(), ult = items[items.length - 1], w = b.offsetWidth;
+  const izq = x == null ? b.offsetLeft : x - bn.getBoundingClientRect().left - bn.clientLeft - w / 2;
+  _bnLenteA(lente, Math.max(items[0].offsetLeft, Math.min(ult.offsetLeft + ult.offsetWidth - w, izq)), w);
+  lente.style.opacity = '1';
+}
+(() => {
+  const lente = $('bnLens'); if(!lente) return;
+  bn.addEventListener('click', e => {
+    if(_bnTragarClick){ e.stopPropagation(); e.preventDefault(); return; }   // el click que manda el navegador al soltar un arrastre
+    if(!bn.classList.contains('bn-min')) return;
+    e.stopPropagation(); e.preventDefault(); _bnMin(false);
+  }, true);
+  bn.addEventListener('pointerdown', e => {
+    if(bn.classList.contains('bn-min') || !e.isPrimary) return;
+    const b = _bnBajo(e.clientX); if(!b) return;
+    _bnToque = { id:e.pointerId, x0:e.clientX, arrastra:false, sobre:b };
+    lente.classList.add('press');
+    if(!b.classList.contains('active')) _bnLenteEn(b);
+  });
+  bn.addEventListener('pointermove', e => {
+    const t = _bnToque; if(!t || e.pointerId !== t.id) return;
+    if(!t.arrastra && Math.abs(e.clientX - t.x0) < 8) return;
+    if(!t.arrastra){ t.arrastra = true; lente.classList.add('drag'); try{ bn.setPointerCapture(e.pointerId); }catch(_){} }
+    const b = _bnBajo(e.clientX);
+    if(b !== t.sobre){ t.sobre = b; try{ navigator.vibrate && navigator.vibrate(6); }catch(_){} }   // un toquecito por pestaña (Android)
+    _bnLenteEn(b, e.clientX);
+  });
+  const fin = e => {
+    const t = _bnToque; if(!t || e.pointerId !== t.id) return;
+    _bnToque = null;
+    lente.classList.remove('press', 'drag');
+    if(t.arrastra && e.type === 'pointerup'){
+      const b = _bnBajo(e.clientX);
+      _bnTragarClick = true;
+      setTimeout(() => { _bnTragarClick = false; if(b && !b.classList.contains('active')) b.click(); else _posicionarLente(); }, 0);
+    } else setTimeout(_posicionarLente, 250);
+  };
+  bn.addEventListener('pointerup', fin);
+  bn.addEventListener('pointercancel', fin);
+})();
 
 // tarjeta flotante de "Grupos de examen" desde Inicio — sin salir de la pantalla para
 // elegir cuál practicar; "Ver todos los grupos" sigue llevando a la pantalla de editar/crear
@@ -10646,6 +10739,7 @@ function ir(pantalla, arg, continuar){
   if(pantalla === 'elegir')   return pantallaElegirTemas();
   if(pantalla === 'grupos')   return pantallaGrupos();
   if(pantalla === 'sync')     return pantallaSync();
+  if(pantalla === 'datos')    return pantallaDatos();
   if(pantalla === 'ia')       return pantallaIA();
   if(pantalla === 'examen')   return iniciarExamen(arg);
   if(pantalla === 'errores')  return pantallaErrores();
@@ -11414,22 +11508,27 @@ function pantallaAjustes(){
       <div class="nota">Los niveles cambian el tamaño de los números, no el tipo de ejercicio.</div>
     </div>
 
-    <h3>Apariencia</h3>
+    <h3>Ajustes</h3>
     <div class="ajCard">
       <button class="ajRow" onclick="ir('tema')">
         <div style="flex:1"><div class="ajTitulo">Tema</div><div class="ajSub">${_MODO_TEMA_ETIQUETA[getTemaModo()]}</div></div>
         <span class="ajChevron">›</span>
       </button>
-    </div>
-
-    <h3>Inteligencia artificial</h3>
-    <div class="ajCard">
       <button class="ajRow" onclick="ir('ia')">
         <div style="flex:1"><div class="ajTitulo">Inteligencia artificial</div><div class="ajSub">${getAiKey() ? 'Conectada' : 'Pega tu clave de Gemini (gratis) para activarla'}</div></div>
         <span class="ajChevron">›</span>
       </button>
-    </div>
-
+      <button class="ajRow" onclick="ir('datos')">
+        <div style="flex:1"><div class="ajTitulo">Datos</div><div class="ajSub">Material de clase, sincronizar y respaldos</div></div>
+        <span class="ajChevron">›</span>
+      </button>
+    </div>`;
+}
+// Ajustes agrupado (como Fit): los botones de Datos viven en su propia página; Material de clase y Sincronizar vuelven aquí
+function pantallaDatos(){
+  _barra('ajustes');
+  main.innerHTML = `
+    <button class="back" onclick="ir('ajustes')">← Ajustes</button>
     <h3>Datos</h3>
     <div class="ajCard">
       <button class="ajRow" onclick="ir('clase')">
@@ -12732,7 +12831,7 @@ function borrarGrupo(id){
 function pantallaSync(){
   _barra('ajustes');
   main.innerHTML = `
-    <button class="back" onclick="ir('ajustes')">← Ajustes</button>
+    <button class="back" onclick="ir('datos')">← Datos</button>
     <div class="card">
       <h2>Sincronizar entre aparatos</h2>
       ${syncCode ? `
@@ -12781,7 +12880,7 @@ function _desconectarYRefrescar(){
 function pantallaClase(){
   _barra('ajustes');
   main.innerHTML = `
-    <button class="back" onclick="ir('ajustes')">← Ajustes</button>
+    <button class="back" onclick="ir('datos')">← Datos</button>
     <div class="card">
       <h2>Material de clase</h2>
       <p style="font-size:.93rem;color:var(--muted);margin-bottom:12px">
