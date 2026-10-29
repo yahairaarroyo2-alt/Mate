@@ -31,7 +31,7 @@ Mate/
 ## Cómo probar / desplegar
 
 - Abrir `index.html?test` corre `autotest()`: 200 tiradas × 3 niveles × cada uno de los
-  135 módulos (488 comprobaciones en 2026-10-29), más casos borde de `verificar()`/`analizarTexto()`, validez geométrica
+  135 módulos (489 comprobaciones en 2026-10-29), más casos borde de `verificar()`/`analizarTexto()`, validez geométrica
   (triángulos/trapecios generados), unicidad (MCM de un número consigo mismo), fechas
   locales (`fechaLocal`/`fechaHaceDias`), caducidad de la racha de días y deduplicado de
   `_registrarError` — el número exacto de comprobaciones lo dice el propio resultado (no
@@ -262,7 +262,7 @@ real. Los dos helpers viven junto a `guardar`/`leer`, arriba del todo de "ALMACE
 | `mate_racha_dias_v1` | `{ actual, mejor, ultimoDia }` — racha de *días* practicados (distinta de la de arriba). Se limpia al cargar (`_limpiarRachaDias`: solo números y fecha) |
 | `mate_historial_v1` | `{ "YYYY-MM-DD": cantidad }` — para el heatmap de "Últimos 14 días" (con el número de ejercicios encima de cada barra). Se limpia al cargar (`_limpiarHistorial`) |
 | `mate_errores_v1` | `[{modId, ej, veces?, proxima?, v?}]`, tope 30 (entre las 4 materias), más reciente primero. Repaso espaciado (2026-10-13): acertar uno en "Repasar mis errores" lo reprograma a +1, +3 y +7 días (`_ESPACIOS`); al 4º acierto sale; fallarlo lo vuelve a hoy (y `v` = cuándo, para mandarlo al final de la cola de hoy sin moverlo de la lista). Solo salen los de hoy (`erroresParaHoy`). Se limpia al cargar (`_limpiarErrores`: fechas y números; el HTML de `ej` ya se limpia al importar) |
-| `mate_sesion_v1` | la ronda en curso para retomarla (no se sincroniza — a propósito): página actual (`sesionIdx`), páginas abiertas/vistas/resultado (`sesionAbiertos`/`sesionVistos`/`sesionRes`), orden sorteado (`sesionOrden`), y `borrador` = lo escrito sin comprobar (Tu proceso y casillas), que se guarda solo al escribir (700 ms) y al salir de la app. `pausada:true` = salió con "← Inicio" (ver "Seguir la ronda") |
+| `mate_sesion_v1` | la ronda en curso para retomarla (no se sincroniza — a propósito): página actual (`sesionIdx`), páginas abiertas/vistas/resultado (`sesionAbiertos`/`sesionVistos`/`sesionRes`), lo contestado en CADA página para verla igual al volver (`sesionEst`, desde v193: ver "Volver a una página de la ronda"), orden sorteado (`sesionOrden`), y `borrador` = lo escrito sin comprobar (Tu proceso y casillas) de la página actual, que se guarda solo al escribir (700 ms) y al salir de la app. `pausada:true` = salió con "← Inicio" (ver "Seguir la ronda") |
 | `mate_sesion_ej_N` | el ejercicio de la página N de la ronda, guardado UNA vez al sacarlo (antes `mate_sesion_ejs_v1` reescribía la ronda entera, hasta 365 KB, en cada respuesta; se migra sola). Las de las prácticas del examen no se guardan (se rearman iguales), salvo las repeticiones (`__rep`). `borrarSesion()` las quita todas |
 | `mate_materia_v1` | la materia activa (`mate`/`wc`/`circ`/`ayud`), se valida contra `MATERIAS` |
 | `mate_ay_vistas_v1` | Repaso de ayudante: qué preguntas de cada banco ya salieron en la ronda (`_ayRecientes`, índices por tema; `id:mezcla` = la lista sin gemelas). Se borra para los temas de cada ronda nueva |
@@ -532,7 +532,7 @@ AEE y otros)** + 500 h de electricidad con energía renovable.
 - Antes de cualquier cambio grande: confirmar que `git status` está limpio o hacer un
   respaldo del archivo — este proyecto no tiene red de seguridad más que git.
 - Después de editar `app.js`: correr `node --check app.js`, y volver a correr
-  `index.html?test` — todas las comprobaciones tienen que seguir pasando (488 en 2026-10-29). Para correrlo sin navegador (2026-10-29): un `vm` de Node con un DOM de mentira (`document.getElementById` que devuelve objetos sueltos, `localStorage` como `Proxy` para que `Object.keys(localStorage)` liste las claves) carga `app.js`, y `?test` deja el resultado en el `innerHTML` de `#main`; sirve para correr también los verificadores y escenarios (rondas, sincronización con un Firestore simulado, IA con un `fetch` simulado) en segundos.
+  `index.html?test` — todas las comprobaciones tienen que seguir pasando (489 en 2026-10-29). Para correrlo sin navegador (2026-10-29): un `vm` de Node con un DOM de mentira (`document.getElementById` que devuelve objetos sueltos, `localStorage` como `Proxy` para que `Object.keys(localStorage)` liste las claves) carga `app.js`, y `?test` deja el resultado en el `innerHTML` de `#main`; sirve para correr también los verificadores y escenarios (rondas, sincronización con un Firestore simulado, IA con un `fetch` simulado) en segundos.
 
 ## Auditoría 2026-10-13 — reglas que dejó
 
@@ -670,3 +670,37 @@ Pedido: "busca bugs, mejoras, cosas nuevas en toda la app"; se aplicaron los pun
   barras invertidas dobles de un heredoc: los scripts con regex se escriben con la herramienta de archivos, no con `cat <<EOF`.
 - **Pendientes que la usuaria no pidió todavía (reporte 2026-10-29):** 22 = explicación Fácil (el truco primero) en los temas al azar de los caps. 6-8 (hoy solo la tienen las preguntas exactas de los exámenes);
   24 = "Lo que te falta" por grupo de examen (como la tarjeta del Parcial 2); 28 = Progreso → "Por tema" agrupado por capítulo con los más flojos arriba (cambio visual: esperar su OK, ver su regla de UI).
+
+## Volver a una página de la ronda la deja igual (2026-10-29, v193)
+
+Pedido: "si yo le doy para atrás para ver el ejercicio anterior que las respuestas sigan estando ahí, que no se borre". Antes, ir a otra página (mapa de preguntas o "Pág.") y volver mostraba la página VACÍA con el aviso
+"Ya la contestaste" (`_notaPreviaHTML`): se perdían la respuesta, el resultado, la explicación y lo escrito sin comprobar.
+
+- **`sesionEst`** = `{ página: { r, v, ri, e, fb, ent, os, bor } }`: contestó, vio la explicación, es un reintento, tiene la explicación abierta, el resultado (`ultimoFeedback`), lo que contestó (`ultimaEntrada`), el orden a
+  medias (`ordenSel`) y `borrador` (lo escrito sin comprobar). `_guardarEstadoPagina()` lo llena al DEJAR la página (primera línea de `_mostrarPuesto`) y desde `guardarSesion()`; `_cargarEstadoPagina(i)` pone esas variables al
+  llegar (al final de `_mostrarPuesto` y en `restaurarSesion`); `_aplicarEstadoPagina()` corre al final de `pintarEjercicio()` y vuelve a poner lo escrito en las casillas, el orden y el resultado (`mostrarFb(res, false, true)`:
+  sin vibrar ni bajar la pantalla) o la explicación abierta (`_pintarVistaExplicacion(true)`, que además quita el aviso "Ya la contestaste/viste la explicación"). Va dentro de `mate_sesion_v1`, así que también sobrevive a
+  cerrar y reabrir la app.
+- **No se vuelve a contar nada**: volver no llama a `responder`, y `responder` sale de inmediato si `respondido`; `sesionRes`/`sesionVistos`/`sesionFallos`/`stats` no se tocan. Para intentarlo otra vez están "↺ Reiniciar"
+  (`reiniciarEjercicio`) y "Otro parecido" (`otroDelMismoTema`): los dos hacen `delete sesionEst[sesionIdx]` antes de repintar, igual que `nuevoEjercicio` (ronda nueva → `sesionEst = {}`) y `_replanearRonda` (que corre los
+  números de página: `re(sesionEst)`). Si agregas otra forma de cambiar el ejercicio de una página, borra también su `sesionEst`.
+- **Solo guarda si lo que hay en pantalla ES esa página** (`main.dataset.ej === String(sesionIdx)`, existe `#zonaEntrada` y no es `modoErrores`/`modoRepasoRonda`). **`nuevoEjercicio` (ronda nueva) pone `main.dataset.ej = ''`**:
+  `guardarSesion()` corre ANTES de pintar el ejemplo del tema y, si la pantalla vieja era la página 1 de otra ronda, su texto escrito y su explicación abierta se guardaban como la página 1 de la ronda nueva (que salía con la
+  explicación abierta). Pasa al empezar una ronda sin pasar por otra pantalla; cualquier ruta nueva que lo haga necesita lo mismo.
+- **`ultimaEntrada` y JSON:** el arreglo de `multi` lleva sus fórmulas en una propiedad suelta (`ent.f`) que `JSON.stringify` perdería: `_entSer`/`_entDes` lo envuelven como `{ _m:1, a:[…], f:[…] }` (en `sesionEst` y en
+  `ultimaEntrada` de `mate_sesion_v1`).
+- **Rondas guardadas por v192 (sin `sesionEst`)** se siguen abriendo: `restaurarSesion` arma el estado de la página actual con los campos de antes (`respondido`, `vioExpl`, `ultimoFeedback`, `borrador`…); la explicación
+  abierta solo se sabe como `vioExpl && !respondido` (igual que antes).
+- **Se probó (2026-10-29):** `vm` de Node (contestar mal/bien, ir y volver con `irAEj`, explicación abierta, reiniciar, otro parecido, guardar → vaciar la memoria → `restaurarSesion`, formato viejo, `_entSer`, y la ronda nueva
+  que no hereda la pantalla vieja: falla si se quita la línea de `main.dataset.ej`); y en el navegador del panel, con clics reales (mapa de preguntas y "Pág.") y 133 de los 135 módulos: lo contestado, lo escrito sin
+  comprobar y la explicación abierta se ven IDÉNTICOS (mismo `outerHTML` de `#zonaEntrada`/`#zonaFb`/`#accionesPre`, salvo los ids `rcN` de las recetas) al ir a otra página y volver (134 de 134 módulos con la respuesta mala
+  puesta) y tras guardar y reabrir (las prácticas del examen vuelven a sacar su explicación al reabrir, así que ahí solo cambian los ids `dgN` de las flechas SVG); los tipos
+  `orden` (también a medias), `multi` con fórmulas, `texto`, `coefvar` y `basexp` aparte. Una página con 100–900 bytes de `sesionEst` (promedio 112): una ronda de 160 páginas suma ~18 KB a `mate_sesion_v1`. Autotest: 489. **No se restauran:** el paso en que iba la explicación paso a paso, el chat de IA de la página ni la posición del scroll.
+
+## Ecuaciones: el camino SIN negativos (2026-10-29, v193)
+
+Ella mostró la explicación de Google para `9/8 − 9x = 0.5` (4 pasos cortos) y preguntó por qué la "Completa" del ejercicio 8 de la práctica 1 del Parcial 2 era un "revolú". Causa: restaba el 9/8 en los dos lados, la x
+quedaba como −9x y aparecían los negativos (4 − 9 = −5, ÷ (−9), voltear la fracción, multiplicar arriba y abajo, regla de signos): 6 dibujos y ~2000 px. Ahora pasa el 9x SUMANDO (9/8 = 1/2 + 9x), luego el 1/2 restando
+(9/8 − 1/2 = 9x), 9/8 − 4/8 = 5/8 y 5/8 ÷ 9 = 5/(8 × 9) = 5/72: 4 dibujos, ~1550 px, sin negativos; la "Fácil" quedó en 3 pasos con el truco "si la x tiene un − delante, pásala sumando al otro lado".
+**Regla para explicaciones nuevas:** en `a − bx = c` se resuelve `bx = a − c` (la x pasa sumando) en vez de restar `a` en los dos lados; y fracción ÷ número = el número se multiplica con el de abajo (sin `pasosDivF`, sin voltear,
+sin signos). La aritmética se verificó con fracciones exactas (BigInt). Ninguna otra explicación usa `diagAmbosLados` con `÷ (−…)` o con un coeficiente negativo.

@@ -7782,17 +7782,18 @@ const _P2 = [
         { t:'Divide la suma entre 3 (son 3 números)', l: pasosDivDec(13.26, 3) }],
       resp:'4.42', comp:'4.42 × 3 = 13.26 ✓ y queda entre el más chico (1.99) y el más grande (6.6)', error:'dividir la suma entre otro número: se divide entre CUÁNTOS números son (3). La opción 10.26 sale de sumar mal (no alinear los puntos).',
       ejemplo:'(4.67 + 6.6 + 1.99) ÷ 3 = 13.26 ÷ 3 = 4.42.', truco:'promedio = suma ÷ cuántos números son.' }) }),
-  // 8: 9/8 − 9x = 0.5
+  // 8: 9/8 − 9x = 0.5. La x se pasa SUMANDO para que quede positiva: sin negativos ni fracciones volteadas (antes se restaba el 9/8, la x quedaba −9x y salían 6 dibujos y 4 reglas de signos; 2026-10-29)
   () => ({ enunciado:`Resuelve la ecuación para <i>x</i>:<br><b>${fr(9, 8)} − 9<i>x</i> = 0.5</b>`, tipo:'frac', respuesta:{ n:5, d:72 }, pedirSimple:true, signo:true, ayuda:'x = ___ (como fracción; con el ± para el signo)',
     explicacion: receta({ pide:'el valor de x (como hay una fracción, se trabaja todo en fracciones).',
-      pasos:[{ t:'Pasa el decimal a fracción', l:['0.5 tiene 1 decimal → abajo va 10: 0.5 = 5/10', explSimplif(5, 10), `→ la ecuación queda ${cb('9/8 − 9x = 1/2')}`] },
-        { t:'Quita el 9/8: réstalo en los DOS lados', l:[diagAmbosLados('9/8 − 9x', '1/2', '− 9/8', '−9x', '1/2 − 9/8'), '9/8 − 9/8 = 0, así que a la izquierda solo queda −9x.'] },
-        { t:'Resta las fracciones: primero el mismo de abajo (8)', l:['1/2 y 9/8 tienen distinto de abajo. 8 es múltiplo de 2 (2 × 4 = 8), así que el común es 8.', diagConvertir({ n:1, d:2 }, 4, 8),
-          '4/8 − 9/8: ya tienen el mismo de abajo; se restan los de arriba y el 8 se queda.', '4 − 9: le quitas más de lo que tienes → se resta 9 − 4 = 5 y se pone el − → −5', `4/8 − 9/8 = ${cb('−5/8')} → la ecuación queda −9x = −5/8`] },
-        { t:'Quita el −9 que multiplica a la x: divide los DOS lados entre −9', l:[diagAmbosLados('−9x', '−5/8', '÷ (−9)', 'x', '−5/8 ÷ (−9)'), '−9 es lo mismo que la fracción −9/1:',
-          ...pasosDivF({ n:-5, d:8 }, { n:-9, d:1 }).lineas, 'Arriba: −5 × −1 = 5. Abajo: 8 × 9 = 72.', `x = ${cb('5/72')}`] }],
-      resp:'x = 5/72', comp:'9/8 − 9(5/72) = 9/8 − 45/72 = 81/72 − 45/72 = 36/72 = 1/2 = 0.5 ✓', error:'dejar el signo negativo al final: −5/8 dividido entre −9 da positivo; o restar 9/8 solo de un lado.',
-      ejemplo:'−9x = −5/8 → x = 5/72.', truco:'si hay una fracción, pasa el decimal a fracción y trabaja todo en fracciones.' }) }),
+      pasos:[{ t:'Pasa el decimal a fracción', l:['0.5 tiene 1 decimal → abajo va 10: 0.5 = 5/10 = 1/2 (arriba y abajo ÷ 5)', `→ la ecuación queda ${cb('9/8 − 9x = 1/2')}`] },
+        { t:'La x a un lado y los números al otro', l:['Pasa el 9x sumando: así la x queda POSITIVA (si pasas el 9/8, queda −9x y te salen negativos).', diagAmbosLados('9/8 − 9x', '1/2', '+ 9x', '9/8', '1/2 + 9x'),
+          'Ahora el 1/2 pasa restando, para que los números queden juntos:', diagAmbosLados('9/8', '1/2 + 9x', '− 1/2', '9/8 − 1/2', '9x')] },
+        { t:'Resta las fracciones: primero el mismo de abajo (8)', l:['9/8 y 1/2 tienen distinto de abajo. 8 es múltiplo de 2 (2 × 4 = 8), así que el común es 8.', diagConvertir({ n:1, d:2 }, 4, 8),
+          '9/8 − 4/8: ya tienen el mismo de abajo; se restan los de arriba (9 − 4 = 5) y el 8 se queda.', `9/8 − 4/8 = ${cb('5/8')} → la ecuación queda 5/8 = 9x`] },
+        { t:'Quita el 9 que multiplica a la x: divide los DOS lados entre 9', l:[diagAmbosLados('5/8', '9x', '÷ 9', '5/8 ÷ 9', 'x'),
+          'Una fracción ÷ un número: el número se multiplica con el de abajo → 5/8 ÷ 9 = 5/(8 × 9) = 5/72', `x = ${cb('5/72')}`] }],
+      resp:'x = 5/72', comp:'9/8 − 9(5/72) = 9/8 − 45/72 = 9/8 − 5/8 = 4/8 = 1/2 = 0.5 ✓', error:'restar 9/8 − 1/2 sin igualar antes los de abajo; o dividir entre 9 solo el 5 y olvidar el 8 (el 9 se multiplica con el 8).',
+      ejemplo:'9/8 − 1/2 = 5/8 = 9x → x = 5/72.', truco:'si hay una fracción, pasa el decimal a fracción y trabaja todo en fracciones. Si la x tiene un − delante, pásala sumando al otro lado: así no te salen negativos.' }) }),
   // 9: 1.5x − 18.4 = 0.6x − 22.9 (opción múltiple)
   () => _aMC(ecL('', '1.5<i>x</i> − 18.4 = 0.6<i>x</i> − 22.9', [], 1.5, -18.4, 0.6, -22.9, 3), '<b>Resuelve : 1.5x - 18.4 = 0.6x - 22.9</b>', ['-5', '4.5', '5', '-4.5', NING], '-5'),
   // 10
@@ -7889,8 +7890,8 @@ const _P2F = [
     '1 − 2.5 + 0.6 = −0.9.', '1/2 = 0.5, y (0.5)² = 0.25 (un cuarto).'),
   _F('el promedio: suma ÷ cuántos son.', [['Suma los 3', `4.67 + 6.6 + 1.99 = ${cb('13.26')}`], ['Divide entre 3', `13.26 ÷ 3 = ${cb('4.42')}`]],
     '13.26 ÷ 3 = 4.42.', 'el promedio queda entre el más chico (1.99) y el más grande (6.6): 10.26 no puede ser.'),
-  _F('x en 9/8 − 9x = 0.5.', [['0.5 = 1/2, y pasa el 9/8 al otro lado (restando)', '−9x = 1/2 − 9/8 = 4/8 − 9/8 = −5/8'], ['Divide entre −9 (− ÷ − = +)', `x = 5/(8 × 9) = ${cb('5/72')}`]],
-    '−9x = −5/8 → x = 5/72.'),
+  _F('x en 9/8 − 9x = 0.5.', [['0.5 = 1/2. Pasa el 9x sumando y el 1/2 restando (así la x queda positiva)', '9/8 − 1/2 = 9x'], ['Resta con el mismo de abajo (1/2 = 4/8)', `9/8 − 4/8 = ${cb('5/8')} → 5/8 = 9x`], ['Divide entre 9 (el 9 se multiplica con el 8 de abajo)', `x = 5/(8 × 9) = ${cb('5/72')}`]],
+    '9/8 − 1/2 = 5/8 = 9x → x = 5/72.', 'si la x tiene un − delante, pásala sumando al otro lado: así no te salen negativos.'),
   _F('x en 1.5x − 18.4 = 0.6x − 22.9.', [['Las x a la izquierda y los números a la derecha (cambian de signo al pasar)', '1.5x − 0.6x = −22.9 + 18.4 → 0.9x = −4.5'], ['Divide entre 0.9', `x = −4.5 ÷ 0.9 = ${cb('−5')}`]],
     '0.9x = −4.5 → x = −5.', 'en opción múltiple también puedes PROBAR una opción: con x = −5 los dos lados dan −25.9.'),
   _F('lo que cuesta UNA camisa.', [['Total ÷ camisas', `245 ÷ 4 = ${cb('61.25')}`]], '245 ÷ 4 = $61.25.'),
@@ -10080,6 +10081,8 @@ let sesionTotal = 0;      // tamaño de la ronda actual; al llegar acá se para 
 // sesionOrden = la cola de la mezcla como se sorteó (el puesto i = sesionOrden[i])
 let sesionEjs = [], sesionIdx = 0, sesionAbiertos = {}, sesionVistos = {}, sesionOrden = [];
 let sesionRes = {};          // resultado de cada página: 'ok' | 'mal' | 'vista' (vio la explicación sin contestar) — el mapa de preguntas
+// lo contestado en cada página, para verla IGUAL al volver con "Pág." o el mapa (ver _guardarEstadoPagina): { página: { r:contestó, v:vioExpl, ri:_reintento, e:explicación abierta, fb:resultado, ent:lo que contestó, bor:lo escrito } }
+let sesionEst = {};
 let _ejsSucios = new Set();  // páginas de la ronda que todavía no se guardaron en su clave (mate_sesion_ej_N)
 let _borradorPend = null;    // lo escrito sin comprobar que hay que volver a poner al retomar la ronda
 // fallos DE ESTA RONDA (se reinicia con cada ronda nueva) — separado de `errores`, que es la
@@ -10135,7 +10138,7 @@ function _replanearRonda(){
     const nuevo = new Map(keep.map((v, k) => [v, k]));
     const re = o => { const n = {}; Object.keys(o).forEach(k => { if(nuevo.has(+k)) n[nuevo.get(+k)] = o[k]; }); return n; };
     const ejs = []; keep.forEach((v, k) => { if(sesionEjs[v]) ejs[k] = sesionEjs[v]; });
-    sesionEjs = ejs; sesionAbiertos = re(sesionAbiertos); sesionVistos = re(sesionVistos); sesionRes = re(sesionRes);
+    sesionEjs = ejs; sesionAbiertos = re(sesionAbiertos); sesionVistos = re(sesionVistos); sesionRes = re(sesionRes); sesionEst = re(sesionEst);
     sesionOrden = keep.map(v => sesionOrden[v]); sesionIdx = nuevo.get(sesionIdx);
     _borrarPaginasSesion(); _ejsSucios = new Set(); ejs.forEach((e, i) => _ejsSucios.add(i));
   }
@@ -10262,6 +10265,44 @@ function _borradorActual(){
   const proceso = leerProceso();
   return (proceso || Object.keys(entrada).length) ? { proceso, entrada } : null;
 }
+// ── lo contestado en cada página de la ronda (2026-10-29) ──
+// Antes, volver a una página anterior (mapa de preguntas o "Pág.") la mostraba VACÍA con un "Ya la contestaste": la respuesta, el resultado y la explicación se perdían.
+// Ahora lo que hay en la página que se deja (si contestó, con qué y cómo le fue; la explicación abierta; lo escrito sin comprobar) se guarda en sesionEst[página] y, al volver, se ve igual.
+// "ent" (lo que contestó) en JSON: un arreglo con propiedades sueltas (multi: ent.f = las fórmulas) las perdería, así que va como { _m:1, a:[…], f:[…] }
+const _entSer = ent => Array.isArray(ent) && ent.f ? { _m:1, a:Array.from(ent), f:ent.f } : ent;
+const _entDes = x => x && x._m ? Object.assign(Array.from(x.a || []), { f:x.f || [] }) : x;
+function _guardarEstadoPagina(){
+  // solo en una ronda normal y solo si lo que está en pantalla ES esa página (el ejemplo de un tema, Inicio, el repaso de errores… no lo son)
+  if(modoErrores || modoRepasoRonda || !modActual || !(sesionIdx >= 0) || main.dataset.ej !== String(sesionIdx) || !$('zonaEntrada')) return;
+  const bor = _borradorActual(), zf = $('zonaFb'), os = !respondido && ejActual && ejActual.tipo === 'orden' && ordenSel.length;
+  if(!respondido && !vioExpl && !bor && !os){ delete sesionEst[sesionIdx]; return; }
+  const e = { r: respondido ? 1 : 0, v: vioExpl ? 1 : 0, ri: _reintento ? 1 : 0, e: !respondido && zf && zf.querySelector('.expl') ? 1 : 0 };
+  if(respondido){ e.fb = ultimoFeedback; e.ent = _entSer(ultimaEntrada); }
+  if(os) e.os = ordenSel.slice();
+  if(bor){ if(bor.proceso && bor.proceso.length > 1500) bor.proceso = bor.proceso.slice(0, 1500); e.bor = bor; }
+  sesionEst[sesionIdx] = e;
+}
+// pone en las variables de la ronda lo guardado de la página i (si hay): si contestó y con qué, el resultado, lo escrito
+function _cargarEstadoPagina(i){
+  const st = sesionEst[i]; if(!st) return;
+  respondido = !!(st.r && st.fb); vioExpl = !!st.v; _reintento = !!st.ri;   // "contestó" sin su resultado guardado no se puede volver a mostrar: queda como sin contestar (si no, la casilla quedaba viva pero responder() no hacía nada)
+  ultimoFeedback = respondido ? st.fb : null;
+  ultimaEntrada = respondido && st.ent !== undefined ? _entDes(st.ent) : null;
+  ultimoProceso = (st.bor && st.bor.proceso) || '';
+  _borradorPend = st.bor || null;
+  ordenSel = respondido ? (ejActual && ejActual.tipo === 'orden' && Array.isArray(ultimaEntrada) ? ultimaEntrada.slice() : []) : (st.os ? st.os.slice() : []);
+}
+// después de pintar la página (pintarEjercicio): vuelve a poner lo escrito en las casillas y, si ya contestó, el resultado y la explicación (o la explicación abierta).
+// Sin vibrar ni bajar la pantalla hasta el resultado: es solo volver a ver la página.
+function _aplicarEstadoPagina(){
+  if(modoErrores || modoRepasoRonda) return;
+  const b = _borradorPend; _borradorPend = null;
+  if(b && b.entrada) Object.entries(b.entrada).forEach(([id, v]) => { const x = $(id); if(x && $('zonaEntrada').contains(x)) x.value = v; });
+  if(ejActual && ejActual.tipo === 'orden' && ordenSel.length) pintarOrden();
+  const st = sesionEst[sesionIdx];
+  if(respondido && ultimoFeedback) mostrarFb(ultimoFeedback, false, true);
+  else if(st && st.e){ const np = $('notaPrevia'); if(np) np.remove(); _pintarVistaExplicacion(true); }   // la explicación abierta cede su lugar al aviso (como el resultado en mostrarFb)
+}
 // ¿esta página de la ronda está (o se guarda) en su propia clave? Las de las prácticas del examen no: se vuelven a armar iguales (las repeticiones sí)
 const _paginaGuardable = i => { const ej = sesionEjs[i], m = ej && MOD_POR_ID[ej.__mod]; return !!ej && !(m && m.nuevaRonda && !ej.__rep); };
 // Un fallo o una repetición pendiente es el MISMO ejercicio de una página ya guardada: no se copia otra vez (cada copia pesa hasta 43 KB y se reescribía en cada respuesta), solo su número de página (p)
@@ -10278,11 +10319,12 @@ const _desCompactarEj = lista => (Array.isArray(lista) ? lista : []).map(it => {
 }).filter(Boolean);
 function guardarSesion(){
   clearTimeout(_borradorT); _borradorT = null;
+  _guardarEstadoPagina();   // lo contestado o escrito en la página que se está viendo (ver más arriba)
   // cada página de la ronda se guarda UNA sola vez, en su propia clave (antes se reescribía la ronda entera, hasta 365 KB, en cada respuesta); primero ellas, para que lo compacto de abajo apunte a algo que ya existe
   _ejsSucios.forEach(i => { if(_paginaGuardable(i)) guardar('mate_sesion_ej_' + i, sesionEjs[i]); });
   _ejsSucios.clear();
   guardar('mate_sesion_v1', { modId: modActual.id, esTemaFijo, capFijo, sesionHechos, sesionCorrectos,
-    sesionCola, sesionPendientes: sesionPendientes.map(_compactarEj), sesionFallos: sesionFallos.map(_compactarEj), temasEjemploVisto, sesionTotal, sesionIdx, sesionAbiertos, sesionVistos, sesionRes, sesionOrden, ejActual, respondido, vioExpl, ordenSel, ultimoFeedback, ultimoProceso, ultimaEntrada, borrador: _borradorActual() });
+    sesionCola, sesionPendientes: sesionPendientes.map(_compactarEj), sesionFallos: sesionFallos.map(_compactarEj), temasEjemploVisto, sesionTotal, sesionIdx, sesionAbiertos, sesionVistos, sesionRes, sesionEst, sesionOrden, ejActual, respondido, vioExpl, ordenSel, ultimoFeedback, ultimoProceso, ultimaEntrada: _entSer(ultimaEntrada), borrador: _borradorActual() });
 }
 const _borrarPaginasSesion = () => { try{ Object.keys(localStorage).filter(k => k.startsWith('mate_sesion_ej_') || k === 'mate_sesion_ejs_v1').forEach(k => localStorage.removeItem(k)); }catch(e){} };
 // (también apaga el guardado diferido de lo escrito: si no, a los 700 ms volvía a guardar la ronda que acabas de dejar y al abrir la app salía de nuevo)
@@ -10314,6 +10356,7 @@ function restaurarSesion(forzar){
   sesionIdx = s.sesionIdx != null ? s.sesionIdx : sesionHechos - 1;
   sesionAbiertos = s.sesionAbiertos || Object.fromEntries(Array.from({length:sesionHechos}, (_, i) => [i, true]));
   sesionVistos = s.sesionVistos || {}; sesionRes = s.sesionRes || {}; sesionOrden = s.sesionOrden || [];
+  sesionEst = s.sesionEst && typeof s.sesionEst === 'object' && !Array.isArray(s.sesionEst) ? s.sesionEst : {};
   sesionEjs = []; _ejsSucios = new Set();
   const viejas = leer('mate_sesion_ejs_v1', null);   // formato anterior: toda la ronda en una sola clave → se pasa a una clave por página
   Object.keys(sesionAbiertos).forEach(k => { const i = +k, ej = (Array.isArray(viejas) && viejas[i]) || leer('mate_sesion_ej_' + i, null); if(ej) sesionEjs[i] = ej; });
@@ -10328,14 +10371,11 @@ function restaurarSesion(forzar){
     ejActual.explicacion = fresco.explicacion; ejActual.enunciado = fresco.enunciado; ejActual.facil = fresco.facil;
   }
   ultimoProceso = s.ultimoProceso || '';
-  ultimaEntrada = s.ultimaEntrada === undefined ? null : s.ultimaEntrada;
-  pintarEjercicio();
-  if(_borradorPend){   // las casillas de respuesta que estaban escritas
-    Object.entries(_borradorPend.entrada || {}).forEach(([id, v]) => { const x = $(id); if(x && $('zonaEntrada').contains(x)) x.value = v; });
-    _borradorPend = null;
-  }
-  if(respondido && ultimoFeedback) mostrarFb(ultimoFeedback, false);   // ya contestó de verdad
-  else if(vioExpl) _pintarVistaExplicacion();                          // solo vio la explicación, sigue pudiendo responder
+  ultimaEntrada = s.ultimaEntrada === undefined ? null : _entDes(s.ultimaEntrada);
+  // una ronda guardada por la versión de antes no trae lo de cada página: lo de ESTA se arma con lo que sí traía (contestó, resultado, lo escrito, explicación abierta)
+  if(!sesionEst[sesionIdx] && (respondido || vioExpl || _borradorPend)) sesionEst[sesionIdx] = { r:respondido ? 1 : 0, v:vioExpl ? 1 : 0, ri:0, e:(!respondido && vioExpl) ? 1 : 0, fb:ultimoFeedback, ent:_entSer(ultimaEntrada), bor:_borradorPend };
+  _cargarEstadoPagina(sesionIdx);
+  pintarEjercicio();   // al pintar vuelven lo escrito en las casillas, el resultado y la explicación (_aplicarEstadoPagina)
   if(s.pausada) guardarSesion();   // ya no está pausada: si cierra la app ahora, al abrirla sigue donde iba
   return true;
 }
@@ -11853,11 +11893,13 @@ function _ejDelPuesto(i, arg){
 }
 // pone en pantalla (sin pintar) el puesto i, desde cero
 function _mostrarPuesto(i, arg){
+  _guardarEstadoPagina();   // lo contestado/escrito en la página que se deja: si se vuelve a ella, se ve igual
   ejActual = _ejDelPuesto(i, arg);
   modActual = MOD_POR_ID[ejActual.__mod] || modActual;
   sesionIdx = i;
   vioExpl = !!sesionVistos[i];   // ya contestado o con la explicación vista: si lo repite, no cuenta otra vez
   respondido = false; _reintento = vioExpl; ordenSel = []; ultimoFeedback = null; ultimoProceso = ''; ultimaEntrada = null; calcHist = [];
+  _cargarEstadoPagina(i);   // y si ya se había contestado o escrito algo aquí, vuelve tal cual (pintarEjercicio lo pone en pantalla)
 }
 // la próxima página que todavía no se abrió (después de la actual y, si no hay, desde el principio); -1 = ya se abrieron todas.
 // Antes "Siguiente" era siempre la página de al lado: desde la última (se llega con "Pág.") acababa la ronda con páginas sin ver, y desde una repetida pasaba otra vez por las ya hechas.
@@ -11872,7 +11914,8 @@ function nuevoEjercicio(arg, continuar){
   if(!continuar){                      // ronda nueva: arma la cola y fija el tamaño
     sesionHechos = 0; sesionCorrectos = 0; sesionPendientes = []; sesionFallos = []; temasEjemploVisto = {};
     if(MOD_POR_ID['geometria-dec']) MOD_POR_ID['geometria-dec']._n = 0;   // geometría: el 1.er ejercicio de cada ronda lleva figura en el enunciado
-    sesionEjs = []; sesionAbiertos = {}; sesionVistos = {}; sesionRes = {}; sesionIdx = -1;
+    sesionEjs = []; sesionAbiertos = {}; sesionVistos = {}; sesionRes = {}; sesionEst = {}; sesionIdx = -1;
+    main.dataset.ej = '';   // lo que haya en pantalla es de la ronda de ANTES: que no se guarde como la página 1 de esta (guardarSesion ya corre antes de pintar el ejemplo)
     _borrarPaginasSesion(); _ejsSucios = new Set();
     esTemaFijo = typeof arg !== 'number' && !!arg;
     capFijo = typeof arg === 'number' ? arg : null;
@@ -12033,6 +12076,7 @@ function pintarEjercicio(){
     </div>
     <div class="card" id="cardProgreso" style="padding:14px 20px">${_filaProgresoHTML()}${_mapaHTML()}</div>`;
   _enfocarPrimero();
+  _aplicarEstadoPagina();   // si ya contestó o escribió algo en esta página: lo escrito, el resultado y la explicación vuelven a verse
 }
 // el cursor va a la primera casilla de respuesta (en el teléfono no: el teclado taparía el enunciado). Enter lo maneja el escucha general
 // de "keydown" (más abajo): sin contestar comprueba, ya contestado pasa al siguiente. Antes cada pantalla ponía además su propio escucha por casilla (copiado 3 veces).
@@ -12188,6 +12232,7 @@ function reiniciarEjercicio(){
   const yaContado = respondido || vioExpl;
   respondido = false; ordenSel = []; ultimoFeedback = null; ultimoProceso = ''; ultimaEntrada = null; calcHist = [];
   vioExpl = yaContado; _reintento = yaContado;
+  delete sesionEst[sesionIdx]; _borradorPend = null;   // desde cero: lo guardado de esta página (resultado, explicación abierta, lo escrito) ya no vale
   pintarEjercicio(); guardarSesion(); window.scrollTo(0, 0);
 }
 function _siguienteEjercicio(){
@@ -12261,11 +12306,11 @@ function _iluminarCasillas(ok){
 }
 // avisos que acompañan al resultado (Casi, "vuelve a salir…", "no cuenta para las estadísticas"): texto suelto, sin recuadro
 const _fbTxt = ls => (ls = ls.filter(Boolean)).length ? `<div class="fbTxt">${ls.join('<br>')}</div>` : '';
-function mostrarFb(res, soloAviso){
+function mostrarFb(res, soloAviso, restaurando){   // restaurando = solo se vuelve a ver una página ya contestada (sin vibrar ni bajar la pantalla hasta el resultado)
   const zona = $('zonaFb');
   if(soloAviso){ zona.innerHTML = `<div class="fbTxt aviso">${res.msg}</div>`; return; }
 
-  _feedbackHaptico(res.ok);
+  if(!restaurando) _feedbackHaptico(res.ok);
   const np = $('notaPrevia'); if(np) np.remove();   // el aviso de "ya la contestaste" cede su lugar al resultado de ahora
   const ent = $('zonaEntrada'), linea = _ponerRespuesta(res.ok);
   const luz = _iluminarCasillas(res.ok);
@@ -12280,7 +12325,7 @@ function mostrarFb(res, soloAviso){
   if(linea && !luz) ent.style.opacity = '.5'; else ent.classList.add('respondida');   // con casillas iluminadas, solo se apaga lo demás (no las que tienen luz)
   ent.style.pointerEvents = 'none';
   $('accionesPre').style.display = 'none';
-  (linea ? zona : ent).scrollIntoView({behavior:'smooth', block:'start'});
+  if(!restaurando) (linea ? zona : ent).scrollIntoView({behavior:'smooth', block:'start'});
 }
 
 // Una línea que empieza con "TRUCO:" no es un paso más: sale de la lista numerada y se
@@ -12475,8 +12520,8 @@ function otroDelMismoTema(){
   if(modActual.nuevaRonda) return;   // práctica del examen: cada página es SU pregunta (la Pág. 4 es la 4), no se cambia por otra
   ejActual = modActual.gen(nivel);
   ejActual.__mod = modActual.id;
-  sesionEjs[sesionIdx] = ejActual; delete sesionVistos[sesionIdx]; delete sesionRes[sesionIdx]; _ejsSucios.add(sesionIdx);   // este puesto ahora es el ejercicio nuevo
-  respondido = false; vioExpl = false; _reintento = false; ordenSel = []; ultimoFeedback = null; ultimoProceso = ''; ultimaEntrada = null; calcHist = [];
+  sesionEjs[sesionIdx] = ejActual; delete sesionVistos[sesionIdx]; delete sesionRes[sesionIdx]; delete sesionEst[sesionIdx]; _ejsSucios.add(sesionIdx);   // este puesto ahora es el ejercicio nuevo (y lo guardado del anterior ya no vale)
+  respondido = false; vioExpl = false; _reintento = false; ordenSel = []; ultimoFeedback = null; ultimoProceso = ''; ultimaEntrada = null; calcHist = []; _borradorPend = null;
   pintarEjercicio();
   guardarSesion();
   window.scrollTo(0, 0);
@@ -12490,7 +12535,7 @@ function verExplicacion(){
   _repintarFilaProgreso();
   guardarSesion();
 }
-function _pintarVistaExplicacion(){
+function _pintarVistaExplicacion(sinScroll){   // sinScroll = solo se vuelve a ver la página (no baja hasta la explicación)
   const zona = $('zonaFb');
   // la explicación ya está abierta: "Ver explicación" sobra y en su lugar va "Otro parecido" (el mismo de "Otro de este tema"); en las prácticas del examen cada página es SU pregunta, ahí solo se oculta
   const bs = $('btnSaltar'); if(bs) bs.style.display = 'none';   // ya viste la explicación: "Saltar" sobra (queda "Siguiente ejercicio")
@@ -12502,7 +12547,7 @@ function _pintarVistaExplicacion(){
   zona.innerHTML = `${_ponerRespuesta(false)}${_fbTxt(['Este ejercicio no cuenta para las estadísticas.'])}
     ${explHTML()}
     <button class="btn amar" onclick="ir('practica',${esTemaFijo ? `'${modActual.id}'` : capFijo ? capFijo : 'undefined'},true)">Siguiente ejercicio</button>`;
-  zona.scrollIntoView({behavior:'smooth', block:'start'});
+  if(!sinScroll) zona.scrollIntoView({behavior:'smooth', block:'start'});
 }
 
 /* ---------- repasar mis errores ---------- */
@@ -13254,6 +13299,21 @@ function autotest(){
     sesionRes = { 2:'mal', 4:'vista' }; respondido = false; sesionIdx = 2; const a = _notaPreviaHTML(); sesionIdx = 4; const b = _notaPreviaHTML(); sesionIdx = 3; const c = _notaPreviaHTML();
     sesionRes = bk.r; sesionIdx = bk.i; respondido = bk.rp;
     chk('al volver a una página ya contestada sale el aviso ("la fallaste", "viste la explicación"); en una nueva no', /fallaste/.test(a) && /viste la explicación/.test(b) && c === '');
+  }
+  {
+    // volver a una página de la ronda la deja IGUAL (sesionEst): contestó y con qué, el resultado, lo escrito; el orden a medias; y el arreglo de "multi" con sus fórmulas pasa por JSON
+    const bk = { est:sesionEst, r:respondido, v:vioExpl, ri:_reintento, fb:ultimoFeedback, ent:ultimaEntrada, pr:ultimoProceso, bp:_borradorPend, os:ordenSel, ej:ejActual };
+    const multi = Object.assign(['1', '2'], { f:['a', 'b'] }), y = _entDes(JSON.parse(JSON.stringify(_entSer(multi))));
+    ejActual = { tipo:'orden', opciones:['a', 'b', 'c'] };
+    sesionEst = { 3:{ r:1, v:1, ri:1, e:0, fb:{ ok:false, msg:'m' }, ent:_entSer(multi), bor:{ proceso:'p', entrada:{ inM0:'1' } } }, 4:{ r:0, v:0, ri:0, e:1, os:[2, 0] } };
+    _cargarEstadoPagina(3);
+    const a = respondido && vioExpl && _reintento && ultimoFeedback.ok === false && ultimaEntrada.f.join() === 'a,b' && ultimoProceso === 'p' && _borradorPend.entrada.inM0 === '1';
+    _cargarEstadoPagina(4);
+    const b = !respondido && ordenSel.join() === '2,0' && ultimoFeedback === null && ultimaEntrada === null;
+    respondido = true; _cargarEstadoPagina(9); const c = respondido;   // sin nada guardado de esa página no toca nada (el que llama ya la dejó limpia)
+    sesionEst = bk.est; respondido = bk.r; vioExpl = bk.v; _reintento = bk.ri; ultimoFeedback = bk.fb; ultimaEntrada = bk.ent; ultimoProceso = bk.pr; _borradorPend = bk.bp; ordenSel = bk.os; ejActual = bk.ej;
+    chk('volver a una página de la ronda: lo contestado (con qué y el resultado), lo escrito y el orden a medias vuelven; el arreglo de "multi" conserva sus fórmulas tras JSON',
+      Array.isArray(y) && y.join() === '1,2' && y.f.join() === 'a,b' && a && b && c && JSON.stringify(_entSer(['x'])) === '["x"]' && _entSer('t') === 't');
   }
   {
     const bk = stats; stats = {};
