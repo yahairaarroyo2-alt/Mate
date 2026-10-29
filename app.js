@@ -1492,7 +1492,7 @@ const DEP_EXACTO2 = [
 ];
 // tema con un banco fijo de preguntas que salen EN ORDEN (una práctica de examen copiada tal cual)
 function _modExamen(id, nombre, banco, cual, facilFn){
-  return { id, nombre, secciones:['5.9'], banco:banco.length, _sig:0,
+  return { id, nombre, secciones:['5.9'], banco:banco.length, sinReloj:true, _sig:0,   // sinReloj: sin botón "Simulacro con reloj" (pedido de la usuaria)
     nuevaRonda(){ this._sig = 0; },
     gen(){
       const C = (n,d=1) => ({n,d}), i = this._sig % banco.length; this._sig++;
