@@ -2,7 +2,7 @@
   "id": "./",
   "name": "Práctica de Matemáticas",
   "short_name": "Mate",
-  "description": "Práctica con explicación paso a paso: Álgebra (MAGS 120I, caps. 1-5 y el Examen Departamental), World Culture I, Circuitos Eléctricos y Repaso de ayudante",
+  "description": "Práctica con explicación paso a paso: Álgebra (MAGS 120I, caps. 1-8 y los Exámenes Departamental y Parcial 2), World Culture I, Circuitos Eléctricos y Repaso de ayudante",
   "start_url": "./",
   "display": "standalone",
   "orientation": "portrait",

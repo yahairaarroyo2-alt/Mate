@@ -275,7 +275,6 @@ function multF(fs){                                                 // producto 
   return { rawN, rawD, n, d };
 }
 const recipF = f => ({ n: f.n<0 ? -f.d : f.d, d: Math.abs(f.n) });  // recíproco, el signo se queda arriba
-const divF = (a,b) => multF([a, recipF(b)]);
 const addF = (a,b) => { const r = sumarF([a,b]); return { n:r.n, d:r.d }; };
 // operando "bonito": entero sin barra, fracción apilada; con paréntesis si es negativo y va tras un operador
 const opS = f => f.d===1 ? mm(f.n) : frS(f.n,f.d);
@@ -936,49 +935,10 @@ function svgRectSem(a, b, c, A, u){
     ${tri(50, 150, sc, [`${a} ${u}`, `${b} ${u}`, `${c} ${u}`])}${tri(190, 150, sc2, [`${A} ${u}`, 'x', 'y'])}</svg>`;
 }
 // ── Práctica del Examen Departamental (los tipos de EducoSoft, caps. 1–5) ──
-// figuras para contar ángulos agudos y rectos: el conteo sale de las MISMAS coordenadas que se dibujan
-const FIGS_ANG = {
-  'rectángulo':          [[0,0],[1.6,0],[1.6,1],[0,1]],
-  'cuadrado':            [[0,0],[1.2,0],[1.2,1.2],[0,1.2]],
-  'triángulo rectángulo':[[0,0],[1.5,0],[0,1]],
-  'triángulo acutángulo':[[0,0],[1.7,0],[0.8,1.3]],
-  'triángulo obtusángulo':[[0,0],[1.4,0],[-0.5,0.8]],
-  'trapecio rectángulo': [[0,0],[1.7,0],[1.1,1],[0,1]],
-  'paralelogramo':       [[0.6,0],[2,0],[1.4,1],[0,1]],
-  'rombo':               [[0.8,0],[1.6,0.9],[0.8,1.8],[0,0.9]].map(([x,y]) => [x*1.1, y*0.75]),
-  'triángulo isósceles obtuso': [[0,0],[1.6,0],[0.8,0.55]]
-};
-function anguloVertice(p, i){
-  const a = p[(i+p.length-1)%p.length], b = p[i], c = p[(i+1)%p.length];
-  const v1 = [a[0]-b[0], a[1]-b[1]], v2 = [c[0]-b[0], c[1]-b[1]];
-  return Math.acos((v1[0]*v2[0] + v1[1]*v2[1]) / (Math.hypot(...v1)*Math.hypot(...v2))) * 180/Math.PI;
-}
-const claseAng = g => Math.abs(g-90) < 0.5 ? 'recto' : g < 90 ? 'agudo' : 'obtuso';
-// dibuja varias figuras separadas, con el cuadradito en cada ángulo recto
-function svgFiguras(nombres){
-  const ancho = 140, partes = [], info = [];
-  nombres.forEach((nom, k) => {
-    const flip = Math.random() < 0.5, p0 = FIGS_ANG[nom].map(([x,y]) => [flip ? -x : x, y]);
-    const minX = Math.min(...p0.map(q => q[0])), s = 62;
-    const p = p0.map(([x,y]) => [20 + k*ancho + (x-minX)*s, 100 - y*s]);   // y hacia arriba
-    const poly = p.map(q => q.map(v => v.toFixed(1)).join(',')).join(' ');
-    let marcas = '';
-    const cls = p.map((_, i) => claseAng(anguloVertice(p, i)));
-    cls.forEach((c, i) => { if(c !== 'recto') return;
-      const a = p[(i+p.length-1)%p.length], b = p[i], d = p[(i+1)%p.length], u = [a[0]-b[0], a[1]-b[1]], w = [d[0]-b[0], d[1]-b[1]];
-      const lu = Math.hypot(...u), lw = Math.hypot(...w), m = 9, q1 = [b[0]+u[0]/lu*m, b[1]+u[1]/lu*m], q2 = [q1[0]+w[0]/lw*m, q1[1]+w[1]/lw*m], q3 = [b[0]+w[0]/lw*m, b[1]+w[1]/lw*m];
-      marcas += `<path d="M${q1[0].toFixed(1)} ${q1[1].toFixed(1)} L${q2[0].toFixed(1)} ${q2[1].toFixed(1)} L${q3[0].toFixed(1)} ${q3[1].toFixed(1)}" fill="none" stroke="currentColor" stroke-width="1.5"/>`; });
-    partes.push(`<polygon points="${poly}" fill="none" stroke="currentColor" stroke-width="2"/>${marcas}`);
-    info.push({ nom, agudos:cls.filter(c => c==='agudo').length, rectos:cls.filter(c => c==='recto').length, obtusos:cls.filter(c => c==='obtuso').length });
-  });
-  const W = 20 + nombres.length*ancho;
-  return { svg:`<svg viewBox="0 0 ${W} 120" style="width:100%;max-width:${W}px;height:auto;color:var(--texto);display:block;margin:10px auto 0" xmlns="http://www.w3.org/2000/svg">${partes.join('')}</svg>`, info };
-}
 // triángulo con los tres lados rotulados (perímetro)
 const svgTrianguloLados = (a, b, c, u) => `<svg viewBox="0 0 220 120" style="width:100%;max-width:220px;height:auto;color:var(--texto);display:block;margin:10px auto 0" xmlns="http://www.w3.org/2000/svg">
   <polygon points="30,95 190,95 95,25" fill="none" stroke="currentColor" stroke-width="2"/>
   <g fill="currentColor" font-size="13" font-weight="700"><text x="110" y="113" text-anchor="middle">${a} ${u}</text><text x="52" y="52" text-anchor="end">${b} ${u}</text><text x="154" y="52" text-anchor="start">${c} ${u}</text></g></svg>`;
-const NUMW = ['','un','dos','tres','cuatro','cinco','seis','siete','ocho','nueve','diez'];
 // ── Examen Departamental (práctica de EducoSoft): las 30 preguntas EXACTAS, en orden (módulo educo-dep-exacto) ──
 // ── ayudas visuales de las dos prácticas del Examen Departamental (flechas y dibujos marcados) ──
 // "menos menos": 83 − (−31) = 83 + 31
@@ -1258,10 +1218,7 @@ const DEP_EXACTO = [
       resp:'x = 8 pulg, y = 10 pulg', comp:'3/6 = 4/8 = 5/10 = 1/2 ✓', error:'sumar 3 (3 + 3 = 6, 4 + 3 = 7): en figuras semejantes se MULTIPLICA, no se suma.',
       ejemplo:'6 ÷ 3 = 2 → x = 4 × 2 = 8, y = 5 × 2 = 10.' }) })
 ];
-const optX = f => 'x = ' + (f.d===1 ? mm(f.n) : `${mm(f.n)}/${f.d}`);
 // término de un polinomio: coeficiente, letra y exponente → texto
-const termTxt = (c, v, e, primero) => { const ab = Math.abs(c), cs = (ab===1 && e>0) ? '' : String(ab), cuerpo = cs + (e>0 ? v + supE(e) : '');
-  return primero ? (c<0 ? '−' : '') + cuerpo : (c<0 ? ' − ' : ' + ') + cuerpo; };
 // teclado numérico del teléfono a veces no trae signo "-" (iOS, sobre todo) — botón ± como atajo
 function toggleSigno(id){
   const el = $(id);
@@ -1492,7 +1449,9 @@ const DEP_EXACTO2 = [
 ];
 // tema con un banco fijo de preguntas que salen EN ORDEN (una práctica de examen copiada tal cual)
 function _modExamen(id, nombre, banco, cual, facilFn){
-  return { id, nombre, secciones:['5.9'], banco:banco.length, sinReloj:true, _sig:0,   // sinReloj: sin botón "Simulacro con reloj" (pedido de la usuaria)
+  // extra: preguntas fijas, FUERA de la mezcla general y de capítulo (se meten con su casilla o en un grupo). Antes entraban con sus preguntas 1 y 2 en cada mezcla (siempre las mismas
+  // y, como las dos prácticas empiezan con "Resta: 83 − (−31)", esa salía dos veces por ronda): lo mismo que la usuaria pidió quitar de la Tarea y los Quizzes.
+  return { id, nombre, secciones:['5.9'], banco:banco.length, _sig:0, extra:true,
     nuevaRonda(){ this._sig = 0; },
     gen(){
       const C = (n,d=1) => ({n,d}), i = this._sig % banco.length; this._sig++;
@@ -1659,8 +1618,6 @@ function explComparar(a, b){
     error:'comparar los de abajo: con el número de abajo más grande, los pedazos son MÁS chicos.', ejemplo:`${a.n}/${a.d} = ${na}/${m}, ${b.n}/${b.d} = ${nb}/${m} → ${s}.` });
 }
 
-const TRUCO_PERIM = 'TRUCO: perímetro es lo que CAMINAS alrededor de la figura, así que se SUMAN lados — nunca se multiplica largo por ancho (eso sería área). Si la figura tiene lados repetidos, ahorra tiempo: cuadrado y rombo son 4 × lado, rectángulo y romboide son 2 × un lado + 2 × el otro. El círculo es el único sin lados: su vuelta se llama circunferencia y sale de C = 2πr.';
-const TRUCO_AREA = 'TRUCO: área es lo que PINTAS por dentro, y siempre sale de MULTIPLICAR (por eso se mide en unidades cuadradas). Dos señales que ahorran memoria: si la figura termina en punta o se define por dos diagonales (triángulo, rombo, trapecio), la fórmula lleva un ÷ 2; y la altura es la distancia derechita, en escuadra, NUNCA el lado inclinado — si en un problema de área te dan un lado inclinado, es un dato de sobra puesto a propósito.';
 
 // banco de "declaraciones" cortas (cierta o falsa) para el módulo P/Q — cada una calcula su
 // propio valor de verdad `v` a partir de los números que genera, nunca lo afirma por su cuenta
@@ -5402,7 +5359,8 @@ function pantallaAyGaleria(){
    ══════════════════════════════════════════════════════════ */
 const TOL_EXACTA = 1e-7;
 const P10 = k => Math.pow(10, k);
-const dN = v => Math.round(v * 1e9) / 1e9;
+// A partir de ~4 millones un ulp ya pasa de 1e-9 y redondear a 9 decimales deja basura (512.844 × 10,000 daba 5128440.000000001): ahí se limpia por cifras significativas.
+const dN = v => { const r = Math.round(v * 1e9) / 1e9; return Math.abs(r) < 1e6 ? r : Number(v.toPrecision(15)); };
 // número como lo escribe el libro: comas de miles y el signo − (k = lugares decimales fijos, opcional)
 function fd(v, k){
   v = dN(v);
@@ -5460,10 +5418,10 @@ function enLetras(n){
   const m = Math.floor(n/1e6), r = n % 1e6; return (m === 1 ? 'un millón' : _unApoc(enLetras(m)) + ' millones') + (r ? ' ' + enLetras(r) : '');
 }
 const mayus = s => s.charAt(0).toUpperCase() + s.slice(1);
+const deDe = s => /^el /.test(s) ? 'del ' + s.slice(3) : 'de ' + s;   // "de" + lo que sigue, con la contracción: el Sr. Sandoval → del Sr. Sandoval (nunca "de el")
 // nombre en palabras de e.f (f con k lugares), como el libro: "veintisiete y cinco milésimas"
 const nombreDec = (e, f, k) => mayus((e ? enLetras(e) + (f ? ' y ' : '') : '') + (f ? (f === 1 ? 'una ' + LUGAR_SG[k] : enLetras(f) + ' ' + LUGAR_PL[k]) : ''));
 // la parte fraccionaria de un decimal como número entero (27.005 → 5 con 3 lugares)
-const parteFrac = v => { const k = lugares(v); return { k, f: Math.round(dN(Math.abs(v) - Math.trunc(Math.abs(v))) * P10(k)), e: Math.trunc(Math.abs(v)) }; };
 const numDec = (ej) => ({ tipo:'num', respuesta: dN(ej), tol: TOL_EXACTA });
 const opcionesUnicas = (ok, malos) => shuffle([ok, ...[...new Set(malos)].filter(m => m !== ok).slice(0, 3)]);
 // a + b con la regla de los signos (para la explicación)
@@ -5627,7 +5585,9 @@ MODULOS.push(
   gen(nv){
     const tipo = pick(['aDec','aPal','aPal','dePal','aFrac']);
     const k = R(1, porNivel(nv, 2, 3, 4)), e = Math.random() < 0.25 ? 0 : R(1, porNivel(nv, 99, 999, 9999));
-    let f; do { f = R(1, P10(k) - 1); } while(f % 10 === 0 || (f % 10 === 1 && f % 100 !== 11 && f !== 1));
+    // Sin nombres ambiguos: "sesenta y seis centésimas" sería 0.66 y también 60.06 (la "y" de "sesenta y seis" y la "y" del punto se confunden). Si la parte entera acaba en decena
+    // sola (30, 40… 90, 130…) no se usa un numerador de una cifra (1–9) con centésimas o más lugares: así cada nombre se lee de UNA sola manera.
+    let f; do { f = R(1, P10(k) - 1); } while(f % 10 === 0 || (f % 10 === 1 && f % 100 !== 11 && f !== 1) || (k >= 2 && f < 10 && e % 10 === 0 && e % 100 >= 30));
     const v = dN(e + f / P10(k)), den = P10(k), sF = String(f).padStart(k, '0');
     const ceros = k - String(f).length;
     const pasoLug = { t:'Cuenta los ceros de abajo: ese es el número de lugares decimales', l:[`${miles(den)} tiene ${k} cero${k>1?'s':''} → ${cb(k + ' lugar' + (k>1?'es':''))} después del punto (${LUGAR_PL[k]}).`] };
@@ -5657,7 +5617,7 @@ MODULOS.push(
     if(tipo === 'dePal'){
       return { enunciado:`Escribe el número decimal del nombre en palabras:<br><b>${nom}</b>`, ...numDec(v),
         explicacion: receta({ pide:'el número con punto decimal.',
-          pasos:[{ t:'Lo que va antes de la "y" es la parte entera', l:[e ? `"${enLetras(e)}" = ${cb(e)}` : 'No hay "y": la parte entera es 0.'] },
+          pasos:[{ t:'Lo que va antes de la "y" es la parte entera', l:[e ? `"${enLetras(e)}" = ${cb(e)}` : /\by\b/.test(enLetras(f)) ? `No hay una "y" que separe la parte entera (la "y" de "${enLetras(f)}" es parte del número ${f}): la parte entera es 0.` : 'No hay "y": la parte entera es 0.'] },
             { t:'La "y" se cambia por el punto', l:['La palabra "y" (la que separa el entero de las décimas, centésimas…) es el punto decimal.'] },
             { t:`La última palabra dice cuántos lugares: ${LUGAR_PL[k]} = ${k}`, l:[tablaLugares(v, 'ult') + `<div class="dgNota">El último dígito tiene que caer en las ${LUGAR_PL[k]} (en naranja).</div>`, `${f} tiene que terminar en el lugar ${k}${ceros ? `, así que se rellena con ${ceros} cero${ceros>1?'s':''}: .${sF}` : `: .${sF}`}`] }],
           resp: fd(v), comp:`lee ${fd(v)} en voz alta: "${nom.toLowerCase()}".`, error:`no rellenar con ceros: "${f === 1 ? 'una ' + LUGAR_SG[k] : enLetras(f) + ' ' + LUGAR_PL[k]}" necesita ${k} lugares.`,
@@ -5670,7 +5630,7 @@ MODULOS.push(
       tipo:'opciones', opciones: opcionesUnicas(nom, malos), respuesta: nom,
       explicacion: receta({ pide:'cómo se lee el número.',
         pasos:[{ t:'Lee la parte entera (lo de antes del punto)', l:[e ? `${e} → "${enLetras(e)}"` : 'Es 0: no se lee (se empieza por la parte decimal).'] },
-          { t:'El punto se lee "y"', l:[e ? 'Entre la parte entera y la decimal se dice "y".' : 'Como no hay parte entera, tampoco se dice "y".'] },
+          { t:'El punto se lee "y"', l:[e ? 'Entre la parte entera y la decimal se dice "y".' : /\by\b/.test(enLetras(f)) ? `Como no hay parte entera, no se dice la "y" del punto (la "y" de "${enLetras(f)}" es parte del número ${f}).` : 'Como no hay parte entera, tampoco se dice "y".'] },
           { t:'Lee los dígitos de después del punto como un número entero', l:[`.${sF} → "${f === 1 ? 'una' : enLetras(f)}"`] },
           { t:'Termina con el nombre del ÚLTIMO lugar', l:[tablaLugares(v, 'ult'), `El último dígito está en el lugar ${k} → ${cb(LUGAR_PL[k])}`] }],
         resp: nom, error:`decir el nombre del lugar equivocado: ${k} lugares son ${LUGAR_PL[k]}, no ${LUGAR_PL[k === 1 ? 2 : k - 1]}.`,
@@ -5685,7 +5645,7 @@ MODULOS.push(
     if(c === 'c' || c === 'd'){   // dinero
       k = c === 'c' ? 2 : 0; v = decK(10, 9999, c === 'c' ? R(3, 5) : 2);
       const quien = pick(['Juana', 'Carlos', 'Elisa', 'el Sr. Sandoval', 'Rosa']);
-      enun = c === 'c' ? `El balance en la cuenta de ${quien} aparece como $${fd(v)}. ¿Cuál es el balance al <b>centavo</b> más cercano?`
+      enun = c === 'c' ? `El balance en la cuenta ${deDe(quien)} aparece como $${fd(v)}. ¿Cuál es el balance al <b>centavo</b> más cercano?`
                        : `${mayus(quien)} va a deducir $${fd(v)} en su planilla y debe redondear al <b>dólar</b> más cercano. ¿Cuánto puede deducir?`;
       cuando = c === 'c' ? ' (el centavo es la centésima de dólar)' : ' (el dólar es la unidad: se redondea al entero)';
     } else if(c === 'n9'){        // el redondeo "arrastra" nueves: 251.6296 → 251.630
@@ -6474,8 +6434,8 @@ MODULOS.push(
       extra.comp = `${fd(r)} ÷ ${esc} = ${fd(d)} pulgadas ✓`; extra.ej = `${fd(d)} × ${esc} = ${fd(r)} millas`;
     } else if(tipo === 'libras'){
       const pl = decK(0.39, 2.99, 2), dinero = pick([5, 6.5, 7.5, 8, 10, 12.25]); r = redondeaK(dinero / pl, 2);
-      const fruta = pick(['guineos', 'manzanas', 'pollo', 'uvas']);
-      enun = `Si ${fruta === 'pollo' ? 'el pollo cuesta' : 'los ' + fruta + ' cuestan'} ${din(pl)} la libra, ¿cuántas libras se pueden comprar con ${din(dinero)}? Redondea a la centésima.`;
+      const fruta = pick(['los guineos cuestan', 'las manzanas cuestan', 'el pollo cuesta', 'las uvas cuestan']);   // con su artículo: "las manzanas", no "los manzanas"
+      enun = `Si ${fruta} ${din(pl)} la libra, ¿cuántas libras se pueden comprar con ${din(dinero)}? Redondea a la centésima.`;
       pasos = [{ t:'Libras = dinero ÷ precio de UNA libra', l:[diagFilas([din(pl), '1 libra'], [din(dinero), '? libras'], `× ${fd(dN(dinero / pl), 2)}…`, `${din(dinero)} es ${fd(dinero)} ÷ ${fd(pl)} veces ${din(pl)}: alcanza para esas mismas veces 1 libra.`), `${fd(dinero)} ÷ ${fd(pl)}`, ...pasosDivDec(dinero, pl).slice(0, -1), `= ${fd(Math.floor(dinero / pl * 1000) / 1000, 3)}… (con la calculadora)`] },
         { t:'Redondea a la centésima (2 decimales)', l: explRed(dinero / pl, 2) }];
       pide = 'cuántas libras alcanzan con ese dinero.'; error = 'multiplicar el dinero por el precio.';
@@ -6525,7 +6485,7 @@ MODULOS.push(
     } else { // dosPrecios: total T, uno cuesta d menos que el otro
       const caro = decK(40, 2000, 2), d = decK(5, caro / 2, 2), barato = dN(caro - d), T = dN(caro + barato);
       const cosas = pick([['una camiseta', 'una calculadora'], ['la computadora más barata', 'la otra'], ['el disco de 40 GB', 'el de 80 GB']]);
-      return { enunciado:`El costo total de ${cosas[0]} y ${cosas[1]} es ${din(T)}. Si ${cosas[0]} cuesta ${din(d)} menos que ${cosas[1]}, ¿cuál es el costo de cada uno?`,
+      return { enunciado:`El costo total ${deDe(cosas[0])} y ${deDe(cosas[1])} es ${din(T)}. Si ${cosas[0]} cuesta ${din(d)} menos que ${cosas[1]}, ¿cuál es el costo de cada uno?`,
         tipo:'multi', campos:[{ et: mayus(cosas[0]), u:'$', din:true, tol:0.005 }, { et: mayus(cosas[1]), u:'$', din:true, tol:0.005 }], respuesta:[barato, caro],
         explicacion: receta({ pide:'los dos precios.',
           pasos:[{ t:'Llama x al más caro; el otro es x − ' + fd(d), l:[`x + (x − ${fd(d)}) = ${fd(T)}`] }, { t:'Junta las x y quita el − ' + fd(d), l:[`2x = ${fd(T)} + ${fd(d)} = ${fd(dN(T + d))}`] },
@@ -6878,12 +6838,14 @@ MODULOS.push(
           ejemplo:`${fd(C)} ÷ ${miles(B)} = ${fd(dN(T / 100))} = ${fd(T)}%.` }) };
     }
     if(tipo === 'cambio'){
-      const sube = Math.random() < 0.6, V = pick([R(2, 99) * 10, R(10, 900), 50 * R(2, 40)]), p = R(2, 60), N = dN(V * (sube ? 1 + p / 100 : 1 - p / 100));
-      if(lugares(N) > 2) return this.gen(nv);
       const cosa = pick([['El costo de cierto artículo', '$'], ['El número de estudiantes admitidos a una escuela', ''], ['La población de un pueblo', ''], ['El precio de un galón de leche', '$']]);
-      return { enunciado:`${cosa[0]} ${sube ? 'aumentó' : 'bajó'} de ${cosa[1]}${fd(V)} a ${cosa[1]}${fd(N)}. ¿Cuál es el porciento de ${sube ? 'aumento' : 'disminución'}?`, ...numDec(p), ayuda:'Escribe solo el número (sin el %).',
+      const leche = /galón/.test(cosa[0]);   // un galón de leche cuesta pocos dólares (antes salía "de $231 a $249.48")
+      const sube = Math.random() < 0.6, V = leche ? pick([2, 3, 4, 5, 6, 8]) : pick([R(2, 99) * 10, R(10, 900), 50 * R(2, 40)]), p = R(2, 60), N = dN(V * (sube ? 1 + p / 100 : 1 - p / 100));
+      if(lugares(N) > 2) return this.gen(nv);
+      const mo = x => cosa[1] ? '$' + fd(x, 2) : fd(x);   // el dinero siempre con centavos: "$231.00 a $249.48", no "$231 a $249.48"
+      return { enunciado:`${cosa[0]} ${sube ? 'aumentó' : 'bajó'} de ${mo(V)} a ${mo(N)}. ¿Cuál es el porciento de ${sube ? 'aumento' : 'disminución'}?`, ...numDec(p), ayuda:'Escribe solo el número (sin el %).',
         explicacion: receta({ pide:`el porciento de ${sube ? 'aumento' : 'disminución'} (siempre comparado con el valor de ANTES).`,
-          pasos:[{ t:`Cuánto ${sube ? 'aumentó' : 'bajó'}: resta`, l:[diagCadena(`${cosa[1]}${fd(V)} (antes)`, [[`${sube ? '+' : '−'} ${fd(Math.abs(dN(N - V)))} (el cambio)`, `${cosa[1]}${fd(N)} (después)`]], `El cambio es lo que hay entre antes y después; el porciento se saca comparándolo con el de ANTES (${fd(V)}).`), `${fd(Math.max(V, N))} − ${fd(Math.min(V, N))} = ${fd(Math.abs(dN(N - V)))}`] },
+          pasos:[{ t:`Cuánto ${sube ? 'aumentó' : 'bajó'}: resta`, l:[diagCadena(`${mo(V)} (antes)`, [[`${sube ? '+' : '−'} ${fd(Math.abs(dN(N - V)))} (el cambio)`, `${mo(N)} (después)`]], `El cambio es lo que hay entre antes y después; el porciento se saca comparándolo con el de ANTES (${fd(V)}).`), `${fd(Math.max(V, N))} − ${fd(Math.min(V, N))} = ${fd(Math.abs(dN(N - V)))}`] },
             { t:'Divide entre el valor ORIGINAL (el de antes)', l:[`${fd(Math.abs(dN(N - V)))} ÷ ${fd(V)}`, ...pasosDivDec(Math.abs(dN(N - V)), V)] }, { t:'Pásalo a porciento (× 100)', l:[decPct(dN(p / 100))] }],
           resp: p + '%', comp:`${p}% de ${fd(V)} = ${fd(dN(p / 100))} × ${fd(V)} = ${fd(Math.abs(dN(N - V)))}, y ${fd(V)} ${sube ? '+' : '−'} ${fd(Math.abs(dN(N - V)))} = ${fd(N)} ✓`, error:'dividir entre el valor NUEVO: el porciento de cambio se compara con el de antes.',
           ejemplo:`${fd(Math.abs(dN(N - V)))} ÷ ${fd(V)} = ${fd(dN(p / 100))} → ${p}%.` }) };
@@ -7197,11 +7159,9 @@ MODULOS.push(
    aquí también salen al azar. En el curso en línea el 8.1 es "Razones y Proporciones" (no "Entendiendo porciento" del E-Book). ── */
 // estimación frontal (EducoSoft): "redondear al valor posicional mayor" → 7.51 ≈ 8, 85.29 ≈ 90, 1/3 = 0.333 ≈ 0.3
 const frontal = v => { if(v === 0) return 0; const p = Math.pow(10, Math.floor(Math.log10(Math.abs(v)) + 1e-9)); return dN(Math.round(dN(v / p)) * p); };
-const mcN = (ok, malos, k) => opcionesMC(fd(ok, k), malos.map(v => fd(v, k)));          // opción múltiple con números
 const din$ = (v, k = 2) => (v < 0 ? '−$' : '$') + fd(Math.abs(v), k);                      // dinero como lo escribe EducoSoft: −$6,072.31
 const DIN_AYUDA = 'Puedes escribir el $ (por ejemplo $25.50). Si es negativo, el signo va ANTES del $: −$6,072.31.';
 const fracDe = v => { const k = lugares(v); return Fq(Math.round(dN(v) * P10(k)), P10(k)); };   // 0.25 → 1/4
-const optFr = f => f.d === 1 ? mm(f.n) : Math.abs(f.n) < f.d ? frS(f.n, f.d) : mixS((f.n < 0 ? -1 : 1) * Math.floor(Math.abs(f.n) / f.d), Math.abs(f.n) % f.d, f.d);
 // figura de un paralelogramo con la altura punteada (razón de la altura a la base)
 const svgParalelo = (h, lado, b, u) => `<svg viewBox="0 0 300 120" style="width:100%;max-width:300px;height:auto;display:block;margin:8px auto;color:var(--texto)" xmlns="http://www.w3.org/2000/svg">
   <polygon points="40,95 200,95 250,25 90,25" fill="none" stroke="currentColor" stroke-width="2"/><line x1="90" y1="25" x2="90" y2="95" stroke="currentColor" stroke-dasharray="4 3"/>
@@ -7218,12 +7178,11 @@ const svgRectDiag = (b, d) => `<svg viewBox="0 0 300 130" style="width:100%;max-
    práctica y Quiz de 6.2–6.4, 7.1–7.2 y 8.1), sacadas de sus páginas de resultados el 2026-10-20: mismos números, mismas opciones a)–e) y
    mismo orden. Cada una es un tema que sale EN ORDEN (banco + nuevaRonda, como las prácticas del Departamental). ── */
 const px = v => (v < 0 ? '−' : '') + String(Math.abs(dN(v)));                       // número tal cual lo escribe EducoSoft (sin comas de miles)
-const TT = (ej, truco) => `TRUCO: ${truco} Ejemplo con este mismo: ${ej}`;
 // temas = el tema de cada pregunta del banco ("sr sr md …", ver _EDU_TEMAS): de ahí salen los temas "— EducoSoft" (EDU_BANCOS guarda banco y temas de cada evaluación)
 const EDU_BANCOS = {};
 function _modEducoTQ(id, nombre, sec, titulo, banco, temas){
   if(temas) EDU_BANCOS[id] = { banco, temas:temas.split(' ') };
-  return { id, nombre, secciones:[sec], banco:banco.length, sinReloj:true, _sig:0, nuevaRonda(){ this._sig = 0; },
+  return { id, nombre, secciones:[sec], banco:banco.length, _sig:0, nuevaRonda(){ this._sig = 0; },
     gen(){ const i = this._sig % banco.length; this._sig++; const ej = banco[i]();
       ej.enunciado = `<small class="capEsq">Capítulo ${sec[0]}</small>` + ej.enunciado; ej.__n = i; return ej; } };
 }
@@ -7232,7 +7191,6 @@ function _modEducoTQ(id, nombre, sec, titulo, banco, temas){
 // R = { pide, pasos:[{t, l}], comp, error, ejemplo, truco } (la forma de receta(): cada paso con su título y de dónde sale cada número)
 const MCx = (enun, ops, ok, R) => ({ enunciado:enun, tipo:'opciones', opciones:ops, respuesta:ok,
   explicacion: receta({ ...R, resp: ok === NING ? `${NING} (tu resultado no está entre las opciones)` : ok }) });
-const _sN = n => n === 1 ? '' : 's';            // plural
 const _lug = k => `${k} lugar${k === 1 ? '' : 'es'}`;
 const _dec = k => `${k} decimal${k === 1 ? '' : 'es'}`;
 const _corta = (v, k) => lugares(dN(v)) <= k ? fd(dN(v)) : fd(Math.floor(dN(Math.abs(v) * P10(k))) / P10(k) * (v < 0 ? -1 : 1), k) + '…';   // sin redondear: 5.7666… con k cifras (si termina antes, el número tal cual)
@@ -7782,7 +7740,7 @@ const _debajoDe = (id, ref) => { const [m] = MODULOS.splice(MODULOS.findIndex(x 
 // facil[i] = la explicación corta de la pregunta i (con el truco), en forma de receta(); sale con el botón "Fácil" (ver explPorQue)
 const _F = (pide, pasos, ejemplo, truco) => ({ pide, pasos: pasos.map(([t, ...l]) => ({ t, l })), ejemplo, truco });
 function _modParcial(id, nombre, banco, cual, facil){
-  return { id, nombre, secciones:['8.9'], banco:banco.length, _sig:0, extra:true, sinReloj:true,   // extra: preguntas fijas, fuera de la mezcla (se mete con su casilla)
+  return { id, nombre, secciones:['8.9'], banco:banco.length, _sig:0, extra:true,   // extra: preguntas fijas, fuera de la mezcla (se mete con su casilla)
     nuevaRonda(){ this._sig = 0; },
     gen(){
       const i = this._sig % banco.length; this._sig++;
@@ -9315,8 +9273,8 @@ function verificar(ej, ent){
         if(/^\$-/.test(s)) return Math.abs(numLimpio(s.slice(1)) - ej.respuesta) < (ej.tol ?? 0.01)
           ? { ok:false, incompleto:true, msg:`El número está bien, pero el signo va ANTES del $: ${din$(ej.respuesta)}. EducoSoft marca mal "$−…" (te pasó en el Quiz 7.1–7.2).` } : { ok:false };
         ent = s.replace(/^(-?)\$/, '$1');
-      }
-      if(ej.pct) ent = String(ent).replace(/s*%s*$/, '');   // la casilla de EducoSoft trae la tecla % ("212%"): el % es opcional
+      } else ent = String(ent).replace(/\$/g, '');   // los demás temas de dinero también dejan escribir el $ ("$16" = 16); antes decía "Eso no es un número"
+      if(ej.pct) ent = String(ent).replace(/\s*%\s*$/, '');   // la casilla de EducoSoft trae la tecla % ("212%"): el % es opcional (antes la regex era /s*%s*$/ y "212% " con un espacio no se quitaba)
       const v = numLimpio(ent);
       if(String(ent).trim() === '') return { ok:false, vacio:true };
       if(!isFinite(v)) return { ok:false, aviso:true, msg: /\//.test(ent) ? 'Aquí va un número, no una fracción: escríbelo con punto decimal (por ejemplo 1/2 = 0.5).' : 'Eso no es un número. Escribe solo el número (por ejemplo -12 o 3.5).' };
@@ -9752,6 +9710,25 @@ function _limpiarStats(s){
   return o;
 }
 const _limpiarRacha = x => ({ actual:_num0(x && x.actual), mejor:_num0(x && x.mejor) });
+// El historial de días, la racha de días y los errores también se leen de localStorage, que un respaldo importado puede llenar con cualquier cosa
+// y que Progreso e Inicio pintan dentro de HTML: solo fechas AAAA-MM-DD y números.
+const _fechaOk = s => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
+function _limpiarHistorial(h){
+  const o = {};
+  if(h && typeof h === 'object' && !Array.isArray(h)) Object.keys(h).forEach(f => { if(_fechaOk(f)) o[f] = _num0(h[f]); });
+  return o;
+}
+const _limpiarRachaDias = x => ({ actual:_num0(x && x.actual), mejor:_num0(x && x.mejor), ultimoDia:x && _fechaOk(x.ultimoDia) ? x.ultimoDia : null });
+function _limpiarErrores(es){
+  if(!Array.isArray(es)) return [];
+  return es.filter(e => e && typeof e === 'object' && _idOk(e.modId) && e.ej && typeof e.ej === 'object').slice(0, 30).map(e => {
+    const o = { modId:e.modId, ej:e.ej };   // el HTML de ej ya se limpia al importar (_limpiarTodoHTML)
+    if(e.veces !== undefined) o.veces = _num0(e.veces);
+    if(_fechaOk(e.proxima)) o.proxima = e.proxima;
+    if(e.v !== undefined) o.v = _num0(e.v);
+    return o;
+  });
+}
 const _nivelOk = n => ['facil','medio','dificil'].includes(n) ? n : 'medio';
 // HTML de un respaldo importado (los errores guardados traen enunciados con dibujos): se le quitan
 // scripts, iframes y atributos on… / javascript:, el resto (fracciones, SVG) se queda igual
@@ -9786,15 +9763,14 @@ let grupos = _limpiarGrupos(leer('mate_grupos_v1', []));      // [{id, nombre, m
 const idGrupo = () => 'g'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
 let stats  = _limpiarStats(leer('mate_stats_v1', {}));        // { modId:{ok, fallo} }
 let racha  = _limpiarRacha(leer('mate_racha_v1', { actual:0, mejor:0 }));
-let errores = leer('mate_errores_v1', []);          // [{modId, ej}], más reciente primero, tope 30
-let historial = leer('mate_historial_v1', {});      // { "YYYY-MM-DD": cantidad de ejercicios }
-let rachaDias = leer('mate_racha_dias_v1', { actual:0, mejor:0, ultimoDia:null });
+let errores = _limpiarErrores(leer('mate_errores_v1', []));   // [{modId, ej, veces?, proxima?, v?}], más reciente primero, tope 30 (v = cuándo lo fallaste por última vez repasando: el de más atrás sale primero)
+let historial = _limpiarHistorial(leer('mate_historial_v1', {}));      // { "YYYY-MM-DD": cantidad de ejercicios }
+let rachaDias = _limpiarRachaDias(leer('mate_racha_dias_v1', { actual:0, mejor:0, ultimoDia:null }));
 let agruparTema = leer('mate_agrupar_v1', false);   // true = las repeticiones de un mismo tema salen juntas, no mezcladas
 let repetirFallo = leer('mate_repetir_v1', false);  // true = una pregunta fallada vuelve a salir, igual, más adelante en la ronda
 let unoPorTema = leer('mate_uno_v1', false);        // true = la mezcla trae 1 ejercicio de cada tema en vez de VECES_POR_TEMA (los bancos fijos del examen/ayudante no cambian); al tocarlo rehace lo que falta de la ronda en curso (_replanearRonda)
-// [{fecha, correctas, total}], tope 30 — historial de resultados de "Modo examen" (ver
-// finalizarExamen). El modo en sí no tiene botón que lo abra ahora mismo (ver CLAUDE.md,
-// "Modo examen"); esto solo asegura que el resultado quede guardado el día que se reexponga.
+// [{fecha, titulo, correctas, total}], tope 30 — resultados de los simulacros de antes (el modo examen/simulacro se quitó el 2026-10-29, código en el commit 7d54266):
+// ya no se agrega ninguno, solo se muestran en Progreso los que ya estaban guardados.
 let examenes = (Array.isArray(leer('mate_examenes_v1', [])) ? leer('mate_examenes_v1', []) : []).filter(e => e && typeof e === 'object')
   .map(e => ({ fecha:String(e.fecha || '').slice(0, 10), titulo:e.titulo ? String(e.titulo).slice(0, 60) : '', correctas:_num0(e.correctas), total:_num0(e.total) || 1 }));
 
@@ -9829,10 +9805,11 @@ function _rachaDiasVigente(){
   return (rachaDias.ultimoDia === hoy || rachaDias.ultimoDia === ayer) ? rachaDias.actual : 0;
 }
 function _registrarError(ej){
-  // si la MISMA pregunta (repetirFallo la reprograma igual, mismo enunciado) se acaba de
-  // fallar dos veces seguidas dentro de la misma ronda, no la dupliques en la lista — es
-  // el mismo error, no dos distintos
-  if(errores[0] && errores[0].modId === ej.__mod && errores[0].ej.enunciado === ej.enunciado) return;
+  // si la MISMA pregunta (repetirFallo la reprograma igual, mismo enunciado) se vuelve a fallar, no la dupliques
+  // en la lista, esté donde esté — es el mismo error, no dos distintos: sube al frente y su repaso espaciado
+  // vuelve a empezar
+  const j = errores.findIndex(e => e && e.modId === ej.__mod && e.ej && e.ej.enunciado === ej.enunciado);
+  if(j >= 0) errores.splice(j, 1);
   errores.unshift({ modId: ej.__mod, ej });
   errores = errores.slice(0, 30);
   guardar('mate_errores_v1', errores);
@@ -9893,11 +9870,13 @@ function _unirGrupos(a, b){
   const vistos = new Set(a.map(g=>g.id));
   return a.concat(b.filter(g=>!vistos.has(g.id)));
 }
-async function conectarSync(codigo){           // se llama UNA vez, al vincular este aparato
+async function conectarSync(codigo, debeExistir){           // se llama UNA vez, al vincular este aparato
+  // debeExistir = el código lo escribió ella a mano: si no existe es un error de dedo y NO se crea otro espacio vacío (antes decía "conectado" y los dos aparatos no compartían nada)
   const db = await _initFirebase();
   const id = await _hashCodigo(codigo);
   const ref = db.collection('syncs').doc(id);
-  const snap = await ref.get();
+  const snap = debeExistir ? await ref.get({ source:'server' }) : await ref.get();   // 'server': sin internet la caché diría "no existe" aunque exista
+  if(debeExistir && !snap.exists) throw new Error('CODIGO_NO_EXISTE');
   const remoto = snap.exists ? snap.data() : {};
   grupos = _unirGrupos(_limpiarGrupos(remoto.grupos), grupos);
   guardar('mate_grupos_v1', grupos);
@@ -9919,6 +9898,7 @@ async function _reengancharSync(){              // se llama en cada apertura, si
   const db = await _initFirebase();
   const id = await _hashCodigo(syncCode);
   syncDoc = db.collection('syncs').doc(id);
+  _flushSync();       // lo que se contestó mientras no había conexión sube ANTES de escuchar: si no, la copia de la nube pisaba esas respuestas
   _escucharSync();
 }
 function _escucharSync(){
@@ -9929,8 +9909,12 @@ function _escucharSync(){
     if(!d) return;
     // Firestore solo guarda el campo que se incrementó (ok o fallo) — un tema sin fallos
     // nunca queda con esa clave. Se normaliza al recibir para que pct() no dé NaN.
-    if(d.stats) stats = _limpiarStats(d.stats);
-    if(d.racha){ const rr = _limpiarRacha(d.racha); racha.actual = rr.actual; racha.mejor = Math.max(racha.mejor||0, rr.mejor); }
+    if(d.stats){
+      stats = _limpiarStats(d.stats);
+      // lo contestado aquí que todavía no subió (los 4 s de espera) se suma encima: si no, esta copia lo pisaba hasta que subiera
+      if(_syncPendiente) Object.keys(_syncPendiente.stats).forEach(id => { const s = stats[id] || (stats[id] = { ok:0, fallo:0 }); s.ok += _syncPendiente.stats[id].ok; s.fallo += _syncPendiente.stats[id].fallo; });
+    }
+    if(d.racha){ const rr = _limpiarRacha(d.racha); if(!_syncPendiente) racha.actual = rr.actual; racha.mejor = Math.max(racha.mejor||0, rr.mejor); }
     if(d.nivel) nivel = _nivelOk(d.nivel);
     if(d.clase !== undefined) clase = _limpiarClase(d.clase);
     if(d.grupos !== undefined) grupos = _limpiarGrupos(d.grupos);
@@ -9943,20 +9927,35 @@ function _escucharSync(){
 }
 // las escrituras se juntan unos segundos en vez de mandar una por cada respuesta — menos
 // veces que se despierta la radio del teléfono para lo mismo
-let _syncPendiente = null, _syncTimer = null;
+// Lo que espera subirse también queda en el aparato (SYNC_PEND_KEY, sin prefijo mate_ a propósito, como ai_skip_mate_v1: no va al respaldo): si se contesta mientras
+// Firebase todavía carga, o sin internet, o la app se cierra antes de los 4 s, sube en cuanto haya conexión. Antes esas respuestas se perdían
+// porque la copia de la nube (la primera que llega) reemplaza las estadísticas de aquí. Se borra en el mismo instante en que se entrega a Firestore.
+const SYNC_PEND_KEY = 'sync_pend_mate_v1';
+function _syncPendLeer(){
+  if(!syncCode) return null;
+  try{
+    const o = JSON.parse(localStorage.getItem(SYNC_PEND_KEY) || 'null');
+    return o && typeof o === 'object' && o.stats ? { stats:_limpiarStats(o.stats), racha:_limpiarRacha(o.racha) } : null;
+  }catch(e){ return null; }
+}
+let _syncPendiente = _syncPendLeer(), _syncTimer = null;
+function _syncPendGuardar(){
+  try{ if(_syncPendiente) localStorage.setItem(SYNC_PEND_KEY, JSON.stringify(_syncPendiente)); else localStorage.removeItem(SYNC_PEND_KEY); }catch(e){}
+}
 function _empujarSync(modId, ok){
-  if(!syncDoc) return;
+  if(!syncCode) return;   // sin código no hay con quién compartir (al vincular se suma todo lo que ya hay aquí)
   if(!_syncPendiente) _syncPendiente = { stats:{} };
   const p = _syncPendiente.stats[modId] || (_syncPendiente.stats[modId] = { ok:0, fallo:0 });
   p[ok ? 'ok' : 'fallo']++;
   _syncPendiente.racha = { actual: racha.actual, mejor: racha.mejor };
+  _syncPendGuardar();
   clearTimeout(_syncTimer);
-  _syncTimer = setTimeout(_flushSync, 4000);
+  if(syncDoc) _syncTimer = setTimeout(_flushSync, 4000);   // sin conexión todavía: espera en _syncPendiente hasta que _reengancharSync llame a _flushSync
 }
 function _flushSync(){
   clearTimeout(_syncTimer); _syncTimer = null;
   if(!syncDoc || !_syncPendiente) return;
-  const p = _syncPendiente; _syncPendiente = null;
+  const p = _syncPendiente; _syncPendiente = null; _syncPendGuardar();
   const statsInc = {};
   Object.keys(p.stats).forEach(id => {
     statsInc[id] = {};
@@ -9969,6 +9968,7 @@ function desconectarSync(){
   _flushSync();
   if(_syncUnsub) _syncUnsub();
   _syncUnsub = null; syncDoc = null; syncListo = false; syncCode = null;
+  _syncPendiente = null; _syncPendGuardar();   // si nunca llegó a conectar, lo pendiente no se manda a otro código después (sigue en las estadísticas de aquí)
   localStorage.removeItem('mate_sync_code_v1');
 }
 // suelta la conexión en vivo con Firestore cuando la app pasa a segundo plano (batería), y la
@@ -10008,16 +10008,6 @@ function modulosActivos(){
   }
   return MODULOS.filter(m => m.clase === materia && !m.extra);   // "Extra" (Repaso de ayudante) no entra en la mezcla general
 }
-/* sortea uno de "ms" dando más peso a los que van peor — la usa iniciarExamen() (el examen al azar) */
-function elegirDe(ms){
-  const pesos = ms.map(m => {
-    const s = stats[m.id] || { ok:0, fallo:0 };
-    return 1 + s.fallo / (s.ok + s.fallo + 1);
-  });
-  let r = Math.random() * pesos.reduce((a,b)=>a+b, 0);
-  for(let i=0; i<ms.length; i++){ r -= pesos[i]; if(r <= 0) return ms[i]; }
-  return ms[ms.length-1];
-}
 
 /* ══════════════════════════════════════════════════════════
    7. INTERFAZ
@@ -10027,6 +10017,18 @@ const main = $('main');
 // diálogos propios — NUNCA usar window.alert()/confirm()/prompt() para nada nuevo: confirmado
 // con evidencia (devuelven al instante, en 1-2ms, sin bloquear ni mostrar nada) que en el
 // entorno donde se prueba esta app esos tres diálogos nativos quedan suprimidos en silencio.
+// Accesibilidad de los dos diálogos: role="dialog" + aria-modal (el lector de pantalla los anuncia), el foco va al botón principal (y vuelve a donde estaba al cerrar) y
+// Escape los cierra (en confirmarAccion = Cancelar; en avisar = Entendido). Cada uno guarda en el elemento (_escape) lo que hace Escape: sin variables globales,
+// porque avisar() puede llamarse mientras la app arranca (guardar sin espacio) y una `let` declarada más abajo cortaría el arranque.
+var _dlgN = 0;   // var: avisar() puede llamarse antes de llegar a esta línea
+function _abrirDialogo(ov, cerrar){
+  const previo = document.activeElement, id = 'dlgMsg' + (++_dlgN), card = ov.querySelector('.card');
+  ov.classList.add('dlg');
+  if(card){ card.setAttribute('role', 'dialog'); card.setAttribute('aria-modal', 'true'); const msg = card.querySelector('.nota'); if(msg){ msg.id = id; card.setAttribute('aria-labelledby', id); } }
+  document.body.appendChild(ov);
+  const b = ov.querySelector('.btn.amar'); if(b && b.focus) b.focus();
+  return () => { ov.remove(); if(previo && previo.focus && document.contains(previo)) try{ previo.focus(); }catch(e){} };
+}
 function confirmarAccion(mensaje, siConfirma){
   const ov = document.createElement('div');
   ov.className = 'overlay';
@@ -10035,8 +10037,8 @@ function confirmarAccion(mensaje, siConfirma){
     <button class="btn amar">Sí, continuar</button>
     <button class="btn sec" style="margin-bottom:0">Cancelar</button>
   </div>`;
-  document.body.appendChild(ov);
-  const cerrar = () => ov.remove();
+  const cerrar = _abrirDialogo(ov);
+  ov._escape = cerrar;
   ov.querySelector('.btn.amar').onclick = () => { cerrar(); siConfirma(); };
   ov.querySelector('.btn.sec').onclick = cerrar;
   ov.onclick = e => { if(e.target === ov) cerrar(); };   // tocar afuera de la tarjeta cancela
@@ -10050,9 +10052,15 @@ function avisar(mensaje, alCerrar){
     <div class="nota" style="margin:0 0 14px">${mensaje}</div>
     <button class="btn amar" style="margin-bottom:0">Entendido</button>
   </div>`;
-  document.body.appendChild(ov);
-  ov.querySelector('.btn.amar').onclick = () => { ov.remove(); if(alCerrar) alCerrar(); };
+  const cerrar = _abrirDialogo(ov), listo = () => { cerrar(); if(alCerrar) alCerrar(); };
+  ov._escape = listo;
+  ov.querySelector('.btn.amar').onclick = listo;
 }
+document.addEventListener('keydown', e => {
+  if(e.key !== 'Escape') return;
+  const ds = document.querySelectorAll('.overlay.dlg'), arriba = ds[ds.length - 1];
+  if(arriba && arriba._escape){ e.preventDefault(); arriba._escape(); }
+});
 let ejActual = null, modActual = null, respondido = false, vioExpl = false, ordenSel = [];
 let _pantallaActual = null;   // qué pantalla-función se repinta sola si llega un cambio de sync
 let esTemaFijo = false;   // true = practicando un tema concreto, no la mezcla
@@ -10062,7 +10070,6 @@ let _errorActual = null; // el objeto de `errores` que se está mostrando ahora 
                           // se necesita la referencia porque `errores` mezcla todas las materias,
                           // así que ya no alcanza con asumir que siempre es errores[0]
 let modoRepasoRonda = false; // true = repitiendo sesionFallos al terminar una ronda (ver _repasarFallosRonda)
-let examen = null;        // { preguntas:[{ej,ok,completado}], idx, finLimite } o null si no hay examen activo
 let sesionHechos = 0;     // cuántos ejercicios van en esta ronda
 let sesionCorrectos = 0;  // cuántos de esos aciertos, para el resumen al terminar la ronda
 let sesionCola = [];      // mezcla: ids de módulo ya sorteados para esta ronda (2 de cada uno), se van sacando
@@ -10110,7 +10117,7 @@ function _colaDe(ms, veces){
 // Si sobran puestos sin abrir se quitan (los de más de un tema ya cubierto) y los números de página se
 // corren; si faltan se agregan al final. Devuelve true si cambió algo.
 function _replanearRonda(){
-  if(esTemaFijo || modoErrores || modoRepasoRonda || examen || !sesionOrden.length) return false;
+  if(esTemaFijo || modoErrores || modoRepasoRonda || !sesionOrden.length) return false;
   const ms = [...new Set(sesionOrden.filter(id => id !== '*'))].map(id => MOD_POR_ID[id]).filter(Boolean);   // los temas de ESTA ronda
   const obj = {}; ms.forEach(m => obj[m.id] = vecesDe(ms, m));
   const cuenta = {};   // cuántos puestos lleva cada tema (lo abierto cuenta primero)
@@ -10151,14 +10158,14 @@ const _filaProgresoHTML = () => `<div class="racha">
         <div><b>${racha.actual}</b><span>racha actual</span></div>
         <button class="${agruparTema?'on':''}" onclick="toggleAgrupar()"><b>${agruparTema?'Sí':'No'}</b><span>agrupar</span></button>
         <button class="${repetirFallo?'on':''}" onclick="toggleRepetir()"><b>${repetirFallo?'Sí':'No'}</b><span>repetir</span></button>
-      </div>${esTemaFijo || modoErrores || modoRepasoRonda || examen || materia === 'ayud' ? '' : `<div class="racha">
+      </div>${esTemaFijo || modoErrores || modoRepasoRonda || materia === 'ayud' ? '' : `<div class="racha">
         <button class="${unoPorTema?'on':''}" onclick="toggleUnoPorTema()"><b>${unoPorTema?'Sí':'No'}</b><span>1 ejercicio por tema</span></button>
       </div>`}`;
 // mapa de las preguntas de la ronda (en toda ronda, no solo en las del Examen Departamental): verde = bien, rojo = mal,
 // amarillo = viste la explicación sin contestar. Tocar un número va a esa pregunta.
 let _mapaAbierto = true;   // abierto desde el principio (la usuaria lo busca; ontoggle recuerda si lo cierra)
 function _mapaHTML(){
-  if(sesionTotal < 2 || modoErrores || modoRepasoRonda || examen) return '';
+  if(sesionTotal < 2 || modoErrores || modoRepasoRonda) return '';
   const nombre = { ok:', bien', mal:', mal', vista:', viste la explicación' };
   const cuenta = k => Object.values(sesionRes).filter(x => x === k).length;
   const lado = window.matchMedia && matchMedia('(min-width:1240px)').matches;   // en computadora va fijo a la izquierda, sin título: siempre abierto
@@ -10278,20 +10285,23 @@ function guardarSesion(){
     sesionCola, sesionPendientes: sesionPendientes.map(_compactarEj), sesionFallos: sesionFallos.map(_compactarEj), temasEjemploVisto, sesionTotal, sesionIdx, sesionAbiertos, sesionVistos, sesionRes, sesionOrden, ejActual, respondido, vioExpl, ordenSel, ultimoFeedback, ultimoProceso, ultimaEntrada, borrador: _borradorActual() });
 }
 const _borrarPaginasSesion = () => { try{ Object.keys(localStorage).filter(k => k.startsWith('mate_sesion_ej_') || k === 'mate_sesion_ejs_v1').forEach(k => localStorage.removeItem(k)); }catch(e){} };
-const borrarSesion = () => { try{ localStorage.removeItem('mate_sesion_v1'); }catch(e){} _borrarPaginasSesion(); _ejsSucios.clear(); };
+// (también apaga el guardado diferido de lo escrito: si no, a los 700 ms volvía a guardar la ronda que acabas de dejar y al abrir la app salía de nuevo)
+const borrarSesion = () => { clearTimeout(_borradorT); _borradorT = null; try{ localStorage.removeItem('mate_sesion_v1'); }catch(e){} _borrarPaginasSesion(); _ejsSucios.clear(); };
 // lo que se escribe se guarda solo, un momento después de dejar de escribir, y al salir de la app:
 // si Android cierra la app mientras miras otra cosa, al volver está todo donde lo dejaste
 let _borradorT = null;
 const _alEscribir = e => {
-  if(!e.target.closest || !e.target.closest('#zonaProceso, #zonaEntrada') || !modActual || examen || modoErrores || modoRepasoRonda || main.dataset.ej === undefined) return;
+  if(!e.target.closest || !e.target.closest('#zonaProceso, #zonaEntrada') || !modActual || modoErrores || modoRepasoRonda || main.dataset.ej === undefined) return;
   clearTimeout(_borradorT); _borradorT = setTimeout(guardarSesion, 700);
 };
 document.addEventListener('input', _alEscribir);
 document.addEventListener('change', _alEscribir);
 document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'hidden' && _borradorT) guardarSesion(); });
-function restaurarSesion(){
+// forzar = ella pidió seguir (botón "Seguir la ronda" o el atajo de un tema): una ronda PAUSADA no se abre sola al arrancar la app, queda esperando en Inicio
+function restaurarSesion(forzar){
   const s = leer('mate_sesion_v1', null);
   if(!s || !MOD_POR_ID[s.modId] || !s.ejActual) return false;
+  if(s.pausada && !forzar) return false;
   // una ronda guardada que trae un tema que ya no existe (se quitó) se descarta entera: seguirla se atoraría al llegar a su turno
   const ids = [...(s.sesionOrden || []), ...(s.sesionCola || []), ...(s.sesionPendientes || []).map(p => p && p.modId), ...(s.sesionFallos || []).map(p => p && p.modId)];
   if(!ids.every(id => id == null || id === '*' || MOD_POR_ID[id])){ borrarSesion(); return false; }
@@ -10326,7 +10336,32 @@ function restaurarSesion(){
   }
   if(respondido && ultimoFeedback) mostrarFb(ultimoFeedback, false);   // ya contestó de verdad
   else if(vioExpl) _pintarVistaExplicacion();                          // solo vio la explicación, sigue pudiendo responder
+  if(s.pausada) guardarSesion();   // ya no está pausada: si cierra la app ahora, al abrirla sigue donde iba
   return true;
+}
+// "← Inicio" a mitad de ronda: la ronda NO se pierde, se pausa. Inicio muestra "Seguir la ronda (N/total)"; al reabrir la app queda esperando ahí
+// (restaurarSesion no la abre sola). Se reemplaza al empezar otra ronda y se borra al terminarla. Antes salir a Inicio la borraba sin preguntar.
+function pausarRonda(){
+  if(modActual && ejActual && !modoErrores && !modoRepasoRonda){
+    guardarSesion();   // lo último que había (incluye lo escrito sin comprobar)
+    const s = leer('mate_sesion_v1', null);
+    if(s){ s.pausada = true; guardar('mate_sesion_v1', s); }
+  }
+  ir('inicio');
+}
+function seguirRonda(){
+  const s = leer('mate_sesion_v1', null), m = s && MOD_POR_ID[s.modId];
+  if(m && m.clase !== materia){ materia = m.clase; guardar('mate_materia_v1', materia); }
+  if(!restaurarSesion(true)) pantallaInicio();   // ya no se pudo abrir (p. ej. un tema que se quitó): Inicio sin el botón
+}
+// el botón de Inicio: solo si hay una ronda pausada de la materia que se está viendo
+function _rondaPausadaHTML(){
+  const s = leer('mate_sesion_v1', null), m = s && s.pausada && MOD_POR_ID[s.modId];
+  if(!m || !s.ejActual || m.clase !== materia || !(s.sesionTotal > 0)) return '';
+  const hechas = Object.keys(s.sesionRes || {}).length;
+  const donde = s.esTemaFijo ? m.nombre : s.capFijo ? nombreCapitulo(s.capFijo) : (clase && clase.mods && clase.mods.length ? clase.etiqueta : 'Todos los temas mezclados');
+  return `<button class="btn amar" onclick="seguirRonda()">Seguir la ronda (${hechas}/${s.sesionTotal})
+        <small>${escHtml(donde)} · vas en la pregunta ${(s.sesionIdx || 0) + 1}</small></button>`;
 }
 
 // barra flotante de abajo — cada pantalla llama esto con su pestaña (o con null para
@@ -10693,6 +10728,7 @@ document.addEventListener('keydown', e => {
 document.addEventListener('keydown', e => {
   if(e.key !== 'Enter') return;
   if($('calcOv').style.display === 'flex') return;   // la calculadora ya maneja su propio Enter
+  if(document.querySelector('.overlay.dlg')) return;  // con un aviso abierto, Enter es de su botón (que ya tiene el foco): no debe pasar de ejercicio por detrás
   if(e.target && /^inP\d+$/.test(e.target.id || '')){   // Enter en un paso: al siguiente paso (o agrega uno), no avanza
     e.preventDefault(); const sig = $('inP' + (+e.target.id.slice(3) + 1)); if(sig) sig.focus(); else agregarPaso(); return;
   }
@@ -10713,16 +10749,20 @@ document.addEventListener('keydown', e => {
 });
 
 let _swReloadPendiente = false;   // ver el listener 'controllerchange' en ARRANQUE
+// Una ronda PAUSADA ("← Inicio" a mitad de ronda, ver pausarRonda) se queda guardada para "Seguir la ronda" en Inicio: ni cambiar de pantalla ni una recarga la borran.
+// Se reemplaza al empezar otra ronda y se borra al terminarla.
+const _sesionPausada = () => { const s = leer('mate_sesion_v1', null); return !!(s && s.pausada); };
 function ir(pantalla, arg, continuar){
-  // una versión nueva esperando se pone al cambiar de pantalla, pero NO al seguir practicando ("Siguiente"): recargar ahí te devolvía a la pregunta que acababas de contestar
-  if(_swReloadPendiente && pantalla !== 'practica'){ window.location.reload(); return; }
+  const pausada = pantalla !== 'practica' && _sesionPausada();
+  // una versión nueva esperando se pone al cambiar de pantalla, pero NO al seguir practicando ("Siguiente"): recargar ahí te devolvía a la pregunta que acababas de contestar.
+  // Antes de recargar se borra la ronda como en un cambio de pantalla normal: si no, al abrir la app volvía a salir la misma pregunta (restaurarSesion).
+  if(_swReloadPendiente && pantalla !== 'practica'){ if(!pausada) borrarSesion(); window.location.reload(); return; }
   cerrarMenuGrupos();   // cambiar de pantalla no debe dejar la tarjeta flotando encima
   cerrarCalc();         // ni la calculadora abierta
   window.scrollTo(0,0);
-  if(pantalla !== 'practica') borrarSesion();   // salir de la práctica = ronda terminada
+  if(pantalla !== 'practica' && !pausada) borrarSesion();   // salir de la práctica = ronda terminada (salvo que esté pausada)
   // salir de examen/errores sin terminar no debe dejar el modo "pegado" — si no, el modo
   // práctica normal queda contaminado (responder() y el botón "Siguiente" siguen esas reglas)
-  if(pantalla !== 'examen'){ examen = null; clearInterval(_examenTimerIv); }
   if(pantalla !== 'errores') modoErrores = false;
   modoRepasoRonda = false;   // no hay pantalla dedicada — cualquier ir() cancela el repaso de la ronda
   // _pantallaActual solo debe apuntar a Inicio/Progreso mientras de verdad estás ahí — si no,
@@ -10741,7 +10781,6 @@ function ir(pantalla, arg, continuar){
   if(pantalla === 'sync')     return pantallaSync();
   if(pantalla === 'datos')    return pantallaDatos();
   if(pantalla === 'ia')       return pantallaIA();
-  if(pantalla === 'examen')   return iniciarExamen(arg);
   if(pantalla === 'errores')  return pantallaErrores();
   if(pantalla === 'ayLeer')   return pantallaAyLeer(arg);
   if(pantalla === 'ayGaleria') return pantallaAyGaleria();
@@ -10813,16 +10852,58 @@ function clearAiKey(){
     pantallaIA();
   });
 }
+// Respuesta por partes (como Fit F): con un chat esperando, aiGenEnviar pone _aiStreamCb y _aiJSON pide la respuesta con streamGenerateContent (SSE);
+// de lo que va llegando se saca el texto de "respuesta" (aunque el JSON esté a medias) y el chat lo va pintando con un cursor.
+let _aiStreamCb = null;
+function _aiRespuestaParcial(txt){
+  const m = /"respuesta"\s*:\s*"/.exec(txt); if(!m) return '';
+  const esc = { n: '\n', t: ' ', r: '', b: '', f: '' };
+  let i = m.index + m[0].length, out = '';
+  while(i < txt.length){
+    const c = txt[i];
+    if(c === '"') break;
+    if(c === '\\'){
+      const n = txt[i + 1]; if(n === undefined) break;
+      if(n === 'u'){ const h = txt.slice(i + 2, i + 6); if(h.length < 4) break; out += String.fromCharCode(parseInt(h, 16)); i += 6; continue; }
+      out += n in esc ? esc[n] : n; i += 2; continue;
+    }
+    out += c; i++;
+  }
+  return out;
+}
+// Lee una respuesta SSE ("data: {json}" por línea) y junta el texto; cada vez que llega algo llama alLlegar(textoHastaAhora)
+async function _aiLeerStream(r, alLlegar){
+  const rd = r.body.getReader(), dec = new TextDecoder();
+  let buf = '', txt = '';
+  const linea = l => {
+    l = l.trim(); if(!l.startsWith('data:')) return;
+    try{ const d = JSON.parse(l.slice(5)); txt += (d.candidates?.[0]?.content?.parts || []).filter(p => !p.thought).map(p => p.text || '').join(''); }catch(e){}
+  };
+  for(;;){
+    const { done, value } = await rd.read();
+    if(value) buf += dec.decode(value, { stream: true });
+    let k;
+    while((k = buf.indexOf('\n')) >= 0){ linea(buf.slice(0, k)); buf = buf.slice(k + 1); }
+    if(done){ linea(buf); break; }
+    if(txt) alLlegar(txt);
+  }
+  return txt;
+}
 // Una llamada a Gemini que devuelve JSON con la forma de `schema` (la API lo garantiza con
 // responseSchema). Lanza un Error cuyo message es un aviso listo para mostrar.
 async function _aiJSON(prompt, schema, extraParts){
   const key = getAiKey();
   if(!key) throw new Error('Primero pega tu clave en Ajustes → Inteligencia artificial');
-  const body = JSON.stringify({
-    contents: [{ parts: [{ text: prompt }, ...(extraParts || [])] }],
-    generationConfig: { responseMimeType: 'application/json', responseSchema: schema }
+  // hay un chat esperando que pinta la respuesta por partes: se toma aquí, de una, para que otra pregunta no lo use
+  const stream = _aiStreamCb; _aiStreamCb = null;
+  // Con foto: que piense más (HIGH) y la foto en alta resolución (_aiFotosParts). Si un modelo no acepta esos ajustes (400) se repite UNA vez sin ellos, solo a ese modelo.
+  const conFoto = (extraParts || []).some(p => p && p.inline_data);
+  const armar = conAjustes => JSON.stringify({
+    contents: [{ parts: [{ text: prompt }, ...(extraParts || []).map(p => { if(conAjustes || !p.mediaResolution) return p; const { mediaResolution, ...resto } = p; return resto; })] }],
+    generationConfig: { responseMimeType: 'application/json', responseSchema: schema, ...(conAjustes && conFoto ? { thinkingConfig: { thinkingLevel: 'HIGH' } } : {}) }
   });
-  let r;
+  const body = armar(true), bodySimple = conFoto ? armar(false) : body;
+  let r, simple = false, ctl = null, modeloIntento = '';
   const now = Date.now();
   // el último (Flash-Lite, 500 al día gratis) NUNCA queda fuera por estar en pausa: así siempre hay a quién preguntarle
   const lista = AI_MODELS.filter((m, k) => k === AI_MODELS.length - 1 || !(_aiSkipUntil[m] > now));
@@ -10830,16 +10911,22 @@ async function _aiJSON(prompt, schema, extraParts){
   const cuotas = [];   // lo que dijo Google en cada 429, para saber si el límite es por minuto o por día
   for(let i = 0; i < lista.length; i++){
     const model = lista[i], ultimo = i === lista.length - 1;
+    if(model !== modeloIntento){ simple = false; modeloIntento = model; }   // quitar los ajustes es por modelo: el siguiente vuelve a intentarlos
     try{
-      // 10 s por modelo (un 503 saturado llegó a tardar 13 s); el último espera 30 s
-      r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-        method: 'POST',
-        headers: { 'x-goog-api-key': key, 'Content-Type': 'application/json' },
-        body,
-        signal: AbortSignal.timeout(ultimo ? 30000 : 10000)
-      });
+      // 10 s por modelo (un 503 saturado llegó a tardar 13 s); el último espera 30 s. Con foto se espera más (subirla y mirarla en alta resolución tarda).
+      // El tiempo cuenta hasta que el modelo EMPIEZA a contestar: con respuesta por partes las primeras letras llegan enseguida y el resto tiene más tiempo (abajo).
+      ctl = new AbortController();
+      const tEspera = setTimeout(() => ctl.abort(new DOMException('La IA tardó demasiado', 'TimeoutError')), conFoto ? (ultimo ? 45000 : 25000) : (ultimo ? 30000 : 10000));
+      try{
+        r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:${stream ? 'streamGenerateContent?alt=sse' : 'generateContent'}`, {
+          method: 'POST',
+          headers: { 'x-goog-api-key': key, 'Content-Type': 'application/json' },
+          body: simple ? bodySimple : body,
+          signal: ctl.signal
+        });
+      } finally { clearTimeout(tEspera); }
     }catch(e){
-      if(e.name === 'TimeoutError'){
+      if(e.name === 'TimeoutError' || e.name === 'AbortError'){
         if(!ultimo){ _aiSkipUntil[model] = now + AI_SKIP_MS; continue; }
         throw new Error('La IA tardó demasiado — inténtalo de nuevo');
       }
@@ -10851,6 +10938,8 @@ async function _aiJSON(prompt, schema, extraParts){
     }
     // el último no tiene a cuál pasar: un 500/503 suele ser un pico de un segundo, se reintenta una vez
     if(ultimo && [500, 503].includes(r.status) && !reintentado){ reintentado = true; i--; await new Promise(ok => setTimeout(ok, 1500)); continue; }
+    // con foto, un 400 puede ser que ese modelo no acepte la alta resolución o "pensar más": se repite sin esos ajustes
+    if(r.status === 400 && conFoto && !simple){ simple = true; i--; continue; }
     if(![404, 429, 500, 503].includes(r.status)) break;
     let sinCupo = false;
     if(r.status === 429){
@@ -10874,15 +10963,26 @@ async function _aiJSON(prompt, schema, extraParts){
     if(r.status === 401 || r.status === 403 || /API.?key|API_KEY/i.test(msg)) throw new Error('La clave de IA no funciona — revísala en Ajustes');
     throw new Error(r.status === 400 ? 'La IA no pudo con eso — prueba con otra foto o texto' : 'La IA no respondió — inténtalo de nuevo');
   }
-  const d = await r.json();
-  const txt = (d.candidates?.[0]?.content?.parts || []).filter(p => !p.thought).map(p => p.text || '').join('');
+  let txt;
+  if(stream && r.body && r.body.getReader){
+    // ya empezó a contestar: tiene hasta 90 s (2 min con foto) para terminar de escribir
+    const tFin = setTimeout(() => ctl.abort(new DOMException('La IA tardó demasiado', 'TimeoutError')), conFoto ? 120000 : 90000);
+    try{ txt = await _aiLeerStream(r, t => { const p = _aiRespuestaParcial(t); if(p) stream(p); }); }
+    catch(e){
+      throw e.name === 'TimeoutError' || e.name === 'AbortError' ? new Error('La IA tardó demasiado — inténtalo de nuevo')
+        : new Error('Se cortó la conexión con la IA — inténtalo de nuevo');
+    } finally { clearTimeout(tFin); }
+  } else {
+    const d = await r.json();
+    txt = (d.candidates?.[0]?.content?.parts || []).filter(p => !p.thought).map(p => p.text || '').join('');
+  }
   try{ return JSON.parse(txt); }
   catch(e){ throw new Error('La IA no respondió bien — inténtalo de nuevo'); }
 }
 // Foto → { mime, data } en base64, achicada (una foto del teléfono pesa varios MB). Fondo blanco:
 // un PNG transparente pasado a JPEG sale con fondo NEGRO y la letra negra desaparece.
 async function _imgParaIA(file, max){
-  max = max || 1024;
+  max = max || 2048;   // como Fit F: la letra de un cuaderno a mano se lee mal a 1024 px
   try{
     const bmp = await createImageBitmap(file);
     const k = Math.min(1, max / Math.max(bmp.width, bmp.height));
@@ -10891,11 +10991,15 @@ async function _imgParaIA(file, max){
     const ctx = c.getContext('2d');
     ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
     ctx.drawImage(bmp, 0, 0, c.width, c.height);
-    return { mime: 'image/jpeg', data: c.toDataURL('image/jpeg', 0.82).split(',')[1] };
+    return { mime: 'image/jpeg', data: c.toDataURL('image/jpeg', 0.85).split(',')[1] };
   }catch(e){
     const data = await new Promise((ok, fail) => { const fr = new FileReader(); fr.onload = () => ok(String(fr.result).split(',')[1]); fr.onerror = fail; fr.readAsDataURL(file); });
     return { mime: file.type || 'image/jpeg', data };
   }
+}
+// La foto del chat → parte para Gemini, en alta resolución (los modelos 3.x lo aceptan por foto; si alguno no, _aiJSON repite la llamada sin ese ajuste).
+function _aiFotosParts(img){
+  return img ? [{ inline_data: { mime_type: img.mime, data: img.data }, mediaResolution: { level: 'MEDIA_RESOLUTION_HIGH' } }] : undefined;
 }
 function pantallaIA(){
   _barra('ajustes');
@@ -11062,12 +11166,17 @@ let _aiRondaId = 0;    // sube al terminar cada ronda: un chat por ronda
 function aiEjAbrir(f, btn, id) {
   if (!ejActual) return;
   if (!respondido && !vioExpl) return confirmarAccion('Pedir ayuda a la IA cuenta como ver la explicación: este ejercicio ya no sumará a tus estadísticas. ¿Seguir?',
-    () => { vioExpl = true; ultimoProceso = leerProceso(); guardarSesion(); aiGenAbrir(f, btn, id); });
+    () => {
+      vioExpl = true; ultimoProceso = leerProceso();
+      // igual que "Ver explicación": la página queda marcada (amarillo) para que, si te vas a otra con "Pág." y vuelves, siga sin contar
+      if (!modoErrores && !modoRepasoRonda) { sesionVistos[sesionIdx] = true; if (!sesionRes[sesionIdx]) sesionRes[sesionIdx] = 'vista'; _repintarFilaProgreso(); }
+      guardarSesion(); aiGenAbrir(f, btn, id);
+    });
   aiGenAbrir(f, btn, id);
 }
 const _AIG = {
   ej: {
-    titulo: 'Ayuda con este ejercicio', aria: 'Pedirle ayuda a la IA con este ejercicio', ph: 'Ej: no entiendo el paso 2', foto: true, fotoMax: 1600, abrir: 'aiEjAbrir',
+    titulo: 'Ayuda con este ejercicio', aria: 'Pedirle ayuda a la IA con este ejercicio', ph: 'Ej: no entiendo el paso 2', foto: true, fotoMax: 2048, abrir: 'aiEjAbrir',
     saludo: 'Pregúntame lo que quieras de este ejercicio: puedo revisar tu proceso (también con una foto de tu cuaderno), explicártelo de otra forma o darte una pista. Yo no decido si tu respuesta está bien: eso lo hace la app.',
     chips: ['Revisa mi proceso', 'Explícamelo de otra forma', 'Dame una pista'],
     seguir: ['Otra explicación distinta', '¿Y qué hago ahora?', 'Dímelo más simple'],
@@ -11094,7 +11203,7 @@ const _AIG = {
         'Máximo 6 oraciones. "paso" es 0 si no aplica.' +
         (revelada ? '' : ' ELLA TODAVÍA NO HA CONTESTADO: NO reveles la respuesta final ni el resultado; si revisas su proceso, dile si los pasos van bien y cuál sería el siguiente, sin hacerlo por ella.'),
         { type: 'OBJECT', properties: { respuesta: { type: 'STRING' }, paso: { type: 'INTEGER' } }, required: ['respuesta', 'paso'] },
-        img ? [{ inline_data: { mime_type: img.mime, data: img.data } }] : undefined);
+        _aiFotosParts(img));
       const resp = String(res.respuesta || '').trim().slice(0, 900);
       if (!resp) throw new Error('La IA no respondió bien — inténtalo de nuevo');
       let paso = Number.isInteger(res.paso) ? res.paso : 0;
@@ -11105,7 +11214,7 @@ const _AIG = {
     }
   },
   tarea: {
-    titulo: 'Foto de mi tarea', aria: 'Mandarle a la IA la foto de un problema de tu tarea', ph: 'Ej: no sé cómo empezar', foto: true, fotoMax: 1600,
+    titulo: 'Foto de mi tarea', aria: 'Mandarle a la IA la foto de un problema de tu tarea', ph: 'Ej: no sé cómo empezar', foto: true, fotoMax: 2048,
     saludo: 'Mándame la foto de un problema de tu tarea o de tu libro (toca la cámara). Te digo qué problema es y de qué tema, y te doy una pista para empezar: no la solución.',
     chips: [], seguir: ['Dame otra pista', 'No entiendo la pista'],
     clave: () => 'tarea:' + materia, ctx: () => ({ materia }),
@@ -11120,7 +11229,7 @@ const _AIG = {
         'En "tema" pon el id EXACTO del tema de la lista que más se parece, o "" si ninguno encaja o el problema no es de esta materia. Si la foto no se entiende, dilo en "respuesta" y deja lo demás vacío.\n\n' +
         'TEMAS DE ESTA MATERIA (id: nombre):\n' + ms.map(m => m.id + ': ' + m.nombre).join('\n'),
         { type: 'OBJECT', properties: { respuesta: { type: 'STRING' }, tema: { type: 'STRING' }, pista: { type: 'STRING' } }, required: ['respuesta', 'tema', 'pista'] },
-        img ? [{ inline_data: { mime_type: img.mime, data: img.data } }] : undefined);
+        _aiFotosParts(img));
       const resp = String(res.respuesta || '').trim().slice(0, 600);
       if (!resp) throw new Error('La IA no respondió bien — inténtalo de nuevo');
       const tema = ids.has(res.tema) ? res.tema : '', pista = String(res.pista || '').trim().slice(0, 400);
@@ -11274,14 +11383,14 @@ function _aiGenRender() {
   if (!msgs.length) h += chips(cfg.chips);
   msgs.forEach((m, k) => {
     if (m.rol === 'yo') h += `<div class="aic-m yo">${m.foto ? '<div class="aic-fotol">Foto adjunta</div>' : ''}${escHtml(m.texto)}</div>`;
-    else if (m.cargando) h += `<div class="aic-m ia"><span class="aic-puntos" aria-label="La IA está pensando"><i></i><i></i><i></i></span></div>`;
+    else if (m.cargando) h += `<div class="aic-m ia" data-k="${k}">${m.parcial ? escHtml(m.parcial) + '<span class="aic-cursor" aria-hidden="true"></span>' : '<span class="aic-puntos" aria-label="La IA está pensando"><i></i><i></i><i></i></span>'}</div>`;
     else if (m.error) h += `<div class="aic-m ia">${escHtml(m.error)}<button type="button" class="aic-act sec" onclick="aiGenReintentar()">Reintentar</button></div>`;
     else h += `<div class="aic-m ia">${escHtml(_aiGenTxt(m))}${(m.acciones || []).map((a, j) => {
       if (a.activo && !a.activo()) return '';
       const lab = typeof a.label === 'function' ? a.label() : a.label, sub = typeof a.sub === 'function' ? a.sub() : a.sub;
       const btn = `<button type="button" class="aic-act" onclick="aiGenAccion(${k},${j})">${a.editar ? `<span class="aic-tit">${escHtml(lab)}</span>` : escHtml(lab)}${sub ? `<small>${escHtml(sub)}</small>` : ''}</button>`;
       return a.editar ? `<div class="aic-actw">${btn}<button type="button" class="aic-edit" onclick="aiGenEditar(${k},${j})" aria-label="Editar lo que se va a anotar">Editar</button></div>` : btn;
-    }).join('')}</div>`;
+    }).join('')}${_aiGenTxt(m) ? `<div class="aic-pie"><button type="button" class="aic-copiar" onclick="aiGenCopiar(${k})" aria-label="Copiar esta respuesta">Copiar</button></div>` : ''}</div>`;
   });
   const ult = msgs[msgs.length - 1];
   if (ult && ult.rol === 'ia' && !ult.cargando && !ult.error) h += chips(cfg.seguir);   // seguimientos tocables, como en un chat
@@ -11290,6 +11399,28 @@ function _aiGenRender() {
 }
 // El texto de una respuesta: fijo, o calculado en cada pintado (textoFn) cuando algo del mensaje se puede editar
 function _aiGenTxt(m) { return m.textoFn ? m.textoFn() : m.texto; }
+// "Copiar" bajo cada respuesta
+function _aiCopiar(texto, aviso) {
+  const ok = () => showToast(aviso || 'Copiado'), mal = () => showToast('No se pudo copiar');
+  try { navigator.clipboard.writeText(texto).then(ok, mal); } catch (e) { mal(); }
+}
+function aiGenCopiar(k) {
+  const g = _aiGen, m = g && (_aiGenMsgs[g.clave] || [])[k];
+  if (m) _aiCopiar(String(_aiGenTxt(m) || ''), 'Respuesta copiada');
+}
+// Respuesta por partes: pinta solo la burbuja que se está escribiendo (no todo el chat), a lo sumo cada 40 ms
+let _aiParcialT = 0;
+function _aiGenParcial(g, pos) {
+  if (!_aiGen || _aiGen.clave !== g.clave) return;
+  if (_aiParcialT) return;   // ya hay un pintado en camino: leerá el texto más nuevo
+  _aiParcialT = setTimeout(() => {
+    _aiParcialT = 0;
+    const el = document.querySelector('#aigMsgs [data-k="' + pos + '"]'), m = (_aiGenMsgs[g.clave] || [])[pos];
+    if (!el || !m || !m.cargando) return;
+    el.innerHTML = escHtml(m.parcial || '') + '<span class="aic-cursor" aria-hidden="true"></span>';
+    const box = document.getElementById('aigMsgs'); if (box) box.scrollTop = box.scrollHeight;
+  }, 40);
+}
 function aiGenChip(j) { if (_aiGenChips[j]) aiGenEnviar(_aiGenChips[j]); }
 function aiGenAccion(k, j) {
   const g = _aiGen; if (!g) return;
@@ -11379,7 +11510,11 @@ async function aiGenEnviar(texto) {
   _aiGenRender();
   let resp, efecto = null;
   try {
-    const r = await _AIG[g.f].enviar(q, previos, g.ctx, img);
+    // la respuesta se va viendo mientras llega: _aiJSON toma este aviso en cuanto empieza (de una, así que cada pregunta usa el suyo) y lo llama con lo que va del campo "respuesta"
+    _aiStreamCb = parcial => { const m = msgs[pos]; if (!m || !m.cargando || _aiGenMsgs[g.clave] !== msgs) return; m.parcial = parcial; _aiGenParcial(g, pos); };
+    const pedido = _AIG[g.f].enviar(q, previos, g.ctx, img);
+    _aiStreamCb = null;   // si enviar() no llegó a _aiJSON enseguida (esperó algo antes), esta pregunta simplemente no se ve por partes
+    const r = await pedido;
     resp = { rol: 'ia', texto: r.texto, textoFn: r.textoFn, acciones: r.acciones || [] };
     efecto = r.efecto || null;
   } catch (e) {
@@ -11413,6 +11548,28 @@ function aiTareaHTML() {   // Inicio
 }
 
 /* ---------- inicio ---------- */
+/* ---------- práctica rápida: lo que más fallas ---------- */
+// Los temas de la materia donde más fallas (con al menos RAPIDA_MIN ejercicios hechos y menos de RAPIDA_META % de aciertos), los más flojos primero y hasta RAPIDA_TEMAS:
+// se mezclan como cualquier otra mezcla (2 preguntas de cada uno: 10 con 5 temas). Fuera quedan los bancos fijos (las prácticas del examen) y Repaso de ayudante: sus preguntas no cambian.
+const RAPIDA_MIN = 3, RAPIDA_META = 85, RAPIDA_TEMAS = 5;
+function _temasFlojos(){
+  if(materia === 'ayud') return [];
+  return MODULOS.filter(m => m.clase === materia && !m.extra && !m.banco && !m.nuevaRonda && stats[m.id] && stats[m.id].ok + stats[m.id].fallo >= RAPIDA_MIN && pct(stats[m.id]) < RAPIDA_META)
+    .sort((a, b) => pct(stats[a.id]) - pct(stats[b.id]) || (stats[b.id].ok + stats[b.id].fallo) - (stats[a.id].ok + stats[a.id].fallo))
+    .slice(0, RAPIDA_TEMAS);
+}
+function _rapidaHTML(){
+  const fl = _temasFlojos();
+  return fl.length ? `<button class="btn sec chico" onclick="practicaRapida()">Práctica rápida: lo que más fallas
+        <small>${tamanoMezcla(fl)} preguntas de ${fl.length === 1 ? 'tu tema más flojo' : `tus ${fl.length} temas más flojos`}</small></button>` : '';
+}
+function practicaRapida(){
+  const fl = _temasFlojos(); if(!fl.length) return;
+  clase = { etiqueta:'Práctica rápida: lo que más fallas', mods: fl.map(m => m.id) };
+  guardar('mate_clase_v1', clase);
+  if(syncDoc) syncDoc.set({clase},{merge:true}).catch(()=>{});
+  ir('practica');
+}
 function pantallaInicio(){
   _pantallaActual = pantallaInicio;
   _barra('inicio');
@@ -11431,6 +11588,7 @@ function pantallaInicio(){
     </div>` : ''}
     <div class="card">
       ${bannerClase}
+      ${_rondaPausadaHTML()}
       <button class="btn amar" onclick="ir('practica')">Empezar a practicar
         <small>${clase && clase.mods.length ? nTemas(clase.mods.length)+' de tu clase' : 'todos los temas mezclados'} · ${tamanoMezcla(modulosActivos())} preguntas</small></button>
       ${_rachaViva > 0 ? `<div class="nota">🔥 ${_rachaViva} ${_rachaViva===1?'día seguido':'días seguidos'} practicando (mejor: ${rachaDias.mejor})</div>` : ''}
@@ -11438,6 +11596,7 @@ function pantallaInicio(){
         <button class="btn sec chico" onclick="menuGrupos(event)">Grupos de examen<span class="flechita">▾</span></button>
         <button class="btn sec chico" onclick="ir('errores')">Repasar mis errores${erroresParaHoy().length?` (${erroresParaHoy().length})`:''}</button>
       </div>
+      ${_rapidaHTML()}
     </div>
     ${ayudMaterialHTML()}
     ${aiTareaHTML()}`;
@@ -11463,27 +11622,42 @@ function toggleSelTema(id, on){
   guardar('mate_seltemas_v1', selTemas);
   const cap = MOD_POR_ID[id].secciones[0][0], el = $('mzl_' + cap); if(el) el.textContent = _mezclaTexto(cap);
 }
+// una fila de la lista de temas: el botón del tema (con su porcentaje) y, en Álgebra y Repaso de ayudante, su casilla. conCap = en los resultados de la búsqueda también dice de qué capítulo es
+function _filaTemaHTML(m, conCap){
+  const s = stats[m.id], p = s ? pct(s) : null;
+  const btnTema = `<button class="btn sec chico${m.tag ? ' conTag' : ''}" onclick="ir('practica','${m.id}')">${m.nombre}${ayTagHTML(m)}
+    ${conCap ? `<small>${nombreCapitulo(m.secciones[0][0])}</small>` : ''}${_otroLado(m) ? `<small>${_otroLado(m)}</small>` : ''}${p!==null ? `<small>${p}% de aciertos · ${s.ok+s.fallo} ejercicios</small>` : ''}</button>`;
+  return _conCasillas() ? `<div class="temaFila"><input type="checkbox" aria-label="Marcar ${escHtml(m.nombre)}" ${selTemas.includes(m.id) ? 'checked' : ''} onchange="toggleSelTema('${m.id}', this.checked)">${btnTema}</div>` : btnTema;
+}
+// sin mayúsculas ni tildes: "razon" encuentra "Razones", "geometria" encuentra "Geometría"
+const _sinTildes = s => String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+function buscarTema(q){
+  const res = $('resBusca'), lista = $('listaCaps'); if(!res || !lista) return;
+  const palabras = _sinTildes(q).split(/\s+/).filter(Boolean);
+  lista.style.display = palabras.length ? 'none' : '';
+  if(!palabras.length){ res.innerHTML = ''; return; }
+  const hallados = MODULOS.filter(m => m.clase === materia && palabras.every(w => _sinTildes(m.nombre).includes(w)));
+  res.innerHTML = hallados.length ? hallados.map(m => _filaTemaHTML(m, true)).join('')
+    : `<div class="nota">No hay ningún tema con “${escHtml(q.trim())}”. Prueba con otra palabra (por ejemplo “fracciones”, “decimales”, “porciento”).</div>`;
+}
 function pantallaTemas(){
   _barra('temas');
   main.innerHTML = `
     ${ayudMaterialHTML()}
     <div class="card">
       <h2>Practicar un tema suelto</h2>
+      <input class="campo" id="inBuscaTema" type="search" autocomplete="off" autocapitalize="off" placeholder="Buscar un tema…" aria-label="Buscar un tema por su nombre" oninput="buscarTema(this.value)" style="margin-bottom:12px">
+      <div id="resBusca"></div>
+      <div id="listaCaps">
       ${materia === 'mate' ? '<div class="nota"><b>Se repite</b> = el mismo tema con otros ejercicios: uno al azar y otro con las preguntas exactas de tu Tarea y tus Quizzes de EducoSoft (mismo color). La casilla mete el tema en la mezcla de su capítulo; los de EducoSoft solo entran si los marcas.</div>' : ''}
       ${MATERIAS[materia].caps.map(cap => { const ms = MODULOS.filter(m=>m.clase===materia && m.secciones[0][0]===String(cap)); return `
         <details class="temaCap">
           <summary>${nombreCapitulo(cap)}</summary>
           <button class="btn amar chico" onclick="ir('practica',${cap})">Mezcla de ${nombreCapitulo(cap).replace(/^Capítulo /,'capítulo ')}
             <small id="mzl_${cap}">${_mezclaTexto(cap)}</small></button>
-          ${ms.map(m=>{
-            const s = stats[m.id], p = s ? pct(s) : null;
-            const btnTema = `<button class="btn sec chico${m.tag ? ' conTag' : ''}" onclick="ir('practica','${m.id}')">${m.nombre}${ayTagHTML(m)}
-              ${_otroLado(m) ? `<small>${_otroLado(m)}</small>` : ''}${p!==null ? `<small>${p}% de aciertos · ${s.ok+s.fallo} ejercicios</small>` : ''}</button>`;
-            return (_conCasillas() ? `<div class="temaFila"><input type="checkbox" aria-label="Marcar ${escHtml(m.nombre)}" ${selTemas.includes(m.id) ? 'checked' : ''} onchange="toggleSelTema('${m.id}', this.checked)">${btnTema}</div>` : btnTema) +
-              (m.nuevaRonda && !m.sinReloj ? `<button class="btn sec chico" onclick="ir('examen','${m.id}')">${_nombreSimulacro(m)} con reloj
-                <small>las ${m.banco} preguntas en 1 h 30 min, como el examen real, con la nota al final</small></button>` : '');
-          }).join('')}
+          ${ms.map(m => _filaTemaHTML(m)).join('')}
         </details>`; }).join('')}
+      </div>
     </div>
 
     <div class="card">
@@ -11626,7 +11800,7 @@ function _pintarEjemploTema(m){
   const n0 = m._n, ej = m.gen(nivel);
   if(m.id === 'geometria-dec') m._n = n0;   // el ejemplo no gasta el turno de la figura (el 1.º ejercicio ya se generó antes que el ejemplo)
   main.innerHTML = `
-    <button class="back" onclick="ir('inicio')">← Inicio</button>
+    <button class="back" onclick="pausarRonda()">← Inicio</button>
     <div class="card">
       <span class="pill">Ejemplo · ${m.nombre}</span>
       <div class="enunciado">${ej.enunciado}</div>
@@ -11641,15 +11815,22 @@ function _ejDelPuesto(i, arg){
   if(sesionEjs[i]) return sesionEjs[i];
   const mod0 = esTemaFijo ? MOD_POR_ID[arg] : null;
   let mod, ej;
-  if(mod0 && mod0.nuevaRonda){          // las 30 del examen: el puesto i es siempre la pregunta i
-    mod = mod0; mod._sig = i % mod.banco; ej = mod.gen(nivel);
+  if(mod0 && mod0.nuevaRonda){          // las 30 del examen: el puesto i es siempre la pregunta i; las que falles ("repetir si fallo") vuelven en los puestos extra del final (antes ese puesto repetía la pregunta 1)
+    const rep = i >= mod0.banco && sesionPendientes.shift();
+    if(rep){ mod = MOD_POR_ID[rep.modId] || mod0; ej = rep.ej; ej.__rep = true; }
+    else { mod = mod0; mod._sig = i % mod.banco; ej = mod.gen(nivel); }
   } else {
     const nuevo = !sesionAbiertos[i];
     if(nuevo) sesionPendientes.forEach(p => p.esperar--);
-    const repite = nuevo && sesionPendientes.find(p => p.esperar <= 0);
+    // Una repetición se mete en el puesto i corriendo LO PLANEADO un lugar (sesionOrden). Eso solo cuadra si ningún puesto de más adelante está ya abierto: lo abierto no se
+    // corre con el plan y quedaba desalineado (un tema salía 1 vez y otro 3). Si saltaste con "Pág.", la repetición espera al primer puesto nuevo después del último abierto o al
+    // puesto extra del final (sesionTotal crece uno por cada repetición pendiente), que es suyo.
+    const alFrente = !Object.keys(sesionAbiertos).some(k => +k > i);
+    const reservado = sesionOrden.length > 0 && (sesionOrden[i] === '*' || i >= sesionOrden.length);
+    const repite = nuevo && (reservado ? sesionPendientes[0] : alFrente && sesionPendientes.find(p => p.esperar <= 0));
     if(repite){
       sesionPendientes.splice(sesionPendientes.indexOf(repite), 1);
-      if(sesionOrden.length) sesionOrden.splice(i, 0, '*');   // este puesto es una repetición: lo planeado se corre uno
+      if(sesionOrden.length && sesionOrden[i] !== '*') sesionOrden.splice(i, 0, '*');   // este puesto es una repetición: lo planeado se corre uno
       mod = MOD_POR_ID[repite.modId] || modActual; ej = repite.ej; ej.__rep = true;
     } else if(mod0){
       mod = mod0; ej = mod.gen(nivel);
@@ -11813,7 +11994,7 @@ function entradaHTML(ej){
 
 // "Ir al ejercicio": cualquier puesto de la ronda (1, 2, 3…) sin hacer los de antes — mezcla, un tema o las prácticas del examen
 function selectorPregunta(){
-  if(modoErrores || modoRepasoRonda || examen || sesionTotal < 2) return '';
+  if(modoErrores || modoRepasoRonda || sesionTotal < 2) return '';
   return `<label class="irPreg">Pág.<select class="campo" aria-label="Ir al ejercicio número" onchange="irAEj(+this.value)">${Array.from({length:sesionTotal}, (_, i) => `<option value="${i}"${i === sesionIdx ? ' selected' : ''}>${i+1}</option>`).join('')}</select></label>`;
 }
 function irAEj(i){
@@ -11825,7 +12006,7 @@ function irAEj(i){
 // al volver a una página que ya contestaste (o cuya explicación viste) sale un aviso: antes se veía como si fuera nueva
 function _notaPreviaHTML(){
   const r = sesionRes[sesionIdx];
-  if(!r || respondido || modoErrores || modoRepasoRonda || examen) return '';
+  if(!r || respondido || modoErrores || modoRepasoRonda) return '';
   const t = { ok:'Ya la contestaste: <b>estaba bien</b> ✓. Si la repites, no cuenta otra vez.', mal:'Ya la contestaste: <b>la fallaste</b>. Inténtala de nuevo; no cuenta otra vez en tus estadísticas.',
     vista:'Ya <b>viste la explicación</b> de esta. Si la contestas ahora, no cuenta.' }[r];
   return t ? `<div class="fbTxt" id="notaPrevia">${t}</div>` : '';
@@ -11835,7 +12016,7 @@ function pintarEjercicio(){
   main.dataset.ej = sesionIdx;   // qué página de la ronda está en pantalla (para guardar lo escrito sin comprobar)
   _aiEjN++;   // el chat de IA es de UN ejercicio: al pintar otro empieza uno nuevo
   main.innerHTML = `
-    <button class="back" onclick="ir('inicio')">← Inicio</button>
+    <button class="back" onclick="pausarRonda()">← Inicio</button>
     <div class="card">
       <div class="cabEj"><span class="pill">${esTemaFijo ? '' : capFijo ? `${nombreCapitulo(capFijo)} · ` : (clase && clase.mods && clase.mods.length) ? `${clase.etiqueta.length>20?'Mi mezcla':escHtml(clase.etiqueta)} · ` : 'Mezcla · '}${modActual.nombre}</span>${selectorPregunta()}</div>
       ${_notaPreviaHTML()}
@@ -11851,16 +12032,13 @@ function pintarEjercicio(){
       </div>
     </div>
     <div class="card" id="cardProgreso" style="padding:14px 20px">${_filaProgresoHTML()}${_mapaHTML()}</div>`;
+  _enfocarPrimero();
+}
+// el cursor va a la primera casilla de respuesta (en el teléfono no: el teclado taparía el enunciado). Enter lo maneja el escucha general
+// de "keydown" (más abajo): sin contestar comprueba, ya contestado pasa al siguiente. Antes cada pantalla ponía además su propio escucha por casilla (copiado 3 veces).
+function _enfocarPrimero(){
   const primero = $('inNum') || $('inTexto') || $('inE') || $('inN') || $('inA2') || $('inBase') || $('inCoef') || $('inM0');
-  if(primero){
-    if(window.innerWidth > 640) primero.focus();  // en móvil no abrimos el teclado solo: tapa el enunciado
-    ['inNum','inTexto','inE','inN','inD','inA2','inA3'].forEach(id=>{
-      const el = $(id); if(el) el.addEventListener('keydown', e => {
-        if(e.key !== 'Enter' || respondido) return;   // ya contestado: que avance el listener global de más abajo
-        responder(); e.stopPropagation();              // evita que el mismo Enter, ya con el botón pintado, también dispare "avanzar"
-      });
-    });
-  }
+  if(primero && window.innerWidth > 640) primero.focus();
 }
 
 const _rondaContadas = () => sesionCorrectos + sesionFallos.length;   // respuestas de esta ronda que cuentan (acertadas + falladas; no las saltadas ni las de "ver explicación")
@@ -11916,16 +12094,7 @@ function _pintarSiguienteRepasoRonda(){
       <div id="zonaFb"></div>
       <div class="row" id="accionesPre"></div>
     </div>`;
-  const primero = $('inNum') || $('inTexto') || $('inE') || $('inN') || $('inA2') || $('inBase') || $('inCoef') || $('inM0');
-  if(primero){
-    if(window.innerWidth > 640) primero.focus();
-    ['inNum','inTexto','inE','inN','inD','inA2','inA3'].forEach(id=>{
-      const el = $(id); if(el) el.addEventListener('keydown', e => {
-        if(e.key !== 'Enter' || respondido) return;   // ya contestado: que avance el listener global de más abajo
-        responder(); e.stopPropagation();              // evita que el mismo Enter, ya con el botón pintado, también dispare "avanzar"
-      });
-    });
-  }
+  _enfocarPrimero();
 }
 
 function tocarOrden(i){
@@ -11962,11 +12131,10 @@ function leerEntrada(ej){
 }
 
 function responder(valor){
-  if(examen) return responderExamen(valor);
   if(respondido) return;
   const ent = (valor !== undefined) ? valor : leerEntrada(ejActual);
   if(ejActual.tipo === 'orden' && ent.length < ejActual.opciones.length){
-    return mostrarFb({ ok:false, msg:'Toca las tres fracciones, en el orden que pide.' }, true);
+    return mostrarFb({ ok:false, msg:'Toca todas las opciones, en el orden que pide.' }, true);   // sirve para 3 fracciones, 4 decimales o las épocas de World Culture
   }
   const res = verificar(ejActual, ent);
   if(res.vacio || res.aviso) return mostrarFb({ ok:false, msg: res.aviso ? res.msg : 'Te falta escribir la respuesta.' }, true);   // aviso = no se entendió lo escrito: no cuenta como error
@@ -11987,7 +12155,7 @@ function responder(valor){
         e.veces = (e.veces || 0) + 1;
         if(e.veces > _ESPACIOS.length){ errores.splice(i, 1); res.msg = (res.msg ? res.msg + '<br>' : '') + '¡Ya lo dominas! Sale de tu lista de errores.'; }
         else { e.proxima = fechaHaceDias(-_ESPACIOS[e.veces - 1]); res.msg = (res.msg ? res.msg + '<br>' : '') + `Vuelve a salir ${_fechaBonita(e.proxima)} para que no se te olvide.`; }
-      } else { e.veces = 0; e.proxima = fechaLocal(); errores.push(errores.splice(i,1)[0]); }
+      } else { e.veces = 0; e.proxima = fechaLocal(); e.v = Date.now(); }   // fallado otra vez: pasa al final de la cola de hoy (_pintarSiguienteError ordena por v) pero SE QUEDA donde estaba en la lista; antes lo mandaba al final de la lista y era el primero en borrarse al llegar un error nuevo (tope 30)
     }
     guardar('mate_errores_v1', errores);
   } else if(modoRepasoRonda){
@@ -12016,7 +12184,7 @@ const _feedbackHaptico = ok => { if(navigator.vibrate) navigator.vibrate(ok ? 30
 // el MISMO ejercicio otra vez, desde cero: sin respuesta, sin explicación y con "Tu proceso" vacío.
 // Si ya lo habías contestado o viste la explicación, el intento nuevo no vuelve a contar en las estadísticas.
 function reiniciarEjercicio(){
-  if(examen || modoErrores || modoRepasoRonda) return;
+  if(modoErrores || modoRepasoRonda) return;
   const yaContado = respondido || vioExpl;
   respondido = false; ordenSel = []; ultimoFeedback = null; ultimoProceso = ''; ultimaEntrada = null; calcHist = [];
   vioExpl = yaContado; _reintento = yaContado;
@@ -12299,6 +12467,7 @@ const explHTML = () => `
 function saltarEjercicio(){
   if(respondido) return;
   nuevoEjercicio(esTemaFijo ? modActual.id : capFijo ? capFijo : undefined, true);
+  window.scrollTo(0, 0);   // el ejercicio nuevo sale desde arriba (sin esto quedaba la pantalla bajada donde estaba el botón)
 }
 // Genera otro ejercicio del MISMO tema, con otros números, sin tocar sesionHechos/sesionCola
 // — para seguir practicando ese tema puntual sin gastar un puesto de la ronda en curso.
@@ -12307,9 +12476,10 @@ function otroDelMismoTema(){
   ejActual = modActual.gen(nivel);
   ejActual.__mod = modActual.id;
   sesionEjs[sesionIdx] = ejActual; delete sesionVistos[sesionIdx]; delete sesionRes[sesionIdx]; _ejsSucios.add(sesionIdx);   // este puesto ahora es el ejercicio nuevo
-  respondido = false; vioExpl = false; _reintento = false; ordenSel = []; ultimoFeedback = null; ultimoProceso = ''; calcHist = [];
+  respondido = false; vioExpl = false; _reintento = false; ordenSel = []; ultimoFeedback = null; ultimoProceso = ''; ultimaEntrada = null; calcHist = [];
   pintarEjercicio();
   guardarSesion();
+  window.scrollTo(0, 0);
 }
 function verExplicacion(){
   if(respondido) return;             // ya contestó de verdad: eso sí queda cerrado
@@ -12359,200 +12529,55 @@ function pantallaErrores(){
   }
   _pintarSiguienteError();
 }
+// Una pregunta de las prácticas del examen (Departamental, Parcial 2) es SIEMPRE la misma pregunta: si el error se guardó con una versión vieja de la app
+// (sin la explicación Fácil, con el enunciado de antes) se vuelve a sacar de su banco, igual que hace restaurarSesion. Las opciones y la respuesta guardadas no se tocan.
+function _refrescarEjFijo(ej){
+  const m = ej && MOD_POR_ID[ej.__mod];
+  if(!m || !m.nuevaRonda || ej.__n == null) return;
+  const sig = m._sig;
+  try{ m._sig = ej.__n; const f = m.gen(nivel); ej.explicacion = f.explicacion; ej.enunciado = f.enunciado; ej.facil = f.facil; }catch(e){}
+  m._sig = sig;
+}
 function _pintarSiguienteError(){
-  const cola = erroresParaHoy();
+  // los que acabas de volver a fallar (v) pasan al final de la cola de hoy; el resto conserva su orden
+  const cola = erroresParaHoy().slice().sort((a, b) => (a.v || 0) - (b.v || 0));
   if(!cola.length){ modoErrores = false; _errorActual = null; return ir('errores'); }
-  const item = cola[0];
-  _errorActual = item;
-  modActual = MOD_POR_ID[item.modId] || { id:item.modId, nombre:'Repaso' };
-  ejActual = item.ej;
+  _errorActual = cola[0];
+  _refrescarEjFijo(_errorActual.ej);
+  _pintarEjError(_errorActual.ej, cola.length);
+}
+function _pintarEjError(ej, quedan){
+  const item = _errorActual, m = MOD_POR_ID[item.modId];
+  modActual = m || { id:item.modId, nombre:'Repaso' };
+  ejActual = ej;
   respondido = false; vioExpl = false; _reintento = false; ordenSel = []; ultimoProceso = ''; calcHist = []; _aiEjN++;
+  const parecido = !!(m && !m.nuevaRonda && typeof m.gen === 'function');   // las preguntas fijas del examen no tienen "otro parecido": cada una es la pregunta del examen
   main.innerHTML = `
     <button class="back" onclick="ir('inicio')">← Inicio</button>
     <div class="card">
-      <span class="pill">Repaso de errores · quedan ${cola.length} hoy</span>
+      <span class="pill">Repaso de errores · quedan ${quedan} hoy</span>
       <div class="enunciado">${ejActual.enunciado}</div>
       <div id="zonaEntrada">${entradaHTML(ejActual)}</div>
       <div id="zonaFb"></div>
       <div class="row" id="accionesPre">
         <button class="btn sec chico" onclick="_quitarErrorActual()">Quitar de la lista</button>
+        ${parecido ? `<button class="btn sec chico" onclick="otroParecidoError()" title="Otro ejercicio de este tema, con otros números" aria-label="Otro ejercicio parecido de este tema, con otros números">Otro parecido</button>` : ''}
       </div>
     </div>`;
-  const primero = $('inNum') || $('inTexto') || $('inE') || $('inN') || $('inA2') || $('inBase') || $('inCoef') || $('inM0');
-  if(primero){
-    if(window.innerWidth > 640) primero.focus();
-    ['inNum','inTexto','inE','inN','inD','inA2','inA3'].forEach(id=>{
-      const el = $(id); if(el) el.addEventListener('keydown', e => {
-        if(e.key !== 'Enter' || respondido) return;   // ya contestado: que avance el listener global de más abajo
-        responder(); e.stopPropagation();              // evita que el mismo Enter, ya con el botón pintado, también dispare "avanzar"
-      });
-    });
-  }
+  _enfocarPrimero();
+}
+// El mismo tema con otros números, para no repasar de memoria. Lo que contestes cuenta para ESTE error: si lo aciertas avanza su repaso, si lo fallas vuelve a hoy.
+function otroParecidoError(){
+  const m = _errorActual && MOD_POR_ID[_errorActual.modId];
+  if(!modoErrores || respondido || !m || m.nuevaRonda || typeof m.gen !== 'function') return;
+  const ej = m.gen(nivel); ej.__mod = m.id;
+  _pintarEjError(ej, erroresParaHoy().length);
 }
 function _quitarErrorActual(){
   const i = errores.indexOf(_errorActual);
   if(i >= 0) errores.splice(i,1);
   guardar('mate_errores_v1', errores);
   _pintarSiguienteError();
-}
-
-/* ---------- modo examen / simulacro ---------- */
-// examen = { preguntas:[{ej, ok, completado, ent}], idx, finLimite, inicio, titulo, modId? }.
-// Con modId es el SIMULACRO de una práctica del Examen Departamental: sus 30 preguntas en orden, 1 h 30 min,
-// como el examen real (se puede ir y volver entre preguntas y cambiar una respuesta; nada se corrige hasta el
-// final). Se guarda en mate_examen_v1 (solo números y respuestas: las preguntas se vuelven a armar iguales),
-// así que si la app se cierra a mitad, al abrirla sigue con el mismo reloj.
-// Sin modId es el examen al azar viejo (10 preguntas): no tiene botón que lo abra (ver CLAUDE.md).
-const EXAMEN_TOTAL = 10, EXAMEN_SEGUNDOS = 60 * EXAMEN_TOTAL;   // 1 minuto por pregunta
-const SIMULACRO_SEGUNDOS = 90 * 60;                              // como el examen real: 1 h 30 min
-let _examenTimerIv = null;
-const _nombreSimulacro = m => 'Simulacro de la ' + m.nombre.replace(/^Examen Departamental:\s*/, '').replace(/\s*\(.*\)\s*$/, '');
-function _armarSimulacro(m){
-  const ps = [];
-  for(let i = 0; i < m.banco; i++){ m._sig = i; const ej = m.gen(nivel); ej.__mod = m.id; ps.push({ ej, ok:null, completado:false, ent:null }); }
-  return ps;
-}
-function iniciarExamen(modId){
-  _barra(null);
-  const m = modId && MOD_POR_ID[modId];
-  if(m && m.nuevaRonda){
-    const ahora = Date.now();
-    examen = { preguntas:_armarSimulacro(m), idx:0, inicio:ahora, finLimite:ahora + SIMULACRO_SEGUNDOS*1000, titulo:_nombreSimulacro(m), modId:m.id };
-    _guardarExamen();
-  } else {
-    examen = { preguntas: [], idx: 0, inicio:Date.now(), finLimite: Date.now() + EXAMEN_SEGUNDOS*1000, titulo:'Examen' };
-    for(let i=0; i<EXAMEN_TOTAL; i++){
-      const mm_ = elegirDe(MODULOS.filter(x=>x.clase===materia));   // todos los temas DE LA MATERIA actual — no se limita a la mezcla/grupo activo
-      const ej = mm_.gen(nivel); ej.__mod = mm_.id; ej.__modNombre = mm_.nombre;
-      examen.preguntas.push({ ej, ok:null, completado:false, ent:null });
-    }
-  }
-  pintarExamen();
-}
-function _guardarExamen(){
-  if(!examen || !examen.modId) return;
-  guardar('mate_examen_v1', { modId:examen.modId, idx:examen.idx, inicio:examen.inicio, finLimite:examen.finLimite, titulo:examen.titulo,
-    resp: examen.preguntas.map(p => ({ ok:p.ok, completado:p.completado, ent:p.ent })) });
-}
-const _borrarExamen = () => { try{ localStorage.removeItem('mate_examen_v1'); }catch(e){} };
-// al abrir la app: si había un simulacro a medias, sigue (o, si ya se acabó el tiempo, da la nota)
-function restaurarExamen(){
-  const s = leer('mate_examen_v1', null), m = s && MOD_POR_ID[s.modId];
-  if(!m || !m.nuevaRonda || !Array.isArray(s.resp)) { if(s) _borrarExamen(); return false; }
-  const ps = _armarSimulacro(m);
-  s.resp.forEach((r, i) => { if(ps[i] && r){ ps[i].ok = r.ok; ps[i].completado = !!r.completado; ps[i].ent = r.ent; } });
-  examen = { preguntas:ps, idx:Math.min(Math.max(0, +s.idx || 0), ps.length - 1), inicio:+s.inicio || Date.now(), finLimite:+s.finLimite || Date.now(), titulo:_nombreSimulacro(m), modId:m.id };
-  _barra(null);
-  if(Date.now() >= examen.finLimite) finalizarExamen(); else pintarExamen();
-  return true;
-}
-function _abandonarExamen(){
-  confirmarAccion(`¿Abandonar ${examen && examen.modId ? 'el simulacro' : 'el examen'}? No se guarda ningún resultado.`, () => {
-    clearInterval(_examenTimerIv);
-    examen = null; _borrarExamen();
-    ir('inicio');
-  });
-}
-function pintarExamen(){
-  const p = examen.preguntas[examen.idx], n = examen.preguntas.length, hechas = examen.preguntas.filter(q => q.completado).length;
-  ordenSel = []; respondido = false; ejActual = p.ej;   // ejActual: lo usan las preguntas de ordenar (tocarOrden) y la calculadora
-  const sim = !!examen.modId;
-  main.innerHTML = `
-    <button class="back" onclick="_abandonarExamen()">← Abandonar ${sim ? 'simulacro' : 'examen'}</button>
-    <div class="card">
-      <div class="cabEj"><span class="pill">${escHtml(examen.titulo || 'Examen')}</span>${sim ? `<label class="irPreg">Pág.<select class="campo" aria-label="Ir a la pregunta" onchange="irPregExamen(+this.value)">${examen.preguntas.map((_, i) => `<option value="${i}"${i === examen.idx ? ' selected' : ''}>${i+1}</option>`).join('')}</select></label>` : ''}</div>
-      <div class="row" style="margin-bottom:10px;align-items:center;justify-content:space-between">
-        <span class="pill" style="margin:0">Pregunta ${examen.idx+1} de ${n}${sim ? ` · contestadas ${hechas}` : ''}</span>
-        <span class="pill" id="examenReloj" style="margin:0;background:var(--rojo-bg);color:#b03a2e">--:--</span>
-      </div>
-      <div class="enunciado">${p.ej.enunciado}</div>
-      ${p.completado ? `<div class="nota" style="margin:0 0 10px">Ya contestaste: <b>${escHtml(_aiRespTxt(p.ej, p.ent))}</b>. Si contestas otra vez, se cambia.</div>` : ''}
-      <div id="zonaEntrada">${entradaHTML(p.ej)}</div>
-      <div id="zonaFb"></div>
-      ${sim ? `<div class="row" style="margin-top:8px">
-          <button class="btn sec chico" onclick="moverExamen(-1)">◀ Anterior</button>
-          <button class="btn sec chico" onclick="moverExamen(1)">Siguiente ▶</button>
-        </div>
-        <button class="btn sec chico" onclick="terminarExamen()">Terminar y ver mi nota</button>` : ''}
-    </div>
-    <div class="nota">${sim ? 'Simulacro: como el examen real, sin explicaciones ni respuestas hasta el final. Puedes ir y volver entre las preguntas y cambiar una respuesta. La calculadora sí se puede usar.' : 'Modo examen: sin explicaciones ni saltar — el repaso queda para el final.'}</div>`;
-  const primero = $('inNum') || $('inTexto') || $('inE') || $('inN');
-  if(primero && window.innerWidth > 640) primero.focus();
-  _actualizarRelojExamen();
-}
-function _actualizarRelojExamen(){
-  clearInterval(_examenTimerIv);
-  const tick = () => {
-    if(!examen) return clearInterval(_examenTimerIv);
-    const restante = Math.max(0, Math.round((examen.finLimite - Date.now())/1000));
-    const el = $('examenReloj');
-    const h_ = Math.floor(restante/3600), mi = Math.floor(restante%3600/60), se = restante%60;
-    if(el) el.textContent = (h_ ? h_ + ':' + String(mi).padStart(2,'0') : String(mi).padStart(2,'0')) + ':' + String(se).padStart(2,'0');
-    if(restante <= 0){ clearInterval(_examenTimerIv); finalizarExamen(); }
-  };
-  tick();
-  _examenTimerIv = setInterval(tick, 1000);
-}
-function irPregExamen(i){ if(!examen || !(i >= 0 && i < examen.preguntas.length)) return; examen.idx = i; _guardarExamen(); pintarExamen(); window.scrollTo(0, 0); }
-function moverExamen(d){ if(!examen) return; const n = examen.preguntas.length; irPregExamen((examen.idx + d + n) % n); }
-function _siguientePendiente(desde){
-  const n = examen.preguntas.length;
-  for(let k = 1; k <= n; k++){ const i = (desde + k) % n; if(!examen.preguntas[i].completado) return i; }
-  return -1;
-}
-function terminarExamen(){
-  const faltan = examen.preguntas.filter(p => !p.completado).length;
-  confirmarAccion(faltan ? `Te ${faltan === 1 ? 'falta 1 pregunta' : `faltan ${faltan} preguntas`} sin contestar (cuentan como mal). ¿Terminar y ver tu nota?` : '¿Terminar y ver tu nota?', finalizarExamen);
-}
-function responderExamen(valor){
-  const p = examen.preguntas[examen.idx];
-  const ent = (valor !== undefined) ? valor : leerEntrada(p.ej);
-  if(p.ej.tipo === 'orden' && ent.length < p.ej.opciones.length) return mostrarFb({ ok:false, msg:'Toca todas las opciones, en el orden que pide.' }, true);
-  const res = verificar(p.ej, ent);
-  if(res.vacio || res.aviso) return mostrarFb({ ok:false, msg: res.aviso ? res.msg : 'Te falta escribir la respuesta.' }, true);
-  p.ok = res.ok; p.completado = true; p.ent = ent;
-  if(!examen.modId){   // examen al azar: una sola pasada
-    examen.idx++;
-    if(examen.idx >= examen.preguntas.length) finalizarExamen();
-    else pintarExamen();
-    return;
-  }
-  const sig = _siguientePendiente(examen.idx);
-  if(sig < 0){ _guardarExamen(); pintarExamen(); return confirmarAccion(`Ya contestaste las ${examen.preguntas.length}. ¿Terminar y ver tu nota?`, finalizarExamen); }
-  examen.idx = sig; _guardarExamen(); pintarExamen(); window.scrollTo(0, 0);
-}
-function finalizarExamen(){
-  if(!examen) return;
-  clearInterval(_examenTimerIv);
-  const total = examen.preguntas.length;
-  const correctas = examen.preguntas.filter(p=>p.ok===true).length;
-  const nota = Math.round(correctas*100/total);
-  const minutos = Math.max(1, Math.round((Math.min(Date.now(), examen.finLimite) - (examen.inicio || Date.now()))/60000));
-  examenes.unshift({ fecha: fechaLocal(), titulo: examen.modId ? examen.titulo : '', correctas, total });
-  examenes = examenes.slice(0, 30);
-  guardar('mate_examenes_v1', examenes);
-  _borrarExamen();
-  main.innerHTML = `
-    <div class="card">
-      <h2>Resultado ${examen.modId ? 'del simulacro' : 'del examen'}</h2>
-      ${examen.modId ? `<div class="nota" style="margin-top:0">${escHtml(examen.titulo)} · ${minutos} min</div>` : ''}
-      <div class="racha">
-        <div><b>${correctas}/${total}</b><span>correctas</span></div>
-        <div><b>${nota}%</b><span>nota</span></div>
-      </div>
-    </div>
-    <div class="card">
-      <h2>Repaso</h2>
-      ${examen.preguntas.map((p,i)=>`
-        <div class="fb ${!p.completado?'medio':p.ok?'ok':'mal'}" style="margin-bottom:6px">
-          ${i+1}. ${p.ej.enunciado}
-          <small>${!p.completado ? 'Sin responder' : p.ok?'Correcto':'Incorrecto — la respuesta es '+fmtRespuesta(p.ej)}</small>
-        </div>
-        <div class="expl" style="margin-bottom:14px">${explPasos(p.ej.explicacion, p.ej.sinNumeros)}</div>`).join('')}
-      <button class="btn amar" onclick="examen=null; ir('inicio')">Volver a Inicio</button>
-    </div>`;
-  window.scrollTo(0, 0);
-  examen = null;
 }
 
 /* ---------- progreso ---------- */
@@ -12622,11 +12647,13 @@ function pantallaStats(){
     </div>` : ''}
     <div class="card">
       <h2>Últimos 14 días</h2>
-      <div style="display:flex;gap:4px;align-items:flex-end;height:50px">
+      <div style="display:flex;gap:4px;align-items:flex-end;height:64px">
         ${_historialUltimosDias(14).map(d=>{
           const alto = d.n ? Math.min(100, 25 + d.n*10) : 6;
-          return `<div style="flex:1;background:${d.n?'var(--verde)':'var(--gris)'};height:${alto}%;
-            border-radius:3px" title="${d.dia}: ${d.n} ejercicios"></div>`;
+          // el número de ejercicios va encima de cada barra (en el teléfono el "title" no se ve); la barra mide lo mismo que antes (alto % de 50 px)
+          return `<div style="flex:1;min-width:0;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center" title="${d.dia}: ${d.n} ejercicios">
+            ${d.n ? `<span style="font-size:.62rem;font-weight:700;line-height:1;margin-bottom:3px;color:var(--muted)">${d.n > 999 ? '999+' : d.n}</span>` : ''}
+            <div style="width:100%;background:${d.n?'var(--verde)':'var(--gris)'};height:${alto / 2}px;border-radius:3px"></div></div>`;
         }).join('')}
       </div>
     </div>
@@ -12640,7 +12667,7 @@ function pantallaStats(){
           <div class="barra-ext"><div class="barra-int" style="width:${p}%;background:${color}"></div></div>
         </div>`;
       }).join('') : '<div class="nota">Todavía no has hecho ningún ejercicio.</div>'}
-      ${total ? `<button class="btn sec chico" style="margin-top:10px" onclick="borrarProgreso()">Borrar mi progreso</button>` : ''}
+      ${total ? `<button class="btn sec chico" style="margin-top:10px" onclick="borrarProgreso()">Borrar todo mi progreso (las 4 materias)</button>` : ''}
     </div>`;
 }
 function _historialUltimosDias(n){
@@ -12687,8 +12714,10 @@ function practicarTema(id){ ir('practica', id); }
 function borrarProgreso(){
   // el botón dice "Borrar MI PROGRESO" — antes solo tocaba stats/racha y dejaba el heatmap
   // de días, la racha de días y los errores guardados intactos, sin avisarlo
-  confirmarAccion('¿Borrar todo tu progreso? Se borran las estadísticas por tema, la racha, el historial de días practicados y tus errores guardados.', () => {
+  // OJO: el progreso es de las 4 materias juntas (la racha y el historial de días son de toda la app, y los errores se guardan en una sola lista): el aviso lo dice
+  confirmarAccion('¿Borrar TODO tu progreso, de las 4 materias (Álgebra, World Culture, Circuitos y Repaso de ayudante)? Se borran las estadísticas por tema, la racha, el historial de días practicados y tus errores guardados. No se puede deshacer.', () => {
     stats = {}; racha = { actual:0, mejor:0 }; historial = {}; rachaDias = { actual:0, mejor:0, ultimoDia:null }; errores = [];
+    _syncPendiente = null; _syncPendGuardar();   // lo que esperaba subirse a la nube también era progreso viejo
     guardar('mate_stats_v1', stats); guardar('mate_racha_v1', racha);
     guardar('mate_historial_v1', historial); guardar('mate_racha_dias_v1', rachaDias); guardar('mate_errores_v1', errores);
     // sin {merge:true}: un merge con {} no borra nada en Firestore, hay que reemplazar el
@@ -12860,12 +12889,17 @@ async function _generarYMostrar(){
     btn.textContent = 'Generar código nuevo'; btn.disabled = false; }
 }
 async function _conectarYRefrescar(){
-  const codigo = $('inCodigo').value.trim().toUpperCase();
+  // los guiones y los espacios son opcionales (XXXXXXXXXXXX vale igual que XXXX-XXXX-XXXX): se acomodan solos
+  let codigo = $('inCodigo').value.trim().toUpperCase().replace(/[\s-]/g, '');
   if(!codigo){ $('zonaSync').innerHTML = `<div class="fb medio">Escribe el código primero.</div>`; return; }
-  if(!/^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(codigo)){ $('zonaSync').innerHTML = `<div class="fb medio">El código tiene la forma XXXX-XXXX-XXXX (12 letras o números con guiones).</div>`; return; }
+  if(/^[A-Z0-9]{12}$/.test(codigo)) codigo = codigo.replace(/^(.{4})(.{4})(.{4})$/, '$1-$2-$3');
+  if(!/^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(codigo)){ $('zonaSync').innerHTML = `<div class="fb medio">El código tiene 12 letras o números (XXXX-XXXX-XXXX; los guiones son opcionales).</div>`; return; }
   const btn = $('btnConectar'); btn.textContent = 'Conectando…'; btn.disabled = true;
-  try{ await conectarSync(codigo); pantallaSync(); }
-  catch(e){ $('zonaSync').innerHTML = `<div class="fb mal">No se pudo conectar. Revisa el código e intenta de nuevo.</div>`;
+  try{ await conectarSync(codigo, true); pantallaSync(); }
+  catch(e){
+    $('zonaSync').innerHTML = e && e.message === 'CODIGO_NO_EXISTE'
+      ? `<div class="fb mal">Ese código no existe. Revisa que sea exactamente el que sale en tu otro aparato (Ajustes → Datos → Sincronización activa).</div>`
+      : `<div class="fb mal">No se pudo conectar. Revisa tu internet e intenta de nuevo.</div>`;
     btn.textContent = 'Conectar'; btn.disabled = false; }
 }
 function _desconectarYRefrescar(){
@@ -13233,6 +13267,52 @@ function autotest(){
   }
   chk('IA: ningún modelo repetido (3.7 redirige a 3.8) y el último es el básico gratis', new Set(AI_MODELS).size === AI_MODELS.length && !AI_MODELS.includes('gemini-3.7-flash') && AI_MODELS[AI_MODELS.length - 1] === 'gemini-3.5-flash-lite');
 
+  lineas.push('', '── auditoría 2026-10-29 ──');
+  chk('dinero: "$16" vale 16 en cualquier tema de dinero, "-$16" y "$-16" valen −16; en los de EducoSoft (dinero:true) "$−…" sigue siendo "casi"',
+    verificar({ tipo:'num', respuesta:16 }, '$16').ok && verificar({ tipo:'num', respuesta:-16 }, '-$16').ok && verificar({ tipo:'num', respuesta:-16 }, '$-16').ok && verificar({ tipo:'num', respuesta:-6072.31, dinero:true }, '$-6,072.31').incompleto === true);
+  chk('porciento: "212% " (con espacio al final) y " 212 %" valen 212 cuando la casilla trae la tecla %', verificar({ tipo:'num', respuesta:212, pct:true }, '212% ').ok && verificar({ tipo:'num', respuesta:212, pct:true }, ' 212 %').ok && verificar({ tipo:'num', respuesta:212, pct:true }, '212').ok);
+  chk('dN: 512.844 × 10,000 = 5128440 (antes 5128440.000000001) y los números chicos no cambian (0.1 + 0.2 = 0.3, 1/3 con 9 decimales)', dN(512.844 * 10000) === 5128440 && dN(0.1 + 0.2) === 0.3 && dN(1/3) === 0.333333333 && dN(2698310.6) === 2698310.6);
+  chk('deDe: "del Sr. Sandoval", "de una camiseta" (nunca "de el")', deDe('el Sr. Sandoval') === 'del Sr. Sandoval' && deDe('el de 80 GB') === 'del de 80 GB' && deDe('una camiseta') === 'de una camiseta');
+  chk('respaldo importado: el historial de días y la racha de días solo conservan fechas y números; los errores, fechas y números',
+    JSON.stringify(_limpiarHistorial({ '2026-10-28': '"><img src=x>', 'x"y': 3, '2026-10-29': 5 })) === '{"2026-10-28":0,"2026-10-29":5}'
+    && (r => r.actual === 5 && r.mejor === 0 && r.ultimoDia === null)(_limpiarRachaDias({ actual:5, mejor:'<img src=x>', ultimoDia:'"><b>' }))
+    && (e => e.length === 1 && e[0].veces === 2 && e[0].proxima === undefined && e[0].ej.enunciado === 'E')(_limpiarErrores([{ modId:'divisibilidad', ej:{ enunciado:'E' }, veces:'2', proxima:'<b>' }, { modId:'<x>', ej:{} }, null])));
+  {
+    const _backupErrores = errores, _backupLS = localStorage.getItem('mate_errores_v1');
+    errores = []; for(let k = 0; k < 30; k++) errores.push({ modId:'divisibilidad', ej:{ __mod:'divisibilidad', enunciado:'E' + k } });
+    _registrarError({ __mod:'divisibilidad', enunciado:'NUEVO' });
+    chk('errores (tope 30): el nuevo entra al frente y se borra el más viejo', errores.length === 30 && errores[0].ej.enunciado === 'NUEVO' && !errores.some(e => e.ej.enunciado === 'E29'));
+    _registrarError({ __mod:'divisibilidad', enunciado:'E5' });
+    chk('errores: el MISMO fallo otra vez (esté donde esté en la lista) no se duplica: sube al frente', errores[0].ej.enunciado === 'E5' && errores.filter(e => e.ej.enunciado === 'E5').length === 1 && errores.length === 30);
+    errores = _backupErrores;
+    if(_backupLS === null) localStorage.removeItem('mate_errores_v1'); else localStorage.setItem('mate_errores_v1', _backupLS);
+  }
+  chk('IA por partes: _aiRespuestaParcial saca el texto de "respuesta" aunque el JSON esté a medias (escapes incluidos)',
+    _aiRespuestaParcial('{"respuesta":"Hola') === 'Hola' && _aiRespuestaParcial('{"respuesta":"a \\"b\\"\\nc \\u00e9') === 'a "b"\nc é' && _aiRespuestaParcial('{"paso":1,"respuesta":"x","paso":3}') === 'x' && _aiRespuestaParcial('{"paso":1') === '');
+  {
+    const bk = stats; stats = { 'divisibilidad':{ ok:1, fallo:9 }, 'primos':{ ok:2, fallo:0 }, 'mcm-listado':{ ok:3, fallo:3 }, 'educo-suma-resta':{ ok:0, fallo:9 }, 'comparar':{ ok:1, fallo:1 } };
+    const fl = _temasFlojos().map(m => m.id); stats = bk;
+    chk('práctica rápida: los temas más flojos primero (con ≥ 3 ejercicios y < 85 %), sin los bancos fijos ni los que van bien ni los de muy pocos ejercicios', fl.join() === 'divisibilidad,mcm-listado');
+  }
+  {
+    // "repetir si fallo" + saltos con "Pág.": la repetición solo se mete donde no haya páginas abiertas más adelante (si no, lo planeado se desalineaba y un tema salía 1 vez y otro 3)
+    const bk = { e:sesionEjs, a:sesionAbiertos, p:sesionPendientes, o:sesionOrden, c:sesionCola, t:esTemaFijo, h:sesionHechos, s:_ejsSucios };
+    esTemaFijo = false; sesionHechos = 0; _ejsSucios = new Set();
+    sesionOrden = ['divisibilidad', 'primos', 'divisibilidad', 'primos', 'divisibilidad', 'primos']; sesionCola = sesionOrden.slice();
+    sesionAbiertos = { 0:true, 3:true }; sesionEjs = [{ __mod:'divisibilidad' }, , , { __mod:'primos' }];
+    sesionPendientes = [{ modId:'divisibilidad', ej:{ __mod:'divisibilidad', enunciado:'repe', tipo:'sino', respuesta:true, explicacion:['x'] }, esperar:0 }];
+    const a = _ejDelPuesto(1), antes = sesionOrden.length, b = _ejDelPuesto(4);
+    chk('repetir si fallo: con una página abierta más adelante (la 4) la repetición espera; en la primera sin abrir después de la última abierta (la 5) vuelve, y lo planeado se corre un lugar',
+      !a.__rep && antes === 6 && b.__rep === true && b.enunciado === 'repe' && sesionOrden.length === 7 && sesionOrden[4] === '*' && sesionPendientes.length === 0);
+    sesionEjs = bk.e; sesionAbiertos = bk.a; sesionPendientes = bk.p; sesionOrden = bk.o; sesionCola = bk.c; esTemaFijo = bk.t; sesionHechos = bk.h; _ejsSucios = bk.s;
+  }
+  {
+    // "Leer y escribir decimales": ningún nombre se lee de dos maneras ("sesenta y seis centésimas" = 0.66 y 60.06): sin números como 60.06 / 130.005 en el ejercicio "número → nombre"
+    const m = MOD_POR_ID['dec-palabras']; let ambiguos = 0;
+    ['facil', 'medio', 'dificil'].forEach(nv => { for(let i = 0; i < 1500; i++){ const ej = m.gen(nv), q = /nombre en palabras para el número decimal dado:[\s\S]*?<b>([\d,.]+)<\/b>/.exec(ej.enunciado); if(q && /^[\d,]*[3-9]0\.0+[1-9]$/.test(q[1])) ambiguos++; } });
+    chk('Leer y escribir decimales: nunca da un número cuyo nombre se confunda con otro (30.05, 60.06, 130.005…)', ambiguos === 0);
+  }
+
   lineas.push('', '── modo clase ──');
   const a1 = analizarTexto('Homework on 3.1 - 3.3 due Friday');
   chk('rango 3.1-3.3 → 3 secciones',      eq(a1.secciones, ['3.1','3.2','3.3']));
@@ -13266,7 +13346,7 @@ function _atajoInicial(){
   if(m){
     if(materia !== m.clase){ materia = m.clase; guardar('mate_materia_v1', materia); clase = null; guardar('mate_clase_v1', null); }
     const s = leer('mate_sesion_v1', null);
-    if(s && s.modId === id && s.esTemaFijo && restaurarSesion()) return true;
+    if(s && s.modId === id && s.esTemaFijo && restaurarSesion(true)) return true;   // true: el atajo de ESE tema sigue donde ibas aunque la ronda esté pausada
     ir('practica', id); return true;
   }
   if(destino === 'errores'){ ir('errores'); return true; }
@@ -13286,8 +13366,9 @@ if(SOLO){
   }).catch(() => {});
 }
 aplicarTema();
+try{ localStorage.removeItem('mate_examen_v1'); }catch(e){}   // el simulacro con reloj ya no existe (2026-10-29): se borra el que hubiera quedado a medias de la versión anterior
 if(location.search.indexOf('test') >= 0) autotest();
-else if(!restaurarExamen() && !_atajoInicial() && !restaurarSesion()) pantallaInicio();
+else if(!_atajoInicial() && !restaurarSesion()) pantallaInicio();
 if(syncCode) _reengancharSync().catch(()=>{});
 
 // ── SERVICE WORKER (PWA offline) ──
@@ -13306,12 +13387,12 @@ if('serviceWorker' in navigator){
     if(!_swWasControlled){ _swWasControlled = true; return; }  // primera instalación
     // Si hay una pregunta sin responder a medio escribir, el reload la tiraba sin avisar —
     // se pospone hasta salir de la app o hasta el próximo cambio de pantalla real (ir() lo aplica al entrar).
-    if(examen || ($('zonaEntrada') && !respondido)){ _swReloadPendiente = true; return; }
+    if($('zonaEntrada') && !respondido){ _swReloadPendiente = true; return; }
     window.location.reload();
   });
   // versión nueva esperando: se pone sola al salir de la app (lo escrito ya se guardó); en un simulacro con reloj no, porque lo tecleado sin comprobar se perdería
   document.addEventListener('visibilitychange', () => {
-    if(document.visibilityState !== 'hidden' || !_swReloadPendiente || examen) return;
+    if(document.visibilityState !== 'hidden' || !_swReloadPendiente) return;
     if(modActual && ejActual && main.dataset.ej !== undefined && !modoErrores && !modoRepasoRonda) guardarSesion();
     window.location.reload();
   });

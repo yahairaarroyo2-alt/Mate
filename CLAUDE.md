@@ -4,7 +4,7 @@
 
 App de práctica en español con 4 materias (`MATERIAS`): **Álgebra** (MAGS 120I, caps. 1-8 y las
 prácticas EXACTAS del Examen Departamental), **World Culture I**, **Circuitos Eléctricos** y **Repaso de
-ayudante** (examen de Ayudante de Perito Electricista). 132 temas (Álgebra 90). Genera ejercicios (o los saca de bancos
+ayudante** (examen de Ayudante de Perito Electricista). 135 temas (Álgebra 93, World Culture 19, Circuitos 7, Ayudante 16). Genera ejercicios (o los saca de bancos
 fijos), verifica la respuesta y siempre explica el porqué paso a paso. Dos archivos (`index.html` = HTML + CSS, `app.js` = todo el JavaScript), sin build, sin npm, publicado como PWA en GitHub Pages
 con sincronización opcional entre aparatos vía Firebase.
 
@@ -18,20 +18,20 @@ con sincronización opcional entre aparatos vía Firebase.
 ```
 Mate/
 ├── index.html      # HTML + CSS (~47 KB) y una sola línea <script src="app.js?v=N">
-├── app.js          # TODO el JavaScript (~1.2 MB, ~11,200 líneas: casi todo son bancos de preguntas y explicaciones). Antes iba dentro de index.html;
+├── app.js          # TODO el JavaScript (~1.5 MB, ~13,400 líneas: casi todo son bancos de preguntas y explicaciones). Antes iba dentro de index.html;
 │                   # en un archivo aparte Chrome guarda el código ya compilado y no lo vuelve a analizar en cada apertura (2026-10-21)
 ├── manifest.json   # PWA manifest
 ├── sw.js           # Service Worker — sube el número de versión (mate-vN) en cada deploy
 ├── icons/          # 4 íconos PWA (generados con un <canvas>, sin herramienta externa)
 ├── ayudante/       # 184 fotos de Repaso de ayudante, en WebP (~1.3 MB; eran PNG/JPG de 6 MB)
-├── verificar-respuestas.js  # verificador independiente (se corre en la consola, ver su encabezado)
+├── verificar-respuestas.js  # verificador independiente: recalcula las respuestas con su propia cuenta (se corre en la consola, ver su encabezado; cubre caps. 1-8 y Circuitos, ver "Auditoría 2026-10-29")
 └── CLAUDE.md        # este archivo
 ```
 
 ## Cómo probar / desplegar
 
 - Abrir `index.html?test` corre `autotest()`: 200 tiradas × 3 niveles × cada uno de los
-  132 módulos (477 comprobaciones en 2026-10-25), más casos borde de `verificar()`/`analizarTexto()`, validez geométrica
+  135 módulos (488 comprobaciones en 2026-10-29), más casos borde de `verificar()`/`analizarTexto()`, validez geométrica
   (triángulos/trapecios generados), unicidad (MCM de un número consigo mismo), fechas
   locales (`fechaLocal`/`fechaHaceDias`), caducidad de la racha de días y deduplicado de
   `_registrarError` — el número exacto de comprobaciones lo dice el propio resultado (no
@@ -72,15 +72,15 @@ ejemplo: ..."), con números, no en abstracto — también fue pedido explícito
 autotest verifica que exista: si algún `return` de un `gen()` se queda sin línea `TRUCO:`,
 ese módulo FALLA (contador `sinTruco`).
 
-Los `tipo` de entrada (8): `sino`, `cmp`, `opciones`, `num`, `texto`, `frac`, `mixto`,
-`orden`. `entradaHTML()` decide qué pintar según el tipo; `verificar()` decide si la
-respuesta es correcta, para los 8 sin excepción. Si se agrega un módulo, casi seguro
+Los `tipo` de entrada (12): `sino`, `cmp`, `opciones`, `num`, `texto`, `frac`, `mixto`,
+`orden`, `multi` (varias casillas), `angulo2`, `basexp` (base/exponente/valor) y `coefvar` (coeficiente/variable). `entradaHTML()` decide qué pintar según el tipo; `verificar()` decide si la
+respuesta es correcta, para los 12 sin excepción. Si se agrega un módulo, casi seguro
 reutiliza uno de estos — no crear un tipo nuevo sin necesidad real.
 `inputmode` del tipo `num` es `"decimal"`, no `"numeric"` — varios módulos (promedio,
 círculo) dan respuesta con decimales, y `"numeric"` no muestra el punto en iOS.
 
 **Ayudas:** el botón "Pista" ya NO existe. `verExplicacion()` muestra todo "Por qué" y marca `vioExpl`
-(esa respuesta no cuenta en las estadísticas); pedir ayuda a la IA antes de contestar cuenta igual.
+(esa respuesta no cuenta en las estadísticas); pedir ayuda a la IA antes de contestar cuenta igual (y desde 2026-10-29 también marca la página como vista, `sesionVistos`/`sesionRes`, igual que "Ver explicación": antes, ir a otra página con "Pág." y volver la volvía a contar).
 **"↺ Reiniciar"** (`reiniciarEjercicio`) lo deja desde cero (respuesta, explicación y Tu
 proceso); si ya lo habías contestado o visto la explicación, el intento nuevo no cuenta otra vez (`_reintento`).
 Desde 2026-10-21 va en UNA fila con Saltar y Ver explicación (`#accionesPre`, `.row.tres`: sin salto de línea, así que
@@ -149,27 +149,23 @@ Todos pasan por `responder()`, que se ramifica según el modo activo:
       usa `_colaDe(ms, veces)`, la misma que usa el replaneo.
     - `agrupar` y `repetir` no reordenan la ronda YA armada — cambian recién en la próxima que
       arranques (`toggleAgrupar()`/`toggleRepetir()` solo repintan la pantalla actual).
-- **Simulacro del Departamental** (2026-10-13): en Temas, debajo de cada práctica del Examen Departamental, "Simulacro
-  de la práctica N con reloj" → `ir('examen', modId)` → `iniciarExamen(modId)`: las 30 preguntas en orden, 1 h 30 min,
-  sin explicaciones hasta el final, con selector Pág., Anterior/Siguiente y "Terminar y ver mi nota"; se puede cambiar
-  una respuesta. Persistido en `mate_examen_v1`; una actualización de la app no recarga a mitad (`_swReloadPendiente`).
-- **Examen al azar** (`examen` no-null sin `modId`): 10 preguntas, 10 minutos, sin "Saltar" ni "Ver
-  explicación", sin feedback por pregunta — todo se revela en la pantalla de resultado al
-  final. No cuenta para `stats` ni para el historial (es una prueba, no práctica) pero sí
-  queda en `mate_examenes_v1` (nota/fecha, ver tabla de localStorage), y esas 3-5 más
-  recientes aparecen en Progreso si hay alguna. Sortea siempre de `MODULOS` completo
-  (`elegirDe(MODULOS)`, no `elegirModulo()`) — a propósito NO respeta ninguna mezcla/grupo
-  activo, ni la vieja `clase` ni los grupos de examen nuevos.
-  **Sin punto de entrada desde la UI (2026-09-16, auditoría) — código muerto por ahora.**
-  `ir('examen')`/`iniciarExamen()` siguen intactos y funcionan si se llaman, pero ningún
-  botón hace ese llamado desde que el commit `c5303a5` reemplazó el botón suelto "Modo
-  examen" de Inicio por "Grupos de examen". La forma obvia de revivirlo — un botón
-  "Simular examen" colgando de cada grupo en `pantallaGrupos()` — se propuso y la usuaria
-  la declinó por ahora; no la agregues sin que lo pida. Si necesitas exponerlo de nuevo,
-  pregunta primero cómo (¿botón suelto como antes? ¿atado a un grupo? ¿otro lado?) — las
-  dos veces que se tocó este tema hubo una decisión de UX real detrás, no fue descuido.
-- **Repasar errores** (`modoErrores`): cicla la lista `errores` (últimos 30 fallos
-  reales, más reciente primero); si aciertas se quita de la lista.
+- **Modo examen / simulacro con reloj — QUITADO (2026-10-29).** Existió como "Simulacro del Departamental" (2026-10-13: las 30 preguntas de una práctica en 1 h 30 min, con nota al final)
+  y como "Examen al azar" (10 preguntas en 10 minutos); sin botón desde que se sacaron de Temas (v191), así que en la auditoría de 2026-10-29 se borró el código (`iniciarExamen`,
+  `pintarExamen`, `finalizarExamen`, `restaurarExamen`, `elegirDe`, la variable `examen` y su `mate_examen_v1`; al abrir la app se borra el simulacro que hubiera quedado a medias).
+  **El código completo está en el commit `7d54266`** (`git show 7d54266:app.js`) por si algún día se quiere volver: la usuaria pidió quitar los BOTONES, y aquí se limpió lo que ya nadie llamaba.
+  `mate_examenes_v1` (las notas de antes) se conserva y Progreso las sigue mostrando, pero ya no se agrega ninguna.
+- **Repasar errores** (`modoErrores`): cicla la lista `errores` (tope 30 fallos reales entre las 4 materias, más reciente primero); si aciertas un error se reprograma (+1, +3 y +7 días) y al 4º acierto sale.
+  Fallarlo en el repaso NO lo cambia de lugar en la lista: se marca `v = Date.now()` y `_pintarSiguienteError` ordena la cola de hoy por `v` (el último fallado sale al final; antes lo mandaba al final de la
+  LISTA y era el primero en borrarse al llegar un error nuevo). `_registrarError` no duplica una pregunta que ya está (busca en toda la lista y la sube al frente reiniciando su repaso).
+  **"Otro parecido"** (`otroParecidoError`, solo en temas con `gen` y no en las prácticas fijas del examen): otro ejercicio del mismo tema; lo que contestes cuenta para ESE error (acierto = avanza su
+  repaso, fallo = vuelve a hoy). Las preguntas de las prácticas del examen guardadas en una versión vieja se rearman con `_refrescarEjFijo` (explicación Fácil y enunciado de ahora, igual que `restaurarSesion`).
+- **"Seguir la ronda" (2026-10-29)**: "← Inicio" a mitad de ronda ya no la borra: `pausarRonda()` guarda la ronda con `pausada:true` en `mate_sesion_v1` y Inicio muestra "Seguir la ronda (N/total)"
+  (`_rondaPausadaHTML`, `seguirRonda` → `restaurarSesion(true)`). Una ronda pausada NO se abre sola al arrancar la app (`restaurarSesion()` sin `forzar` la salta; una cerrada sin pausar sí se retoma como antes),
+  sobrevive a cambiar de pestaña y a una recarga por versión nueva (`ir` solo borra la ronda si no está pausada), solo sale en la materia de la ronda, se reemplaza al empezar otra y se borra al terminarla.
+  El atajo `?practica=<tema>` sigue donde ibas aunque esté pausada. `borrarSesion()` también apaga el guardado diferido de lo escrito (`_borradorT`): antes, a los 700 ms, volvía a guardar la ronda recién dejada.
+- **Práctica rápida** (Inicio, `practicaRapida`, `_temasFlojos`): los hasta 5 temas de la materia con ≥ 3 ejercicios hechos y < 85 % de aciertos (`RAPIDA_*`), los más flojos primero, mezclados como cualquier
+  mezcla (`clase` = "Práctica rápida: lo que más fallas": 2 preguntas por tema, 10 con 5 temas). Sin los bancos fijos (`banco`/`nuevaRonda`/`extra`) y sin Repaso de ayudante (sus preguntas no cambian).
+- **Buscar un tema** (Temas, `buscarTema`): la caja de arriba filtra por nombre sin tildes ni mayúsculas, muestra los resultados (con su capítulo y su casilla, `_filaTemaHTML`) y esconde los capítulos mientras hay texto.
 
 ## Grupos de examen
 
@@ -259,19 +255,19 @@ real. Los dos helpers viven junto a `guardar`/`leer`, arriba del todo de "ALMACE
 | `mate_nivel_v1` | `'facil'` / `'medio'` / `'dificil'` |
 | `mate_clase_v1` | `{ etiqueta, mods:[] }` — la mezcla ACTIVA ahora mismo (personalizada, detectada del material de clase, o copiada de un grupo al tocar "Practicar") |
 | `mate_grupos_v1` | `[{id, nombre, mods:[]}]` — grupos de examen guardados (ej. "Examen 1" = cap. 1 y 2); **sí sincroniza entre aparatos** (2026-09-13), ver "Grupos de examen" más abajo — la nota vieja aquí decía "no sincroniza, a propósito" y estaba desactualizada/contradecía esa sección; no vuelvas a escribirla sin corregir la otra |
-| `mate_examenes_v1` | `[{fecha, titulo, correctas, total}]`, tope 30 — notas de los simulacros (y del examen al azar), salen en Progreso |
+| `mate_examenes_v1` | `[{fecha, titulo, correctas, total}]`, tope 30 — notas de los simulacros de antes (el modo examen se quitó el 2026-10-29: ya no se agrega ninguna), salen en Progreso |
 | `mate_agrupar_v1` / `mate_repetir_v1` / `mate_uno_v1` | `true`/`false` — los tres ajustes de la pantalla de práctica (agrupar por tema / repetir si fallo / 1 ejercicio por tema, ver "Modos de práctica") |
 | `mate_stats_v1` | `{ modId: {ok, fallo} }` |
 | `mate_racha_v1` | `{ actual, mejor }` — racha de aciertos seguidos |
-| `mate_racha_dias_v1` | `{ actual, mejor, ultimoDia }` — racha de *días* practicados (distinta de la de arriba) |
-| `mate_historial_v1` | `{ "YYYY-MM-DD": cantidad }` — para el heatmap de "Últimos 14 días" |
-| `mate_errores_v1` | `[{modId, ej, veces?, proxima?}]`, tope 30, más reciente primero. Repaso espaciado (2026-10-13): acertar uno en "Repasar mis errores" lo reprograma a +1, +3 y +7 días (`_ESPACIOS`); al 4º acierto sale; fallarlo lo vuelve a hoy. Solo salen los de hoy (`erroresParaHoy`) |
-| `mate_sesion_v1` | la ronda en curso para retomarla (no se sincroniza — a propósito): página actual (`sesionIdx`), páginas abiertas/vistas/resultado (`sesionAbiertos`/`sesionVistos`/`sesionRes`), orden sorteado (`sesionOrden`), y `borrador` = lo escrito sin comprobar (Tu proceso y casillas), que se guarda solo al escribir (700 ms) y al salir de la app |
+| `mate_racha_dias_v1` | `{ actual, mejor, ultimoDia }` — racha de *días* practicados (distinta de la de arriba). Se limpia al cargar (`_limpiarRachaDias`: solo números y fecha) |
+| `mate_historial_v1` | `{ "YYYY-MM-DD": cantidad }` — para el heatmap de "Últimos 14 días" (con el número de ejercicios encima de cada barra). Se limpia al cargar (`_limpiarHistorial`) |
+| `mate_errores_v1` | `[{modId, ej, veces?, proxima?, v?}]`, tope 30 (entre las 4 materias), más reciente primero. Repaso espaciado (2026-10-13): acertar uno en "Repasar mis errores" lo reprograma a +1, +3 y +7 días (`_ESPACIOS`); al 4º acierto sale; fallarlo lo vuelve a hoy (y `v` = cuándo, para mandarlo al final de la cola de hoy sin moverlo de la lista). Solo salen los de hoy (`erroresParaHoy`). Se limpia al cargar (`_limpiarErrores`: fechas y números; el HTML de `ej` ya se limpia al importar) |
+| `mate_sesion_v1` | la ronda en curso para retomarla (no se sincroniza — a propósito): página actual (`sesionIdx`), páginas abiertas/vistas/resultado (`sesionAbiertos`/`sesionVistos`/`sesionRes`), orden sorteado (`sesionOrden`), y `borrador` = lo escrito sin comprobar (Tu proceso y casillas), que se guarda solo al escribir (700 ms) y al salir de la app. `pausada:true` = salió con "← Inicio" (ver "Seguir la ronda") |
 | `mate_sesion_ej_N` | el ejercicio de la página N de la ronda, guardado UNA vez al sacarlo (antes `mate_sesion_ejs_v1` reescribía la ronda entera, hasta 365 KB, en cada respuesta; se migra sola). Las de las prácticas del examen no se guardan (se rearman iguales), salvo las repeticiones (`__rep`). `borrarSesion()` las quita todas |
 | `mate_materia_v1` | la materia activa (`mate`/`wc`/`circ`/`ayud`), se valida contra `MATERIAS` |
 | `mate_ay_vistas_v1` | Repaso de ayudante: qué preguntas de cada banco ya salieron en la ronda (`_ayRecientes`, índices por tema; `id:mezcla` = la lista sin gemelas). Se borra para los temas de cada ronda nueva |
-| `mate_examen_v1` | el SIMULACRO en curso: tema, página, reloj y respuestas (las preguntas se rearman con `_armarSimulacro`); al abrir la app `restaurarExamen()` sigue (o da la nota si ya se acabó el tiempo) |
 | `mate_sync_code_v1` | el código de sincronización de ESTE aparato, si está conectado |
+| `sync_pend_mate_v1` | (SIN prefijo `mate_`, como `ai_skip_mate_v1`: no va al respaldo) respuestas contestadas que todavía no suben a la nube (`{stats:{id:{ok,fallo}}, racha}`): ver "Sincronización" |
 | `mate_tema_v1` | `'auto-system'` (por defecto) / `'auto-hour'` / `'light'` / `'dark'` — preferencia de claro/oscuro (Ajustes → Tema); **no sincroniza entre aparatos**, a propósito: es una preferencia de pantalla, no de progreso |
 
 Al agregar una clave nueva: prefijo `mate_`, y si es algo que debe viajar entre aparatos,
@@ -294,6 +290,11 @@ la consola de Firebase, pestaña "Reglas" de Firestore.
   teléfono en cada respuesta.
 - `racha`, `nivel`, `clase` — última escritura gana (tiene sentido para preferencias y
   para una racha, que es inherentemente secuencial).
+- **Lo contestado sin conexión no se pierde (2026-10-29).** `_empujarSync` acumula en `_syncPendiente` aunque `syncDoc` todavía no exista (Firebase cargando, sin internet o app cerrada antes
+  de los 4 s) y lo guarda en `sync_pend_mate_v1`; `_reengancharSync` lo sube (`_flushSync`) ANTES de escuchar y el listener suma lo pendiente encima de lo que llega de la nube (sin eso, la primera
+  copia de la nube reemplazaba las estadísticas de aquí y esas respuestas desaparecían). Se borra en el mismo instante en que se entrega a Firestore (que ya tiene su propia cola offline; así no se
+  cuenta dos veces), al desconectar y en "Borrar todo mi progreso". `conectarSync(codigo, debeExistir)`: un código ESCRITO A MANO que no existe falla con `CODIGO_NO_EXISTE` (se pide al servidor,
+  `source:'server'`: la caché sin internet diría "no existe" aunque exista) y NO crea otro espacio vacío; "Generar código nuevo" sí crea. El código se acepta sin guiones, con espacios y en minúsculas.
 - `mate_sesion_v1` (el ejercicio en curso) — **nunca se sincroniza**, a propósito: no
   tendría sentido que el teléfono salte al ejercicio exacto donde iba la computadora.
 
@@ -446,6 +447,7 @@ cupo gratis separado del de Fit-F/Fit-M). Sin clave no se dibuja ningún botón 
 - **Burbuja AI + chat (2026-10-05, mismo motor que Fit-F/Fit-M):** ninguna función de IA tiene caja de texto ni botón con etiqueta: la pantalla dibuja una burbuja `AI` (`_aiGenBurbuja(f, id, cls)`; `est` en el flujo, `ancho` del tamaño de un botón) y al tocarla se abre una hoja tipo chat (`#aiGenOv`, `.aic-*`, animación desde la burbuja) con escribir, **micrófono interruptor** (`_dictar`: un toque escucha, otro apaga), **cámara con menú "Tomar foto" / "Elegir de la galería"** (`aiGenMenuFoto`, solo en los chats con `foto:true`), sugerencias y "Nueva". Una entrada por función en `_AIG` (`titulo/aria/ph/saludo/chips/seguir/clave/ctx/enviar`, y `abrir` para un abridor propio); `enviar(q, previos, ctx, img)` devuelve `{ texto, acciones? }`. Un chat por función+contexto en memoria (`_aiGenMsgs`); una respuesta tardía de un chat vaciado se descarta. Los botones de acción (`acciones`) son lo único que hace algo (`practicarTema`, con `cierra:true` para cerrar el chat antes).
 - Los 4 chats: **`ej`** (ayuda con ESTE ejercicio: revisar proceso con o sin foto del cuaderno, explicar de otra forma, pista; burbuja en `aiBoxHTML`/`#zonaIA` y otra bajo la explicación, `_aiOtraBtn`; clave `ej:N` con `_aiEjN`, que sube en cada `pintarEjercicio`/repaso, y si el ejercicio cambió mientras el chat estaba abierto `enviar` avisa), **`tarea`** (foto de un problema de tarea → qué es, tema y pista, NUNCA la solución; botón "Practicar este tema"; `aiTareaHTML` en Inicio), **`plan`** (plan de repaso con tus datos; botones "Practicar: tema" con ids validados contra `MODULOS`; `_aiPlanHTML` en Progreso con ≥5 ejercicios) y **`ronda`** (comentario de la ronda; `_aiRondaHTML` en `pantallaRondaCompleta`, ≥3 ejercicios; clave `ronda:N` con `_aiRondaId`). Todo corre solo al tocar la burbuja y enviar (Mate se usa mucho: no gastar cupo solo).
 - **Ayuda de IA ANTES de contestar = "ver la explicación"** (decisión de la usuaria): `aiEjAbrir` (el `abrir` del chat `ej`) pide confirmación al tocar la burbuja y pone `vioExpl = true` (el ejercicio no suma a stats). Si todavía no contestó ni vio la respuesta (`revelada` falso), el prompt NO revela la respuesta final y el ejercicio sigue abierto. Después de contestar o de "Ver explicación" ya no hay nada que descalificar.
+- **Respuesta por partes, foto en alta resolución y "Copiar" (2026-10-29, portado de Fit F):** `aiGenEnviar` pone `_aiStreamCb` justo antes de llamar a `enviar()`; `_aiJSON` lo toma de una (`const stream = _aiStreamCb; _aiStreamCb = null`, así cada pregunta usa el suyo y una `enviar` que tarde en llegar simplemente no se ve por partes) y pide `streamGenerateContent?alt=sse`; `_aiLeerStream` junta el texto y `_aiRespuestaParcial` saca lo que va del campo "respuesta" aunque el JSON esté a medias; el mensaje en curso (`m.cargando` + `m.parcial`, `data-k`) se repinta solo a ese elemento (`_aiGenParcial`, cada 40 ms) con un cursor (`.aic-cursor`). El tiempo límite cuenta hasta que el modelo EMPIEZA a contestar (10 s / 30 s el último; con foto 25 s / 45 s) y luego tiene 90 s (120 s con foto). Las fotos del cuaderno van a 2048 px (`_imgParaIA`, `fotoMax`), con `_aiFotosParts` (`mediaResolution: HIGH` por foto) y `thinkingConfig: HIGH`; si un modelo contesta 400 se repite UNA vez sin esos ajustes (solo a ese modelo, `simple`). Cada respuesta de la IA trae "Copiar" (`aiGenCopiar` → `_aiCopiar`). Probado con un `fetch` simulado (SSE troceado, 400 con foto, 429 por día, JSON incompleto) y en el navegador; falta ver con la clave real. NO está portado de Fit F: el prompt en dos partes (`systemInstruction` + conversación por turnos), "Corregir" y "Nueva con Deshacer".
 - `ultimaEntrada` guarda lo que respondió (va en `mate_sesion_v1`) para poder revisarlo. `showToast` es un aviso corto propio del motor (Mate no tenía).
 - Estética: la etiqueta `.ai-tagged`/`.aiB` ya no se usa en las funciones (queda el CSS). Si agregas otra función de IA: una entrada en `_AIG` + `_aiGenBurbuja('f')` en su pantalla. Si cambias algo del motor, espeja Fit-F/Fit-M (y Facturas).
 - En World Culture/Circuitos el contenido sale de las presentaciones del profesor: el prompt dice "no agregues datos externos".
@@ -462,7 +464,7 @@ negativos con `signo:true` (botón ±): −2 2/7 vale −(2 + 2/7).
 
 Pasada desde la app suelta `Proyectos/estudio-ayudante.html` (examen de Ayudante de Perito
 Electricista, PR). Es una materia más de `MATERIAS` (caps: 1 Ley de Ohm, 2 Materiales y su uso,
-3 Las Leyes, 4 Reglamentos y energía renovable). Todo su código vive en UN bloque de `index.html`, justo antes de
+3 Las Leyes, 4 Reglamentos y energía renovable). Todo su código vive en UN bloque de `app.js`, justo antes de
 `MODULOS.forEach(... m.clase = 'mate')`: `const AYUD` (datos), 9 módulos `ayud-*` (los de la materia 4 son `ayud-reg-*`)
 (`_ayFicha` = tarjetas pregunta/respuesta → opción múltiple, `_ayPregunta` = preguntas con 4
 opciones, `_ayFotosTodas` = foto → nombre (materiales y conduletos juntos)) y las pantallas `pantallaAyLeer(k)` /
@@ -530,7 +532,7 @@ AEE y otros)** + 500 h de electricidad con energía renovable.
 - Antes de cualquier cambio grande: confirmar que `git status` está limpio o hacer un
   respaldo del archivo — este proyecto no tiene red de seguridad más que git.
 - Después de editar `app.js`: correr `node --check app.js`, y volver a correr
-  `index.html?test` — todas las comprobaciones tienen que seguir pasando (477 en 2026-10-25).
+  `index.html?test` — todas las comprobaciones tienen que seguir pasando (488 en 2026-10-29). Para correrlo sin navegador (2026-10-29): un `vm` de Node con un DOM de mentira (`document.getElementById` que devuelve objetos sueltos, `localStorage` como `Proxy` para que `Object.keys(localStorage)` liste las claves) carga `app.js`, y `?test` deja el resultado en el `innerHTML` de `#main`; sirve para correr también los verificadores y escenarios (rondas, sincronización con un Firestore simulado, IA con un `fetch` simulado) en segundos.
 
 ## Auditoría 2026-10-13 — reglas que dejó
 
@@ -560,8 +562,8 @@ AEE y otros)** + 500 h de electricidad con energía renovable.
 - **Dinero** (`ej.dinero` en tipo `num`, o `din:true` en un campo de `multi`): se acepta con o sin `$`, y "$−6,072.31" avisa que el signo va ANTES del `$` (EducoSoft lo marca mal).
 - **Sí/No y listas de 2 opciones** cambian de lado al azar por ejercicio (`_invPos`); las prácticas exactas (`__n`/`nuevaRonda`) y las rotuladas (a)/(b) no.
 - Las figuras de los Repasos son SVG a mano (`svgF`, `txF`, `dashF`): para ver una página del PDF se puede dibujar con pdf.js en una página temporal y guardarla como PNG.
-- Pendiente: parsers de `verificar-respuestas.js` para los temas nuevos de los caps. 6-8 (los al azar: `dec-*`, `suma-resta-dec`, `mult-div-dec`, `ecuaciones-dec`, `formulas-dec`, `aplicaciones-dec`, `geometria-dec`, `porciento-*`, `interes`, `compras-grandes`…; ahora devuelve "NO RECONOCIDO" para ellos);
-  práctica del Parcial 2 (Caps. 6-8) y tareas de 8.2-8.3 cuando las haga (sus preguntas exactas se agregan como bancos nuevos + su cadena de temas, ver abajo).
+- Los parsers de `verificar-respuestas.js` para los temas al azar de los caps. 6-8 se escribieron el 2026-10-29 (ver "Auditoría 2026-10-29"). Pendiente: tareas de 8.2-8.3 cuando las haga
+  (sus preguntas exactas se agregan como bancos nuevos + su cadena de temas, ver abajo).
 
 **Tareas y Quizzes de EducoSoft (2026-10-20, pedido de la usuaria: "que sean los mismos siempre")**: los bancos `educo-hw6|qp6|qz6|hw7|qp7|qz7|hw8|qp8|qz8`
 (`_modEducoTQ`, `sinReloj:true`; los 9 YA NO son temas sueltos —repetían los 9 temas "— EducoSoft" y metían 2 preguntas siempre iguales en cada mezcla—: la usuaria pidió quitarlos, primero el cap. 6 y
@@ -601,11 +603,11 @@ no el lado inclinado); `ecuaciones-dec`: `fraccion` ((n/b)x ± c = d), `fracComb
 - **Números con coma** (`numLimpio`): "1,250" = 1250 (miles), "0,375" = 0.375 (un número que empieza en 0 no lleva miles), "2,5" = 2.5; si una coma de exactamente 3 dígitos daría la respuesta como decimal ("2,375" cuando era 2.375), sale un aviso (`aviso:true`, no cuenta como error).
 - **`escHtml` escapa también `"` y `'`:** se usa dentro de `value="…"` (nombre del grupo) y un nombre con comillas abría un atributo nuevo.
 - **Calculadora:** `+`/`−` seguido de `%` calcula el % DEL número anterior (200 + 15 % = 230); después de × o ÷ es solo ÷ 100 (80 × 15 % = 12).
-- **Versión nueva de la app:** si hay una pregunta sin contestar (o un simulacro), espera (`_swReloadPendiente`); se pone al salir de la app (`visibilitychange` oculto, menos en un simulacro con reloj) o al cambiar de pantalla, pero NO al seguir practicando (recargar ahí te devolvía a la pregunta que acababas de contestar).
+- **Versión nueva de la app:** si hay una pregunta sin contestar, espera (`_swReloadPendiente`); se pone al salir de la app (`visibilitychange` oculto) o al cambiar de pantalla, pero NO al seguir practicando (recargar ahí te devolvía a la pregunta que acababas de contestar). Al cambiar de pantalla `ir()` borra primero la ronda (salvo que esté pausada) y DESPUÉS recarga: antes recargaba antes de borrar y al abrir la app volvía a salir la misma pregunta.
 - **IA (mismos arreglos que Fit F):** `AI_MODELS` sin repetidos (3.1-pro → 3.8-flash → 3.6-flash → 3.5-flash-lite); los modelos que fallaron se recuerdan entre aperturas en `ai_skip_mate_v1` (sin `mate_`: no va al respaldo ni a la sincronización): 10 min, y 24 h si el 429 dice "limit: 0" (el Pro con la clave gratis); el último (el básico) nunca queda fuera; el mensaje de un 429 distingue por minuto / por día / ningún modelo gratis pudo (no es tu límite). Guardar o quitar la clave limpia las pausas.
 - **Progreso → "Lo que te falta para el Parcial 2"** (solo Álgebra; `_faltaParcial2`, `_parcial2HTML`, `practicarParcial2`): los temas de los caps. 6-8 de la mezcla (sin los "— EducoSoft", que suman a su tema al azar por `cubre`) sin practicar o por debajo de `PARCIAL2_META` (70 %); el botón arma una mezcla con ellos (`clase`, como "Practicar" un grupo).
 - `.calcBtn` usa `backdrop-filter: blur(8px)` (era el blur(40px) del vidrio de las tarjetas, recalculado en cada cuadro del scroll en todas las pantallas).
-- Pendientes que NO se aplicaron: el simulacro con reloj de los caps. 6-8 (25 preguntas) y "Otro parecido" en Repasar mis errores (se propusieron, no se pidieron todavía).
+- Pendientes de esa auditoría: el simulacro con reloj de los caps. 6-8 (la usuaria quitó después todos los simulacros) y "Otro parecido" en Repasar mis errores (hecho el 2026-10-29).
 
 ## Explicaciones de los caps. 6, 7 y 8 (2026-10-21, pedido: "que sea fácil de entender y tenga todos los pasos de dónde se sacan las cosas")
 
@@ -632,7 +634,39 @@ Todos los temas de los caps. 6-8 (al azar, "— EducoSoft", Repasos y Autoevalua
 - **Casillas que se iluminan** (`_iluminarCasillas(ok)`, `_bienMulti`): cada casilla (`.campo.bien` verde / `.campo.mal` roja) según SU parte: número (`inNum`), fracción, mixto, ángulos, base/exponente/valor, coeficiente/variable y los `multi`. Si iluminó algo, `mostrarFb` deja la zona con `.respondida` (solo se apaga lo demás) en vez de bajarle la opacidad a todo.
 - **Fácil / Completa** (`ej.facil` = `receta(_F(pide, pasos, ejemplo, truco))`): `explPorQue(ej)` pinta los botones (`_explModo`, `mate_expl_modo_v1`, por defecto 'facil') y las dos versiones; sin `ej.facil` sale la explicación de siempre. La Fácil es CORTA y el atajo es el camino (ver memoria feedback-explicaciones-mate). Hoy la tienen: Examen Parcial 2 (`_P2F`/`_P2BF`, 25 + 25, vía `_modParcial(…, facil)`) y Examen Departamental (`DEP_F1`/`DEP_F2`, 30 + 30, vía `_modExamen(…, () => DEP_F1)`: es una FUNCIÓN porque `_F` se define más abajo que las prácticas). Al retomar una práctica guardada, `restaurarSesion` vuelve a sacar `explicacion`, `enunciado` Y `facil`. Si cambias una pregunta del banco, cambia también su entrada Fácil (mismo número).
 - **Dibujo "pasa al otro lado"** (`diagPasa`): flecha + "pasa sumando/restando/multiplicando/dividiendo/volteado". `diagAmbosLados` es ahora un envoltorio que lo usa (con `_diagAmbosViejo` de respaldo); el dibujo viejo "en los DOS lados" no se entendía. Las notas repetidas se quitan con `_sinNotasRepetidas` (`data-k`).
-- **Sin línea "Pregunta N de M"** sobre el enunciado de los exámenes, y sin "Simulacro de … con reloj" en NINGUNA práctica: ni en el Parcial 2 ni en el Departamental (2026-10-29: `_modExamen` también lleva `sinReloj:true`; la usuaria lo pidió). `ir('examen', modId)`, `iniciarExamen` y el "Simulacro del Departamental" de más arriba siguen en el código pero ya no tienen botón; el examen al azar de Inicio sigue igual (`sinReloj:true` solo lo lee `pantallaTemas`).
+- **Sin línea "Pregunta N de M"** sobre el enunciado de los exámenes, y sin "Simulacro de … con reloj" en NINGUNA práctica: ni en el Parcial 2 ni en el Departamental (2026-10-29: la usuaria lo pidió). Ese mismo día se borró el código del modo examen/simulacro, `sinReloj` incluido (ver "Modos de práctica").
 - **"Saltar" se esconde** al tocar "Ver explicación" (`#btnSaltar`, en `_pintarVistaExplicacion`): queda "Siguiente ejercicio".
 - **Lo escrito se conserva ya contestado**: `_borradorActual()` ya no se anula con `respondido`, y `restaurarSesion` lo vuelve a poner siempre; antes, al reabrir la app, la casilla salía verde/roja pero VACÍA.
 - **Dinero**: `fmtRespuesta` de un `num` con `dinero:true` da `$124.00` (`din$`) si tiene ≤ 2 decimales. `bYardas` (telas, cap. 7): si el precio de 1 yarda no sale en centavos exactos (24.80 ÷ 4.4 = 5.636…) usa "cuántas veces cabe" (22 ÷ 4.4 = 5; 24.80 × 5); antes guardaba 123.999999992 y la explicación decía $5.64 × 22 = $124.00 (da 124.08).
+
+## Auditoría 2026-10-29 (v192) — reglas que dejó
+
+Pedido: "busca bugs, mejoras, cosas nuevas en toda la app"; se aplicaron los puntos 1–21, 23 y 25–34 del reporte (queda pendiente el 22, el 24 y el 28 — ver abajo). Se probó con el autotest (488), un
+`vm` de Node con DOM de mentira, el navegador del panel y los verificadores independientes. Lo que cambió y por qué:
+
+- **Bugs de rondas:** (1) ver "Versión nueva de la app". (4) la ayuda de IA antes de contestar marca la página como vista. (5) `_ejDelPuesto`: una repetición ("repetir si fallo") solo se mete en el puesto `i` si NO hay un
+  puesto abierto más adelante (`alFrente`) —lo planeado (`sesionOrden`) se corre un lugar, pero lo abierto no, y con saltos de "Pág." un tema salía 1 vez y otro 3 (111 de 120 rondas de prueba salían desparejas)—; si saltaste,
+  la repetición espera al primer puesto nuevo después del último abierto o a su puesto extra del final (`reservado`: `sesionOrden[i] === '*'` o `i >= sesionOrden.length`). En una práctica fija del examen (`nuevaRonda`) las
+  falladas vuelven en los puestos extra del final (antes ese puesto repetía la pregunta 1).
+- **Las dos prácticas del Examen Departamental son `extra:true`** (como las de Parcial 2 y las "— EducoSoft"): ya no entran en "Empezar a practicar" ni en las mezclas de capítulo (metían siempre sus preguntas 1 y 2, y las
+  dos empiezan con "Resta: 83 − (−31)"). Se siguen practicando con su botón en Temas, con su casilla, en un grupo y con el atajo del ícono. "Empezar a practicar" de Álgebra pasó de 164 a 160 preguntas.
+- **Seguridad del respaldo:** `mate_historial_v1`, `mate_racha_dias_v1` y `mate_errores_v1` se limpian al cargar (`_limpiarHistorial`, `_limpiarRachaDias`, `_limpiarErrores`) como ya se hacía con stats, racha, grupos y clase:
+  se pintan dentro de HTML y un respaldo armado podía meter código (las 4 apps comparten dominio y localStorage).
+- **Números:** `verificar` (tipo `num`) acepta "$" en TODOS los temas de dinero (antes solo con `dinero:true`, donde el signo sigue yendo antes del $); la regex del % era `/s*%s*$/` y ahora es `/\s*%\s*$/`.
+  `dN` limpia por cifras significativas a partir de ~1 millón (512.844 × 10,000 daba 5128440.000000001: un ulp ya pasa de 1e-9 y el redondeo a 9 decimales no lo quita).
+- **Textos:** `deDe(s)` (de + artículo con contracción: "del Sr. Sandoval", "del disco de 40 GB") y las frutas con su artículo ("las manzanas", no "los manzanas"); el cambio de precio muestra el dinero con centavos
+  ($231.00 a $249.48) y el galón de leche cuesta pocos dólares. **"Leer y escribir decimales":** un nombre se leía de dos maneras ("sesenta y seis centésimas" = 0.66 y 60.06) —lo encontró el verificador nuevo—; el
+  generador ya no da una parte entera que acabe en decena sola (30, 40… 130…) con un numerador de una cifra y centésimas o más (`dec-palabras`) y la explicación aclara que la "y" de "sesenta y seis" es parte del número.
+- **Avisos y diálogos (`confirmarAccion`/`avisar`)**: `role="dialog"`, `aria-modal`, `aria-labelledby`, el foco va al botón principal (y vuelve a donde estaba), Escape los cierra (Cancelar / Entendido) y con uno abierto el Enter
+  global (siguiente ejercicio) no actúa por detrás. `_dlgN` es `var` a propósito (`avisar()` puede correr durante el arranque, p. ej. por un `guardar` sin espacio). **Código del Enter:** el escucha global de `keydown` ya
+  comprueba / avanza; se quitaron los tres bloques de "Enter comprueba" por casilla (`_enfocarPrimero` solo enfoca la primera casilla en pantalla ancha).
+- **Otros:** "Saltar" y "Otro parecido" suben al principio; "Borrar mi progreso" dice que borra las 4 materias (el progreso es de todas juntas); el aviso de ordenar dice "Toca todas las opciones"; Progreso → "Últimos 14 días" lleva
+  el número de ejercicios sobre cada barra; código muerto fuera (12 funciones sin uso, el estilo `.aic-nota`, las figuras de ángulos).
+- **Verificador independiente (`verificar-respuestas.js`)**: ahora cubre los temas al azar de los caps. 6-8 y Circuitos con fracciones exactas (y BigInt en el interés compuesto): `dec-palabras`, `dec-redondear`,
+  `dec-comparar`, `suma-resta-dec`, `mult-div-dec`, `dec-fraccion`, `orden-op-dec`, `promedio-dec`, `ecuaciones-dec` (sustituye la respuesta en la ecuación), `porciento-conv`, `porciento-formula`, `interes`, `formulas-dec`,
+  `comercial-dec`, `compras-grandes`, `aplicaciones-dec`, `raices-pitagoras` (sin figura), `circ-ley-ohm`, `circ-ley-watt`, `circ-serie`, `circ-paralelo`, `circ-resistividad`: más de 50,000 ejercicios, 0 fallos. Sin
+  verificador (no se pueden comprobar con otra cuenta): los bancos de preguntas fijas (World Culture, Repaso de ayudante, Departamental y Parcial 2), `dec-grafica`/`geometria-dec` y las figuras de razones y Pitágoras (dependen
+  de un dibujo), la propina "Regla Especial" con figura y "Despeje las fórmulas" de Watt. Se corre en la consola del navegador o en el `vm` de Node (ver el encabezado del archivo); en Windows el Bash de Claude Code se come las
+  barras invertidas dobles de un heredoc: los scripts con regex se escriben con la herramienta de archivos, no con `cat <<EOF`.
+- **Pendientes que la usuaria no pidió todavía (reporte 2026-10-29):** 22 = explicación Fácil (el truco primero) en los temas al azar de los caps. 6-8 (hoy solo la tienen las preguntas exactas de los exámenes);
+  24 = "Lo que te falta" por grupo de examen (como la tarjeta del Parcial 2); 28 = Progreso → "Por tema" agrupado por capítulo con los más flojos arriba (cambio visual: esperar su OK, ver su regla de UI).

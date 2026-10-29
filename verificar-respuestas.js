@@ -10,6 +10,10 @@
 // Imprime un resumen por módulo: "ok", "FALLA n" con ejemplos, o "NO RECONOCIDO" si un
 // enunciado nuevo no calza con ningún parser (hay que agregarle el parser, no ignorarlo).
 // 3ª auditoría (2026-09-18): 33.300 ejercicios, 0 fallos, tras corregir 2 bugs que encontró.
+// 4ª (2026-10-29): se agregaron verificadores EXACTOS (fracciones, BigInt en el interés compuesto) para los caps. 6-8 (decimales, porcientos, interés, fórmulas, comercial, compras, aplicaciones,
+//   raíces/Pitágoras sin figura) y para Circuitos (Ohm, Watt, serie, paralelo, resistividad). Encontró nombres ambiguos en "Leer y escribir decimales" ("sesenta y seis centésimas" = 0.66 y 60.06).
+//   Sin verificador (no se puede comprobar con otra cuenta): los temas de preguntas fijas de World Culture y Repaso de ayudante, las partes de caps. 6-8 que dependen de un dibujo
+//   (dec-grafica, geometria-dec, las figuras de razones y de Pitágoras), la propina "Regla Especial" y "Despeje las fórmulas" de Watt (NO RECONOCIDO).
 (function(){
 const G=(a,b)=>{a=Math.abs(a);b=Math.abs(b);while(b){[a,b]=[b,a%b];}return a;};
 const Fr=(n,d=1)=>{ if(d<0){n=-n;d=-d;} const g=G(n,d)||1; return {n:n/g,d:d/g}; };
@@ -361,6 +365,242 @@ C['educo-dep']=(ej,t,h)=>{ const s=S5(h); let m;
   if(/^Halla la suma: /.test(t)){ const v=mv(t.replace(/^Halla la suma:/,'')); if(v.length<2) return null; return mcCheck(ej,add(v[0],v[1])); }
   if(/^Simplifica: /.test(t)){ const v=mv(t.replace(/^Simplifica:/,'')); if(v.length<3) return null; return mcCheck(ej,add(v[0],mul(v[1],v[2]))); }
   return null; };
+// ─── capítulos 6, 7 y 8 (decimales, porcientos, interés) — verificadores independientes (2026-10-29) ───
+// Todo con fracciones exactas (Fr): nada de coma flotante, y sin usar ninguna función de la app. Los enunciados que no reconocen devuelven null ("NO RECONOCIDO").
+const D=s=>{ s=String(s).replace(/[−–]/g,'-').replace(/[$,\s%]/g,''); const m=/^(-?)(\d*)(?:\.(\d+))?$/.exec(s); if(!m||(m[2]===''&&!m[3])) throw new Error('no es decimal: '+s); const k=(m[3]||'').length; return Fr((m[1]?-1:1)*+((m[2]||'0')+(m[3]||'')),10**k); };
+// redondeo "medio hacia arriba" (alejándose del cero), k = lugares decimales (0 = entero, −1 = decena)
+const RD=(f,k)=>{ const neg=f.n<0, a=Math.abs(f.n); if(k>=0){ const q=Math.floor((2*a*10**k+f.d)/(2*f.d)); return Fr(neg?-q:q,10**k); } const p=10**-k, q=Math.floor((2*a+f.d*p)/(2*f.d*p)); return Fr((neg?-q:q)*p,1); };
+const LUG={'décima':1,'centésima':2,'milésima':3,'diez milésima':4,'decena':-1,'centena':-2};
+const lugDe=t=>{ let m; if(m=/a (\d+) lugares decimales/.exec(t)) return +m[1]; if(/un lugar decimal/.test(t)) return 1; if(/al entero más cercano|al dólar/.test(t)) return 0; if(m=/a la (diez milésima|milésima|centésima|décima|decena|centena) más cercana/.exec(t)) return LUG[m[1]]; if(/al centavo/.test(t)) return 2; return null; };
+const igual=(f,resp,tol=1e-9)=>Math.abs(val(f)-resp)<tol;
+const res=(f,ej,tol)=>({mine:+val(f).toFixed(9), ok:igual(f,ej.respuesta,tol)});
+// "1,174.44" / "−5.2" / "[7/8]" / "4 [22/7]" / "66[2/3]" → fracción exacta
+const numTxt=s=>{ s=s.trim().replace(/[−–]/g,'-').replace(/(\d),(?=\d{3})/g,'$1'); let m; if(m=/^(-?)\s*(\d+)?\s*\[(\d+)\/(\d+)\]$/.exec(s)){ const f=add(Fr(+(m[2]||0)),Fr(+m[3],+m[4])); return m[1]?Fr(-f.n,f.d):f; } return D(s); };
+// ── palabras ↔ número (estricto: cada palabra solo donde corresponde) ──
+const W_UN={un:1,uno:1,una:1,dos:2,tres:3,cuatro:4,cinco:5,seis:6,siete:7,ocho:8,nueve:9}, W_TE={diez:10,once:11,doce:12,trece:13,catorce:14,quince:15,dieciséis:16,diecisiete:17,dieciocho:18,diecinueve:19,veinte:20,veintiuno:21,veintiún:21,veintidós:22,veintitrés:23,veinticuatro:24,veinticinco:25,veintiséis:26,veintisiete:27,veintiocho:28,veintinueve:29};
+const W_DE={treinta:30,cuarenta:40,cincuenta:50,sesenta:60,setenta:70,ochenta:80,noventa:90}, W_CE={cien:100,ciento:100,doscientos:200,trescientos:300,cuatrocientos:400,quinientos:500,seiscientos:600,setecientos:700,ochocientos:800,novecientos:900};
+function wEnt(tk){ const k=tk.indexOf('mil'); if(k>=0){ const a=k===0?1:wEnt(tk.slice(0,k)), b=k+1<tk.length?wEnt(tk.slice(k+1)):0; return a==null||b==null?null:a*1000+b; }
+  let v=0,i=0; if(tk[i] in W_CE){ v+=W_CE[tk[i]]; i++; }
+  if(i<tk.length){ const w=tk[i]; if(w in W_TE){ v+=W_TE[w]; i++; } else if(w in W_DE){ v+=W_DE[w]; i++; if(tk[i]==='y'){ if(tk[i+1] in W_UN){ v+=W_UN[tk[i+1]]; i+=2; } else return null; } } else if(w in W_UN){ v+=W_UN[w]; i++; } else return null; }
+  return i===tk.length?v:null; }
+// nombre de un decimal → {vals:[todas las lecturas posibles]}; "cincuenta y cuatro centésimas" puede ser 0.54 o 50.04 (si hay más de una lectura, el nombre es ambiguo)
+function wDec(txt){ let tk=txt.toLowerCase().replace(/[.,]/g,'').split(/\s+/).filter(Boolean); let lug=0;
+  const fin=tk.slice(-2).join(' '), ult=tk[tk.length-1];
+  if(/^décimas?$/.test(ult)) lug=1; else if(/^centésimas?$/.test(ult)) lug=2; else if(fin==='diez milésimas'||fin==='diez milésima') lug=4; else if(fin==='cien milésimas'||fin==='cien milésima') lug=5; else if(/^milésimas?$/.test(ult)) lug=3; else if(/^millonésimas?$/.test(ult)) lug=6;
+  if(!lug){ const v=wEnt(tk); return {vals:v==null?[]:[Fr(v)]}; }
+  tk=tk.slice(0,tk.length-(lug===4||lug===5?2:1)); const vals=[]; const F=a=>{ const v=wEnt(a); return v!=null&&v>=1&&v<10**lug?v:null; };
+  { const f=F(tk); if(f!=null) vals.push(Fr(f,10**lug)); }
+  // lectura con parte entera: no vale cuando la entera acaba en decena sola (30, 40… 130…) y el numerador es de una cifra con centésimas o más: "sesenta y seis centésimas" es 0.66
+  // (esos 60.06 la app NO los genera; si lo hiciera, el nombre se leería de dos maneras y el ejercicio sería ambiguo)
+  tk.forEach((w,j)=>{ if(w==='y'&&j>0){ const e=wEnt(tk.slice(0,j)), f=F(tk.slice(j+1)); if(e!=null&&f!=null&&!(lug>=2&&f<10&&e%10===0&&e%100>=30)) vals.push(add(Fr(e),Fr(f,10**lug))); } });
+  return {vals:vals.filter((x,i,a)=>a.findIndex(y=>eq(x,y))===i)}; }
+C['dec-palabras']=(ej,t)=>{ let m;
+  if(m=/^Escribe el nombre en palabras para el número decimal dado: (.+)$/.exec(t)){ const x=D(m[1]), buenas=ej.opciones.filter(o=>{ const w=wDec(o); return w.vals.some(v=>eq(v,x)); });
+    const lec=wDec(ej.respuesta).vals; if(lec.length>1) return {mine:'AMBIGUA: "'+ej.respuesta+'" se lee '+lec.map(v=>val(v)).join(' o '), ok:false};
+    return {mine:buenas.join(' | '), ok:buenas.length===1&&buenas[0]===ej.respuesta}; }
+  if(m=/^Escribe el número decimal como una fracción \(no la reduzcas\): (.+)$/.exec(t)){ const s=m[1].trim().replace(/,/g,''), k=(s.split('.')[1]||'').length, n=+s.replace('.',''); return {mine:n+'/'+10**k, ok:ej.respuesta.n===n&&ej.respuesta.d===10**k}; }
+  if(m=/^Escribe el número dado en notación decimal: (.+)$/.exec(t)){ const f=numTxt(m[1]); return res(f,ej); }
+  if(m=/^Escribe el número decimal del nombre en palabras: (.+)$/.exec(t)){ const w=wDec(m[1]); if(w.vals.length!==1) return {mine:w.vals.length?'AMBIGUA: '+w.vals.map(v=>val(v)).join(' o '):'no entendí el nombre', ok:false}; return res(w.vals[0],ej); }
+  return null; };
+C['dec-redondear']=(ej,t)=>{ let m, f, k;
+  if(m=/^Redondea el número(?: decimal)? .*?: (.+)$/.exec(t)){ f=D(m[1]); k=lugDe(t); }
+  else if(m=/balance en la cuenta .* aparece como \$(\d[\d,]*(?:\.\d+)?)\. ¿Cuál es el balance al centavo/.exec(t)){ f=D(m[1]); k=2; }
+  else if(m=/va a deducir \$(\d[\d,]*(?:\.\d+)?) en su planilla .* al dólar/.exec(t)){ f=D(m[1]); k=0; }
+  else return null;
+  if(k==null) return null; return res(RD(f,k),ej); };
+C['dec-comparar']=(ej,t)=>{ let m;
+  if(m=/^Halla el valor absoluto del número: \|(.+)\|$/.exec(t)){ const f=D(m[1]); return res(Fr(Math.abs(f.n),f.d),ej); }
+  if(m=/^Escribe el símbolo de desigualdad apropiado entre los dos decimales: (.+?) ___ (.+)$/.exec(t)){ const a=D(m[1]), b=D(m[2]), c=a.n*b.d-b.n*a.d, s=c<0?'<':c>0?'>':'='; return {mine:s, ok:s===ej.respuesta}; }
+  if(/^Escribe los números dados en orden ascendente/.test(t)){ const v=ej.opciones.map(o=>val(D(o))), orden=[...v.keys()].sort((x,y)=>v[x]-v[y]); return {mine:orden, ok:JSON.stringify(orden)===JSON.stringify(ej.respuesta)}; }
+  return null; };
+C['suma-resta-dec']=(ej,t,h)=>{ let m, f;
+  const cuerpo=s=>ev(s.replace(/^.*?:\s*/,''));
+  if(m=/^(?:Halla la diferencia|Suma los decimales|Halla la suma indicada|Halla la diferencia indicada): (.+)$/.exec(t)) f=ev(m[1].replace(/\[(\d+)\/(\d+)\]/g,'($1/$2)'));
+  else if(m=/^Resta (\d[\d,]*(?:\.\d+)?) de ([\d.,]+?)(?: y redondea la diferencia a la (.+?) más cercana)?\.$/.exec(t)){ f=sub(D(m[2]),D(m[1])); if(m[3]) f=RD(f,lugDe('a la '+m[3]+' más cercana')); }
+  else if(m=/^Resta la diferencia de (\d[\d,]*(?:\.\d+)?) y (\d[\d,]*(?:\.\d+)?) de la suma de (\d[\d,]*(?:\.\d+)?) y (\d[\d,]*(?:\.\d+)?)\.$/.exec(t)) f=sub(add(D(m[3]),D(m[4])),sub(D(m[1]),D(m[2])));
+  else if(m=/^Suma la suma de (\d[\d,]*(?:\.\d+)?) y (\d[\d,]*(?:\.\d+)?) a la diferencia entre (\d[\d,]*(?:\.\d+)?) y (\d[\d,]*(?:\.\d+)?)\.$/.exec(t)) f=add(add(D(m[1]),D(m[2])),sub(D(m[3]),D(m[4])));
+  else if(m=/^Suma la diferencia de (\d[\d,]*(?:\.\d+)?) y (\d[\d,]*(?:\.\d+)?) a la diferencia entre (\d[\d,]*(?:\.\d+)?) y (\d[\d,]*(?:\.\d+)?)\.$/.exec(t)) f=add(sub(D(m[1]),D(m[2])),sub(D(m[3]),D(m[4])));
+  else if(m=/^Estima la (suma|diferencia) redondeando cada número al número cardinal más cercano\. (.+)$/.exec(t)){ const xs=m[2].split(/ [+−-] /).map(s=>RD(D(s),0)), ops=m[2].match(/ [+−-] /g).map(o=>o.trim()); f=xs.reduce((a,x,i)=>i===0?x:ops[i-1]==='+'?add(a,x):sub(a,x)); }
+  else if(m=/^Estima la (suma|diferencia) usando estimación frontal \(.*?\)\. (.+)$/.exec(t)){ const front=x=>{ const a=Math.abs(val(x)); if(a===0) return Fr(0); const e=Math.floor(Math.log10(a)), p=e>=0?Fr(10**e):Fr(1,10**-e), q=RD(div(Fr(Math.abs(x.n),x.d),p),0); return mul(q,p); };
+    const xs=m[2].split(/ [+−-] /).map(s=>front(D(s))), ops=m[2].match(/ [+−-] /g).map(o=>o.trim()); f=xs.reduce((a,x,i)=>i===0?x:ops[i-1]==='+'?add(a,x):sub(a,x)); }
+  else if(m=/^Simplifica combinando términos semejantes: ((?:[\d.]+[a-z]( [+−] )?)+)$/.exec(t)){
+    const ts=m[1].split(/ (?=[+−] )/); let tot=Fr(0), letra; ts.forEach((s,i)=>{ const q=/^(?:([+−]) )?([\d.]+)([a-z])$/.exec(s.trim()); letra=q[3]; const v=D(q[2]); tot=(q[1]==='−')?sub(tot,v):add(tot,v); });
+    const txt=(val(tot)<0?'−':'')+String(Math.abs(val(tot)))+letra; return {mine:txt, ok:String(ej.respuesta).replace(/<[^>]+>/g,'')===txt}; }
+  else return null;
+  return res(f,ej); };
+C['mult-div-dec']=(ej,t)=>{ let m, f;
+  if(m=/^Halla el cociente: (.+?) ÷ (.+)$/.exec(t)){ f=div(D(m[1]),D(m[2])); }
+  else if(m=/^Divide y redondea el cociente a la (.+?) más cercana: (.+?) ÷ (.+)$/.exec(t)){ f=RD(div(D(m[2]),D(m[3])),lugDe('a la '+m[1]+' más cercana')); }
+  else if(m=/^Calcula el producto indicado: (.+)$/.exec(t)){ f=m[1].split(' × ').map(s=>D(s.replace(/[()]/g,''))).reduce(mul); }
+  else if(m=/^Halla el (?:producto|cociente) mentalmente moviendo el punto decimal: (.+?) (×|÷) (10\^(\d+)|[\d,]+)$/.exec(t)){ const p=m[4]?10**+m[4]:+m[3].replace(/,/g,''); f=m[2]==='×'?mul(D(m[1]),Fr(p)):div(D(m[1]),Fr(p)); }
+  else return null;
+  return res(f,ej); };
+C['dec-fraccion']=(ej,t)=>{ let m, f;
+  const aDec=(fr,k)=>k==null?fr:RD(fr,k);
+  if(m=/^Cambia (?:la fracción|el número mixto) a (?:forma decimal|un número decimal(?: y redondea a la (.+?) más cercana)?)(?:\. Si el decimal es infinito.*)?: (.+)$/.exec(t)){ const fr=numTxt(m[2]); const k=m[1]?lugDe('a la '+m[1]+' más cercana'):null;
+    if(/overline/.test(String(ej.respuesta))){ const txt=String(ej.respuesta).replace(/<span[^>]*>(.*?)<\/span>/,'($1)').replace(/−/g,'-'); const mm=/^(-?)(\d*)\.(\d*)\((\d+)\)$/.exec(txt); if(!mm) return null;   // 0.41(6) = 0.41666…
+      const pre=+(mm[2]+mm[3]), full=+(mm[2]+mm[3]+mm[4]), x=Fr(full-pre,(10**mm[4].length-1)*10**mm[3].length); const sg=mm[1]?Fr(-x.n,x.d):x; return {mine:txt, ok:eq(sg,fr)}; }
+    return res(aDec(fr,k),ej); }
+  if(m=/^Cambia el número de forma decimal a forma fraccionaria y redúcelo a sus términos más simples: (.+)$/.exec(t)){ f=D(m[1]); return {mine:f.n+'/'+f.d, ok:ej.respuesta.n===f.n&&ej.respuesta.d===f.d}; }
+  if(m=/^Cambia el número de forma decimal a forma de número mixto y redúcelo a sus términos más simples: (.+)$/.exec(t)){ f=D(m[1]); const neg=f.n<0, a=Math.abs(f.n), e=Math.floor(a/f.d), r=Fr(a-e*f.d,f.d); const R={e:neg?-e:e,n:r.n,d:r.d}; return {mine:R, ok:ej.respuesta.e===R.e&&ej.respuesta.n===R.n&&ej.respuesta.d===R.d}; }
+  return null; };
+C['orden-op-dec']=(ej,t,h)=>{ let m;
+  const E=s=>ev(s.replace(/\[/g,'(').replace(/\]/g,')').replace(/\(([\d.]+)\)\(([\d.]+)\)/g,'($1)*($2)'));
+  if(m=/^Simplifica la expresión numérica: (.+)$/.exec(clean(h).replace(/\[(\d+)\/(\d+)\]/g,'[$1/$2]'))){ const cuerpo=toExpr(h).replace(/^.*?expresión numérica:\s*/,''); return res(parse(cuerpo.replace(/\[/g,'(').replace(/\]/g,')')),ej); }
+  if(m=/^Evalúa la expresión para x = ([\d.]+) y y = ([\d.]+): (.+)$/.exec(t)){ const x=D(m[1]), y=D(m[2]); let e=m[3].replace(/−/g,'-').replace(/(\d)([xy])/g,'$1*$2').replace(/([xy])([xy])/g,'$1*$2').replace(/(\d)([xy])/g,'$1*$2'); e=e.replace(/x/g,'('+m[1]+')').replace(/y/g,'('+m[2]+')'); return res(parse(e.replace(/\s+/g,' ')),ej); }
+  return null; };
+C['promedio-dec']=(ej,t)=>{ let m, lista, k=null;
+  if(m=/^Halla el promedio(?: \(redondea a la (.+?) más cercana\))?: (.+)$/.exec(t)){ lista=m[2]; k=m[1]?lugDe('a la '+m[1]+' más cercana'):null; }
+  else if(m=/fue(?: \(en dólares\))?: (.+?)\. ¿Cuál es el promedio(, redondeado a la centésima)?\?$/.exec(t)){ lista=m[1]; k=m[2]?2:null; }
+  else return null;
+  const xs=lista.split(/,\s*/).map(s=>D(s.replace(/[^\d.\-−]/g,''))); const f=div(xs.reduce(add),Fr(xs.length)); return res(k==null?f:RD(f,k),ej); };
+C['porciento-conv']=(ej,t)=>{ let m, f;
+  if(m=/^Escribe el porciento como un número decimal: (.+)%$/.exec(t)) return res(div(numTxt(m[1]),Fr(100)),ej);
+  if(m=/^Escribe el número decimal como un porciento: (.+)$/.exec(t)) return res(mul(D(m[1]),Fr(100)),ej);
+  if(m=/^Cambia el porciento a una fracción y redúcela a sus términos más simples: (.+)%$/.exec(t)){ f=div(numTxt(m[1]),Fr(100)); const R=ej.respuesta; if(typeof R==='number') return {mine:f.n/f.d, ok:f.d===1&&f.n===R}; if(ej.tipo==='mixto'){ const e=Math.floor(f.n/f.d), r=Fr(f.n-e*f.d,f.d); return {mine:e+' '+r.n+'/'+r.d, ok:R.e===e&&R.n===r.n&&R.d===r.d}; } return {mine:f.n+'/'+f.d, ok:R.n===f.n&&R.d===f.d}; }
+  if(m=/^Escribe el número como un porciento\. Redondea a la décima de porciento más cercana: (.+)$/.exec(t)) return res(RD(mul(numTxt(m[1]),Fr(100)),1),ej);
+  if(m=/^Convierte el porciento a un decimal redondeado a la (.+?) más cercana: (.+)%$/.exec(t)) return res(RD(div(numTxt(m[2]),Fr(100)),lugDe('a la '+m[1]+' más cercana')),ej);
+  if(/^Halla el porciento de ganancia de cada inversión/.test(t)){ const g=[...t.matchAll(/\((a|b)\) \$(\d[\d,]*(?:\.\d+)?) de ganancia al invertir \$(\d[\d,]*(?:\.\d+)?)/g)].map(q=>({l:'('+q[1]+')',p:div(D(q[2]),D(q[3]))})); if(g.length!==2) return null; const mejor=g[0].p.n*g[1].p.d>g[1].p.n*g[0].p.d?g[0].l:g[1].l; return {mine:mejor, ok:mejor===ej.respuesta}; }
+  return null; };
+C['porciento-formula']=(ej,t)=>{ let m;
+  const nP=s=>numTxt(s.replace(/%$/,''));
+  if(m=/^¿([\d.]+(?:\[\d+\/\d+\])?)% de (\d[\d,]*(?:\.\d+)?) es qué número\?(?: Redondea a la centésima\.)?$/.exec(t)){ const f=div(mul(nP(m[1]),D(m[2])),Fr(100)); return res(/Redondea/.test(t)?RD(f,2):f,ej); }
+  if(m=/^¿Qué porciento de (\d[\d,]*(?:\.\d+)?) es (\d[\d,]*(?:\.\d+)?)\?$/.exec(t)) return res(mul(div(D(m[2]),D(m[1])),Fr(100)),ej);
+  if(m=/^¿(\d[\d,]*(?:\.\d+)?) es ([\d.]+)% de qué número\?$/.exec(t)) return res(div(mul(D(m[1]),Fr(100)),D(m[2])),ej);
+  if(m=/^¿([\d.]+)% de qué número es (\d[\d,]*(?:\.\d+)?)\?$/.exec(t)) return res(div(mul(D(m[2]),Fr(100)),D(m[1])),ej);
+  if(m=/^(?:El|La) .* (aumentó|bajó) de \$?(\d[\d,]*(?:\.\d+)?) a \$?(\d[\d,]*(?:\.\d+)?)\. ¿Cuál es el porciento de (?:aumento|disminución)\?$/.exec(t)){ const a=D(m[2]), b=D(m[3]); return res(mul(div(Fr(Math.abs(b.n*a.d-a.n*b.d),a.d*b.d),a),Fr(100)),ej); }
+  if(m=/^Un mineral contiene ([\d.]+)% de cobre\. ¿Cuántos kilogramos del mineral contienen (\d[\d,]*(?:\.\d+)?) kg de cobre\?$/.exec(t)) return res(div(mul(D(m[2]),Fr(100)),D(m[1])),ej);
+  if(m=/el ([\d.]+)% de los estudiantes son varones y el número de niñas es (\d[\d,]*(?:\.\d+)?)\. ¿Cuántos varones hay\?$/.exec(t)){ const p=D(m[1]), niñas=D(m[2]); const total=div(mul(niñas,Fr(100)),sub(Fr(100),p)); return res(mul(total,div(p,Fr(100))),ej); }
+  if(m=/compró un auto en \$(\d[\d,]*(?:\.\d+)?)\. Hizo un pronto pago de ([\d.]+)%\. Halla la cantidad del préstamo\.$/.exec(t)) return res(mul(D(m[1]),sub(Fr(1),div(D(m[2]),Fr(100)))),ej);
+  if(m=/aumentó ([\d.]+)% desde el último censo\. Si la población anterior era de (\d[\d,]*(?:\.\d+)?) habitantes/.exec(t)) return res(mul(D(m[2]),add(Fr(1),div(D(m[1]),Fr(100)))),ej);
+  if(m=/deprecia a una tasa de ([\d.]+)% por año\. Si la maquinaria nueva cuesta \$(\d[\d,]*(?:\.\d+)?), ¿cuál será su valor después de (\d+) años?\?$/.exec(t)){ let v=D(m[2]); const r=sub(Fr(1),div(D(m[1]),Fr(100))); for(let i=0;i<+m[3];i++) v=mul(v,r); return res(RD(v,2),ej); }
+  return null; };
+C['interes']=(ej,t)=>{ let m;
+  const num=s=>D(s.replace(/\$/g,''));
+  if(m=/Halla el interés simple usando la fórmula I = Prt: Principal = \$(\d[\d,]*(?:\.\d+)?), tasa = ([\d.]+)%, tiempo = ([\d.]+) (años?|meses|días)(?: \(usa (\d+) días en un año\))?\.(?: Redondea al centavo más cercano\.)?/.exec(t)){
+    const P=num(m[1]), r=div(D(m[2]),Fr(100)); let tm=D(m[3]); tm=m[4]==='meses'?div(tm,Fr(12)):m[4]==='días'?div(tm,Fr(+m[5])):tm; const I=mul(mul(P,r),tm); return res(/Redondea/.test(t)?RD(I,2):I,ej); }
+  if(m=/Halla la cantidad \(principal \+ interés\) que se tendrá: Principal = \$(\d[\d,]*(?:\.\d+)?), tasa = ([\d.]+)% de interés simple, tiempo = ([\d.]+) años?\.(?: Redondea al centavo más cercano\.)?/.exec(t)){ const P=num(m[1]), A=add(P,mul(mul(P,div(D(m[2]),Fr(100))),D(m[3]))); return res(/Redondea/.test(t)?RD(A,2):A,ej); }
+  if(m=/^¿A qué tasa porcentual \$(\d[\d,]*(?:\.\d+)?) ganarán un interés simple de \$(\d[\d,]*(?:\.\d+)?) en (\d+(?:\.\d+)?) (años|meses)\?$/.exec(t)){ const tm=m[4]==='meses'?div(D(m[3]),Fr(12)):D(m[3]); return res(mul(div(div(num(m[2]),num(m[1])),tm),Fr(100)),ej); }
+  if(m=/^(?:Carmen|Arnaldo|Rita) tomó prestados \$(\d[\d,]*(?:\.\d+)?) a un interés simple de ([\d.]+)%\. Después de cierto tiempo devolvió \$(\d[\d,]*(?:\.\d+)?) y saldó la cuenta/.exec(t)){ const P=num(m[1]); return res(div(sub(num(m[3]),P),mul(P,div(D(m[2]),Fr(100)))),ej); }
+  if(m=/^Halla (?:la cantidad|el interés compuesto) sobre \$(\d[\d,]*(?:\.\d+)?) por ([\d.]+) años? al ([\d.]+)% compuesto (anual|semestral|trimestral|mensual)\. Redondea al centavo\.$/.exec(t)){
+    // exacto con BigInt: P·(1 + i)^períodos sin coma flotante; "interés" = cantidad − P; al centavo (medio hacia arriba)
+    const n={anual:1,semestral:2,trimestral:4,mensual:12}[m[4]], P=num(m[1]), per=Math.round(val(D(m[2]))*n), i=div(D(m[3]),Fr(100*n)); let N=BigInt(P.n), Dn=BigInt(P.d); const a=BigInt(i.d+i.n), b=BigInt(i.d); for(let k=0;k<per;k++){ N*=a; Dn*=b; }
+    if(/interés compuesto/.test(t)){ N=N*BigInt(P.d)-BigInt(P.n)*Dn; Dn=Dn*BigInt(P.d); }
+    const c=(N*200n+Dn)/(2n*Dn), mine=Number(c)/100; return {mine, ok:Math.abs(mine-ej.respuesta)<1e-9}; }
+  return null; };
+C['ecuaciones-dec']=(ej,t,h)=>{ // sustituye la respuesta en la ecuación: los dos lados tienen que dar lo mismo (no la resuelve: la comprueba)
+  const m=/^Resuelve la ecuación(?: para ([a-z]))?(?: y verifica(?: tu| la)? respuesta)?: /.exec(t); if(!m) return null;
+  const e=toExpr(h).replace(/(\d),(?=\d{3})/g,'$1').replace(/^.*?(?:respuesta|para [a-z]|ecuación):\s*/,'').replace(/\)\s*([a-z])/g,')*$1').replace(/([a-z])\s*\(/g,'$1*(');
+  const letra=(e.match(/[a-z]/)||[])[0]; if(!letra||e.split('=').length!==2) return null;
+  const r=ej.respuesta, F=typeof r==='object'?Fr(r.n,r.d):D(String(r)), v='('+F.n+'/'+F.d+')';
+  const [L,Rr]=e.split('=').map(x=>x.replace(new RegExp(letra,'g'),v)); const a=parse(L), b=parse(Rr); return {mine:val(a)+' vs '+val(b), ok:eq(a,b)}; };
+C['raices-pitagoras']=(ej,t)=>{ let m;
+  if(m=/^Determina si el número dado es un cuadrado perfecto: ([\d,]+)$/.exec(t)){ const n=+m[1].replace(/,/g,''), r=Math.round(Math.sqrt(n)), v=r*r===n; return {mine:v, ok:v===ej.respuesta}; }
+  if(m=/trío de números representa los lados de un triángulo rectángulo: \((\d+), (\d+), (\d+)\)$/.exec(t)){ const [a,b,c]=[+m[1],+m[2],+m[3]].sort((x,y)=>x-y), v=a*a+b*b===c*c; return {mine:v, ok:v===ej.respuesta}; }
+  if(m=/^¿Entre qué dos enteros consecutivos se encuentra √(\d+)\?$/.exec(t)){ const n=+m[1]; let a=Math.floor(Math.sqrt(n)); while(a*a>n) a--; while((a+1)*(a+1)<=n) a++; return {mine:[a,a+1], ok:ej.respuesta.a===a&&ej.respuesta.b===a+1}; }
+  if(m=/^Halla el valor de la expresión: (−)?(\()?√(\d+)\)?(\^2)?$/.exec(t)){ const n=+m[3], r=Math.round(Math.sqrt(n)); if(r*r!==n) return null; const v=m[4]?n:(m[1]?-r:r); return {mine:v, ok:v===ej.respuesta}; }
+  if(m=/^Estima el valor de la raíz cuadrada a un lugar decimal \(redondea a la décima\): √(\d+)$/.exec(t)){ const n=+m[1]; let k=Math.floor(Math.sqrt(100*n)+0.5); while((2*k-1)**2>400*n) k--; while((2*k+1)**2<=400*n) k++; return {mine:k/10, ok:Math.abs(k/10-ej.respuesta)<1e-9}; }
+  return null; };
+
+const NM='(\\d[\\d,]*(?:\\.\\d+)?)';
+const RX=(fuente)=>new RegExp(fuente.split('NUM').join(NM));   // NUM = un número del enunciado: 1,174.44 (sin tragarse el punto final de la oración)
+C['formulas-dec']=(ej,t)=>{ let m; const tn=t.replace(/−/g,'-');
+  const dado=tn.slice(tn.indexOf('dado')+4);   // los datos van DESPUÉS de "dado" (antes está la fórmula, que también tiene "V = …")
+  const g=(k)=>{ const q=new RegExp('(?:^|[ ,])'+k+' = (-?\\d[\\d,]*(?:\\.\\d+)?)').exec(dado); return q?D(q[1]):null; };
+  if(m=RX('^Usa la fórmula F = 1\\.8C \\+ 32 para hallar la temperatura en (Fahrenheit|Celsius) que corresponde a (-?\\d[\\d.]*)° (?:C|F)\\.$').exec(tn)){ const x=D(m[2]), f=m[1]==='Fahrenheit'?add(mul(D('1.8'),x),Fr(32)):div(sub(x,Fr(32)),D('1.8')); return res(f,ej); }
+  if(/^Resuelve para la desconocida\. l = a \+ \(n - 1\)d/.test(tn)){ const n=g('n'), a=g('a'), d=g('d'); return res(add(a,mul(sub(n,Fr(1)),d)),ej); }
+  if(/^Resuelve para la desconocida\. S = \[n\/2\]\(a \+ l\); halla S/.test(tn)){ const n=g('n'), a=g('a'), l=g('l'); return res(mul(div(n,Fr(2)),add(a,l)),ej); }
+  if(/^Resuelve para la desconocida\. A = P \+ Prt; halla P/.test(tn)){ const A=g('A'), r=g('r'), tt=g('t'); return res(div(A,add(Fr(1),mul(r,tt))),ej); }
+  if(/^Resuelve para la desconocida\. V = πr\^2h; halla V/.test(tn)){ const r=g('r'), hh=g('h'), pi=g('π'); return res(RD(mul(mul(pi,mul(r,r)),hh),2),ej); }
+  if(/^Resuelve para la desconocida\. V = 3\.14r\^2h; halla h/.test(tn)){ const V=g('V'), r=g('r'); return res(RD(div(V,mul(D('3.14'),mul(r,r))),2),ej); }
+  if(/^Resuelve para la desconocida\. A = \[1\/2\]h\(b \+ c\); halla h/.test(tn)){ const A=g('A'), b=g('b'), c=g('c'); return res(div(mul(A,Fr(2)),add(b,c)),ej); }
+  return null; };
+C['comercial-dec']=(ej,t)=>{ let m; const P=s=>D(s), pc=s=>div(D(s),Fr(100));
+  const c2=f=>RD(f,2), ceil2=f=>{ const x=mul(f,Fr(100)), q=Math.ceil(x.n/x.d); return Fr(q,100); };
+  if(m=RX('^Un artículo que cuesta \\$NUM tiene un margen de ganancia de NUM% basado en el costo\\. ¿Cuál es su precio de venta\\?$').exec(t)) return res(c2(mul(P(m[1]),add(Fr(1),pc(m[2])))),ej);
+  if(m=RX('^Halla el precio de venta de una lavadora listada en \\$NUM y vendida con un descuento de NUM%\\.$').exec(t)) return res(c2(mul(P(m[1]),sub(Fr(1),pc(m[2])))),ej);
+  if(m=RX('^Una tienda anunció un descuento de NUM% en todo\\. Halla el precio marcado de una camisa si se vende en \\$NUM\\.$').exec(t)) return res(c2(div(P(m[2]),sub(Fr(1),pc(m[1])))),ej);
+  if(m=RX('^Compraste (?:un artículo de|artículos de) (.+?)\\. El impuesto de venta es NUM%\\. ¿Cuál es el costo total\\? \\(El impuesto se redondea al centavo mayor\\.\\)$').exec(t)){ const sub_=m[1].split(/, /).map(s=>P(s.replace('$',''))).reduce(add), imp=ceil2(mul(sub_,pc(m[2]))); return res(add(sub_,imp),ej); }
+  if(m=RX('^Halla el precio de un escritorio listado en \\$NUM y vendido con descuentos sucesivos de NUM% y NUM%\\.$').exec(t)) return res(c2(mul(mul(P(m[1]),sub(Fr(1),pc(m[2]))),sub(Fr(1),pc(m[3])))),ej);
+  if(m=RX('^A un artículo que le cuesta al dueño de una tienda \\$NUM se le suma un margen de ganancia de \\$NUM\\. ¿Cuál es el porciento de margen de ganancia basado en el (costo|precio de venta)\\? Redondea a la décima de porciento\\.$').exec(t)){ const c=P(m[1]), g_=P(m[2]); const base=m[3]==='costo'?c:add(c,g_); return res(RD(mul(div(g_,base),Fr(100)),1),ej); }
+  if(m=RX('^Una cámara está a la venta en \\$NUM\\. Si el margen de ganancia es NUM% del precio de venta, ¿cuál es el costo de la cámara\\?$').exec(t)) return res(c2(mul(P(m[1]),sub(Fr(1),pc(m[2])))),ej);
+  if(m=RX('tiene un salario semanal de \\$NUM más NUM% de comisión en las ventas(?: sobre \\$NUM)?\\. Halla su ingreso de la semana si sus ventas fueron \\$NUM\\.$').exec(t)){ const base=m[3]?P(m[3]):Fr(0); return res(add(P(m[1]),mul(pc(m[2]),sub(P(m[4]),base))),ej); }
+  if(m=RX('^Una casa se compró por \\$NUM y se vendió por \\$NUM\\. ¿Cuál es el porciento de ganancia\\?$').exec(t)){ const a=P(m[1]); return res(mul(div(sub(P(m[2]),a),a),Fr(100)),ej); }
+  return null; };
+C['compras-grandes']=(ej,t)=>{ let m; const P=s=>D(s), pc=s=>div(D(s),Fr(100));
+  const arr=(mine)=>({mine, ok:Array.isArray(ej.respuesta)&&ej.respuesta.length===mine.length&&mine.every((v,i)=>Math.abs(v-ej.respuesta[i])<0.005)});
+  if(m=RX('^Carla desea comprar un automóvil valorado en \\$NUM\\. Su cooperativa le presta el NUM% del costo\\. Tiene que pagar un impuesto de ventas del NUM% y un cargo de licencia de \\$NUM\\. ¿Cuánto dinero en efectivo necesita\\?$').exec(t)){ const p=P(m[1]); return res(add(add(sub(p,mul(p,pc(m[2]))),mul(p,pc(m[3]))),P(m[4])),ej); }
+  if(m=RX('^Hace cinco años Juan compró una casa valorada en \\$NUM\\. Cuando la vendió este año, la propiedad había apreciado un NUM% del valor de compra\\. ¿Cuál fue su ganancia en la venta\\?$').exec(t)) return res(mul(P(m[1]),pc(m[2])),ej);
+  if(m=RX('^Un automóvil que cuesta \\$NUM al contado se vendió con un pronto pago de \\$NUM\\. El resto será pagado en (\\d+) meses con un cargo anual de NUM%\\. Halla \\(a\\) el cargo por financiamiento; \\(b\\) el pago mensual\\.$').exec(t)){
+    const resto=sub(P(m[1]),P(m[2])), cargo=mul(mul(resto,pc(m[4])),div(Fr(+m[3]),Fr(12))), mensual=RD(div(add(resto,cargo),Fr(+m[3])),2); return arr([val(cargo),val(mensual)]); }
+  if(m=RX('^Una casa se vendió en \\$NUM\\. El comprador tiene que dar un pronto pago del NUM% del precio de venta, pagar un cargo de préstamo de NUM% de la hipoteca, \\$NUM por el seguro contra incendios, \\$NUM por los cargos de registro, \\$NUM por los impuestos y \\$NUM por honorarios legales\\. Halla \\(a\\) el pronto pago, \\(b\\) la hipoteca y \\(c\\) el efectivo que necesita\\.$').exec(t)){
+    const precio=P(m[1]), pronto=mul(precio,pc(m[2])), hip=sub(precio,pronto), cargo=mul(hip,pc(m[3])), efectivo=[pronto,cargo,P(m[4]),P(m[5]),P(m[6]),P(m[7])].reduce(add); return arr([val(pronto),val(hip),val(efectivo)]); }
+  return null; };
+// la propina con la Regla Especial del libro: se redondea la cuenta al dólar, el 10% (÷ 10) más su mitad (el 5%) = el 15% de esa cuenta redondeada
+{ const f0=C['comercial-dec']; C['comercial-dec']=(ej,t,h)=>{ const m=RX('^Usa la Regla Especial para calcular una propina de 15%: la cuenta es de \\$NUM incluyendo el impuesto\\. ¿De cuánto será la propina\\?$').exec(t.replace(/\s+([.,?:;!)%])/g,'$1'));
+  if(!m) return f0(ej,t,h); return res(mul(RD(D(m[1]),0),D('0.15')),ej); }; }
+// diferencia entre el interés compuesto anual y el simple: P·((1+r)^n − 1) − P·r·n, exacto con BigInt y al centavo
+{ const f0=C['interes']; C['interes']=(ej,t,h)=>{ const m=RX('^Halla la diferencia entre el interés compuesto anual y el interés simple sobre \\$NUM por (\\d+) años al NUM% por año\\.$').exec(t.replace(/\s+([.,?:;!)%])/g,'$1'));
+  if(!m) return f0(ej,t,h); const P=D(m[1]), n=+m[2], r=div(D(m[3]),Fr(100));
+  let N=BigInt(P.n), Dn=BigInt(P.d); const a=BigInt(r.d+r.n), b=BigInt(r.d); for(let k=0;k<n;k++){ N*=a; Dn*=b; }
+  // compuesto − principal − simple, todo sobre Dn·P.d·r.d
+  const simple=mul(mul(P,r),Fr(n)), num=N*BigInt(P.d)-BigInt(P.n)*Dn;   // (compuesto − P) = num / (Dn·P.d)
+  const den=Dn*BigInt(P.d), sN=BigInt(simple.n), sD=BigInt(simple.d), X=num*sD-sN*den, Y=den*sD;   // X / Y
+  const c=(X*200n+Y)/(2n*Y), mine=Number(c)/100; return {mine, ok:Math.abs(mine-ej.respuesta)<1e-9}; }; }
+// clean() deja espacios sueltos ("Resta 58.4 de 253.58 ." / "para x : [1/5]" / "$ 125.66" / "12 %"): se acomodan antes de leer cada enunciado
+['dec-palabras','dec-redondear','dec-comparar','suma-resta-dec','mult-div-dec','dec-fraccion','orden-op-dec','promedio-dec','porciento-conv','porciento-formula','interes','ecuaciones-dec','raices-pitagoras','formulas-dec','comercial-dec','compras-grandes'].forEach(id=>{
+  const f=C[id]; C[id]=(ej,t,h)=>f(ej,t.replace(/\s+([.,?:;!)%])/g,'$1').replace(/([(¿¡$])\s+/g,'$1'),h); });
+
+C['aplicaciones-dec']=(ej,t)=>{ let m; const P=s=>D(s.replace('$','')), pc=s=>div(D(s),Fr(100)), c2=f=>RD(f,2);
+  t=t.replace(/\s+([.,?:;!)%])/g,'$1').replace(/([(¿¡$])\s+/g,'$1');
+  const par=(mine)=>({mine, ok:Array.isArray(ej.respuesta)&&ej.respuesta.length===mine.length&&mine.every((v,i)=>Math.abs(v-ej.respuesta[i])<0.005)});
+  if(m=RX('^En un mapa, 1 pulgada representa NUM millas\\. La distancia entre dos ciudades en el mapa es NUM pulgadas\\. ¿Cuántas millas hay entre las ciudades\\?$').exec(t)) return res(mul(P(m[1]),P(m[2])),ej);
+  if(m=RX('^Halla el NUM% de \\$NUM\\.( Redondea al centavo\\.)?$').exec(t)){ const f=mul(pc(m[1]),P(m[2])); return res(m[3]?c2(f):f,ej); }
+  if(m=RX('^El costo total (?:de|del) (.+?) y (?:de|del) (.+?) es \\$NUM\\. Si (.+?) cuesta \\$NUM menos que (.+?), ¿cuál es el costo de cada uno\\?$').exec(t)){ const T=P(m[3]), d=P(m[5]); return par([val(c2(div(sub(T,d),Fr(2)))),val(c2(div(add(T,d),Fr(2))))]); }
+  if(m=RX('^Si (?:los|las|el|la) .+? cuest(?:an|a) \\$NUM la libra, ¿cuántas libras se pueden comprar con \\$NUM\\? Redondea a la centésima\\.$').exec(t)) return res(RD(div(P(m[2]),P(m[1])),2),ej);
+  if(m=RX('^¿Cuál es la mejor compra para (.+?): NUM onzas por \\$NUM ó NUM onzas por \\$NUM\\?$').exec(t)){ const a=div(P(m[3]),P(m[2])), b=div(P(m[5]),P(m[4])), mejor=a.n*b.d<b.n*a.d?m[2]+' onzas por $'+m[3]:m[4]+' onzas por $'+m[5]; return {mine:mejor, ok:mejor===ej.respuesta}; }
+  if(m=RX('^Si NUM .+? cuestan \\$NUM, ¿cuál es el costo por .+?\\? Redondea al centavo más cercano\\.$').exec(t)) return res(c2(div(P(m[2]),P(m[1]))),ej);
+  if(m=RX('recorrió NUM millas en NUM horas\\. ¿Cuál fue su velocidad promedio en millas por hora\\? Redondea a la décima\\.$').exec(t)) return res(RD(div(P(m[1]),P(m[2])),1),ej);
+  if(m=RX('vendió camisetas a \\$NUM cada una en una feria\\. ¿Cuánto ganó por la venta de (\\d+) camisetas, si cada una le costó \\$NUM y pagó \\$NUM por la renta del kiosco\\?$').exec(t)) return res(sub(mul(sub(P(m[1]),P(m[3])),Fr(+m[2])),P(m[4])),ej);
+  if(m=RX('^[^\\s]+ tenía \\$NUM en su cuenta de cheques\\. Escribió cheques por (.+?)\\. Luego hizo un depósito de \\$NUM\\. ¿Cuál es el balance en la cuenta\\?$').exec(t)){ const cheques=m[2].split(/, /).map(P).reduce(add); return res(add(sub(P(m[1]),cheques),P(m[3])),ej); }
+  if(m=RX('^Antes de las deducciones, el ingreso bruto mensual de [^\\s]+ es \\$NUM\\. Sus deducciones fueron: (.+?)\\. Halla el pago neto').exec(t)){ const ded=[...m[2].matchAll(/\$(\d[\d,]*(?:\.\d+)?)/g)].map(q=>P(q[1])); return res(ded.reduce(sub,P(m[1])),ej); }
+  return null; };
+
+// ── Circuitos Eléctricos (ETRE 160): con los datos del enunciado se calcula todo (Rt, It, Vt, V / I / P de cada resistor) y cada casilla se compara por su etiqueta ──
+// (coma flotante normal: las respuestas del curso van redondeadas y se aceptan con ~1 % de margen)
+const PREF={k:1e3,K:1e3,M:1e6,m:1e-3,'µ':1e-6,u:1e-6,'':1};
+const unidades=t=>[...t.matchAll(/(\d+(?:\.\d+)?)\s*([kKMmµu]?)\s*(Ω|V|A|w|W)(?![a-zA-Z])/g)].map(q=>({v:+q[1]*PREF[q[2]], u:q[3]==='w'?'W':q[3]}));
+const casiIgual=(mine,resp)=>Math.abs(mine-resp)<=Math.max(1e-12,0.011*Math.abs(mine));
+const resCirc=(ej,mine,etiqs)=>{ const malos=[]; (etiqs||[0]).forEach((e,i)=>{ if(mine[i]==null||!casiIgual(mine[i],ej.respuesta[i])) malos.push((typeof e==='string'?e:i)+': app='+ej.respuesta[i]+' mío='+(mine[i]==null?'?':+mine[i].toPrecision(5))); }); return {mine:mine.map(x=>x==null?null:+x.toPrecision(5)), ok:malos.length===0&&mine.length===ej.respuesta.length, msg:malos.join('; ')}; };
+C['circ-resistividad']=(ej,t)=>{ const m=/resistencia de (\d+) pies de cable .*Dato de la tabla 8: AWG #\d+ = (\d+(?:\.\d+)?) Ω por cada 1000 ft/.exec(t); if(!m) return null; return resCirc(ej,[+m[1]*+m[2]/1000]); };
+C['circ-ley-ohm']=(ej,t)=>{ let m;
+  const pares=[...t.matchAll(/R\d = (\d+(?:\.\d+)?)\s*([kKMmµu]?)Ω con I = (\d+(?:\.\d+)?)\s*([kKMmµu]?)A/g)];
+  if(pares.length){ return resCirc(ej,pares.map(q=>(+q[1]*PREF[q[2]])*(+q[3]*PREF[q[4]])),ej.campos.map(c=>c.et)); }
+  const u=unidades(t.replace(/\[dibujo\]/g,'')), V=u.find(x=>x.u==='V'), A=u.find(x=>x.u==='A'), R=u.find(x=>x.u==='Ω');
+  if(/I = \?/.test(t)&&V&&R) return resCirc(ej,[V.v/R.v]);
+  if(/R = \?/.test(t)&&V&&A) return resCirc(ej,[V.v/A.v]);
+  if(/Vs = \?/.test(t)&&A&&R) return resCirc(ej,[A.v*R.v]);
+  return null; };
+C['circ-ley-watt']=(ej,t)=>{ const u=unidades(t.replace(/\[dibujo\]/g,'')), V=u.find(x=>x.u==='V'), A=u.find(x=>x.u==='A'), R=u.find(x=>x.u==='Ω'), W=u.find(x=>x.u==='W');
+  if(/Determine (?:la (?:cantidad de )?)?potencia/.test(t)){ if(V&&A) return resCirc(ej,[V.v*A.v]); if(A&&R) return resCirc(ej,[A.v*A.v*R.v]); if(V&&R) return resCirc(ej,[V.v*V.v/R.v]); }
+  if(/Cual es la corriente/.test(t)){ if(W&&R) return resCirc(ej,[Math.sqrt(W.v/R.v)]); if(W&&V) return resCirc(ej,[W.v/V.v]); }
+  return null; };
+// serie y paralelo: se calcula todo y cada casilla busca su etiqueta (Rtotal, Itotal, Vtotal, VR1, IR2, PR3, PT / Ptotal)
+function circuito(t,paralelo){ const dat=t.replace(/^.*?⏎/,'')===t?t:t;   // el enunciado entero: los nombres de abajo ("Rtotal", "VR1") no llevan "="
+  const R=[...dat.matchAll(/\bR(\d) = (\d+(?:\.\d+)?)\s*([kKMmµu]?)Ω/g)].map(q=>({n:q[1],v:+q[2]*PREF[q[3]]})); if(!R.length) return null;
+  const V=/\b(?:V|Vt|VT|E) = (\d+(?:\.\d+)?)\s*([kKMmµu]?)V/.exec(dat), I=/\b(?:I|IT|It) = (\d+(?:\.\d+)?)\s*([kKMmµu]?)A/.exec(dat);
+  const Rt=paralelo?1/R.reduce((a,r)=>a+1/r.v,0):R.reduce((a,r)=>a+r.v,0); let Vt, It;
+  if(V){ Vt=+V[1]*PREF[V[2]]; It=Vt/Rt; } else if(I){ It=+I[1]*PREF[I[2]]; Vt=It*Rt; } else return null;
+  const q={Rtotal:Rt, Rt:Rt, Itotal:It, Vtotal:Vt, PT:Vt*It, Ptotal:Vt*It};
+  R.forEach(r=>{ if(paralelo){ q['IR'+r.n]=Vt/r.v; q['PR'+r.n]=Vt*Vt/r.v; q['VR'+r.n]=Vt; } else { q['VR'+r.n]=It*r.v; q['IR'+r.n]=It; q['PR'+r.n]=It*It*r.v; } });
+  return q; }
+const circGen=(paralelo)=>(ej,t)=>{ const sinDib=t.replace(/\[dibujo\]/g,'').replace(/\b([IVRP]) (T|t|total|R\d)\b/g,'$1$2');   // clean() deja "I T" / "V R1" donde el enunciado tiene subíndices
+  let m; if(m=/resistencias de ([\d.]+)Ω, ([\d.]+)Ω, ([\d.]+)Ω, ([\d.]+)Ω y R/.exec(sinDib)){ const u=unidades(sinDib.replace(/resistencias de.*$/,'')), V=u.find(x=>x.u==='V'), A=u.find(x=>x.u==='A'); if(!V||!A) return null; const Rt=V.v/A.v; return resCirc(ej,[Rt,Rt-(+m[1]+ +m[2]+ +m[3]+ +m[4])],['Rt','R']); }
+  const q=circuito(sinDib,paralelo); if(!q) return null;
+  const etiqs=ej.campos.map(c=>c.et.replace(/<sub>(.*?)<\/sub>/g,'$1')); const mine=etiqs.map(e=>q[e]);
+  return resCirc(ej,mine,etiqs); };
+C['circ-serie']=circGen(false);
+C['circ-paralelo']=circGen(true);
 // ─── corrida ───
 const out={}, POR=300;
 for(const m of MODULOS){ const r={ver:0,unv:0,fallos:[],errores:[]}; out[m.id]=r; const chk=C[m.id]; if(!chk){ r.sinCheck=true; continue; }

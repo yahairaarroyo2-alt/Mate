@@ -399,7 +399,12 @@
     .aic-chip { padding:9px 15px; border-radius:999px; border:1.5px solid var(--aic-bd); background:var(--aic-bg); color:var(--texto); font-size:12.5px; font-weight:800; font-family:inherit; cursor:pointer; box-shadow:var(--aic-sh); transition:transform .12s; -webkit-tap-highlight-color:transparent; }
     .aic-chip:active { transform:scale(.95); }
     body.night .aic-chip { color:#fff; }
-    .aic-nota { margin-top:8px; font-size:11px; color:var(--muted); white-space:normal; }
+    .aic-pie { display:flex; align-items:center; justify-content:flex-end; gap:8px; margin-top:6px; white-space:normal; }
+    .aic-copiar { background:none; border:none; padding:2px 0; color:var(--muted); font-size:10.5px; font-weight:800; font-family:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    body.night .aic-copiar { color:rgba(255,255,255,.6); }
+    /* el cursor solo parpadea mientras la IA escribe (se quita al llegar la respuesta entera) */
+    .aic-cursor { display:inline-block; width:7px; height:1.05em; margin-left:2px; vertical-align:-2px; border-radius:2px; background:currentColor; opacity:.45; animation:aicParpadeo 1s steps(2) infinite; }
+    @keyframes aicParpadeo { 50% { opacity:0; } }
     .aic-act { display:block; margin-top:10px; width:100%; padding:10px; border-radius:12px; border:1.5px solid var(--aic-bd); background:var(--aic-bg); color:var(--texto); font-size:13px; font-weight:800; font-family:inherit; cursor:pointer; box-shadow:var(--aic-sh); -webkit-tap-highlight-color:transparent; }
     .aic-act:active { transform:scale(.98); }
     .aic-act.sec { background:transparent; border:1.5px solid var(--aiborde); color:var(--texto); box-shadow:none; }
@@ -620,6 +625,6 @@
 </div>
 
 <!-- todo el JavaScript vive en app.js (Chrome lo guarda ya compilado y no lo vuelve a analizar en cada apertura). El ?v= es el MISMO número que CACHE en sw.js: se suben juntos en cada deploy. -->
-<script src="app.js?v=191"></script>
+<script src="app.js?v=192"></script>
 </body>
 </html>
