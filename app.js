@@ -549,6 +549,7 @@ function diagConvertir(f, nuevoN, m){ const k = m/f.d; return _nota(diagFrac([_f
 // a/d ± b/d = r/d: los de abajo ya son iguales, así que SOLO se opera con los de arriba (flecha de arriba) y el de abajo se queda igual (flecha de abajo).
 // Pedido de la usuaria 2026-10-29: restar con el mismo de abajo se entiende mejor en dibujo que en texto. Hoy solo lo usa el ejercicio 8 de la práctica 1 del Parcial 2.
 function diagMismoAbajo(a, b, op, d){
+  if(op === '+' && b < 0){ op = '−'; b = -b; }   // a + (−b) se dibuja como a − b
   const r = op === '+' ? a + b : a - b, t = x => x < 0 ? `(${mm(x)})` : String(x), cuenta = `${mm(a)} ${op} ${t(b)} = ${mm(r)}`;
   return _nota(diagFrac([_fT(a, d), _op(op), _fT(b, d), _op('='), _fT(r, d)],
     [{ de:[0,'n'], a:[4,'n'], txt:cuenta }, { de:[0,'d'], a:[4,'d'], txt:'se queda igual' }]),
@@ -588,15 +589,18 @@ function _comoMCM(p, q, m){
   const g = mcd(p, q);
   return `${p} y ${q} se pueden dividir los dos entre ${g}. El MCM es ${p} × ${q} ÷ ${g} = ${p*q} ÷ ${g} = ${cb(m)}`;
 }
+// la cuenta de los de arriba en texto, solo si dice algo más que el dibujo (signos distintos, "por partes"…)
+// (una resta que da positivo, 44 − 37, ya la dice el dibujo; el texto queda cuando el resultado es negativo o el primero es negativo, o la suma es grande y va "por partes")
+const _arrSuma = (x, y) => { const t = sumaArriba(x, y); return x >= 0 && x + y >= 0 && (y < 0 || t === `${x} + ${y} = ${x + y}`) ? '' : `Arriba: ${t}`; };
 function pasosSumaF(a, b){
   const r = sumarF([a, b]), lineas = [];
-  if(a.d === b.d) lineas.push('▸ Suma los de arriba (el de abajo se queda igual)', `${opTP(a)} + ${opTP(b)}: el de abajo es el mismo (${r.m}), solo se suman los de arriba.`, `Arriba: ${sumaArriba(a.n, b.n)}`, `Queda: ${opT({n:r.tot, d:r.m})}`);
+  if(a.d === b.d) lineas.push('▸ Suma los de arriba (el de abajo se queda igual)', diagMismoAbajo(a.n, b.n, '+', r.m), _arrSuma(a.n, b.n));
   else {
     lineas.push('▸ Busca el MCM de los de abajo', `Los de abajo (${a.d} y ${b.d}) son distintos, y para sumar o restar deben ser iguales. Se busca el MCM: el número más chico que está en la tabla del ${a.d} y en la del ${b.d}.`, _comoMCM(a.d, b.d, r.m));
     lineas.push('▸ Pasa cada fracción al denominador común');
     if(r.m !== a.d) lineas.push(diagConvertir(a, r.nums[0], r.m));
     if(r.m !== b.d) lineas.push(diagConvertir(b, r.nums[1], r.m));
-    lineas.push('▸ Suma los de arriba (el de abajo se queda igual)', `${tf(r.nums[0], r.m)} + ${tfP(r.nums[1], r.m)}: ya tienen el mismo de abajo (${r.m}), ahora se suman los de arriba.`, `Arriba: ${sumaArriba(r.nums[0], r.nums[1])}`, `Queda: ${opT({n:r.tot, d:r.m})}`);
+    lineas.push('▸ Suma los de arriba (el de abajo se queda igual)', diagMismoAbajo(r.nums[0], r.nums[1], '+', r.m), _arrSuma(r.nums[0], r.nums[1]));
   }
   const s = explSimplif(r.tot, r.m); if(s) lineas.push('▸ Simplifica', s);
   return { res:{n:r.n, d:r.d}, lineas };
@@ -1622,7 +1626,8 @@ function recetaSuma(ts){
     P.push({ t:'Pasa cada fracción a ese denominador', l: ts.map((f,i) => f.d === m ? `${tf(f.n,f.d)} ya tiene ${m} abajo.` : diagConvertir(f, nums[i], m)) });
   }
   let s = nums[0]; const c = [];
-  nums.slice(1).forEach(v => { c.push(nums.length === 2 ? sumaArriba(s, v) : `${mm(s)} ${v<0 ? '−' : '+'} ${Math.abs(v)} = ${mm(s+v)}`); s += v; });
+  if(nums.length === 2) c.push(diagMismoAbajo(nums[0], nums[1], '+', m), _arrSuma(nums[0], nums[1]));   // dos fracciones: dibujo (la cuenta de arriba en texto solo si trae signos o "por partes")
+  else nums.slice(1).forEach(v => { c.push(`${mm(s)} ${v<0 ? '−' : '+'} ${Math.abs(v)} = ${mm(s+v)}`); s += v; });
   P.push({ t:`Suma los de arriba; el de abajo (${m}) se queda igual`, l:[...c, `→ ${cb(tf(tot, m))}`] });
   P.push(pasoSimplif(tot, m));
   return { pasos:P, res:Fq(tot, m) };
@@ -8042,7 +8047,7 @@ const _P2B = [
     explicacion: receta({ pide:'el porciento que queda en el medio (entre 30 y 59 años), como número mixto.',
       pasos:[{ t:'Todos los residentes son el 100%', l:['Los de 59 o más son 25% y los de 30 o menos son 20 1/3 %: el resto está en el medio.'] }, { t:'Suma los dos porcientos de las orillas', l:['Enteros con enteros: 25 + 20 = 45. La fracción 1/3 se queda.', `25 + 20 1/3 = ${cb('45 1/3')}`] },
         { t:'Réstalos del 100%: "presta" 1 entero', l:['A 100 no le puedes quitar 1/3 directo (no tiene fracción). Se presta 1 entero y se escribe como 3/3: 100 = 99 3/3',
-          'Enteros con enteros: 99 − 45 = 54', 'Fracción con fracción: 3/3 − 1/3 = 2/3', `100 − 45 1/3 = ${cb('54 2/3')} %`, diagCadena('100%', [['− 25%', '75%'], ['− 20 1/3 %', '54 2/3 %']], 'Del 100% se quitan las dos orillas, una por una: lo que queda abajo (en naranja) es el medio.')] }],
+          'Enteros con enteros: 99 − 45 = 54', 'Fracción con fracción:', diagMismoAbajo(3, 1, '−', 3), `100 − 45 1/3 = ${cb('54 2/3')} %`, diagCadena('100%', [['− 25%', '75%'], ['− 20 1/3 %', '54 2/3 %']], 'Del 100% se quitan las dos orillas, una por una: lo que queda abajo (en naranja) es el medio.')] }],
       resp:'54 2/3 %', comp:'25 + 20 1/3 + 54 2/3 = 100 ✓', error:'restar solo uno de los dos porcientos: hay que quitar los DOS del 100%.', ejemplo:'100 − 25 − 20 1/3 = 54 2/3 %.', truco:'las partes de un todo suman 100%: lo que falta es 100 menos lo que ya está.' }) }),
   // 18: 9 2/5 como porciento
   () => MCx(`<b>El porciento equivalente al número mixto ${mixS(9, 2, 5)} es</b>`, ['9.4%', '.094%', '9.40%', '940%', NING], '940%', { pide:'9 2/5 como porciento.',
@@ -13382,8 +13387,12 @@ function autotest(){
   }
   {
     const r = diagMismoAbajo(9, 4, '−', 8), s = diagMismoAbajo(3, 2, '+', 7), n = diagMismoAbajo(1, -3, '+', 5);
+    const rs = JSON.stringify(recetaSuma([{ n:3, d:4 }, { n:1, d:6 }]).pasos), neg = _arrSuma(9, -4) === '' && _arrSuma(4, -55) !== '' && _arrSuma(2, 3) === '';   // la suma de fracciones usa el dibujo; el texto de signos solo si el resultado es negativo
+    const p2b = MOD_POR_ID['educo-parcial2-p2'], sg = p2b._sig; p2b._sig = 16; const c17 = p2b.gen(nivel).explicacion.join(' '); p2b._sig = sg;   // práctica 2, pregunta 17: 3/3 − 1/3 en dibujo
+    chk('sumar/restar fracciones usa el dibujo del mismo de abajo (recetaSuma, pasosSumaF y la pregunta 17 de la práctica 2 del Parcial 2), y el texto de signos solo cuando hace falta',
+      rs.includes('se queda igual') && rs.includes('9 + 2 = 11') && neg && c17.includes('se queda igual') && !c17.includes('3/3 − 1/3 = 2/3'));
     chk('dibujo de restar/sumar con el mismo de abajo: flecha de arriba (la cuenta), flecha de abajo ("se queda igual") y su nota; con un negativo no escribe "+ -"',
-      /<svg/.test(r) && r.includes('9 − 4 = 5') && r.includes('se queda igual') && r.includes('solo se restan los de arriba') && s.includes('3 + 2 = 5') && s.includes('solo se suman') && n.includes('1 + (−3) = −2') && !n.includes('+ -'));
+      /<svg/.test(r) && r.includes('9 − 4 = 5') && r.includes('se queda igual') && r.includes('solo se restan los de arriba') && s.includes('3 + 2 = 5') && s.includes('solo se suman') && n.includes('1 − 3 = −2') && !n.includes('+ -'));
   }
   {
     const d = diagDivEntero(5, 8, 9), m = diagMixDec(4, 1, 2), fuera = pasosMultDec(0.6, 250).join(' ');   // fuera del Parcial 2: igual que siempre

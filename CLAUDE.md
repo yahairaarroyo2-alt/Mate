@@ -31,7 +31,7 @@ Mate/
 ## Cómo probar / desplegar
 
 - Abrir `index.html?test` corre `autotest()`: 200 tiradas × 3 niveles × cada uno de los
-  135 módulos (493 comprobaciones en 2026-10-29), más casos borde de `verificar()`/`analizarTexto()`, validez geométrica
+  135 módulos (494 comprobaciones en 2026-10-29), más casos borde de `verificar()`/`analizarTexto()`, validez geométrica
   (triángulos/trapecios generados), unicidad (MCM de un número consigo mismo), fechas
   locales (`fechaLocal`/`fechaHaceDias`), caducidad de la racha de días y deduplicado de
   `_registrarError` — el número exacto de comprobaciones lo dice el propio resultado (no
@@ -532,7 +532,7 @@ AEE y otros)** + 500 h de electricidad con energía renovable.
 - Antes de cualquier cambio grande: confirmar que `git status` está limpio o hacer un
   respaldo del archivo — este proyecto no tiene red de seguridad más que git.
 - Después de editar `app.js`: correr `node --check app.js`, y volver a correr
-  `index.html?test` — todas las comprobaciones tienen que seguir pasando (493 en 2026-10-29). Para correrlo sin navegador (2026-10-29): un `vm` de Node con un DOM de mentira (`document.getElementById` que devuelve objetos sueltos, `localStorage` como `Proxy` para que `Object.keys(localStorage)` liste las claves) carga `app.js`, y `?test` deja el resultado en el `innerHTML` de `#main`; sirve para correr también los verificadores y escenarios (rondas, sincronización con un Firestore simulado, IA con un `fetch` simulado) en segundos.
+  `index.html?test` — todas las comprobaciones tienen que seguir pasando (494 en 2026-10-29). Para correrlo sin navegador (2026-10-29): un `vm` de Node con un DOM de mentira (`document.getElementById` que devuelve objetos sueltos, `localStorage` como `Proxy` para que `Object.keys(localStorage)` liste las claves) carga `app.js`, y `?test` deja el resultado en el `innerHTML` de `#main`; sirve para correr también los verificadores y escenarios (rondas, sincronización con un Firestore simulado, IA con un `fetch` simulado) en segundos.
 
 ## Auditoría 2026-10-13 — reglas que dejó
 
@@ -737,3 +737,10 @@ Autotest: 492 (dibujos nuevos, sin "Lugares decimales" dentro del Parcial 2, sí
   ya no se pintan, ni su página "Resultado" del paso a paso (`explReceta` no la crea y el contador dice "Paso 1 de N" con N = los pasos; `_rVer` solo rotula "Resultado" si existe `.rFinal`). Siguen en los datos
   (`receta()` las guarda y agrega la marca `§sinfin|` cuando `_masDibujo` está prendido): la IA las lee (`_aiExplTxt`) y los demás temas las siguen pintando. `_modParcial.gen` arma también la "Fácil" con el interruptor
   prendido. Para volver a mostrarlas: quitar la línea `if(_masDibujo) L.push('§sinfin|')` de `receta()`. Autotest: 493.
+
+## Dibujo de sumar/restar con el mismo de abajo en TODA la app (2026-10-29, v195; ella lo aprobó: "si está bien, hazlo en todos, en los Parciales, en los dos")
+
+Ella preguntó si quería el mismo dibujo en todas las sumas y restas de fracciones y contestó "hazme uno a ver lo que dices". Se puso en `pasosSumaF` (ambas ramas) y en `recetaSuma` (solo con 2 fracciones) en vez de las líneas "X + Y: el de abajo es el mismo…" y "Queda: …".
+`diagMismoAbajo` dibuja `a − b` cuando la segunda va negativa (`a + (−b)`); `_arrSuma(x, y)` deja el texto "Arriba: …" solo si el resultado es negativo, el primero es negativo o la suma va "por partes" (si no, el dibujo ya lo dice).
+Cambian 10 temas (suma-resta-frac, resta-mental-frac, orden-op-frac, frac-compleja, ecuaciones-frac, de-multiplicar, repaso/autoeval cap. 4 y 5); los demás dan la misma explicación (se comparó con la misma semilla, salvo los ids `dgN`).
+Además la pregunta 17 de la práctica 2 del Parcial 2 (`3/3 − 1/3` al "prestar" 1 entero) usa `diagMismoAbajo(3, 1, '−', 3)`; era la única resta de fracciones en texto de las dos prácticas del Parcial 2 (se buscó en las 50 explicaciones). Autotest: 494. Pendiente de publicar como mate-v195.
