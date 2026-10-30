@@ -392,6 +392,7 @@ function receta({ pide, pasos, resp, comp, error, ejemplo, truco }){
   L.push(`§resp|${resp}`);
   if(comp) L.push(`§comp|${comp}`);
   if(error) L.push(`§error|${error}`);
+  if(_masDibujo) L.push('§sinfin|');   // Parcial 2 (pedido de ella): "Respuesta / Comprueba / Error común" no se pintan; siguen en los datos (la IA los lee)
   L.push(`TRUCO: Receta para el examen: ${pasos.map((p, i) => `${i + 1}) ${p.t}.`).join(' ')}${comp ? ` ${pasos.length + 1}) Comprueba.` : ''} Ejemplo con este mismo: ${ejemplo}`);
   if(truco) L.push(`TRUCO: ${truco}`);   // un atajo propio del ejercicio, aparte de la receta (sale en su recuadro "TRUCO PARA QUE SEA MÁS FÁCIL")
   return L;
@@ -545,6 +546,24 @@ const _op = s => ({ t:'o', s });
 const _par = (i, j, txt, conAbajo) => [{ de:[i,'n'], a:[j,'n'], txt }, ...(conAbajo ? [{ de:[i,'d'], a:[j,'d'], txt }] : [])];
 // a/b → (a·k)/(b·k) con flechas × k
 function diagConvertir(f, nuevoN, m){ const k = m/f.d; return _nota(diagFrac([_fT(f.n, f.d), _op('='), _fT(nuevoN, m)], _par(0, 2, '× ' + k, f.d !== 1)), `Abajo: ${f.d} × ${k} = ${m}. Arriba también × ${k}, para que la fracción valga lo mismo.`, 'conv'); }
+// a/d ± b/d = r/d: los de abajo ya son iguales, así que SOLO se opera con los de arriba (flecha de arriba) y el de abajo se queda igual (flecha de abajo).
+// Pedido de la usuaria 2026-10-29: restar con el mismo de abajo se entiende mejor en dibujo que en texto. Hoy solo lo usa el ejercicio 8 de la práctica 1 del Parcial 2.
+function diagMismoAbajo(a, b, op, d){
+  const r = op === '+' ? a + b : a - b, t = x => x < 0 ? `(${mm(x)})` : String(x), cuenta = `${mm(a)} ${op} ${t(b)} = ${mm(r)}`;
+  return _nota(diagFrac([_fT(a, d), _op(op), _fT(b, d), _op('='), _fT(r, d)],
+    [{ de:[0,'n'], a:[4,'n'], txt:cuenta }, { de:[0,'d'], a:[4,'d'], txt:'se queda igual' }]),
+    `Los de abajo ya son iguales (${d}): solo se ${op === '+' ? 'suman' : 'restan'} los de arriba (${cuenta}) y el ${d} se queda igual.`);
+}
+// n/d ÷ k (un número entero): lo de arriba se queda y el número se multiplica con el de abajo (flecha de arriba "se queda", de abajo d × k). Pedido de la usuaria 2026-10-29.
+function diagDivEntero(n, d, k){
+  return _nota(diagFrac([_fT(n, d), _op('÷'), _fT(k, 1), _op('='), _fT(n, d * k)],
+    [{ de:[0,'n'], a:[4,'n'], txt:'se queda' }, { de:[0,'d'], a:[4,'d'], txt:`${d} × ${k} = ${d * k}` }]),
+    `Una fracción ÷ un número: lo de arriba (${n}) se queda y el número se multiplica con el de abajo (${d} × ${k} = ${d * k}).`);
+}
+// mixto → decimal: el entero se queda y la fracción es una división (arriba ÷ abajo) que se le suma
+const diagMixDec = (e, p, q) => { const f = dN(p / q);
+  return _nota(diagFrac([{ t:'m', e:String(e), n:p, d:q }, _op('='), _tx(String(e)), _op('+'), _tx(px(f)), _op('='), _tx(px(dN(e + f)))], [{ de:[0,'n'], a:[4,'n'], txt:`${p} ÷ ${q}` }]),
+    'El entero se queda. La fracción es una división (arriba ÷ abajo): da el decimal, y se le suma el entero.'); };
 // línea de simplificación: solo si hay algo que simplificar ('' si ya está simple; explPasos descarta las vacías)
 function explSimplif(n, d){
   const g = mcd(n, d), [sn, sd] = simplificar(n, d);
@@ -7199,11 +7218,12 @@ function pasosDivDec(a, b){
   const L = [], k = lugares(b), A = dN(Math.abs(a) * P10(k)), B = dN(Math.abs(b) * P10(k)), q = dN(Math.abs(a) / Math.abs(b));
   const sg = a !== 0 && (a < 0) !== (b < 0) ? '−' : '';   // con signos distintos el resultado es negativo (se divide sin signos y se le pone al final)
   if(sg) L.push('Signos: uno negativo y el otro positivo → el resultado es NEGATIVO (se divide sin los signos y al final se le pone el −).');
-  if(k) L.push(`El divisor (${fd(Math.abs(b))}) tiene ${_dec(k)}: se mueve el punto ${_lug(k)} a la DERECHA en los DOS números → ${fd(Math.abs(b))} pasa a ${fd(B)} y ${fd(Math.abs(a))} pasa a ${fd(A)}.`,
-    diagCorreDiv(a, b));
+  if(k && !_masDibujo) L.push(`El divisor (${fd(Math.abs(b))}) tiene ${_dec(k)}: se mueve el punto ${_lug(k)} a la DERECHA en los DOS números → ${fd(Math.abs(b))} pasa a ${fd(B)} y ${fd(Math.abs(a))} pasa a ${fd(A)}.`);   // con _masDibujo lo dice el dibujo
+  if(k) L.push(diagCorreDiv(a, b));
   const kA = lugares(A), Ai = Math.round(A * P10(kA)), qi = Ai / B;
   if(Number.isInteger(B) && Number.isInteger(qi) && lugares(q) <= kA)
-    L.push(kA ? `Se divide como si no hubiera punto: ${miles(Ai)} ÷ ${miles(B)} = ${miles(qi)}. El punto del cociente va justo arriba del punto del dividendo (${_lug(kA)} desde la derecha) → ${cb(sg + fd(q))}`
+    L.push(kA && _masDibujo ? `${fd(A)} ÷ ${miles(B)} = ${cb(sg + fd(q))}`   // la cuenta sola (con calculadora se puede): sin la "casita"
+      : kA ? `Se divide como si no hubiera punto: ${miles(Ai)} ÷ ${miles(B)} = ${miles(qi)}. El punto del cociente va justo arriba del punto del dividendo (${_lug(kA)} desde la derecha) → ${cb(sg + fd(q))}`
               : `${miles(A)} ÷ ${miles(B)} = ${fd(q)}${sg ? ` → con el signo: ${cb(sg + fd(q))}` : ''}`.replace(/= ([\d,.]+)$/, (m, n) => `= ${cb(n)}`));
   else { const termina = lugares(q) < 9, largo = !termina || lugares(q) > 6;   // dN deja 9 decimales: con 9 la división no termina
     L.push(`${fd(A)} ÷ ${fd(B)} = ${largo ? _corta(q, 4) : cb(fd(q))}${!termina ? ' (con la calculadora; la división no termina)' : largo ? ' (con la calculadora)' : ' (con la calculadora o a mano)'}${sg ? ` → con el signo: ${sg}${largo ? _corta(q, 4) : fd(q)}` : ''}`); }
@@ -7215,6 +7235,8 @@ function pasosMultDec(a, b){
   if(!ka && !kb) return [`${miles(ia)} × ${miles(ib)} = ${cb(fd(p))}`];
   // el punto puesto a mano (con sus ceros) y, si sobran ceros al final, cómo queda sin ellos
   const K = ka + kb, s = String(ia * ib).padStart(K + 1, '0'), crudo = miles(Number(s.slice(0, -K))) + '.' + s.slice(-K);
+  const dib = () => diagPunto(ia * ib, -K, `El punto empieza al final de ${miles(ia * ib)} y salta ${_lug(K)} a la IZQUIERDA (${ka} de ${fd(Math.abs(a))} + ${kb} de ${fd(Math.abs(b))}), una flecha por lugar.`);
+  if(_masDibujo) return [`Sin los puntos: ${miles(ia)} × ${miles(ib)} = ${miles(ia * ib)}`, dib(), `→ ${cb(fd(p))}`];   // los lugares decimales los cuenta el dibujo (su nota)
   return [`Sin los puntos: ${miles(ia)} × ${miles(ib)} = ${miles(ia * ib)}`,
     `Lugares decimales: ${fd(Math.abs(a))} tiene ${ka} y ${fd(Math.abs(b))} tiene ${kb} → ${ka} + ${kb} = ${K}. Se cuenta${K === 1 ? '' : 'n'} ${_lug(K)} desde la derecha${String(ia * ib).length < K ? ' (no alcanzan los dígitos: se ponen ceros a la izquierda)' : String(ia * ib).length === K ? ' (se pone un 0 antes del punto)' : ''}: ${miles(ia * ib)} → `
       + (crudo === fd(p) ? cb(fd(p)) : `${crudo} = ${cb(fd(p))} (los ceros del final de los decimales se pueden quitar)`),
@@ -7310,8 +7332,7 @@ const bFront = (n, d, e, p, q) => { const f1 = sig1(n / d), g = sig1(p / q), f2 
 const bProm = (e, p, q, a, b) => { const x0 = dN(e + p / q), s = dN(x0 + a + b), r = redondeaK(s / 3, 2);
   return { enunciado:`Halla el promedio del siguiente grupo de números y redondea la respuesta a dos lugares decimales.<br><b>${mixS(e, p, q)}, ${px(a)}, ${px(b)}</b>`, ...numDec(r), ayuda:'Dos lugares decimales.',
     explicacion: receta({ pide:'el promedio = (la suma de los números) ÷ (cuántos números son), redondeado a la centésima.',
-      pasos:[{ t:'Pasa el número mixto a decimal', l:[_nota(diagFrac([{ t:'m', e:String(e), n:p, d:q }, _op('='), _tx(String(e)), _op('+'), _tx(px(dN(p / q))), _op('='), _tx(px(x0))], [{ de:[0,'n'], a:[4,'n'], txt:`${p} ÷ ${q}` }]),
-          'El entero se queda. La fracción es una división (arriba ÷ abajo): da el decimal, y se le suma el entero.'), `${p}/${q} = ${p} ÷ ${q} = ${px(dN(p / q))}`, `${e} ${p}/${q} = ${e} + ${px(dN(p / q))} = ${cb(px(x0))}`] },
+      pasos:[{ t:'Pasa el número mixto a decimal', l:[diagMixDec(e, p, q), ...(_masDibujo ? [] : [`${p}/${q} = ${p} ÷ ${q} = ${px(dN(p / q))}`, `${e} ${p}/${q} = ${e} + ${px(dN(p / q))} = ${cb(px(x0))}`])] },   // con _masDibujo las cuentas ya están en el dibujo
         { t:'Suma los 3 números (en columna)', l:[colDec([x0, a, b], '+', s)] },
         { t:'Divide la suma entre 3 (son 3 números)', l:[`${px(s)} ÷ 3 = ${_corta(s / 3, 4)}`] },
         { t:'Redondea a dos lugares decimales (la centésima)', l: explRed(s / 3, 2) }],
@@ -7472,10 +7493,13 @@ const _dibProp = (u1, u2, a, b, c, d) => _nota(diagFrac([{ t:'f', n:`${a} ${u1}`
 const bMaq = (a1, e, p, q, a2) => { const h = (e + p / q) * a2 / a1, r = redondeaK(h, 0), imp = e * q + p;
   return { enunciado:`Una máquina cosecha <b>${a1}</b> acres de habichuelas en <b>${mixS(e, p, q)}</b> horas. ¿Cuánto tiempo le tomaría cosechar <b>${a2}</b> acres?<br><small>(Redondea a un número cardinal)</small>`, ...numDec(r), ayuda:'horas (número cardinal)',
     explicacion: receta({ pide:`las horas para ${a2} acres (redondeadas a un número entero).`,
-      pasos:[{ t:'Arma la proporción con las mismas unidades en el mismo lugar (acres arriba, horas abajo)', l:[_dibProp('acres', 'horas', a1, `${e} ${p}/${q}`, a2, 'x'), `${a1} acres / ${e} ${p}/${q} horas = ${a2} acres / x horas`] },
-        { t:'Pasa el mixto a fracción impropia', l:[explImpropia({ n:imp, d:q }), `${e} ${p}/${q} = (${e} × ${q} + ${p})/${q} = ${cb(tf(imp, q))}`] },
+      // con _masDibujo (Parcial 2) los renglones que repiten el dibujo de al lado no van, y la fracción ÷ número es un dibujo (diagDivEntero)
+      pasos:[{ t:'Arma la proporción con las mismas unidades en el mismo lugar (acres arriba, horas abajo)', l:[_dibProp('acres', 'horas', a1, `${e} ${p}/${q}`, a2, 'x'), _masDibujo ? '' : `${a1} acres / ${e} ${p}/${q} horas = ${a2} acres / x horas`] },
+        { t:'Pasa el mixto a fracción impropia', l:[explImpropia({ n:imp, d:q }), _masDibujo ? '' : `${e} ${p}/${q} = (${e} × ${q} + ${p})/${q} = ${cb(tf(imp, q))}`] },
         { t:'Multiplica en cruz', l:[diagCruzados(a1, `${imp}/${q}`, a2, 'x'), `${a1} · x = ${a2} × ${tf(imp, q)} = ${tf(a2 * imp, q)}`] },
-        { t:`Divide los DOS lados entre ${a1}`, l:[diagAmbosLados(`${a1}x`, tf(a2 * imp, q), `÷ ${a1}`, 'x', tf(a2 * imp, q * a1)), `x = ${tf(a2 * imp, q)} ÷ ${a1} = ${tf(a2 * imp, q * a1)} = ${a2 * imp} ÷ ${q * a1} = ${_corta(h, 2)}`] },
+        { t:`Divide los DOS lados entre ${a1}`, l:[diagAmbosLados(`${a1}x`, tf(a2 * imp, q), `÷ ${a1}`, 'x', tf(a2 * imp, q * a1)), ...(_masDibujo
+          ? [diagDivEntero(a2 * imp, q, a1), `${a2 * imp} ÷ ${q * a1} = ${_corta(h, 2)}`]
+          : [`x = ${tf(a2 * imp, q)} ÷ ${a1} = ${tf(a2 * imp, q * a1)} = ${a2 * imp} ÷ ${q * a1} = ${_corta(h, 2)}`])] },
         { t:'Redondea al número entero (cardinal) más cercano', l: explRed(h, 0) }],
       resp:`${r} horas`, comp:`más acres (${a2} > ${a1}) tiene que dar más horas: ${r} > ${e} ${p}/${q} ✓`, error:'poner acres arriba de un lado y horas arriba del otro.',
       ejemplo:`x = ${tf(a2 * imp, q * a1)} ≈ ${_corta(h, 2)} → ${r}.`, truco:'misma unidad arriba en los dos lados (acres) y misma abajo (horas).' }) }; };
@@ -7484,7 +7508,9 @@ const bImp = (t, g, inc) => { const r = dN(t * (g + inc) / g), n2 = g + inc;
     explicacion: receta({ pide:'el impuesto nuevo, con la misma razón impuesto/ganancia.',
       pasos:[{ t:'"Aumentan EN" = se suma a la ganancia de antes', l:[`Ganancia nueva = ${g} + ${inc} = ${cb(n2)}`] },
         { t:'Arma la proporción (impuesto arriba, ganancia abajo)', l:[`${t}/${g} = x/${n2}`] },
-        { t:'Multiplica en cruz y despeja x', l:[diagCruzados(t, g, 'x', n2), `${g} · x = ${t} × ${n2} = ${miles(t * n2)}`, `x = ${miles(t * n2)} ÷ ${g} = ${cb(fd(r))}`] }],
+        { t:'Multiplica en cruz y despeja x', l:[diagCruzados(t, g, 'x', n2), `${g} · x = ${t} × ${n2} = ${miles(t * n2)}`,
+          _masDibujo ? diagAmbosLados(`${g}x`, miles(t * n2), `÷ ${g}`, 'x', `${miles(t * n2)} ÷ ${g}`) : '',   // Parcial 2: el ${g} pasa dividiendo, en dibujo (como en las otras proporciones)
+          `x = ${miles(t * n2)} ÷ ${g} = ${cb(fd(r))}`] }],
       resp: din$(r), comp:`la ganancia subió, así que el impuesto también: ${din$(r)} > $${t} ✓`, error:`usar $${inc} como si fuera la ganancia nueva: la ganancia nueva es ${g} + ${inc}.`,
       ejemplo:`${t}/${g} = x/${n2} → x = ${din$(r)}.`, truco:'"aumentan en" = se SUMA a la ganancia de antes (no es la ganancia nueva).' }) }; };
 
@@ -7739,15 +7765,22 @@ const _debajoDe = (id, ref) => { const [m] = MODULOS.splice(MODULOS.findIndex(x 
    forma de contestar). Intento 1 de la usuaria, 2026-10-22 (attempt 467035583, 25/25). EducoSoft cambia los números en cada intento: el próximo es otro módulo. ── */
 // facil[i] = la explicación corta de la pregunta i (con el truco), en forma de receta(); sale con el botón "Fácil" (ver explPorQue)
 const _F = (pide, pasos, ejemplo, truco) => ({ pide, pasos: pasos.map(([t, ...l]) => ({ t, l })), ejemplo, truco });
+// "Menos texto y más dibujo" (pedido de la usuaria 2026-10-29, solo en las prácticas del Parcial 2): mientras se arma una de sus preguntas, los ayudantes compartidos
+// (pasosMultDec, pasosDivDec, ecL, bProm, bMaq, bImp) quitan el texto que repite lo que ya dice un dibujo y usan dibujos donde antes había texto. Los demás temas no cambian.
+// var (no let): esos ayudantes también corren al cargar la app para otros temas, antes de llegar a esta línea.
+var _masDibujo = false;
 function _modParcial(id, nombre, banco, cual, facil){
   return { id, nombre, secciones:['8.9'], banco:banco.length, _sig:0, extra:true,   // extra: preguntas fijas, fuera de la mezcla (se mete con su casilla)
     nuevaRonda(){ this._sig = 0; },
     gen(){
       const i = this._sig % banco.length; this._sig++;
-      const ej = banco[i]();
-      ej.explicacion = ej.explicacion.map(l => typeof l !== 'string' || /^§|^TRUCO:/.test(l) || l.includes('<svg') ? l
-        : l.replace(/(= −?[\d.,/]+) → (?=−?[\d(][\d.,/)]* [+−×÷] )/g, '$1<br>').replace(/, y (?=[\d−(])/g, '<br>y '));
-      if(facil && facil[i]) ej.facil = receta({ ...facil[i], resp: fmtRespuesta(ej) });
+      _masDibujo = true; let ej;
+      try {
+        ej = banco[i]();
+        ej.explicacion = ej.explicacion.map(l => typeof l !== 'string' || /^§|^TRUCO:/.test(l) || l.includes('<svg') ? l
+          : l.replace(/(= −?[\d.,/]+) → (?=−?[\d(][\d.,/)]* [+−×÷] )/g, '$1<br>').replace(/, y (?=[\d−(])/g, '<br>y '));
+        if(facil && facil[i]) ej.facil = receta({ ...facil[i], resp: fmtRespuesta(ej) });   // también la "Fácil" se arma con el interruptor prendido
+      } finally { _masDibujo = false; }
       ej.__n = i;
       return ej;
     } };
@@ -7767,7 +7800,7 @@ const _P2 = [
   () => ({ enunciado:`Evalúa la expresión y escribe la respuesta en forma decimal.<br><b>4<i>x</i><sup>2</sup> − 5<i>x</i> + 3<i>y</i></b> &nbsp;para&nbsp; <b><i>x</i> = ${fr(1, 2)}</b> &nbsp;y&nbsp; <b><i>y</i> = 0.2</b><br><small>(Redondea la respuesta hasta 2 lugares decimales)</small>`,
     ...numDec(-0.9), ayuda:'Redondea a 2 lugares decimales.',
     explicacion: receta({ pide:'el valor de la expresión cuando x = 1/2 y y = 0.2 (en decimal).',
-      pasos:[{ t:'Sustituye x y y por sus números', l:[diagSustituir([['x', '1/2'], ['y', '0.2']], 'Cada letra se cambia por su número (flecha hacia abajo), dentro de un paréntesis.'), 'Cada letra se cambia por su número: 4(1/2)² − 5(1/2) + 3(0.2)',
+      pasos:[{ t:'Sustituye x y y por sus números', l:[diagSustituir([['x', '1/2'], ['y', '0.2']], 'Cada letra se cambia por su número (flecha hacia abajo), dentro de un paréntesis.'), '→ 4(1/2)² − 5(1/2) + 3(0.2)',
           '1/2 es 1 ÷ 2 = 0.5. Conviene pasarlo a decimal porque la y ya está en decimal → 4(0.5)² − 5(0.5) + 3(0.2)'] },
         { t:'Primero el exponente: (0.5)² = 0.5 × 0.5', l:pasosMultDec(0.5, 0.5).concat(['La expresión queda 4(0.25) − 5(0.5) + 3(0.2)']) },
         { t:'Después las multiplicaciones (el número pegado al paréntesis multiplica)', l:[`4 × 0.25 = ${cb(1)} (4 cuartos = 1 entero)`, `5 × 0.5 = ${cb('2.5')} (5 mitades = 2 y media)`, `3 × 0.2 = ${cb('0.6')}`, 'La expresión queda 1 − 2.5 + 0.6'] },
@@ -7789,9 +7822,9 @@ const _P2 = [
         { t:'La x a un lado y los números al otro', l:['Pasa el 9x sumando: así la x queda POSITIVA (si pasas el 9/8, queda −9x y te salen negativos).', diagAmbosLados('9/8 − 9x', '1/2', '+ 9x', '9/8', '1/2 + 9x'),
           'Ahora el 1/2 pasa restando, para que los números queden juntos:', diagAmbosLados('9/8', '1/2 + 9x', '− 1/2', '9/8 − 1/2', '9x')] },
         { t:'Resta las fracciones: primero el mismo de abajo (8)', l:['9/8 y 1/2 tienen distinto de abajo. 8 es múltiplo de 2 (2 × 4 = 8), así que el común es 8.', diagConvertir({ n:1, d:2 }, 4, 8),
-          '9/8 − 4/8: ya tienen el mismo de abajo; se restan los de arriba (9 − 4 = 5) y el 8 se queda.', `9/8 − 4/8 = ${cb('5/8')} → la ecuación queda 5/8 = 9x`] },
+          diagMismoAbajo(9, 4, '−', 8), `→ la ecuación queda ${cb('5/8 = 9x')}`] },
         { t:'Quita el 9 que multiplica a la x: divide los DOS lados entre 9', l:[diagAmbosLados('5/8', '9x', '÷ 9', '5/8 ÷ 9', 'x'),
-          'Una fracción ÷ un número: el número se multiplica con el de abajo → 5/8 ÷ 9 = 5/(8 × 9) = 5/72', `x = ${cb('5/72')}`] }],
+          diagDivEntero(5, 8, 9), `x = ${cb('5/72')}`] }],
       resp:'x = 5/72', comp:'9/8 − 9(5/72) = 9/8 − 45/72 = 9/8 − 5/8 = 4/8 = 1/2 = 0.5 ✓', error:'restar 9/8 − 1/2 sin igualar antes los de abajo; o dividir entre 9 solo el 5 y olvidar el 8 (el 9 se multiplica con el 8).',
       ejemplo:'9/8 − 1/2 = 5/8 = 9x → x = 5/72.', truco:'si hay una fracción, pasa el decimal a fracción y trabaja todo en fracciones. Si la x tiene un − delante, pásala sumando al otro lado: así no te salen negativos.' }) }),
   // 9: 1.5x − 18.4 = 0.6x − 22.9 (opción múltiple)
@@ -7937,7 +7970,7 @@ const _P2B = [
   // 4: 5(-3.3)(5.1)
   () => MCx('<b>Halla el producto: 5(-3.3)(5.1)</b>', ['13.31', '-84.15', '84.15', '-13.31', NING], '-84.15', { pide:'el producto de los tres números (de dos en dos).',
     pasos:[{ t:'El signo: hay UN solo factor negativo', l:[_nota(diagFrac([_tx('5'), _tx('×'), _tx('(−3.3)'), _tx('×'), _tx('5.1'), _op('='), _tx('−')], [{ de:[2,'n'], a:[6,'n'], txt:'un solo −' }]),
-        'Se cuentan los negativos: uno solo (par = +, impar = −). Con uno, el resultado es NEGATIVO.'), 'Con un solo factor negativo, el resultado es NEGATIVO.'] },
+        'Se cuentan los negativos: uno solo (par = +, impar = −). Con uno, el resultado es NEGATIVO.')] },
       { t:'Multiplica 5 × 3.3 (sin signo)', l:pasosMultDec(5, 3.3) }, { t:'Multiplica el resultado por 5.1', l:pasosMultDec(16.5, 5.1) }, { t:'Ponle el signo', l:[`${cb('−84.15')}`] }],
     comp:'estima: 5 × 3 × 5 = 75, cerca de 84 y negativo ✓', error:'olvidar el signo: con un solo negativo el resultado es negativo (las opciones 84.15 y −84.15 se diferencian solo en eso).', ejemplo:'5 × 3.3 = 16.5; 16.5 × 5.1 = 84.15; con el signo −84.15.', truco:'cuenta los negativos: uno solo → resultado negativo.' }),
   // 5: 32.7 ÷ 5 a la centésima
@@ -7956,25 +7989,23 @@ const _P2B = [
     explicacion: receta({ pide:'el valor de x.',
       pasos:[{ t:'Quita el paréntesis: el −6 multiplica a los DOS de adentro', l:[_nota(diagFrac([_tx('−6'), _tx('('), _tx('x'), _tx('−'), _tx('2/3'), _tx(')'), _op('='), _tx('−6x'), _tx('+'), _tx('4')],
           [{ de:[0,'n'], a:[2,'n'], txt:'×' }, { de:[0,'n'], a:[4,'n'], txt:'×', nivel:2 }]), 'El −6 (con su signo) multiplica a CADA término de adentro del paréntesis.'),
-          '−6 × x = −6x', '−6 × (−2/3): negativo × negativo = positivo → 6 × 2/3 = (6 × 2)/3 = 12/3', `12/3 = 12 ÷ 3 = ${cb('4')} → +4`, `→ ${cb('7x − 6x + 4 = 7')}`] },
+          `−6 × (−2/3): negativo × negativo = positivo, y 6 × 2/3 = (6 × 2)/3 = 12/3 = 12 ÷ 3 = ${cb('4')} → +4`, `→ ${cb('7x − 6x + 4 = 7')}`] },
         { t:'Junta los términos con x', l:[`7x − 6x = (7 − 6)x = 1x = x → ${cb('x + 4 = 7')}`] },
         { t:'Quita el + 4: resta 4 en los DOS lados', l:[diagAmbosLados('x + 4', '7', '− 4', 'x', '3'), `7 − 4 = 3 → x = ${cb(3)}`] }],
       resp:'x = 3', comp:'7(3) − 6(3 − 2/3) = 21 − 6(7/3) = 21 − 14 = 7 ✓', error:'olvidar que el −6 también multiplica al 2/3 (y que menos por menos da más).', ejemplo:'7x − 6x + 4 = 7 → x = 3.', truco:'el número de afuera multiplica a TODO lo de adentro del paréntesis, con su signo.' }) }),
   // 9: 0.7(0.8x + 5) − 0.8(1.3x − 0.7) = x
   () => bEq('Resuelve la ecuación :', '0.7 (0.8<i>x</i> + 5) − 0.8 (1.3<i>x</i> − 0.7) = <i>x</i>', '<br><small>( Redondea a 2 lugares decimales )</small>',
-    [{ t:'Quita los paréntesis: cada número de afuera multiplica a los dos de adentro', l:[diagDistribuir('0.7', '0.8x', '+', '5', '0.56x', '3.5'), '0.7 × 0.8x = 0.56x y 0.7 × 5 = 3.5',
+    [{ t:'Quita los paréntesis: cada número de afuera multiplica a los dos de adentro', l:[diagDistribuir('0.7', '0.8x', '+', '5', '0.56x', '3.5'),
         _nota(diagFrac([_tx('−0.8'), _tx('('), _tx('1.3x'), _tx('−'), _tx('0.7'), _tx(')'), _op('='), _tx('−1.04x'), _tx('+'), _tx('0.56')], [{ de:[0,'n'], a:[2,'n'], txt:'×' }, { de:[0,'n'], a:[4,'n'], txt:'×', nivel:2 }]),
-          'El −0.8 multiplica con su signo: −0.8 × (−0.7) da + porque negativo × negativo = positivo.'),
-        '−0.8 × 1.3x = −1.04x y −0.8 × (−0.7) = +0.56 (negativo × negativo = positivo)', `→ ${cb('0.56x + 3.5 − 1.04x + 0.56 = x')}`] },
+          'El −0.8 multiplica con su signo: −0.8 × (−0.7) da + porque negativo × negativo = positivo.'), `→ ${cb('0.56x + 3.5 − 1.04x + 0.56 = x')}`] },
      { t:'Junta los términos semejantes de la izquierda', l:[_nota(diagFrac([_tx('0.56x'), _tx('+'), _tx('3.5'), _tx('−'), _tx('1.04x'), _tx('+'), _tx('0.56'), _op('='), _tx('x')],
           [{ de:[0,'n'], a:[4,'n'], txt:'x con x: 0.56 − 1.04 = −0.48' }, { de:[2,'d'], a:[6,'d'], txt:'números: 3.5 + 0.56 = 4.06' }]),
-          'Arriba se juntan las que tienen x; abajo, los números solos. Cada grupo se suma con su signo.'),
-        'Las x: 0.56 − 1.04 = −0.48 → −0.48x', 'Los números: 3.5 + 0.56 = 4.06', `→ ${cb('−0.48x + 4.06 = x')}`] }], -0.48, 4.06, 1, 0, 2),
+          'Arriba se juntan las que tienen x; abajo, los números solos. Cada grupo se suma con su signo.'), `→ ${cb('−0.48x + 4.06 = x')}`] }], -0.48, 4.06, 1, 0, 2),
   // 10: tasa de lluvia
   () => ({ enunciado:'Durante una tormenta se registraron <b>5.4</b> pulgadas de lluvia en <b>1.2</b> horas. ¿Cuál fue la tasa de lluvia durante este tiempo?', tipo:'frac', respuesta:{ n:9, d:2 }, pedirSimple:true, ayuda:'pulgadas arriba y horas abajo, en su forma más simple.',
     explicacion: receta({ pide:'la tasa pulgadas / horas como fracción simplificada (una tasa compara cantidades de unidades distintas).',
       pasos:[{ t:'Escribe la tasa: pulgadas arriba, horas abajo', l:[cb('5.4 pulgadas / 1.2 horas')] }, { t:'Quita los puntos: multiplica arriba y abajo por 10', l:[_nota(diagFrac([{ t:'f', n:'5.4', d:'1.2' }, _op('='), _fT(54, 12)], _par(0, 2, '× 10', true)),
-          'Los dos tienen 1 decimal: × 10 corre el punto 1 lugar a la derecha. Se hace arriba Y abajo, así la fracción vale lo mismo.'), '5.4 × 10 = 54 y 1.2 × 10 = 12 → 54/12'] },
+          'Los dos tienen 1 decimal: × 10 corre el punto 1 lugar a la derecha. Se hace arriba Y abajo, así la fracción vale lo mismo.')] },
         { t:'Simplifica', l:[explSimplif(54, 12)] }],
       resp:'9/2 (9 pulgadas por 2 horas)', comp:'54 ÷ 12 = 4.5 y 9 ÷ 2 = 4.5: valen lo mismo ✓ (4.5 pulgadas por hora)', error:'poner las horas arriba: lo que se nombra primero (la lluvia) va arriba.', ejemplo:'5.4/1.2 = 54/12 = 9/2.', truco:'en una tasa se escriben las unidades: 9 pulgadas / 2 horas.' }) }),
   // 11: precio de cada dulce
@@ -8015,7 +8046,7 @@ const _P2B = [
       resp:'54 2/3 %', comp:'25 + 20 1/3 + 54 2/3 = 100 ✓', error:'restar solo uno de los dos porcientos: hay que quitar los DOS del 100%.', ejemplo:'100 − 25 − 20 1/3 = 54 2/3 %.', truco:'las partes de un todo suman 100%: lo que falta es 100 menos lo que ya está.' }) }),
   // 18: 9 2/5 como porciento
   () => MCx(`<b>El porciento equivalente al número mixto ${mixS(9, 2, 5)} es</b>`, ['9.4%', '.094%', '9.40%', '940%', NING], '940%', { pide:'9 2/5 como porciento.',
-    pasos:[{ t:'Pasa la fracción a decimal: arriba ÷ abajo', l:['2/5 = 2 ÷ 5 = 0.4'] }, { t:'Súmale el entero', l:[`9 2/5 = 9 + 0.4 = ${cb('9.4')}`] }, { t:'Pasa el decimal a porciento: × 100 (el punto 2 lugares a la derecha)', l:[decPct(9.4)] }],
+    pasos:[{ t:'Pasa el mixto a decimal: el entero se queda y la fracción es arriba ÷ abajo', l:[diagMixDec(9, 2, 5)] }, { t:'Pasa el decimal a porciento: × 100 (el punto 2 lugares a la derecha)', l:[decPct(9.4)] }],
     comp:'9 2/5 es casi 10 enteros, y 10 enteros son 1000%: 940% es razonable ✓', error:'escoger 9.4% (se le olvidó multiplicar por 100) o 9.40% (es lo mismo que 9.4%).', ejemplo:'9 2/5 = 9.4 = 940%.', truco:'mixto → decimal → × 100.' }),
   // 19: 9 pies a 5 yardas
   () => MCx('<b>Escribe una razón expresada en sus términos más simple para la razón de 9 pies a 5 yardas .</b>', [frS(3, 5), frS(36, 5), frS(5, 3), frS(5, 36)], frS(3, 5), { pide:'la razón 9 pies a 5 yardas, simplificada (lo que se nombra primero va arriba).',
@@ -8042,7 +8073,7 @@ const _P2B = [
   // 24: papitas fritas (resultado mixto)
   () => ({ enunciado:'Si <b>1</b> onza de papitas fritas contiene <b>270</b> calorías, ¿cuántas onzas contendrían <b>4,040</b> calorías?', tipo:'mixto', respuesta:{ e:14, n:26, d:27 }, ayuda:'Escribe el número mixto: entero, y la fracción arriba y abajo.',
     explicacion: receta({ pide:'las onzas para 4,040 calorías, como número mixto.',
-      pasos:[{ t:'Arma la proporción con las mismas unidades en el mismo lugar (onzas arriba, calorías abajo)', l:[_dibProp('onzas', 'calorías', 1, 270, 'x', 4040), cb('1/270 = x/4040')] }, { t:'Multiplica en cruz', l:[diagCruzados(1, 270, 'x', 4040), `270 · x = 1 × 4040 = ${cb('4040')}`] },
+      pasos:[{ t:'Arma la proporción con las mismas unidades en el mismo lugar (onzas arriba, calorías abajo)', l:[_dibProp('onzas', 'calorías', 1, 270, 'x', 4040)] }, { t:'Multiplica en cruz', l:[diagCruzados(1, 270, 'x', 4040), `270 · x = 1 × 4040 = ${cb('4040')}`] },
         { t:'Quita el 270: divide los DOS lados entre 270', l:[diagAmbosLados('270x', '4040', '÷ 270', 'x', '4040/270'), 'Simplifica: los dos terminan en 0, se divide arriba y abajo entre 10.', explSimplif(4040, 270)] },
         { t:'Pásala a mixto: cuántas veces cabe el 27 en 404', l:[diagAMixto(404, 27, 14, 26), '27 × 14 = 378 (es lo más cerca de 404 sin pasarse) y 404 − 378 = 26', `x = ${cb('14 26/27')} onzas`] }],
       resp:'14 26/27 onzas', comp:'14.96 onzas × 270 ≈ 4,040 calorías ✓ (casi 15 onzas)', error:'poner las calorías arriba de un lado y las onzas arriba del otro.', ejemplo:'x = 4040 ÷ 270 = 404/27 = 14 26/27.', truco:'misma unidad arriba en los dos lados (onzas) y misma abajo (calorías).' }) }),
@@ -8240,10 +8271,11 @@ function ecL(cab, enun, pre, a, b, c, d, k, L = 'x'){
     return i > 0 && i < 70 ? { t: mayus(p.slice(0, i)), l:[p.slice(i + 2)] } : { t:'Prepara la ecuación', l:[p] }; });
   const sg = n => (n < 0 ? '− ' : '+ ') + fd(Math.abs(n)), sgT = co => (co < 0 ? '− ' : '+ ') + T(Math.abs(co));   // un pedazo con su signo delante
   const piezas = (co, n) => co ? [T(co), ...(n ? [sg(n)] : [])] : [fd(n)];
-  if(c !== 0) pasos.push({ t:`Pasa las ${L} al lado izquierdo`, l:[`A la derecha hay ${T(c)}. ${c > 0 ? 'Está sumando, así que pasa RESTANDO' : 'Está restando, así que pasa SUMANDO'} (es lo mismo que ${c > 0 ? 'restar' : 'sumar'} ${T(Math.abs(c))} en los DOS lados).`,
+  // con _masDibujo (Parcial 2) no va el renglón "A la derecha hay… pasa RESTANDO": el dibujo ya lo muestra (término en naranja, "pasa restando" y su nota)
+  if(c !== 0) pasos.push({ t:`Pasa las ${L} al lado izquierdo`, l:[_masDibujo ? '' : `A la derecha hay ${T(c)}. ${c > 0 ? 'Está sumando, así que pasa RESTANDO' : 'Está restando, así que pasa SUMANDO'} (es lo mismo que ${c > 0 ? 'restar' : 'sumar'} ${T(Math.abs(c))} en los DOS lados).`,
     diagPasa([piezas(a, b), piezas(c, d)], [1, 0], [[...piezas(a, b), { t: sgT(-c) }], [fd(d)]], c > 0 ? 'pasa restando' : 'pasa sumando'),
     `Junta las ${L}: ${fd(a)} ${c > 0 ? '−' : '+'} ${fd(Math.abs(c))} = ${fd(dif)} → queda ${cb(lado(dif, b) + ' = ' + fd(d))}`] });
-  if(b !== 0) pasos.push({ t:'Pasa el número al lado derecho', l:[`A la izquierda está el ${b < 0 ? '−' : '+'} ${fd(Math.abs(b))}. ${b < 0 ? 'Está restando, así que pasa SUMANDO' : 'Está sumando, así que pasa RESTANDO'}.`,
+  if(b !== 0) pasos.push({ t:'Pasa el número al lado derecho', l:[_masDibujo ? '' : `A la izquierda está el ${b < 0 ? '−' : '+'} ${fd(Math.abs(b))}. ${b < 0 ? 'Está restando, así que pasa SUMANDO' : 'Está sumando, así que pasa RESTANDO'}.`,
     diagPasa([piezas(dif, b), [fd(d)]], [0, 1], [[T(dif)], [fd(d), { t: sg(-b) }]], b < 0 ? 'pasa sumando' : 'pasa restando'),
     `${fd(d)} ${b < 0 ? '+' : '−'} ${fd(Math.abs(b))} = ${fd(der)} → queda ${cb(T(dif) + ' = ' + fd(der))}`] });
   if(dif !== 1){
@@ -8251,7 +8283,8 @@ function ecL(cab, enun, pre, a, b, c, d, k, L = 'x'){
     pasos.push({ t:`Quita el ${fd(dif)} que multiplica a la ${L}: pasa al otro lado dividiendo`, l:[diagPasa([[dif === -1 ? '−' : fd(dif), L], [fd(der)]], [0, 0], [[L], [fd(der), { t:'÷ ' + fdP(dif) }]], 'pasa dividiendo',
         `El ${fd(dif)} está multiplicando a la ${L}: pasa al otro lado DIVIDIENDO (con su signo). Es lo mismo que dividir los DOS lados entre ${fd(dif)}.`), `${L} = ${fd(der)} ÷ ${fdP(dif)}`,
       ...(sig ? [`Signos: ${sig}.`] : []),
-      ...(kk ? [`El ${fd(Math.abs(dif))} tiene ${kk} decimal${kk > 1 ? 'es' : ''}: se mueve el punto ${kk} lugar${kk > 1 ? 'es' : ''} a la derecha en los dos números → ${fd(dN(Math.abs(der) * P10(kk)))} ÷ ${fd(dN(Math.abs(dif) * P10(kk)))}`] : []),
+      ...(!kk ? [] : _masDibujo ? [diagCorreDiv(der, dif), `→ ${fd(dN(Math.abs(der) * P10(kk)))} ÷ ${fd(dN(Math.abs(dif) * P10(kk)))}`]   // el punto que salta, en dibujo (Parcial 2)
+        : [`El ${fd(Math.abs(dif))} tiene ${kk} decimal${kk > 1 ? 'es' : ''}: se mueve el punto ${kk} lugar${kk > 1 ? 'es' : ''} a la derecha en los dos números → ${fd(dN(Math.abs(der) * P10(kk)))} ÷ ${fd(dN(Math.abs(dif) * P10(kk)))}`]),
       exacto ? `${L} = ${cb(fd(x))}` : lugares(x) <= 6 ? `${L} = ${fd(x)} (tiene más decimales de los que pide: se redondea)` : `${L} = ${fd(Math.trunc(x * 1e5) / 1e5, 5)}… (la división no termina)`] });
   }
   if(!exacto) pasos.push({ t:`Redondea a ${k === 3 ? 'la milésima' : k === 4 ? 'la diez milésima' : k === 2 ? 'dos lugares decimales (la centésima)' : k + ' lugares decimales'}`, l: explRed(x, k) });
@@ -12425,7 +12458,7 @@ function aReceta(lista, enun){
 // pasos se abren de a uno con "Siguiente paso", o todos con "Ver todo". La receta para el examen sale al final.
 function explReceta(lista){
   const grupos = [], fin = [], trucos = [];
-  let pide = '', g = null;
+  let pide = '', g = null, sinFin = false;
   lista.filter(Boolean).forEach(l => {
     if(/^TRUCO:/.test(l)) return trucos.push(l.replace(/^TRUCO:\s*/, ''));
     const m = /^§(\w+)\|([\s\S]*)$/.exec(l);
@@ -12433,16 +12466,18 @@ function explReceta(lista){
     const [, k, t] = m;
     if(k === 'pide') pide = t;
     else if(k === 'paso') grupos.push(g = { t, l:[] });
+    else if(k === 'sinfin') sinFin = true;
     else { g = null; fin.push(`<div class="rFin"><b>${{ resp:'Respuesta', comp:'Comprueba', error:'Error común' }[k]}:</b> ${t}</div>`); }
   });
+  if(sinFin) fin.length = 0;   // Parcial 2: no se pintan "Respuesta / Comprueba / Error común" (ni su página "Resultado"); siguen en los datos para la IA
   const id = 'rc' + (++_dgId);
   // los TRUCO y la "Receta para el examen" ya no se pintan (pedido de la usuaria 2026-10-25: recuadros que no sirven); siguen en el arreglo para los temas sin receta
   return `<div class="receta" id="${id}">` +
     (pide ? `<div class="rPide"><b>Qué te piden:</b> ${pide}</div>` : '') +
     grupos.map((p, i) => `<div class="rPaso${i ? ' oculto' : ''}"><div class="rTit">${p.t}</div>${p.l.map(x => typeof x === 'string' && x.startsWith('▸ ') ? `<div class="rSub">${x.slice(2)}</div>` : `<div class="rLin">${x}</div>`).join('')}</div>`).join('') +
-    `<div class="rPaso rFinal oculto">${fin.join('')}</div>` +
+    (fin.length ? `<div class="rPaso rFinal oculto">${fin.join('')}</div>` : '') +
     `<div class="rNav"><div class="rBtns"><button type="button" class="btn sec chico rAnt" onclick="rAnt('${id}')" disabled>◀ Anterior</button><button type="button" class="btn amar chico rSig" onclick="rSig('${id}')">Siguiente paso ▶</button></div>` +
-    `<div class="rPie"><span class="rPag">Paso 1 de ${grupos.length + 1}</span><button type="button" class="rModo" onclick="rModo('${id}')">Ver todo</button></div></div></div>`;
+    `<div class="rPie"><span class="rPag">Paso 1 de ${grupos.length + (fin.length ? 1 : 0)}</span><button type="button" class="rModo" onclick="rModo('${id}')">Ver todo</button></div></div></div>`;
 }
 // la explicación cambia de PÁGINA: se ve un solo paso a la vez (no se va alargando); "Ver todo" los muestra todos
 function _rVer(c, i){
@@ -12450,7 +12485,7 @@ function _rVer(c, i){
   ps.forEach((p, k) => p.classList.toggle('oculto', k !== i));
   const pd = c.querySelector('.rPide'); if(pd) pd.classList.toggle('oculto', i !== 0);
   c.querySelector('.rAnt').disabled = i === 0; c.querySelector('.rSig').disabled = i === ps.length - 1;
-  c.querySelector('.rPag').textContent = i === ps.length - 1 ? 'Resultado' : `Paso ${i + 1} de ${ps.length}`;
+  c.querySelector('.rPag').textContent = i === ps.length - 1 && c.querySelector('.rFinal') ? 'Resultado' : `Paso ${i + 1} de ${ps.length}`;
   c.querySelector('.rModo').textContent = 'Ver todo';
   c.querySelector('.rBtns').style.display = '';
 }
@@ -12657,6 +12692,21 @@ function practicarParcial2(){
   if(syncDoc) syncDoc.set({clase},{merge:true}).catch(()=>{});
   ir('practica');
 }
+// "Por tema" de Progreso (2026-10-29): los temas con ejercicios hechos, agrupados por capítulo (en el orden del curso) y, dentro de cada capítulo, los más flojos arriba
+// (a igual porcentaje, el que tiene más ejercicios hechos: su porcentaje es más de fiar). Un tema de un capítulo que no está en la lista de la materia no desaparece: va al final.
+function _porTemaHTML(conDatos){
+  const fila = m => { const s = stats[m.id], p = pct(s), color = p >= 80 ? 'var(--verde)' : p >= 55 ? 'var(--ambar)' : 'var(--rojo)';
+    return `<div class="stat">
+          <div class="lbl"><span>${m.nombre}</span><b>${p}% · ${s.ok}/${s.ok+s.fallo}</b></div>
+          <div class="barra-ext"><div class="barra-int" style="width:${p}%;background:${color}"></div></div>
+        </div>`; };
+  const hechos = m => stats[m.id].ok + stats[m.id].fallo, caps = MATERIAS[materia].caps.map(String);
+  conDatos.forEach(m => { const c = m.secciones[0][0]; if(!caps.includes(c)) caps.push(c); });
+  return caps.map(cap => {
+    const ms = conDatos.filter(m => m.secciones[0][0] === cap).sort((a, b) => pct(stats[a.id]) - pct(stats[b.id]) || hechos(b) - hechos(a));
+    return ms.length ? `<h3>${nombreCapitulo(cap)}</h3>${ms.map(fila).join('')}` : '';
+  }).join('');
+}
 function pantallaStats(){
   _pantallaActual = pantallaStats;
   _barra('stats');
@@ -12704,14 +12754,7 @@ function pantallaStats(){
     </div>
     <div class="card">
       <h2>Por tema</h2>
-      ${conDatos.length ? conDatos.map(m=>{
-        const s = stats[m.id], p = pct(s);
-        const color = p >= 80 ? 'var(--verde)' : p >= 55 ? 'var(--ambar)' : 'var(--rojo)';
-        return `<div class="stat">
-          <div class="lbl"><span>${m.nombre}</span><b>${p}% · ${s.ok}/${s.ok+s.fallo}</b></div>
-          <div class="barra-ext"><div class="barra-int" style="width:${p}%;background:${color}"></div></div>
-        </div>`;
-      }).join('') : '<div class="nota">Todavía no has hecho ningún ejercicio.</div>'}
+      ${conDatos.length ? _porTemaHTML(conDatos) : '<div class="nota">Todavía no has hecho ningún ejercicio.</div>'}
       ${total ? `<button class="btn sec chico" style="margin-top:10px" onclick="borrarProgreso()">Borrar todo mi progreso (las 4 materias)</button>` : ''}
     </div>`;
 }
@@ -13324,6 +13367,37 @@ function autotest(){
     stats = bk;
     chk('Parcial 2: sin práctica faltan todos los temas de los caps. 6-8 (sin los "— EducoSoft"); 90 % en uno lo quita; su versión "— EducoSoft" también suma; 25 % sigue faltando',
       todos.length > 20 && sinNada.length === todos.length && todos.every(m => PARCIAL2_CAPS.includes(m.secciones[0][0]) && !m.extra) && conUno.length === todos.length - 1 && !conFijo.some(t => t.m.id === 'suma-resta-dec') && flojo.some(t => t.m.id === 'suma-resta-dec'));
+  }
+  {
+    const bk = { s:stats, m:materia }; materia = 'mate';
+    const c3 = _modsCap(3).slice(0, 3).map(m => m.id), c1 = _modsCap(1)[0].id;
+    stats = { [c3[0]]:{ ok:9, fallo:1 }, [c3[1]]:{ ok:1, fallo:3 }, [c3[2]]:{ ok:5, fallo:5 }, [c1]:{ ok:2, fallo:2 } };
+    const html = _porTemaHTML(MODULOS.filter(m => stats[m.id])), en = id => html.indexOf('<span>' + MOD_POR_ID[id].nombre + '</span>'), tit = c => html.indexOf('<h3>' + nombreCapitulo(c) + '</h3>');
+    // un tema de un capítulo que la materia no lista no desaparece
+    const raro = { id:'x-raro', nombre:'Tema raro', clase:'mate', secciones:['9.1'] }; stats['x-raro'] = { ok:1, fallo:1 };
+    const conRaro = _porTemaHTML([raro]);
+    stats = bk.s; materia = bk.m;
+    chk('Progreso → "Por tema": agrupado por capítulo (en orden del curso) y los más flojos arriba dentro de cada capítulo; un capítulo fuera de la lista no se pierde',
+      tit(1) >= 0 && tit(1) < en(c1) && en(c1) < tit(3) && tit(3) < en(c3[1]) && en(c3[1]) < en(c3[2]) && en(c3[2]) < en(c3[0]) && /<h3>Capítulo 9<\/h3>/.test(conRaro) && conRaro.includes('Tema raro'));
+  }
+  {
+    const r = diagMismoAbajo(9, 4, '−', 8), s = diagMismoAbajo(3, 2, '+', 7), n = diagMismoAbajo(1, -3, '+', 5);
+    chk('dibujo de restar/sumar con el mismo de abajo: flecha de arriba (la cuenta), flecha de abajo ("se queda igual") y su nota; con un negativo no escribe "+ -"',
+      /<svg/.test(r) && r.includes('9 − 4 = 5') && r.includes('se queda igual') && r.includes('solo se restan los de arriba') && s.includes('3 + 2 = 5') && s.includes('solo se suman') && n.includes('1 + (−3) = −2') && !n.includes('+ -'));
+  }
+  {
+    const d = diagDivEntero(5, 8, 9), m = diagMixDec(4, 1, 2), fuera = pasosMultDec(0.6, 250).join(' ');   // fuera del Parcial 2: igual que siempre
+    const p2 = MOD_POR_ID['educo-parcial2-p1'], sig = p2._sig; p2._sig = 13; const t14 = p2.gen(nivel).explicacion.join(' '); p2._sig = sig;   // pregunta 14: 60% de 250
+    chk('Parcial 2 con más dibujos: fracción ÷ número y mixto → decimal en dibujo; en sus prácticas no se repite en texto lo que ya dice un dibujo, y los demás temas siguen igual',
+      /<svg/.test(d) && d.includes('8 × 9 = 72') && d.includes('se queda') && /<svg/.test(m) && m.includes('1 ÷ 2') && /Lugares decimales/.test(fuera) && !/Lugares decimales/.test(t14) && /<svg/.test(t14) && _masDibujo === false);
+  }
+  {
+    const p2 = MOD_POR_ID['educo-parcial2-p1'], sig = p2._sig; p2._sig = 22; const e = p2.gen(nivel); p2._sig = sig;   // pregunta 23 (la que ella marcó)
+    const htmlC = explReceta(e.explicacion), htmlF = explReceta(e.facil), otro = MOD_POR_ID['divisibilidad'].gen(nivel), htmlO = explReceta(otro.explicacion);
+    const pasosC = e.explicacion.filter(l => /^§paso\|/.test(l)).length;
+    chk('Parcial 2: no se pintan "Respuesta / Comprueba / Error común" (ni su página "Resultado") en Completa ni en Fácil, el contador de pasos cuadra y la IA sigue recibiéndolos; en otros temas siguen',
+      !/Comprueba:|Error común:|Respuesta:|rFinal/.test(htmlC + htmlF) && htmlC.includes(`Paso 1 de ${pasosC}<`) && /Respuesta:/.test(_aiExplTxt(e.explicacion)) && /Comprobación:/.test(_aiExplTxt(e.explicacion))
+        && /Comprueba:/.test(htmlO) && /rFinal/.test(htmlO));
   }
   chk('IA: ningún modelo repetido (3.7 redirige a 3.8) y el último es el básico gratis', new Set(AI_MODELS).size === AI_MODELS.length && !AI_MODELS.includes('gemini-3.7-flash') && AI_MODELS[AI_MODELS.length - 1] === 'gemini-3.5-flash-lite');
 

@@ -31,7 +31,7 @@ Mate/
 ## Cómo probar / desplegar
 
 - Abrir `index.html?test` corre `autotest()`: 200 tiradas × 3 niveles × cada uno de los
-  135 módulos (489 comprobaciones en 2026-10-29), más casos borde de `verificar()`/`analizarTexto()`, validez geométrica
+  135 módulos (493 comprobaciones en 2026-10-29), más casos borde de `verificar()`/`analizarTexto()`, validez geométrica
   (triángulos/trapecios generados), unicidad (MCM de un número consigo mismo), fechas
   locales (`fechaLocal`/`fechaHaceDias`), caducidad de la racha de días y deduplicado de
   `_registrarError` — el número exacto de comprobaciones lo dice el propio resultado (no
@@ -532,7 +532,7 @@ AEE y otros)** + 500 h de electricidad con energía renovable.
 - Antes de cualquier cambio grande: confirmar que `git status` está limpio o hacer un
   respaldo del archivo — este proyecto no tiene red de seguridad más que git.
 - Después de editar `app.js`: correr `node --check app.js`, y volver a correr
-  `index.html?test` — todas las comprobaciones tienen que seguir pasando (489 en 2026-10-29). Para correrlo sin navegador (2026-10-29): un `vm` de Node con un DOM de mentira (`document.getElementById` que devuelve objetos sueltos, `localStorage` como `Proxy` para que `Object.keys(localStorage)` liste las claves) carga `app.js`, y `?test` deja el resultado en el `innerHTML` de `#main`; sirve para correr también los verificadores y escenarios (rondas, sincronización con un Firestore simulado, IA con un `fetch` simulado) en segundos.
+  `index.html?test` — todas las comprobaciones tienen que seguir pasando (493 en 2026-10-29). Para correrlo sin navegador (2026-10-29): un `vm` de Node con un DOM de mentira (`document.getElementById` que devuelve objetos sueltos, `localStorage` como `Proxy` para que `Object.keys(localStorage)` liste las claves) carga `app.js`, y `?test` deja el resultado en el `innerHTML` de `#main`; sirve para correr también los verificadores y escenarios (rondas, sincronización con un Firestore simulado, IA con un `fetch` simulado) en segundos.
 
 ## Auditoría 2026-10-13 — reglas que dejó
 
@@ -669,7 +669,8 @@ Pedido: "busca bugs, mejoras, cosas nuevas en toda la app"; se aplicaron los pun
   de un dibujo), la propina "Regla Especial" con figura y "Despeje las fórmulas" de Watt. Se corre en la consola del navegador o en el `vm` de Node (ver el encabezado del archivo); en Windows el Bash de Claude Code se come las
   barras invertidas dobles de un heredoc: los scripts con regex se escriben con la herramienta de archivos, no con `cat <<EOF`.
 - **Pendientes que la usuaria no pidió todavía (reporte 2026-10-29):** 22 = explicación Fácil (el truco primero) en los temas al azar de los caps. 6-8 (hoy solo la tienen las preguntas exactas de los exámenes);
-  24 = "Lo que te falta" por grupo de examen (como la tarjeta del Parcial 2); 28 = Progreso → "Por tema" agrupado por capítulo con los más flojos arriba (cambio visual: esperar su OK, ver su regla de UI).
+  24 = "Lo que te falta" por grupo de examen (como la tarjeta del Parcial 2). **El 28 (Progreso → "Por tema" agrupado por capítulo, más flojos arriba) ya se hizo en v194:** ver abajo. Los cambios visuales de este reporte van de
+  uno en uno (su regla de UI): primero salió el 29 (número sobre cada barra de "Últimos 14 días", publicado en v192; ella dijo "si me gusta") y después el 28.
 
 ## Volver a una página de la ronda la deja igual (2026-10-29, v193)
 
@@ -701,6 +702,38 @@ Pedido: "si yo le doy para atrás para ver el ejercicio anterior que las respues
 
 Ella mostró la explicación de Google para `9/8 − 9x = 0.5` (4 pasos cortos) y preguntó por qué la "Completa" del ejercicio 8 de la práctica 1 del Parcial 2 era un "revolú". Causa: restaba el 9/8 en los dos lados, la x
 quedaba como −9x y aparecían los negativos (4 − 9 = −5, ÷ (−9), voltear la fracción, multiplicar arriba y abajo, regla de signos): 6 dibujos y ~2000 px. Ahora pasa el 9x SUMANDO (9/8 = 1/2 + 9x), luego el 1/2 restando
-(9/8 − 1/2 = 9x), 9/8 − 4/8 = 5/8 y 5/8 ÷ 9 = 5/(8 × 9) = 5/72: 4 dibujos, ~1550 px, sin negativos; la "Fácil" quedó en 3 pasos con el truco "si la x tiene un − delante, pásala sumando al otro lado".
+(9/8 − 1/2 = 9x), 9/8 − 4/8 = 5/8 y 5/8 ÷ 9 = 5/(8 × 9) = 5/72: 5 dibujos, sin negativos; la "Fácil" quedó en 3 pasos con el truco "si la x tiene un − delante, pásala sumando al otro lado".
+**Restar con el mismo de abajo en dibujo (pedido de ella, mismo día: "eso en dibujo es más fácil de entender que en texto"):** `diagMismoAbajo(a, b, op, d)` (junto a `diagConvertir`) dibuja `a/d ± b/d = r/d` con una flecha de arriba
+(`9 − 4 = 5`) y otra de abajo ("se queda igual") y una nota corta; el Paso 3 del ejercicio 8 lo usa en vez de las dos líneas de texto. **Hoy solo lo usa ese ejercicio:** `pasosSumaF` (rama del mismo denominador, que usan todas las
+sumas y restas de fracciones) sigue con texto; ponerlo ahí sería un cambio visual grande: esperar su OK. Regla general que salió de esto: cuando una operación se puede ver con flechas, dibujo antes que texto.
 **Regla para explicaciones nuevas:** en `a − bx = c` se resuelve `bx = a − c` (la x pasa sumando) en vez de restar `a` en los dos lados; y fracción ÷ número = el número se multiplica con el de abajo (sin `pasosDivF`, sin voltear,
 sin signos). La aritmética se verificó con fracciones exactas (BigInt). Ninguna otra explicación usa `diagAmbosLados` con `÷ (−…)` o con un coeficiente negativo.
+
+## Progreso → "Por tema" agrupado por capítulo (2026-10-29, v194; punto 28 del reporte)
+
+`_porTemaHTML(conDatos)` (junto a `pantallaStats`) pinta la tarjeta "Por tema": un título pequeño por capítulo (`<h3>`, el mismo look que los títulos de capítulo de Temas: sin CSS nuevo; el nombre sale de
+`nombreCapitulo`), los capítulos en el orden del curso (`MATERIAS[materia].caps`) y, dentro de cada uno, los temas del más flojo al más fuerte (porcentaje de menor a mayor; a igual porcentaje, primero el que tiene más
+ejercicios hechos). Solo salen los temas con ejercicios hechos y los capítulos que los tienen. Un tema de un capítulo que la materia no lista no desaparece: se agrega un título al final (`caps` se completa con lo que traigan
+los datos). Cada fila sigue igual (nombre, `p% · ok/total`, barra roja/ámbar/verde). **Decisiones que se pueden cambiar si no le gusta:** capítulos en orden del curso (y no el más flojo primero), sin capítulos plegables y sin
+el promedio del capítulo en el título. Autotest: 490 (comprueba el orden de capítulos, el de los temas y que un capítulo raro no se pierde; se probó que falla si se invierte el orden).
+Se vio en el navegador del panel con datos de prueba (8 capítulos, 95 temas: todos los grupos salen ordenados de menor a mayor).
+
+## Parcial 2: menos texto y más dibujo (2026-10-29, v194)
+
+Pedido de ella (marcó con rojo el texto de `5/8 ÷ 9 = 5/(8 × 9)` del ejercicio 8): "verifica todos los pasos y todas las explicaciones de las prácticas 1 y 2 de los exámenes parciales 2 para que sea en dibujos
+esas cosas que son mejor en dibujos que en texto; menos texto y más dibujo si es POSIBLE Y SOLO SI ES MEJOR". Se leyeron las 50 explicaciones (Completa y Fácil) y se cambió solo lo que mejoraba:
+- **Dibujos nuevos:** `diagDivEntero(n, d, k)` (fracción ÷ número: arriba "se queda", abajo `d × k`; ej. 8 de la práctica 1 y la máquina de los acres, ej. 24) y `diagMixDec(e, p, q)` (mixto → decimal: el entero se queda y
+  la fracción es arriba ÷ abajo; ya era el dibujo de `bProm`, ahora también el ej. 18 de la práctica 2). En las divisiones de `ecL` con decimales (ej. 9 de las dos prácticas) el "se mueve el punto" es `diagCorreDiv`.
+  En el impuesto (ej. 25 de la práctica 2) el 50000 pasa dividiendo en dibujo, como en las otras proporciones.
+- **Texto que repetía un dibujo de al lado, fuera:** los "Lugares decimales…" de `pasosMultDec` (la nota del dibujo del punto ya los cuenta; queda "→ 150"), el "El divisor tiene N decimales…" de `pasosDivDec`, los
+  "A la derecha hay… pasa RESTANDO" de `ecL`, las cuentas repetidas de `bProm`/`bMaq`, y en las preguntas escritas a mano (práctica 1: 6; práctica 2: 4, 8, 9, 10, 24).
+- **Cuenta corta en vez de "la casita":** `pasosDivDec` dice `13.26 ÷ 3 = 4.42` (se permite calculadora; ella no quiso la casita).
+- **Cómo se limita al Parcial 2:** `var _masDibujo` (es `var` porque esos ayudantes también corren al cargar otros temas) se pone en true SOLO mientras `_modParcial.gen` arma una pregunta (con `try/finally`);
+  los ayudantes compartidos miran ese interruptor. Se comprobó con la misma semilla de `Math.random` que los otros 133 temas dan EXACTAMENTE la misma explicación que antes (8 ejercicios por tema). Si quiere lo mismo
+  en otros temas, basta prender `_masDibujo` en su `gen` (o quitar la condición en el ayudante).
+- **Lo que se dejó en texto a propósito:** los "Fácil" (ya son cortos), las reglas de signos, los "→ la ecuación queda…", y las cuentas que no tienen un dibujo más claro que la cuenta misma.
+Autotest: 492 (dibujos nuevos, sin "Lugares decimales" dentro del Parcial 2, sí fuera de él, e interruptor apagado al terminar). Visto en el navegador del panel: ej. 8, 9 y 24 de la práctica 1; 9, 18 y 25 de la práctica 2.
+- **Sin "Respuesta / Comprueba / Error común" (pedido de ella, mismo día: "quita eso, es innecesario", marcando ese bloque al final de la pregunta 23):** en las prácticas del Parcial 2 (Completa y Fácil) esas tres líneas
+  ya no se pintan, ni su página "Resultado" del paso a paso (`explReceta` no la crea y el contador dice "Paso 1 de N" con N = los pasos; `_rVer` solo rotula "Resultado" si existe `.rFinal`). Siguen en los datos
+  (`receta()` las guarda y agrega la marca `§sinfin|` cuando `_masDibujo` está prendido): la IA las lee (`_aiExplTxt`) y los demás temas las siguen pintando. `_modParcial.gen` arma también la "Fácil" con el interruptor
+  prendido. Para volver a mostrarlas: quitar la línea `if(_masDibujo) L.push('§sinfin|')` de `receta()`. Autotest: 493.
