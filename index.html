@@ -415,7 +415,7 @@
     .aic-puntos i:nth-child(2) { animation-delay:.18s; } .aic-puntos i:nth-child(3) { animation-delay:.36s; }
     @keyframes aicPunto { 0%,80%,100% { opacity:.25; transform:translateY(0); } 40% { opacity:1; transform:translateY(-3px); } }
     .aic-in { display:flex; align-items:center; gap:8px; padding:10px 12px calc(10px + env(safe-area-inset-bottom)); border-top:1px solid var(--aiborde); }
-    .aic-in input { flex:1; min-width:0; padding:12px 16px; border-radius:22px; border:1.5px solid rgba(0,0,0,.2); background:rgba(0,0,0,.05); color:var(--texto); font-size:14px; font-family:inherit; outline:none; box-shadow:inset 0 1px 3px rgba(0,0,0,.08); transition:border-color .15s, background .15s; }
+    .aic-in input { flex:1; min-width:0; padding:12px 16px; border-radius:22px; border:1.5px solid rgba(0,0,0,.2); background:rgba(0,0,0,.05); color:var(--texto); font-size:16px; font-family:inherit; outline:none; /* 16px: con menos el iPhone hace zoom al tocar el campo */ box-shadow:inset 0 1px 3px rgba(0,0,0,.08); transition:border-color .15s, background .15s; }
     .aic-in input::placeholder { color:var(--muted); opacity:.9; }
     .aic-in input:focus { border-color:rgba(0,0,0,.45); background:rgba(0,0,0,.07); }
     body.night .aic-in input { border-color:rgba(255,255,255,.22); background:rgba(255,255,255,.08); box-shadow:inset 0 1px 3px rgba(0,0,0,.35); }
@@ -625,6 +625,6 @@
 </div>
 
 <!-- todo el JavaScript vive en app.js (Chrome lo guarda ya compilado y no lo vuelve a analizar en cada apertura). El ?v= es el MISMO número que CACHE en sw.js: se suben juntos en cada deploy. -->
-<script src="app.js?v=195"></script>
+<script src="app.js?v=196"></script>
 </body>
 </html>
