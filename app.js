@@ -5236,12 +5236,50 @@ const _ayRecientes = (() => { try{ return JSON.parse(localStorage.getItem(_AY_VI
 // en el orden de AY_ORDEN_ASUNTOS y, dentro de cada asunto, en el orden del banco (libro del maestro primero)
 const AY_ORDEN_ASUNTOS = 'HJCLMS';   // Leyes: H historia y enmiendas · J la Junta · C el Colegio y los sellos · L licencias y examen · M multas y sanciones · S supervisión y alcance
 const AY_ASUNTOS_LEYES = { fc:'HHHHHHHHHHLCCCCLLLLMJJJJSLCLLLLMJJJJLLLLLSLMMCCCCCCLLLJJHHHH', q:'HHHHCCLLLCMJHHHJJJJHHLSLJCLMLHLLLMMJJJLLLLLSLMMMCCCCHHHHHHHHJJJJJJLLCCSSSCCCCLM' };
+// Libro → ley actual: la pregunta del libro sale y JUSTO DESPUÉS la de la ley actual (o del NEC actual), nunca la actual antes.
+// AY_LIB_ACT = pregunta del libro → sus versiones actuales, en orden de preferencia (si una ya salió o no está en la ronda, la otra).
+// _aySigue = las que deben salir en el próximo puesto; en una mezcla _ayAdelanta trae ese tema al puesto (cambia dos puestos sin abrir).
+const AY_LIB_ACT = (() => {
+  const L = AYUD.leyes, R = AYUD.reglam, m = new Map(), par = (lib, ...act) => m.set(lib, act);
+  par(L.fc[10], L.fc[28], L.quiz[30]);  par(L.quiz[6], L.quiz[30], L.fc[28]);    // materias del examen
+  par(L.fc[13], L.fc[45], L.quiz[48]);                                           // sello
+  par(L.fc[16], L.fc[29], L.quiz[32]);  par(L.quiz[8], L.quiz[32], L.fc[29]);    // escolaridad del ayudante
+  par(L.fc[17], L.fc[30], L.quiz[38]);  par(L.quiz[26], L.quiz[38], L.fc[30]);   // escolaridad del aprendiz
+  par(L.fc[19], L.fc[31], L.quiz[33]);  par(L.quiz[10], L.quiz[33], L.fc[31]);   // multa
+  par(L.quiz[27], L.quiz[34]);                                                   // multa en reincidencia
+  par(L.fc[47], L.fc[48], L.quiz[50]);  par(L.fc[49], L.fc[50]);                 // miembros del Colegio · educación continua
+  par(L.fc[51], L.fc[38], L.quiz[40]);  par(L.fc[52], L.fc[39], L.quiz[41]);     // certificado del aprendiz · documentos
+  par(L.fc[54], L.fc[55]);                                                       // a quién elige la Junta
+  par(R.fc[5], R.fc[6], R.quiz[5]);  par(R.quiz[6], R.quiz[5], R.fc[6]);         // NEC viejo → actual
+  par(R.fc[7], R.fc[8], R.quiz[7]);  par(R.fc[9], R.fc[10], R.quiz[8]);
+  [11, 13, 15, 17, 19].forEach(k => par(R.fc[k], R.fc[k + 1]));
+  return m;
+})();
+const AY_ACT_LIB = new Map();
+AY_LIB_ACT.forEach((acts, lib) => acts.forEach(a => AY_ACT_LIB.set(a, [...(AY_ACT_LIB.get(a) || []), lib])));
+let _aySigue = null;
+const _ayBase = x => x.f || (typeof x.q === 'object' ? x.q : x);   // los repasos envuelven: { f:tarjeta } o { q:pregunta }
+const _ayRec = (id, n) => { const rec = (_ayRecientes[id] || []).filter(i => i < n); return rec.length >= n ? [rec[rec.length - 1]] : rec; };   // vuelta nueva: solo evita repetir la última
+const _ayTiene = (id, lista, objs) => { const rec = _ayRec(id, lista.length); return lista.some((x, k) => objs.includes(_ayBase(x)) && !rec.includes(k)); };
+function _ayAdelanta(i){   // mezcla: si la actual que toca está en otro tema de la ronda, ese tema pasa a este puesto
+  if(!_aySigue || !sesionOrden[i] || sesionOrden[i] === '*') return;
+  const ok = mid => { const m = MOD_POR_ID[mid]; return !!(m && m.tiene && m.tiene(_aySigue)); };
+  if(ok(sesionOrden[i])) return;
+  const j = sesionOrden.findIndex((mid, k) => k > i && !sesionAbiertos[k] && mid !== '*' && ok(mid));
+  if(j > 0) [sesionOrden[i], sesionOrden[j]] = [sesionOrden[j], sesionOrden[i]];
+}
 function _ayElegir(id, lista, asuntos){
-  let rec = (_ayRecientes[id] || []).filter(i => i < lista.length);
-  if(rec.length >= lista.length) rec = [rec[rec.length - 1]];   // vuelta nueva: solo evita repetir la última
-  const libres = lista.map((_, i) => i).filter(i => !rec.includes(i));
+  const rec = _ayRec(id, lista.length), bases = lista.map(_ayBase);
+  let libres = lista.map((_, i) => i).filter(i => !rec.includes(i));
+  // la actual espera mientras su pregunta del libro no haya salido (en esta lista o, en una mezcla, en otro tema de la ronda)
+  const mio = id.replace(/:mezcla$/, ''), otros = [...new Set(sesionOrden)].filter(mid => mid !== mio && mid !== '*');
+  const espera = k => (AY_ACT_LIB.get(bases[k]) || []).some(lib => { const j = bases.indexOf(lib);
+    return j >= 0 ? !rec.includes(j) : otros.some(mid => { const m = MOD_POR_ID[mid]; return !!(m && m.tiene && m.tiene([lib])); }); });
+  const sinEspera = libres.filter(k => !espera(k)); if(sinEspera.length) libres = sinEspera;
   const rango = i => { const k = AY_ORDEN_ASUNTOS.indexOf((asuntos || '')[i]); return k < 0 ? 99 : k; };
-  const i = agruparTema && asuntos ? libres.slice().sort((a, b) => rango(a) - rango(b) || a - b)[0] : libres[Math.floor(Math.random() * libres.length)];
+  let i = agruparTema && asuntos ? libres.slice().sort((a, b) => rango(a) - rango(b) || a - b)[0] : libres[Math.floor(Math.random() * libres.length)];
+  if(_aySigue){ for(const o of _aySigue){ const k = bases.indexOf(o); if(k >= 0 && !rec.includes(k)){ i = k; break; } } }
+  _aySigue = AY_LIB_ACT.get(bases[i]) || null;
   rec.push(i); _ayRecientes[id] = rec;
   try{ localStorage.setItem(_AY_VISTAS, JSON.stringify(_ayRecientes)); }catch(e){}
   return lista[i];
@@ -5262,7 +5300,8 @@ const _ayFoto = src => `<br><img class="ayFoto" src="${src}" alt="Foto para iden
 function _ayFicha(id, nombre, sec, fichas, pareja, gemelas = [], asuntos){
   const resp = fichas.map(f => f.a), enMezcla = fichas.filter((_, i) => !gemelas.includes(i));
   const asuntosMezcla = asuntos && [...asuntos].filter((_, i) => !gemelas.includes(i)).join('');
-  return { id, nombre, clase:'ayud', secciones:[sec], banco:fichas.length, pareja, bancoMezcla:enMezcla.length, gen(){
+  return { id, nombre, clase:'ayud', secciones:[sec], banco:fichas.length, pareja, bancoMezcla:enMezcla.length,
+    tiene: objs => sesionOrden.includes(pareja) ? _ayTiene(id + ':mezcla', enMezcla, objs) : _ayTiene(id, fichas, objs), gen(){
     const f = sesionOrden.includes(pareja) ? _ayElegir(id + ':mezcla', enMezcla, asuntosMezcla) : _ayElegir(id, fichas, asuntos);
     return { enunciado:f.q, tipo:'opciones', opciones:_ayOpciones(f.a, resp), respuesta:f.a,
       explicacion:[`La respuesta es: ${f.a}.`, _ayTrucoFicha(f.q, f.a)] };
@@ -5270,7 +5309,7 @@ function _ayFicha(id, nombre, sec, fichas, pareja, gemelas = [], asuntos){
 }
 // preguntas con 4 opciones ya escritas ({p, o, c, e, f?})
 function _ayPregunta(id, nombre, sec, preguntas, asuntos){
-  return { id, nombre, clase:'ayud', secciones:[sec], banco:preguntas.length, gen(){
+  return { id, nombre, clase:'ayud', secciones:[sec], banco:preguntas.length, tiene: objs => _ayTiene(id, preguntas, objs), gen(){
     const q = _ayElegir(id, preguntas, asuntos);
     return { enunciado:q.p, tipo:'opciones', opciones:_ayBarajar(q.o), respuesta:q.o[q.c],
       explicacion:[q.e, `→ ${q.o[q.c]}.`, _ayTrucoQuiz(q)] };
@@ -5292,20 +5331,25 @@ function _ayFotosTodas(){
               : `TRUCO: cada tipo de conduleto se reconoce por la forma del cuerpo y por dónde tiene las entradas; memoriza la letra junto a su foto en la Galería. Ejemplo con este mismo: es el tipo ${f.r}.`] };
   } };
 }
+// Datos curiosos del libro que no van para el examen de Ayudante (historia, química, pueblos de las centrales,
+// consejos del libro): se quedan en su banco (los índices de AY_REPASOS no se mueven) y solo salen en el tema Extra.
+const AY_CURIOSAS = { fund:[0, 1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14], basica:[31, 32, 51, 52], ac:[13, 14, 15, 16, 28], disp:[50] };
+const _ayExamen = k => AYUD.libro[k].filter((_, i) => !(AY_CURIOSAS[k] || []).includes(i));
 MODULOS.push(
-  _ayFicha('ayud-ohm-conceptos', 'Ley de Ohm: conceptos y fórmulas', '1.1', AYUD.ohm.fc, 'ayud-ohm-preguntas', [9, 10, 16, 20, 23]),
+  _ayFicha('ayud-ohm-conceptos', 'Ley de Ohm: conceptos y fórmulas', '1.1', AYUD.ohm.fc, 'ayud-ohm-preguntas', [9, 10, 16, 18, 19, 20, 23]),
   _ayPregunta('ayud-ohm-preguntas', 'Ley de Ohm: preguntas de práctica', '1.2', AYUD.ohm.quiz),
-  _ayPregunta('ayud-lib-fund', 'Fundamentos de la electricidad (libro, cap. B)', '1.3', AYUD.libro.fund),
-  _ayPregunta('ayud-lib-basica', 'Electricidad básica y circuitos (libro, cap. C)', '1.4', AYUD.libro.basica),
-  _ayPregunta('ayud-lib-ac', 'Corriente alterna (libro, cap. D)', '1.5', AYUD.libro.ac),
+  _ayPregunta('ayud-lib-fund', 'Fundamentos de la electricidad (libro, cap. B)', '1.3', _ayExamen('fund')),
+  _ayPregunta('ayud-lib-basica', 'Electricidad básica y circuitos (libro, cap. C)', '1.4', _ayExamen('basica')),
+  _ayPregunta('ayud-lib-ac', 'Corriente alterna (libro, cap. D)', '1.5', _ayExamen('ac')),
+  Object.assign(_ayPregunta('ayud-lib-curiosas', 'Datos curiosos del libro (historia y química)', '1.6', Object.keys(AY_CURIOSAS).flatMap(k => AY_CURIOSAS[k].map(i => AYUD.libro[k][i]))), { extra:true }),
   _ayFicha('ayud-mat-conceptos', 'Materiales: conceptos', '2.1', AYUD.materiales.fc, 'ayud-mat-preguntas', [0, 1, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 23, 24, 26]),
   _ayPregunta('ayud-mat-preguntas', 'Materiales: preguntas de práctica', '2.2', [...AYUD.materiales.quiz, ...AYUD.idQuiz]),
   _ayFotosTodas(),
-  _ayPregunta('ayud-lib-disp', 'Dispositivos, cajas y conexiones (libro, cap. E–F)', '2.4', AYUD.libro.disp),
+  _ayPregunta('ayud-lib-disp', 'Dispositivos, cajas y conexiones (libro, cap. E–F)', '2.4', _ayExamen('disp')),
   _ayPregunta('ayud-lib-paneles', 'Paneles, cargas y circuitos (libro, cap. G)', '2.5', AYUD.libro.paneles),
-  _ayFicha('ayud-leyes-conceptos', 'Las Leyes: conceptos', '3.1', AYUD.leyes.fc, 'ayud-leyes-preguntas', [0, 1, 2, 11, 12, 15, 16, 17, 19, 20, 21, 22, 23, 24, 25, 26, 28, 30, 31, 33, 34, 35, 36, 38, 39, 41, 44, 45], AY_ASUNTOS_LEYES.fc),
+  _ayFicha('ayud-leyes-conceptos', 'Las Leyes: conceptos', '3.1', AYUD.leyes.fc, 'ayud-leyes-preguntas', [0, 1, 2, 3, 5, 7, 8, 9, 11, 12, 13, 14, 15, 16, 17, 19, 20, 21, 22, 23, 24, 25, 26, 28, 29, 30, 31, 32, 33, 34, 35, 36, 38, 39, 40, 41, 42, 44, 45, 48], AY_ASUNTOS_LEYES.fc),
   _ayPregunta('ayud-leyes-preguntas', 'Las Leyes: preguntas de práctica', '3.2', AYUD.leyes.quiz, AY_ASUNTOS_LEYES.q),
-  _ayFicha('ayud-reg-conceptos', 'Reglamentos (NEC y AEE): conceptos', '4.1', AYUD.reglam.fc, 'ayud-reg-preguntas', [0, 2, 5, 21, 22, 24, 25]),
+  _ayFicha('ayud-reg-conceptos', 'Reglamentos (NEC y AEE): conceptos', '4.1', AYUD.reglam.fc, 'ayud-reg-preguntas', [0, 1, 2, 3, 5, 6, 8, 10, 21, 22, 23, 24, 25]),
   _ayPregunta('ayud-reg-preguntas', 'Reglamentos (NEC y AEE): preguntas de práctica', '4.2', AYUD.reglam.quiz),
   // Extra: no está en el material del maestro; no entra en la mezcla (m.extra, ver construirCola/modulosActivos)
   Object.assign(_ayFicha('ayud-reg-extra-conceptos', 'Energía renovable y NEC general (conceptos)', '4.3', AYUD.reglamExtra.fc), { extra:true }),
@@ -5321,7 +5365,7 @@ MODULOS.push(
 const _ayRepaso = (id, nombre, sec, ...partes) => {
   const todas = [];
   partes.forEach(([banco, idx, ficha]) => { const bolsa = ficha && banco.map(f => f.a); idx.forEach(i => todas.push(ficha ? { f:banco[i], bolsa } : { q:banco[i] })); });
-  return { id, nombre:nombre + ' (repaso)', clase:'ayud', secciones:[sec], banco:todas.length, gen(){
+  return { id, nombre:nombre + ' (repaso)', clase:'ayud', secciones:[sec], banco:todas.length, tiene: objs => _ayTiene(id, todas, objs), gen(){
     const t = _ayElegir(id, todas);
     if(t.f) return { enunciado:t.f.q, tipo:'opciones', opciones:_ayOpciones(t.f.a, t.bolsa), respuesta:t.f.a,
       explicacion:[`La respuesta es: ${t.f.a}.`, _ayTrucoFicha(t.f.q, t.f.a)] };
@@ -5331,7 +5375,7 @@ const _ayRepaso = (id, nombre, sec, ...partes) => {
 };
 const AY_REPASOS = (() => {
   const L = AYUD.leyes, O = AYUD.ohm, M = AYUD.materiales, R = AYUD.reglam, B = AYUD.libro;
-  const todo = b => b.map((_, i) => i), rango = (a, z) => Array.from({ length:z - a + 1 }, (_, k) => a + k);
+  const todo = b => b.map((_, i) => i), sinCur = k => todo(B[k]).filter(i => !(AY_CURIOSAS[k] || []).includes(i)), rango = (a, z) => Array.from({ length:z - a + 1 }, (_, k) => a + k);
   return [
     // Las Leyes (cap. 3)
     _ayRepaso('ayud-leyes-hist', 'Historia (del libro)', '3.3', [L.quiz, rango(52, 59)]),
@@ -5351,15 +5395,15 @@ const AY_REPASOS = (() => {
     _ayRepaso('ayud-ohm-paralelo', 'Circuitos en paralelo', '1.9', [O.fc, [11, 12], true], [O.quiz, [7, 8, 10, 25]], [B.basica, [38, 40, 41, 46, 47, 48]]),
     _ayRepaso('ayud-ohm-kirchhoff', 'Leyes de Kirchhoff', '1.9', [O.fc, [18, 19], true], [O.quiz, [14, 15]]),
     _ayRepaso('ayud-ohm-caida', 'Caída de voltaje', '1.9', [O.fc, [22], true], [O.quiz, [31]], [B.paneles, [30, 31]]),
-    _ayRepaso('ayud-ohm-libro-b', 'Fundamentos (libro, cap. B)', '1.9', [B.fund, todo(B.fund)]),
-    _ayRepaso('ayud-ohm-libro-c', 'Electricidad básica (libro, cap. C)', '1.9', [B.basica, todo(B.basica)]),
-    _ayRepaso('ayud-ohm-libro-d', 'Corriente alterna (libro, cap. D)', '1.9', [B.ac, todo(B.ac)]),
+    _ayRepaso('ayud-ohm-libro-b', 'Fundamentos (libro, cap. B)', '1.9', [B.fund, sinCur('fund')]),
+    _ayRepaso('ayud-ohm-libro-c', 'Electricidad básica (libro, cap. C)', '1.9', [B.basica, sinCur('basica')]),
+    _ayRepaso('ayud-ohm-libro-d', 'Corriente alterna (libro, cap. D)', '1.9', [B.ac, sinCur('ac')]),
     // Materiales y su uso (cap. 2)
     _ayRepaso('ayud-mat-conductores', 'Conductores vs. aislantes', '2.9', [M.fc, [2, 4], true], [M.quiz, [0, 1, 2, 3, 4, 14, 15]]),
     _ayRepaso('ayud-mat-datos', 'Datos técnicos clave', '2.9', [M.quiz, [5, 6, 7, 8, 9]], [B.basica, [8, 9, 10, 12, 20, 23]]),
     _ayRepaso('ayud-mat-uso', 'Materiales y su uso', '2.9', [M.fc, [25], true], [M.quiz, [10, 11, 12, 16]], [AYUD.idQuiz, [2, 9, 10, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 40, 41]]),
     _ayRepaso('ayud-mat-colores', 'Colores que debes memorizar', '2.9', [M.fc, [22], true], [M.quiz, [13]], [AYUD.idQuiz, [3, 4, 5, 6, 7, 8]]),
-    _ayRepaso('ayud-mat-libro-ef', 'Dispositivos, cajas y conexiones (libro, cap. E–F)', '2.9', [B.disp, todo(B.disp)]),
+    _ayRepaso('ayud-mat-libro-ef', 'Dispositivos, cajas y conexiones (libro, cap. E–F)', '2.9', [B.disp, sinCur('disp')]),
     _ayRepaso('ayud-mat-libro-g', 'Paneles, cargas y circuitos (libro, cap. G)', '2.9', [B.paneles, todo(B.paneles)]),
     // Reglamentos (cap. 4); la tarjeta "Extra" abre el tema Extra que ya existe (ayud-reg-extra-preguntas)
     _ayRepaso('ayud-reg-ley115', 'Lo que manda la Ley 115 (art. 23)', '4.9', [R.fc, [1, 3], true], [R.quiz, rango(0, 4)]),
@@ -5381,7 +5425,7 @@ const AY_TAG = {
   'ayud-ohm-conceptos':'ayu', 'ayud-ohm-preguntas':'ayu', 'ayud-lib-fund':'conf', 'ayud-lib-basica':'ayu', 'ayud-lib-ac':'conf',
   'ayud-mat-conceptos':'ayu', 'ayud-mat-preguntas':'ayu', 'ayud-fotos':'ayu', 'ayud-lib-disp':'conf', 'ayud-lib-paneles':'perito',
   'ayud-leyes-conceptos':'ayu', 'ayud-leyes-preguntas':'ayu', 'ayud-reg-conceptos':'ayu', 'ayud-reg-preguntas':'ayu',
-  'ayud-reg-extra-conceptos':'extra', 'ayud-reg-extra-preguntas':'extra'
+  'ayud-reg-extra-conceptos':'extra', 'ayud-lib-curiosas':'extra', 'ayud-reg-extra-preguntas':'extra'
 };
 const AY_TAG_TXT = { ayu:'Ayudante', conf:'Por confirmar', perito:'Probable perito', extra:'Extra', azar:'Al azar', libro:'Del libro', educo:'EducoSoft' };   // los 3 últimos son de Álgebra
 MODULOS.forEach(m => { if (AY_TAG[m.id]) m.tag = AY_TAG[m.id]; });
@@ -11984,6 +12028,7 @@ function _ejDelPuesto(i, arg){
     } else if(mod0){
       mod = mod0; ej = mod.gen(nivel);
     } else {
+      _ayAdelanta(i);   // libro → ley actual: la actual sale en el puesto siguiente aunque sea de otro tema de la mezcla
       let id = sesionOrden[i];
       if(id && id !== '*'){
         const k = sesionCola.indexOf(id); if(k >= 0) sesionCola.splice(k, 1);
